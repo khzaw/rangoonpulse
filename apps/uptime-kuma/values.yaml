@@ -1,0 +1,53 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/app-template-3.7.3/charts/other/app-template/values.schema.json
+controllers:
+  main:
+    strategy: RollingUpdate
+    containers:
+      main:
+        image:
+          repository: louislam/uptime-kuma
+          tag: latest
+
+service:
+  main:
+    controller: main
+    type: ClusterIP
+    ports:
+      http:
+        port: 3001
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    cpu: 100m
+    memory: 200Mi
+
+persistence:
+  data:
+    enabled: true
+    type: persistentVolumeClaim
+    storageClass: longhorn
+    accessMode: ReadWriteOnce
+    size: 1Gi
+
+pod:
+  nodeSelector:
+    kubernetes.io/hostname: talos-7nf-osf
+
+ingress:
+  main:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: 'false'
+    hosts:
+    - host: uptime-kuma.local
+      paths:
+      - path: /
+        pathType: Prefix
+        service:
+          name: uptime-kuma
+          port: 3001

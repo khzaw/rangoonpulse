@@ -1,0 +1,9 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: bjw-s-charts
+  namespace: flux-system
+spec:
+  interval: 1h # How often Flux should check the repository for updates
+  url: https://charts.bjw-s.dev

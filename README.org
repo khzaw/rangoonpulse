@@ -1,0 +1,3 @@
+* rangoonpulse
+
+This repository contains infrastructure written as code for my homelab kubernetes cluster, tentatively named as ~rangoonpulse~. I try to adhere to to GitOps practices.
