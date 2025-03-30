@@ -4,4 +4,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ./repositories/bjw-s-charts.yaml
+  - ./repositories/longhorn-charts.yaml
   - ./kustomizations/app-kustomization.yaml
