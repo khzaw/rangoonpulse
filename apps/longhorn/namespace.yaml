@@ -5,3 +5,11 @@ metadata:
   name: longhorn-system
   labels:
     name: longhorn-system
+    # Allow privileged pods in this namespace (Required by Longhorn)
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/enforce-version: latest
+    # Optional but recommended audit/warn labels:
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: privileged
+    pod-security.kubernetes.io/warn-version: latest
