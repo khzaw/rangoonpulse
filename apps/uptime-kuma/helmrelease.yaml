@@ -4,7 +4,7 @@ metadata:
   name: uptime-kuma
   namespace: default
 spec:
-  interval: 30m # defines which interval the Helm repository index is fetched
+  interval: 15m # defines which interval the Helm repository index is fetched
   chart:
     spec:
       chart: app-template
