@@ -9,6 +9,7 @@ resources:
   - ./repositories/metallb.yaml
 
   # tell Flux *what* directories in Git to sync
+  - ./kustomizations/metallb.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/longhorn.yaml
   - ./kustomizations/infra-storage-calibre.yaml
