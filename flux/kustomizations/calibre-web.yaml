@@ -1,0 +1,17 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: calibre-web
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./apps/calibre-web # Path to the calibre-web app's Kustomization
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: default # Namespace where calibre-web app runs
+  timeout: 5m
+  dependsOn:
+    # Wait for the PVC Kustomization to be ready
+    - name: infra-storage-calibre

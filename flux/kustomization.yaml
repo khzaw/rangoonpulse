@@ -3,6 +3,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  # Source for helm charts
   - ./repositories/bjw-s-charts.yaml
   - ./repositories/longhorn-charts.yaml
-  - ./kustomizations/app-kustomization.yaml
+
+  # tell Flux *what* directories in Git to sync
+  - ./kustomizations/infra-storage-calibre.yaml
+  - ./kustomizations/longhorn.yaml
+  - ./kustomizations/uptime-kuma.yaml
+  - ./kustomizations/calibre.yaml
+  - ./kustomizations/calibre-web.yaml

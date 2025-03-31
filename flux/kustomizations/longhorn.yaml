@@ -1,0 +1,14 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: longhorn # Kustomization name
+  namespace: flux-system
+spec:
+  interval: 15m # maybe longer for infrastructure like Longhorn
+  path: ./apps/longhorn
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: longhorn-system # Target NS for the HelmRelease obj
+  timeout: 15m # Allow longer for storage system install/upgrade
