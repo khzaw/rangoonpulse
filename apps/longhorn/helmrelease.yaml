@@ -28,6 +28,10 @@ spec:
     keepHistory: false
 
   values:
+
+    persistence:
+      defaultClassReplicaCount: 1
+
     ingress:
       enabled: true
       ingressClassName: nginx
