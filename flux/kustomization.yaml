@@ -14,3 +14,4 @@ resources:
   - ./kustomizations/uptime-kuma.yaml
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web.yaml
+  - ./kustomizations/actual-budget.yaml
