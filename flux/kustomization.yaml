@@ -8,6 +8,7 @@ resources:
   - ./repositories/longhorn-charts.yaml
 
   # tell Flux *what* directories in Git to sync
+  - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/longhorn.yaml
   - ./kustomizations/infra-storage-calibre.yaml
   - ./kustomizations/uptime-kuma.yaml
