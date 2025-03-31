@@ -40,7 +40,7 @@ ingress:
           - path: /
             pathType: Prefix
             service:
-              name: main
+              name: calibre
               port: 8080
 
 persistence:
