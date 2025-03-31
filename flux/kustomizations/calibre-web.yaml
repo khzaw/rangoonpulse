@@ -13,5 +13,5 @@ spec:
   targetNamespace: default # Namespace where calibre-web app runs
   timeout: 5m
   dependsOn:
-    # Wait for the PVC Kustomization to be ready
     - name: infra-storage-calibre
+    - name: ingress-nginx

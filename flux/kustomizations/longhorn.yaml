@@ -12,3 +12,5 @@ spec:
     name: flux-system
   targetNamespace: longhorn-system # Target NS for the HelmRelease obj
   timeout: 15m # Allow longer for storage system install/upgrade
+  dependsOn:
+    - name: ingress-nginx
