@@ -13,3 +13,5 @@ spec:
   targetNamespace: default
   timeout: 5m
   wait: true
+  dependsOn:
+    - name: longhorn
