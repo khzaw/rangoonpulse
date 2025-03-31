@@ -36,7 +36,7 @@ ingress:
           - path: /
             pathType: Prefix
             service:
-              name: main
+              name: calibre-web
               port: 8083
 
 persistence:
