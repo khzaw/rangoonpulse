@@ -33,6 +33,9 @@ persistence:
     storageClass: longhorn
     accessMode: ReadWriteOnce
     size: 1Gi
+    globalMounts:
+      - path: /app/data
+
 
 pod:
   nodeSelector:
