@@ -3,8 +3,8 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: bjw-s-charts
+  name: metallb
   namespace: flux-system
 spec:
-  interval: 1h # How often Flux should check the repository for updates
-  url: https://bjw-s.github.io/helm-charts
+  interval: 1h
+  url: https://metallb.github.io/metallb

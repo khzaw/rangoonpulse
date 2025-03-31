@@ -6,6 +6,7 @@ resources:
   # Source for helm charts
   - ./repositories/bjw-s-charts.yaml
   - ./repositories/longhorn-charts.yaml
+  - ./repositories/metallb.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/ingress-nginx.yaml
