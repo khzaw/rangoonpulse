@@ -1,5 +1,20 @@
-# core/ingress-nginx/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/baremetal/deploy.yaml
+
+patches:
+  - patch: |-
+      # Change the type from NodePort to LoadBalancer
+      - op: replace
+        path: /spec/type
+        value: LoadBalancer
+      # Remove specific nodePort fields
+      - op: remove
+        path: /spec/ports/0/nodePort # HTTP port 80 mapping
+      - op: remove
+        path: /spec/ports/1/nodePort # HTTPS port 443 mapping
+    target:
+      kind: Service
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
