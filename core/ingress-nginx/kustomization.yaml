@@ -1,15 +1,28 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  # Point directly to the remote manifest URL (use your correct version)
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/baremetal/deploy.yaml
 
 patches:
+  # Patch 1: Change Service type
   - patch: |-
-      # Change the type from NodePort to LoadBalancer ONLY
       - op: replace
         path: /spec/type
         value: LoadBalancer
     target:
       kind: Service
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+
+  # Patch 2: Add the missing --publish-service argument to the Deployment
+  #  path: /spec/template/spec/containers/0/args/- uses JSON Patch syntax to append (add to path ending in -) the value to the existing args array for the first container).
+  - patch: |-
+      # Append the argument to the existing args list for the first container
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --publish-service=$(POD_NAMESPACE)/ingress-nginx-controller
+    target:
+      kind: Deployment
       name: ingress-nginx-controller
       namespace: ingress-nginx
