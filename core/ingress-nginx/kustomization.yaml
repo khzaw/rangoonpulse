@@ -5,15 +5,10 @@ resources:
 
 patches:
   - patch: |-
-      # Change the type from NodePort to LoadBalancer
+      # Change the type from NodePort to LoadBalancer ONLY
       - op: replace
         path: /spec/type
         value: LoadBalancer
-      # Remove specific nodePort fields
-      - op: remove
-        path: /spec/ports/0/nodePort # HTTP port 80 mapping
-      - op: remove
-        path: /spec/ports/1/nodePort # HTTPS port 443 mapping
     target:
       kind: Service
       name: ingress-nginx-controller
