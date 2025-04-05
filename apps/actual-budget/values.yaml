@@ -31,15 +31,20 @@ ingress:
     enabled: true
     className: nginx
     annotations:
-      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-staging
     hosts:
-      - host: actual.local
+      - host: actual.khzaw.dev
         paths:
           - path: /
             pathType: Prefix
             service:
               name: actual-budget
               port: 5006
+    tls:
+      - secretName: actual-tls
+        hosts:
+          - actual.khzaw.dev
 
 persistence:
   server-files:

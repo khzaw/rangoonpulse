@@ -31,13 +31,20 @@ ingress:
     enabled: true
     className: nginx
     hosts:
-      - host: calibre.local
+      - host: calibre.khzaw.dev
         paths:
           - path: /
             pathType: Prefix
             service:
               name: calibre-web
               port: 8083
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-staging
+    tls:
+      - secretName: calibre-tls
+        hosts:
+          - calibre.khzaw.dev
 
 persistence:
   config:
