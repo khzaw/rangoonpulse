@@ -34,7 +34,7 @@ resource "cloudflare_record" "calibre_web" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "calibre"
   value   = var.metallb_ip
-  type    = "a"
+  type    = "A"
   ttl     = 1
   proxied = false
 }

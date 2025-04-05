@@ -12,11 +12,11 @@ spec:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
-  varsFrom:
-    - kind: Secret
-      name: cloudflare-api-token
-      varsKeys:
-        - cloudflare-api-token
+  # varsFrom:
+  #   - kind: Secret
+  #     name: cloudflare-api-token
+  #     varsKeys:
+  #       - cloudflare-api-token
   vars:
     - name: cloudflare_zone_id
       value: "06575a5b0478672278b2a86a5b145d9a"
