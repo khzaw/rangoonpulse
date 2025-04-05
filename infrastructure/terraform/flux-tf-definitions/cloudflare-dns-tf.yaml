@@ -37,3 +37,4 @@ spec:
   dependsOn:
     - name: tofu-controller
       namespace: flux-system
+      kind: Kustomization
