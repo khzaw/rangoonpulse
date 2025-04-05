@@ -5,7 +5,7 @@ data "cloudflare_zone" "primary" {
 resource "cloudflare_record" "longhorn" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "longhorn"
-  value   = var.metallb_ip
+  content = var.metallb_ip
   type    = "A"
   ttl     = 1
   proxied = false
@@ -14,7 +14,7 @@ resource "cloudflare_record" "longhorn" {
 resource "cloudflare_record" "uptime_kuma" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "uptime-kuma"
-  value   = var.metallb_ip
+  content = var.metallb_ip
   type    = "A"
   ttl     = 1
   proxied = false
@@ -24,7 +24,7 @@ resource "cloudflare_record" "uptime_kuma" {
 resource "cloudflare_record" "calibre_manage" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "calibre-manage"
-  value   = var.metallb_ip
+  content = var.metallb_ip
   type    = "A"
   ttl     = 1
   proxied = false
@@ -33,7 +33,7 @@ resource "cloudflare_record" "calibre_manage" {
 resource "cloudflare_record" "calibre_web" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "calibre"
-  value   = var.metallb_ip
+  content = var.metallb_ip
   type    = "A"
   ttl     = 1
   proxied = false
@@ -42,7 +42,7 @@ resource "cloudflare_record" "calibre_web" {
 resource "cloudflare_record" "actual_budget" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "actual"
-  value   = var.metallb_ip
+  content = var.metallb_ip
   type    = "A"
   ttl     = 1
   proxied = false
