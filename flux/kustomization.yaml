@@ -13,6 +13,7 @@ resources:
   - ./kustomizations/metallb.yaml
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/cert-manager.yaml
+  - ./kustomizations/cert-manager-config.yaml
   - ./kustomizations/tofu-controller.yaml
   - ./kustomizations/terraform-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
