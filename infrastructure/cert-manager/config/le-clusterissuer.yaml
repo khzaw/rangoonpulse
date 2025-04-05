@@ -15,7 +15,7 @@ spec:
             email: kayhzaw@gmail.com
             apiTokenSecretRef:
               name: cloudflare-api-token
-              key: api-token
+              key: token
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -33,4 +33,4 @@ spec:
             email: kayhzaw@gmail.com
             apiTokenSecretRef:
               name: cloudflare-api-token
-              key: api-token
+              key: token
