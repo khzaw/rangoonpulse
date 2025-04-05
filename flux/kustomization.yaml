@@ -8,6 +8,7 @@ resources:
   - ./repositories/longhorn-charts.yaml
   - ./repositories/metallb.yaml
   - ./repositories/tofu-controller.yaml
+  - ./repositories/jetstack.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/metallb.yaml
