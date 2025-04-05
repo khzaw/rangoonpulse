@@ -13,6 +13,7 @@ resources:
   - ./kustomizations/metallb.yaml
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/tofu-controller.yaml
+  - ./kustomizations/terraform-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/longhorn.yaml
   - ./kustomizations/infra-storage-calibre.yaml
