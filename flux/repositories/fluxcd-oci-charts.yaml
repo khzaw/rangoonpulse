@@ -1,13 +1,11 @@
 
 ---
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
 metadata:
   name: fluxcd-charts
   namespace: flux-system
 spec:
   interval: 1h
   url: oci://ghcr.io/fluxcd/charts
-  provider: generic
-  secretRef:
-    name: ghcr-auth
+  type: oci
