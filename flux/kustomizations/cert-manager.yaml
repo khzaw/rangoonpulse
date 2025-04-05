@@ -1,0 +1,18 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  interval: 15m
+  path: ./infrastructure/cert-manager
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  timeout: 15m
+  healthChecks: # wait for webhook deployments to be ready
+   - apiVersion: apps/v1
+     kind: Deployment
+     name: cert-manager-webhook
+     namespace: cert-manager
