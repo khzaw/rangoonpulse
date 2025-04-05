@@ -41,7 +41,7 @@ resource "cloudflare_record" "calibre_web" {
 
 resource "cloudflare_record" "actual_budget" {
   zone_id = data.cloudflare_zone.primary.id
-  name    = "budget"
+  name    = "actual"
   value   = var.metallb_ip
   type    = "A"
   ttl     = 1
