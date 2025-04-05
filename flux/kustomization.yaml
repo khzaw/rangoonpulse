@@ -7,7 +7,7 @@ resources:
   - ./repositories/bjw-s-charts.yaml
   - ./repositories/longhorn-charts.yaml
   - ./repositories/metallb.yaml
-  - ./repositories/fluxcd-oci-charts.yaml
+  - ./repositories/tofu-controller.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/metallb.yaml
