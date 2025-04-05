@@ -1,6 +1,5 @@
 
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrepository-source-v1.json
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
@@ -10,3 +9,5 @@ spec:
   interval: 1h
   url: oci://ghcr.io/fluxcd/charts
   provider: generic
+  secretRef:
+    name: ghcr-auth
