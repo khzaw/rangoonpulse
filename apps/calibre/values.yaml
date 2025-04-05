@@ -33,15 +33,20 @@ ingress:
     enabled: true
     className: nginx
     annotations:
-      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
     hosts:
-      - host: calibre-manage.local
+      - host: calibre-manage.khzaw.dev
         paths:
           - path: /
             pathType: Prefix
             service:
               name: calibre
               port: 8080
+    tls:
+      - secretName: calibre-manage-tls
+        hosts:
+          - calibre-manage.khzaw.dev
 
 persistence:
   config:

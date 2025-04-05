@@ -39,7 +39,7 @@ spec:
       annotations:
         nginx.ingress.kubernetes.io/ssl-redirect: 'true'
         nginx.ingress.kubernetes.io/proxy-body-size: 10000m
-        cert-manager.io/cluster-issuer: letsencrypt-staging
+        cert-manager.io/cluster-issuer: letsencrypt-prod
       tls:
         - secretName: longhorn-tls
           hosts:

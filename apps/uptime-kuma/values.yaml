@@ -36,7 +36,6 @@ persistence:
     globalMounts:
       - path: /app/data
 
-
 pod:
   nodeSelector:
     kubernetes.io/hostname: talos-7nf-osf
@@ -46,9 +45,14 @@ ingress:
     enabled: true
     className: nginx
     annotations:
-      nginx.ingress.kubernetes.io/ssl-redirect: 'false'
+      nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: uptime-kuma-tls
+        hosts:
+          - uptime-kuma.khzaw.dev
     hosts:
-    - host: uptime-kuma.local
+    - host: uptime-kuma.khzaw.dev
       paths:
       - path: /
         pathType: Prefix
