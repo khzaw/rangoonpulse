@@ -12,6 +12,7 @@ resources:
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/metallb.yaml
   - ./kustomizations/metallb-config.yaml
+  - ./kustomizations/tofu-controller.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/longhorn.yaml
   - ./kustomizations/infra-storage-calibre.yaml
