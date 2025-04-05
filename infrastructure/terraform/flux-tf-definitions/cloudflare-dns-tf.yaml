@@ -33,8 +33,3 @@ spec:
             secretKeyRef:
               name: cloudflare-api-token
               key: token
-
-  dependsOn:
-    - name: tofu-controller
-      namespace: flux-system
-      kind: Kustomization
