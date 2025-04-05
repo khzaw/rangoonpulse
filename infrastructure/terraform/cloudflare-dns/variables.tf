@@ -18,7 +18,7 @@ variable "metallb-ip" {
 }
 
 variable "domain_name" {
-  type        = "string"
-  description =" domain name"
+  type        = string
+  description = "domain name"
   default     = "khzaw.dev"
 }
