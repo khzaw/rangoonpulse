@@ -15,8 +15,8 @@ spec:
   varsFrom:
     - kind: Secret
       name: cloudflare-api-token
-      varsKey:
-        cloudflare-api-token: token
+      varsKeys:
+        - cloudflare-api-token
   vars:
     - name: cloudflare_zone_id
       value: "06575a5b0478672278b2a86a5b145d9a"
@@ -33,7 +33,6 @@ spec:
             secretKeyRef:
               name: cloudflare-api-token
               key: token
-      serviceAccountName: tofu-controller
 
   dependsOn:
     - name: tofu-controller
