@@ -9,6 +9,7 @@ resources:
   - ./repositories/metallb.yaml
   - ./repositories/tofu-controller.yaml
   - ./repositories/jetstack.yaml
+  - ./repositories/vicsufer-charts.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/metallb.yaml
