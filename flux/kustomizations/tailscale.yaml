@@ -11,8 +11,8 @@ spec:
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
   timeout: 5m
-  # healthChecks:
-  #   - apiVersion: apps/v1
-  #     kind: Deployment
-  #     name: tailscale-subnet-router
-  #     namespace: tailscale
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: tailscale-subnet-router
+      namespace: tailscale
