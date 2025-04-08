@@ -4,4 +4,7 @@ kind: Kustomization
 namespace: tailscale
 resources:
   - namespace.yaml
+  - serviceaccount.yaml
+  - role.yaml
+  - rolebinding.yaml
   - deployment.yaml

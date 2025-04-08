@@ -15,7 +15,7 @@ spec:
         app: tailscale-subnet-router
     spec:
       # hostNetwork: true # Use host network to easily advertise routes on the LAN interface
-      serviceAccountName: default # Or create a specific one if needed
+      serviceAccountName: tailscale-subnet-router
       containers:
       - name: tailscale
         image: tailscale/tailscale:latest # Use official image
@@ -31,9 +31,8 @@ spec:
         - name: TS_ROUTES
           value: "10.254.250.0/8"
 
-        # Optional: Add Kube Secret storage to persist node identity
-        # - name: TS_KUBE_SECRET
-        #   value: "tailscale-state" # Name of secret Tailscale will create/use
+        - name: TS_KUBE_SECRET
+          value: "tailscale-state" # Name of secret Tailscale will create/use
 
         # Add necessary linux capabilities for routing
         securityContext:

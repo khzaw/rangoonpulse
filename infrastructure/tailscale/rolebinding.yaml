@@ -1,0 +1,14 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tailscale-runner-binding # Name of the binding
+  namespace: tailscale
+subjects:
+  - kind: ServiceAccount
+    name: tailscale-subnet-router # The SA we created
+    namespace: tailscale
+roleRef:
+  kind: Role # Linking to a Role within the namespace
+  name: tailscale-runner # The Role we created
+  apiGroup: rbac.authorization.k8s.io
