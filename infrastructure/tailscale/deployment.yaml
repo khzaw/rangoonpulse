@@ -16,7 +16,6 @@ spec:
     spec:
       # hostNetwork: true # Use host network to easily advertise routes on the LAN interface
       serviceAccountName: tailscale-subnet-router
-      hostNetwork: true
       containers:
       - name: tailscale
         image: tailscale/tailscale:latest
