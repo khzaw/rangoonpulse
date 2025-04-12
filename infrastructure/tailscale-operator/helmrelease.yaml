@@ -23,7 +23,12 @@ spec:
     remediation: { retries: 3 }
 
   values:
-    operator:
-      auth:
-        secretName: tailscale-operator-authkey
-        secretKey: authkey
+    apiServerProxyConfig:
+      mode: "false"
+    extraEnv:
+      - name: TS_AUTHKEY
+        valueFrom:
+          secretKeyRef:
+            name: tailscale-operator-authkey
+            key: authkey
+
