@@ -25,10 +25,3 @@ spec:
   values:
     apiServerProxyConfig:
       mode: "false"
-    extraEnv:
-      - name: TS_AUTHKEY
-        valueFrom:
-          secretKeyRef:
-            name: tailscale-operator-authkey
-            key: authkey
-

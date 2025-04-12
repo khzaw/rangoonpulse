@@ -10,7 +10,7 @@ spec:
   path: ./infrastructure/tailscale-operator
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
-  timeout: 5m
+  timeout: 15m
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment
