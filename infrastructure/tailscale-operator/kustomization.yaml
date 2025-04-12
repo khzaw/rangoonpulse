@@ -5,3 +5,5 @@ namespace: tailscale
 resources:
   - namespace.yaml
   - helmrelease.yaml
+  - rbac-patch-clusterrole.yaml
+  - rbac-patch-clusterrolebinding.yaml

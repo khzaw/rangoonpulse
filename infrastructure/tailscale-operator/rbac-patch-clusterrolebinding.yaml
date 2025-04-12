@@ -1,0 +1,13 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tailscale-operator-endpointslice-reader-binding
+subjects:
+  - kind: ServiceAccount
+    name: tailscale-operator # The SA created by the Helm chart
+    namespace: tailscale    # Namespace where the SA lives
+roleRef:
+  kind: ClusterRole
+  name: tailscale-operator-endpointslice-reader # The ClusterRole created above
+  apiGroup: rbac.authorization.k8s.io

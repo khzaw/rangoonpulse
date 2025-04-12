@@ -1,0 +1,13 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tailscale-operator-endpointslice-reader
+rules:
+- apiGroups: ["discovery.k8s.io"]
+  resources: ["endpointslices"]
+  # Operator needs to watch these cluster-wide to find backends for exposed services
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""] # Also add core endpoints for compatibility/completeness
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
