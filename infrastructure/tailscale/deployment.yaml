@@ -18,7 +18,7 @@ spec:
       serviceAccountName: tailscale-subnet-router
       containers:
       - name: tailscale
-        image: tailscale/tailscale:latest # Use official image
+        image: tailscale/tailscale:latest
         env:
         # Get Auth Key from K8s Secret
         - name: TS_AUTHKEY
@@ -29,7 +29,7 @@ spec:
 
         # Define the routes to advertise: Your MetalLB Service IP
         - name: TS_ROUTES
-          value: "10.254.250.0/8"
+          value: "10.254.250.0/32"
 
         - name: TS_KUBE_SECRET
           value: "tailscale-state" # Name of secret Tailscale will create/use
@@ -40,9 +40,21 @@ spec:
           capabilities:
             add: ["NET_ADMIN", "NET_RAW"]
 
+        # Define resource requests and limits
+        resources:
+          requests:
+            memory: "64Mi" # minimal memory request
+            cpu: "25m" # minimal cpu request
+          limits:
+            # cap usage but allow some headroom
+            memory: "256Mi"
+            cpu: "200m"
+
         # Readiness probe could check tailscale status
         readinessProbe:
           exec:
             command: ["tailscale", "status"]
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
