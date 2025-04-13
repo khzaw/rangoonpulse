@@ -1,0 +1,17 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: actual-budget # Name for this Flux Kustomization object
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./apps/actual-budget # Path to the app's Kustomization
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: default # Namespace where app runs
+  timeout: 5m
+  dependsOn:
+    - name: longhorn
+    - name: ingress-nginx
