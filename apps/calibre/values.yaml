@@ -43,6 +43,14 @@ ingress:
             service:
               name: calibre
               port: 8080
+
+          - path: /content
+            pathType: Prefix
+            service:
+              name: calibre
+              port: 8081
+
+
     tls:
       - secretName: calibre-manage-tls
         hosts:
