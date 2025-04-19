@@ -45,18 +45,28 @@ ingress:
             service:
               identifier: main
               port: http
+    tls:
+      - secretName: calibre-manage-tls
+        hosts:
+          - calibre-manage.khzaw.dev
 
-          - path: /content
+  # -- Add new ingress block for Content Server on '/content' ---
+  server: # content-server
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /$2 # add rewrite rule for this specific path
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: calibre-manage.khzaw.dev
+        paths:
+          - path: /content(/|$)(.*) # captures the '/content' prefix and anything after it
             pathType: Prefix
             service:
               identifier: main
               port: server
 
-
-    tls:
-      - secretName: calibre-manage-tls
-        hosts:
-          - calibre-manage.khzaw.dev
 
 persistence:
   config:
