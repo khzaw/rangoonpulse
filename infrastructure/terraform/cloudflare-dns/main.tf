@@ -47,3 +47,12 @@ resource "cloudflare_record" "actual_budget" {
   ttl     = 1
   proxied = false
 }
+
+resource "cloudflare_record" "ghost" {
+  zone_id = data.cloudflare_zone.primary.id
+  name = "blog"
+  value = var.metallb_ip
+  type = "A"
+  ttl = 1
+  proxied = false
+}
