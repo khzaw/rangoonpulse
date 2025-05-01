@@ -1,8 +1,11 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
-apiVersion: kustomize.config.k8s.io/v1beta1
+apiVersion: kustomize.config.k8s.io/v1
 kind: Kustomization
 resources:
+  # non-default namespaces (has to come first before objects that make use of them)
+  - ./kustomizations/namespaces.yaml
+
   # Source for helm charts
   - ./repositories/bitnami.yaml
   - ./repositories/bjw-s-charts.yaml
