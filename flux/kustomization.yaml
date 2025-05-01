@@ -29,3 +29,4 @@ resources:
   - ./kustomizations/calibre-web.yaml
   - ./kustomizations/actual-budget.yaml
   - ./kustomizations/ghost.yaml
+  - ./kustomizations/grafana.yaml
