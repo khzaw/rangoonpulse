@@ -1,0 +1,43 @@
+ghostUser: khzaw
+ghostHost: "blog.khzaw.dev"
+ghostPasswordSecret: ghost-admin-secret
+
+persistence:
+  enabled: true
+  storageClass: "longhorn"
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  hostname: "blog.khzaw.dev"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  extraTls:
+    - hosts:
+        - "blog.khzaw.dev"
+      secretName: ghost-blog-tls
+
+
+mariadb:
+  enabled: true
+  auth:
+    database: ghost_prod
+    username: bn_ghost
+    rootPasswordSecret: ghost-mariadb-root-secret
+    passwordSecret: ghost-mariadb-app-secret
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "longhorn"
+      accessModes:
+        - ReadWriteOnce
+      size: 8Gi
+
+
+redis:
+  enabled: false
