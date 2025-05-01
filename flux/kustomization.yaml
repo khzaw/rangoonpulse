@@ -1,6 +1,6 @@
 ---
 # yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
-apiVersion: kustomize.config.k8s.io/v1
+apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # non-default namespaces (has to come first before objects that make use of them)
@@ -15,6 +15,7 @@ resources:
   - ./repositories/jetstack.yaml
   - ./repositories/vicsufer-charts.yaml
   - ./repositories/tailscale-charts.yaml
+  - ./repositories/grafana.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/metallb.yaml
@@ -32,4 +33,5 @@ resources:
   - ./kustomizations/calibre-web.yaml
   - ./kustomizations/actual-budget.yaml
   - ./kustomizations/ghost.yaml
-  - ./kustomizations/grafana.yaml
+  # - ./kustomizations/grafana.yaml
+  # - ./kustomizations/loki.yaml
