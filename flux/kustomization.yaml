@@ -3,9 +3,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # non-default namespaces (has to come first before objects that make use of them)
-  - ./kustomizations/namespaces.yaml
-
   # Source for helm charts
   - ./repositories/bitnami.yaml
   - ./repositories/bjw-s-charts.yaml
@@ -18,6 +15,7 @@ resources:
   - ./repositories/grafana.yaml
 
   # tell Flux *what* directories in Git to sync
+  - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
   - ./kustomizations/metallb.yaml
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/tailscale-operator.yaml
