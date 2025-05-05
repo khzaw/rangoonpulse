@@ -9,7 +9,7 @@ controllers:
       main:
         image:
           repository: actualbudget/actual-server
-          tag: latest
+          tag: '25.5.0'
         env:
           TZ: 'Asia/Singapore'
         resources:
