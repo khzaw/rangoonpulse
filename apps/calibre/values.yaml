@@ -8,7 +8,7 @@ controllers:
       main:
         image:
           repository: lscr.io/linuxserver/calibre
-          tag: latest
+          tag: '8.4.0'
         env:
           TZ: 'Asia/Singapore'
           PUID: "1000"
