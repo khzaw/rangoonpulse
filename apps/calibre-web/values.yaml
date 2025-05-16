@@ -41,6 +41,7 @@ ingress:
     annotations:
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.org/client-max-body-size: "0"
     tls:
       - secretName: calibre-tls
         hosts:
