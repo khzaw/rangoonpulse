@@ -13,7 +13,7 @@ resources:
   - ./repositories/vicsufer-charts.yaml
   - ./repositories/tailscale-charts.yaml
   - ./repositories/grafana.yaml
-  - ./repositories/csi-driver-nfs.yaml
+  - ./repositories/democratic-csi.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
@@ -32,6 +32,6 @@ resources:
   - ./kustomizations/calibre-web.yaml
   - ./kustomizations/actual-budget.yaml
   - ./kustomizations/ghost.yaml
-  - ./kustomizations/csi-driver-nfs.yaml
+  - ./kustomizations/democratic-csi.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml

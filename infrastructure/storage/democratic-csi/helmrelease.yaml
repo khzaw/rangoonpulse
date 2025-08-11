@@ -1,0 +1,71 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: democratic-csi
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: democratic-csi
+      version: "0.14.x"
+      sourceRef:
+        kind: HelmRepository
+        name: democratic-csi
+        namespace: flux-system
+  values:
+    csiDriver:
+      name: "org.democratic-csi.nfs"
+
+    storageClasses:
+    - name: truenas-nfs
+      defaultClass: false
+      reclaimPolicy: Retain
+      volumeBindingMode: Immediate
+      allowVolumeExpansion: true
+      parameters:
+        fsType: nfs
+      mountOptions:
+      - noatime
+      - nfsvers=4
+      secrets:
+        provisioner-secret:
+        controller-publish-secret:
+        node-stage-secret:
+        node-publish-secret:
+
+    driver:
+      config:
+        driver: freenas-nfs
+        instance_id: "truenas-nfs"
+        httpConnection:
+          protocol: http
+          host: 10.0.0.210
+          port: 80
+          username:
+            secret: truenas-credentials
+            key: username
+          password:
+            secret: truenas-credentials
+            key: password
+          allowInsecure: true
+          apiVersion: 2
+        zfs:
+          datasetParentName: tank/k8s-storage
+          detachedSnapshotsDatasetParentName: tank/k8s-storage/snapshots
+          datasetEnableQuotas: true
+          datasetEnableReservation: true
+          datasetPermissionsMode: "0777"
+          datasetPermissionsUser: root
+          datasetPermissionsGroup: wheel
+        nfs:
+          shareHost: 10.0.0.210
+          shareAlldirs: false
+          shareAllowedHosts: ["10.0.0.0/8"]
+          shareAllowedNetworks: []
+          shareMaprootUser: root
+          shareMaprootGroup: wheel
+
+
+
