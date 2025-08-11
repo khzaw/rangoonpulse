@@ -5,10 +5,11 @@ metadata:
   name: csi-driver-nfs
 spec:
   interval: 15m
+  targetNamespace: kube-system
   chart:
     spec:
       chart: csi-driver-nfs
-      version: "4.x.x"
+      version: "4.11.0"
       sourceRef:
         kind: HelmRepository
         name: csi-driver-nfs
