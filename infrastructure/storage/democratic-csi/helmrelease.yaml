@@ -18,6 +18,7 @@ spec:
     csiDriver:
       name: "org.democratic-csi.nfs"
 
+
     storageClasses:
     - name: truenas-nfs
       defaultClass: false
@@ -36,6 +37,8 @@ spec:
         node-publish-secret:
 
     driver:
+      image:
+        tag: next
       config:
         driver: freenas-api-nfs
         instance_id: "truenas-nfs"
@@ -60,6 +63,11 @@ spec:
           shareAllowedNetworks: []
           shareMaprootUser: root
           shareMaprootGroup: wheel
+
+    node:
+      driver:
+        image:
+          tag: next
 
   valuesFrom:
     - targetPath: driver.config.httpConnection.username
