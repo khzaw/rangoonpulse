@@ -43,12 +43,6 @@ spec:
           protocol: http
           host: 10.0.0.210
           port: 80
-          username:
-            secret: truenas-credentials
-            key: username
-          password:
-            secret: truenas-credentials
-            key: password
           allowInsecure: true
           apiVersion: 2
         zfs:
@@ -67,5 +61,12 @@ spec:
           shareMaprootUser: root
           shareMaprootGroup: wheel
 
-
-
+  valuesFrom:
+    - targetPath: driver.config.httpConnection.username
+      kind: Secret
+      name: truenas-credentials
+      valuesKey: username
+    - targetPath: driver.config.httpConnection.password
+      kind: Secret
+      name: truenas-credentials
+      valuesKey: password
