@@ -19,6 +19,11 @@ spec:
       name: "org.democratic-csi.nfs"
 
 
+    controller:
+      driver:
+        image:
+          tag: next
+
     storageClasses:
     - name: truenas-nfs
       defaultClass: false
