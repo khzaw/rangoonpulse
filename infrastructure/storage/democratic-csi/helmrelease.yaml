@@ -47,7 +47,7 @@ spec:
           apiVersion: 2
         zfs:
           datasetParentName: tank/k8s-storage
-          detachedSnapshotsDatasetParentName: tank/k8s-storage/snapshots
+          detachedSnapshotsDatasetParentName: tank/k8s-snapshots
           datasetEnableQuotas: true
           datasetEnableReservation: true
           datasetPermissionsMode: "0777"
