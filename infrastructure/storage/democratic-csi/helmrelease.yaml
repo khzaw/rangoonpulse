@@ -43,6 +43,7 @@ spec:
 
     driver:
       image:
+        registry: docker.io/democraticcsi/democratic-csi
         tag: next
       config:
         driver: freenas-api-nfs
@@ -72,6 +73,7 @@ spec:
     node:
       driver:
         image:
+          registry: docker.io/democraticcsi/democratic-csi
           tag: next
 
   valuesFrom:
