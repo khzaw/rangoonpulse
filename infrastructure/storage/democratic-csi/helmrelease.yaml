@@ -68,9 +68,7 @@ spec:
 
     driver:
       image:
-        registry: docker.io/democraticcsi/democratic-csi
         tag: next
-        pullPolicy: Always
       config:
         driver: freenas-api-nfs
         instance_id: "truenas-nfs"
