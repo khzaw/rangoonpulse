@@ -14,15 +14,38 @@ spec:
         kind: HelmRepository
         name: democratic-csi
         namespace: flux-system
+
   values:
     csiDriver:
       name: "org.democratic-csi.nfs"
 
-
     controller:
+      enabled: true
+      rbac:
+        enabled: true
+      replicaCount: 1
+      hostNetwork: false
+      priorityClassName: ""
+      externalHealthMonitorController:
+        enabled: true
+        resources:
+
+      livenessProbe:
+        enabled: true
+
       driver:
+        enabled: true
         image:
-          tag: next
+          registry: docker.io/democraticcsi/democratic-csi
+          tag: "next"
+          pullPolicy: Always
+
+    node:
+      driver:
+      image:
+        registry: docker.io/democraticcsi/democratic-csi
+        tag: next
+        pullPolicy: Always
 
     storageClasses:
     - name: truenas-nfs
@@ -40,11 +63,12 @@ spec:
         controller-publish-secret:
         node-stage-secret:
         node-publish-secret:
+        controller-expand-secret:
 
     driver:
       image:
-        registry: docker.io/democraticcsi/democratic-csi
         tag: next
+        pullPolicy: Always
       config:
         driver: freenas-api-nfs
         instance_id: "truenas-nfs"
@@ -69,12 +93,6 @@ spec:
           shareAllowedNetworks: []
           shareMaprootUser: root
           shareMaprootGroup: wheel
-
-    node:
-      driver:
-        image:
-          registry: docker.io/democraticcsi/democratic-csi
-          tag: next
 
   valuesFrom:
     - targetPath: driver.config.httpConnection.username
