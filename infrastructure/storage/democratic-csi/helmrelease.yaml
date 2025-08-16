@@ -77,20 +77,22 @@ spec:
           allowInsecure: true
           apiVersion: 2
         zfs:
-          datasetParentName: tank/k8s-storage
-          detachedSnapshotsDatasetParentName: tank/k8s-snapshots
+          datasetParentName: tank/k8s/storage
+          detachedSnapshotsDatasetParentName: tank/k8s/snapshots
           datasetEnableQuotas: true
           datasetEnableReservation: true
           datasetPermissionsMode: "0777"
-          datasetPermissionsUser: root
-          datasetPermissionsGroup: wheel
+          datasetPermissionsUser: 0
+          datasetPermissionsGroup: 0
         nfs:
           shareHost: 10.0.0.210
           shareAlldirs: false
           shareAllowedHosts: ["10.0.0.0/8"]
           shareAllowedNetworks: []
-          shareMaprootUser: root
-          shareMaprootGroup: wheel
+          shareMaprootUser: ''
+          shareMaprootGroup: ''
+          shareMapallUser: root
+          shareMapallGroup: root
 
   valuesFrom:
     - targetPath: driver.config.httpConnection.username
