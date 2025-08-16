@@ -44,9 +44,9 @@ spec:
       driver:
         enabled: true
         image:
-            registry: docker.io/democraticcsi/democratic-csi
-            tag: next
-            pullPolicy: Always
+          registry: docker.io/democraticcsi/democratic-csi
+          tag: next
+          pullPolicy: Always
 
     storageClasses:
     - name: truenas-nfs
@@ -68,6 +68,7 @@ spec:
 
     driver:
       image:
+        registry: docker.io/democraticcsi/democratic-csi
         tag: next
         pullPolicy: Always
       config:
