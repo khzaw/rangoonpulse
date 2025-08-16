@@ -67,8 +67,6 @@ spec:
         controller-expand-secret:
 
     driver:
-      image:
-        tag: next
       config:
         driver: freenas-api-nfs
         instance_id: "truenas-nfs"
