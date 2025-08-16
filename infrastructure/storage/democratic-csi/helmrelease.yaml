@@ -87,8 +87,8 @@ spec:
         nfs:
           shareHost: 10.0.0.210
           shareAlldirs: false
-          shareAllowedHosts: ["10.0.0.0/8"]
-          shareAllowedNetworks: []
+          shareAllowedHosts: []
+          shareAllowedNetworks: ['10.0.0.0/8']
           shareMaprootUser: ''
           shareMaprootGroup: ''
           shareMapallUser: root
