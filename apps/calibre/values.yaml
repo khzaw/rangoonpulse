@@ -38,9 +38,7 @@ persistence:
   config:
     enabled: true
     type: persistentVolumeClaim
-    storageClass: longhorn
-    accessMode: ReadWriteOnce
-    size: 2Gi
+    existingClaim: calibre-config
     globalMounts:
       - path: /config
 
