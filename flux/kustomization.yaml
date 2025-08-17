@@ -34,5 +34,6 @@ resources:
   - ./kustomizations/actualbudget.yaml
   # - ./kustomizations/ghost.yaml
   - ./kustomizations/democratic-csi.yaml
+  - ./kustomizations/qbittorrent.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
