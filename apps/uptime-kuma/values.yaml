@@ -24,15 +24,15 @@ resources:
     memory: 100Mi
   limits:
     cpu: 100m
-    memory: 200Mi
+    memory: 150Mi
 
 persistence:
   data:
     enabled: true
     type: persistentVolumeClaim
-    storageClass: longhorn
+    storageClass: truenas-nfs
     accessMode: ReadWriteOnce
-    size: 1Gi
+    size: 128Mi
     globalMounts:
       - path: /app/data
 
