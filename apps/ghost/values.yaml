@@ -4,7 +4,7 @@ ghostPasswordSecret: ghost-admin-secret
 
 persistence:
   enabled: true
-  storageClass: "longhorn"
+  storageClass: truenas-nfs
   accessModes:
     - ReadWriteOnce
   size: 5Gi
@@ -33,7 +33,7 @@ mariadb:
   primary:
     persistence:
       enabled: true
-      storageClass: "longhorn"
+      storageClass: truenas-nfs
       accessModes:
         - ReadWriteOnce
       size: 8Gi
