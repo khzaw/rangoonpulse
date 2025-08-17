@@ -26,7 +26,6 @@ ingress:
 
 persistence:
   enabled: true
-  mountPath: "/data"
   storageClass: truenas-nfs
   size: 2Gi
   accessModes:
