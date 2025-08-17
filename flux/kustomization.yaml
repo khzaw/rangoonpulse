@@ -26,7 +26,7 @@ resources:
   - ./kustomizations/tofu-controller.yaml
   - ./kustomizations/terraform-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
-  - ./kustomizations/longhorn.yaml
+  # - ./kustomizations/longhorn.yaml
   - ./kustomizations/infra-storage-calibre.yaml
   - ./kustomizations/uptime-kuma.yaml
   - ./kustomizations/calibre.yaml
