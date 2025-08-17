@@ -59,6 +59,6 @@ persistence:
   books:
     enabled: true
     type: persistentVolumeClaim
-    existingClaim: calibre-books-pvc
+    existingClaim: calibre-books
     globalMounts:
       - path: /books
