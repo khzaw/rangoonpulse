@@ -36,4 +36,4 @@ spec:
               service:
                 name: calibre
                 port:
-                  name: https
+                  name: http
