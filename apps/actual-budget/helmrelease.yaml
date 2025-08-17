@@ -10,7 +10,7 @@ spec:
   interval: 15m
   chart:
     spec:
-      chart: actual-budget
+      chart: actualbudget
       version: "1.8.1"
       sourceRef:
         kind: HelmRepository
