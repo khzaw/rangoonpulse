@@ -1,67 +1,33 @@
 ---
-# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/app-template-3.7.3/charts/other/app-template/values.schema.json
-
-controllers:
-  main:
-    replicas: 1
-    strategy: RollingUpdate
-    containers:
-      main:
-        image:
-          repository: actualbudget/actual-server
-          tag: '25.5.0'
-        env:
-          TZ: 'Asia/Singapore'
-        resources:
-          requests:
-            cpu: 50m
-            memory: 128Mi
-          limits:
-            memory: 256Mi
+image:
+  repository: actualbudget/actual-server
+  pullPolicy: Always
+  tag: '25.5.0'
 
 service:
-  main:
-    controller: main
-    ports:
-      http:
-        port: 5006
+  type: ClusterIP
+  port: 5006
 
 ingress:
-  main:
-    enabled: true
-    className: nginx
-    annotations:
-      nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts:
-      - host: actual.khzaw.dev
-        paths:
-          - path: /
-            pathType: Prefix
-            service:
-              name: actual-budget
-              port: 5006
-    tls:
-      - secretName: actual-tls
-        hosts:
-          - actual.khzaw.dev
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: actual.khzaw.dev
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: actual-tls
+      hosts:
+        - actual.khzaw.dev
 
 persistence:
-  server-files:
-    enabled: true
-    type: persistentVolumeClaim
-    storageClass: longhorn
-    accessMode: ReadWriteOnce
-    size: 1Gi
-    globalMounts:
-      - path: /data/server-files
-
-  # Volume for user budget files (.actual files)
-  user-files:
-    enabled: true
-    type: persistentVolumeClaim
-    storageClass: longhorn
-    accessMode: ReadWriteOnce
-    size: 5Gi # Adjust based on expected size of your budget files
-    globalMounts:
-      - path: /data/user-files # Mount path inside container
+  enabled: true
+  mountPath: "/data"
+  storageClass: truenas-nfs
+  size: 2Gi
+  accessModes:
+    - ReadWriteOnce
