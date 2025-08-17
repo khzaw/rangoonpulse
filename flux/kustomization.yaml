@@ -32,7 +32,7 @@ resources:
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web.yaml
   - ./kustomizations/actualbudget.yaml
-  - ./kustomizations/ghost.yaml
+  # - ./kustomizations/ghost.yaml
   - ./kustomizations/democratic-csi.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
