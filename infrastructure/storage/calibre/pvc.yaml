@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -7,6 +8,20 @@ spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: longhorn
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: calibre-books
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: truenas-nfs
   resources:
     requests:
       storage: 10Gi
