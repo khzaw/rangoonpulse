@@ -14,6 +14,7 @@ resources:
   - ./repositories/tailscale-charts.yaml
   - ./repositories/grafana.yaml
   - ./repositories/democratic-csi.yaml
+  - ./repositories/community-charts.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
