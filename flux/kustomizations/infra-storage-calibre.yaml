@@ -13,4 +13,4 @@ spec:
   targetNamespace: default
   timeout: 5m
   dependsOn:
-    - name: longhorn
+    - name: democratic-csi

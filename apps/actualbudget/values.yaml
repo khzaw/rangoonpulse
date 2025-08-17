@@ -2,7 +2,7 @@
 image:
   repository: actualbudget/actual-server
   pullPolicy: Always
-  tag: '25.5.0'
+  tag: latest
 
 service:
   type: ClusterIP

@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: actual-budget
+  name: actualbudget
   namespace: default
 
 spec:
@@ -28,5 +28,5 @@ spec:
 
   valuesFrom:
     - kind: ConfigMap
-      name: actual-budget-helm-values
+      name: actualbudget-helm-values
       valuesKey: values.yaml

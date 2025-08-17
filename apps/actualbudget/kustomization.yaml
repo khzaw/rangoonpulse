@@ -4,7 +4,7 @@ namespace: default
 resources:
   - helmrelease.yaml
 configMapGenerator:
-  - name: actual-budget-helm-values
+  - name: actualbudget-helm-values
     files:
       - values.yaml=values.yaml
     options:
