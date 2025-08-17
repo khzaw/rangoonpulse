@@ -10,6 +10,7 @@ controllers:
           repository: louislam/uptime-kuma
           tag: latest
 
+
 service:
   main:
     controller: main
@@ -20,11 +21,10 @@ service:
 
 resources:
   requests:
-    cpu: 50m
-    memory: 100Mi
+    cpu: 25m
+    memory: 64Mi
   limits:
-    cpu: 100m
-    memory: 150Mi
+    memory: 128Mi
 
 persistence:
   data:
