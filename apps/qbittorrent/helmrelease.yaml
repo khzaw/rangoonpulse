@@ -45,7 +45,7 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
-                  name: main
+                  name: qbittorrent
                   port: 8080
 
         annotations:
