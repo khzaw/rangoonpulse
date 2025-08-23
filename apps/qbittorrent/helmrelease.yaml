@@ -46,6 +46,7 @@ spec:
                 pathType: Prefix
                 service:
                   name: main
+                  port: 8080
 
         annotations:
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
