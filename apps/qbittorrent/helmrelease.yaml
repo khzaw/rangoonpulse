@@ -58,15 +58,19 @@ spec:
     persistence:
       config:
         enabled: true
-        type: hostPath
-        hostPath: /mnt/tank/config/qbittorrent
+        type: persistentVolumeClaim
+        storageClass: truenas-hdd-config
+        size: 1Gi
+        accessMode: ReadWriteOnce
         globalMounts:
           - path: /config
 
-      # Downloads storage on NVMe pool (boot-pool)
+      # Downloads storage on NVMe pool
       downloads:
         enabled: true
-        type: hostPath
-        hostPath: /mnt/boot-pool/torrents # Path on the NAS node
+        type: persistentVolumeClaim
+        storageClass: truenas-nvme-downloads
+        size: 950Gi
+        accessMode: ReadWriteMany
         globalMounts:
           - path: /downloads

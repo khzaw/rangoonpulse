@@ -49,6 +49,25 @@ spec:
           pullPolicy: Always
 
     storageClasses:
+
+    - name: truenas-nvme-downloads
+      defaultClass: false
+      reclaimPolicy: Retain
+      parameters:
+        datasetParentName: nvme_pool/torrents
+
+    - name: truenas-hdd-media
+      defaultClass: false
+      reclaimPolicy: Retain
+      parameters:
+        datasetParentName: tank/media
+
+    - name: truenas-hdd-config
+      defaultClass: false
+      reclaimPolicy: Retain
+      parameters:
+        datasetParentName: tank/config
+
     - name: truenas-nfs
       defaultClass: false
       reclaimPolicy: Retain
@@ -79,6 +98,7 @@ spec:
         zfs:
           datasetParentName: tank/k8s/storage
           detachedSnapshotsDatasetParentName: tank/k8s/snapshots
+          datasetNameTemplate: "{{ .parameters.csi.storage.k8s.io/pvc/namespace }}-{{ .parameters.csi.storage.k8s.io/pvc/name }}"
           datasetEnableQuotas: true
           datasetEnableReservation: true
           datasetPermissionsMode: "0777"
