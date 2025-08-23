@@ -45,8 +45,7 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
-                  name: qbittorrent
-                  port: 8080
+                  name: main
 
         annotations:
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
