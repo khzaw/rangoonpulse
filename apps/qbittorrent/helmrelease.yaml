@@ -5,6 +5,8 @@ kind: HelmRelease
 metadata:
   name: qbittorrent
   namespace: default
+  annotations:
+    reconcile.fluxcd.io/trigger: "1"
 spec:
   interval: 15m
   chart:
@@ -63,7 +65,7 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         storageClass: truenas-hdd-config
-        size: 1Gi
+        size: 256Mi
         accessMode: ReadWriteOnce
         globalMounts:
           - path: /config
