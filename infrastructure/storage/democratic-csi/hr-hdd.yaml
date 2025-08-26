@@ -1,0 +1,101 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: democratic-csi-hdd
+  namespace: democratic-csi
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: democratic-csi
+      version: "0.15.0"
+      sourceRef:
+        kind: HelmRepository
+        name: democratic-csi
+        namespace: flux-system
+  values:
+    csiDriver:
+      name: "org.democratic-csi.nfs-hdd"
+
+    controller:
+      enabled: true
+      driver:
+        image:
+          tag: next
+
+    node:
+      enabled: true
+      driver:
+        image:
+          tag: next
+
+    storageClasses:
+    - name: truenas-nfs
+      defaultClass: true
+      reclaimPolicy: Retain
+      volumeBindingMode: Immediate
+      allowVolumeExpansion: true
+      parameters:
+        fsType: nfs
+      mountOptions:
+      - noatime
+      - nfsvers=4
+
+    - name: truenas-hdd-media
+      defaultClass: false
+      reclaimPolicy: Retain
+      volumeBindingMode: Immediate
+      allowVolumeExpansion: true
+      parameters:
+        fsType: nfs
+      mountOptions:
+      - noatime
+      - nfsvers=4
+
+    - name: truenas-hdd-config
+      defaultClass: false
+      reclaimPolicy: Retain
+      volumeBindingMode: Immediate
+      parameters:
+        fsType: nfs
+      mountOptions:
+      - noatime
+      - nfsvers=4
+
+    driver:
+      config:
+        driver: freenas-api-nfs
+        instance_id: "truenas-nfs-hdd"
+        httpConnection:
+          protocol: http
+          host: 10.0.0.210
+          port: 80
+          allowInsecure: true
+          apiVersion: 2
+        zfs:
+          datasetParentName: tank/k8s/storage
+          datasetEnableQuotas: true
+          datasetEnableReservation: true
+          datasetPermissionsMode: "0777"
+          datasetPermissionsUser: 0
+          datasetPermissionsGroup: 0
+          datasetProperties:
+            "org.freenas:description": "{{ parameters.[csi.storage.k8s.io/pvc/namespace] }}/{{ parameters.[csi.storage.k8s.io/pvc/name] }}"
+        nfs:
+          shareHost: 10.0.0.210
+          shareAllowedNetworks: ['10.0.0.0/8']
+          shareMaprootUser: ''
+          shareMaprootGroup: ''
+          shareMapallUser: root
+          shareMapallGroup: root
+
+  valuesFrom:
+  - kind: Secret
+    name: truenas-credentials
+    valuesKey: username
+    targetPath: driver.config.httpConnection.username
+  - kind: Secret
+    name: truenas-credentials
+    valuesKey: password
+    targetPath: driver.config.httpConnection.password
