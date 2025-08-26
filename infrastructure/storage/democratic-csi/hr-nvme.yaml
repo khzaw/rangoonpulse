@@ -54,6 +54,7 @@ spec:
           apiVersion: 2
         zfs:
           datasetParentName: nvme_pool/storage
+          detachedSnapshotsDatasetParentName: nvme_pool/snapshots
           datasetEnableQuotas: true
           datasetEnableReservation: true
           datasetPermissionsMode: "0777"
