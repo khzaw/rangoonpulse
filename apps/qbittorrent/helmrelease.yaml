@@ -37,10 +37,6 @@ spec:
         ports:
           http:
             port: 8080
-      tcp:
-        port: 6881
-      udp:
-        port: 6881
 
     ingress:
       main:
