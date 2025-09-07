@@ -76,7 +76,7 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         storageClass: truenas-nvme-downloads
-        size: 950Gi
+        size: 899Gi
         accessMode: ReadWriteMany
         globalMounts:
           - path: /downloads
