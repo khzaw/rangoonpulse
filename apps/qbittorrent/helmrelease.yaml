@@ -69,7 +69,6 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        name: qbittorrent-config
         storageClass: truenas-hdd-config
         size: 256Mi
         accessMode: ReadWriteOnce
@@ -80,7 +79,6 @@ spec:
       downloads:
         enabled: true
         type: persistentVolumeClaim
-        name: qbittorrent-downloads
         storageClass: truenas-nvme-downloads
         size: 950Gi
         accessMode: ReadWriteMany
