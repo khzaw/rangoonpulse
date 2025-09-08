@@ -65,8 +65,8 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: truenas-hdd-config
-        size: 256Mi
+        existingClaim: app-configs-pvc
+        subPath: qbittorrent
         accessMode: ReadWriteOnce
         globalMounts:
           - path: /config
