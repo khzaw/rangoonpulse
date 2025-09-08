@@ -38,9 +38,12 @@ persistence:
   config:
     enabled: true
     type: persistentVolumeClaim
-    existingClaim: calibre-config
-    globalMounts:
-      - path: /config
+    existingClaim: app-configs-pvc
+    advancedMounts:
+      main:
+        main:
+          - path: /config
+            subPath: calibre
 
   books:
     enabled: true
