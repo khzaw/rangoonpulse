@@ -66,10 +66,11 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         existingClaim: app-configs-pvc
-        subPath: qbittorrent
-        accessMode: ReadWriteOnce
-        globalMounts:
-          - path: /config
+        advancedMounts:
+          main:
+            main:
+              - path: /config
+                subPath: qbittorrent
 
       # Downloads storage on NVMe pool
       downloads:
