@@ -11,31 +11,3 @@ spec:
   resources:
     requests:
       storage: 20Gi
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: calibre-config
-  namespace: default
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: truenas-hdd-config
-  resources:
-    requests:
-      storage: 100Mi
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: calibre-web-config
-  namespace: default
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: truenas-hdd-config
-  resources:
-    requests:
-      storage: 100Mi
