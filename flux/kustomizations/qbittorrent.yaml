@@ -16,3 +16,4 @@ spec:
   dependsOn:
     - name: ingress-nginx
     - name: democratic-csi
+    - name: infra-storage-media

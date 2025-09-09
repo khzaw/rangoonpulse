@@ -13,5 +13,6 @@ spec:
   targetNamespace: default # Namespace where calibre-web app runs
   timeout: 5m
   dependsOn:
+    - name: infra-storage-media
     - name: infra-storage-calibre
     - name: ingress-nginx
