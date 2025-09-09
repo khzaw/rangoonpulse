@@ -72,12 +72,7 @@ spec:
               - path: /config
                 subPath: qbittorrent
 
-      # Downloads storage on NVMe pool
       downloads:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: truenas-nvme-downloads
-        size: 899Gi
-        accessMode: ReadWriteMany
-        globalMounts:
-          - path: /downloads
+        existingClaim: downloads
