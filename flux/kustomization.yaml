@@ -26,7 +26,6 @@ resources:
   - ./kustomizations/tofu-controller.yaml
   - ./kustomizations/terraform-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
-  # - ./kustomizations/longhorn.yaml
   - ./kustomizations/infra-storage-calibre.yaml
   - ./kustomizations/infra-storage-media.yaml
   - ./kustomizations/uptime-kuma.yaml
@@ -36,5 +35,6 @@ resources:
   # - ./kustomizations/ghost.yaml
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/qbittorrent.yaml
+  - ./kustomizations/radarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
