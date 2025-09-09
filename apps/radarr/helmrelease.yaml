@@ -33,7 +33,7 @@ spec:
         main:
           ports:
               http:
-              port: 7878
+                port: 7878
 
     ingress:
       main:
@@ -54,7 +54,7 @@ spec:
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
-          - secretname: radarr-tls
+          - secretName: radarr-tls
             hosts:
               - radarr.khzaw.dev
 
