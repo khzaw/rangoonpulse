@@ -7,7 +7,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: truenas-nfs
+  storageClassName: truenas-hdd-config
   resources:
     requests:
       storage: 20Gi
@@ -21,7 +21,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: truenas-nfs
+  storageClassName: truenas-hdd-config
   resources:
     requests:
       storage: 100Mi
@@ -35,7 +35,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: truenas-nfs
+  storageClassName: truenas-hdd-config
   resources:
     requests:
       storage: 100Mi
