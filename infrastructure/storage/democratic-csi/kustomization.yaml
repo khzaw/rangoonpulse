@@ -6,4 +6,3 @@ resources:
   - namespace.yaml
   - hr-hdd.yaml
   - hr-nvme.yaml
-  - app-configs-pvc.yaml
