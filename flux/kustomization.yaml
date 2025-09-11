@@ -36,5 +36,6 @@ resources:
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/qbittorrent.yaml
   - ./kustomizations/radarr.yaml
+  - ./kustomizations/sonarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml

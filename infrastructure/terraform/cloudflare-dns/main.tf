@@ -57,6 +57,14 @@ resource "cloudflare_record" "radarr" {
   proxied = false
 }
 
+resource "cloudflare_record" "sonarr" {
+  zone_id = data.cloudflare_zone.primary.id
+  name    = "sonarr"
+  content = var.metallb_ip
+  type    = "A"
+  ttl     = 1
+  proxied = false
+}
 # resource "cloudflare_record" "ghost" {
 #   zone_id = data.cloudflare_zone.primary.id
 #   name = "blog"
