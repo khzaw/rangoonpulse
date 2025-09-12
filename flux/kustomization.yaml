@@ -37,5 +37,6 @@ resources:
   - ./kustomizations/qbittorrent.yaml
   - ./kustomizations/radarr.yaml
   - ./kustomizations/sonarr.yaml
+  - ./kustomizations/jellyfin.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
