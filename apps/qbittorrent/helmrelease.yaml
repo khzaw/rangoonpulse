@@ -43,7 +43,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: torrent.khzaw.dev
+          - host: qbittorrent.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
@@ -59,7 +59,7 @@ spec:
         tls:
           - secretName: qbittorrent-tls
             hosts:
-              - torrent.khzaw.dev
+              - qbittorrent.khzaw.dev
 
     persistence:
       config:
