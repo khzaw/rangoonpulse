@@ -1,0 +1,96 @@
+maybe:
+  # Environment variables needed by the Maybe app
+  env:
+    DATABASE_URL: # Constructed using the postgresql subchart details and secret
+      valueFrom:
+        secretKeyRef:
+          name: maybe-postgres-secret # Secret created manually
+          key: DATABASE_URL # Chart likely creates this key in the secret if using subchart
+          # If not using subchart or need custom URL:
+          # value: "postgresql://maybe_user:<YourPostgresPassword>@maybe-finance-postgresql.default.svc.cluster.local:5432/maybe_db"
+    REDIS_URL: # Points to the redis subchart service if enabled
+      value: "redis://maybe-finance-redis-master.default.svc.cluster.local:6379" # Adjust namespace if needed
+    SECRET_KEY_BASE:
+      valueFrom:
+        secretKeyRef:
+          name: maybe-rails-secret # Secret created manually
+          key: SECRET_KEY_BASE
+    RAILS_ENV: production
+    RAILS_LOG_TO_STDOUT: "true"
+    RAILS_SERVE_STATIC_FILES: "true"
+    TZ: "Asia/Singapore" # Set your timezone
+
+  # Persistence for Maybe app itself (if needed - check chart defaults)
+  # persistence: {}
+
+sidekiq:
+  # Use the image specified in chart defaults or override
+  # image:
+  #   repository: ghcr.io/maybe-finance/sidekiq
+  #   tag: main
+
+  # Sidekiq needs the same DB, Redis, Secret Key Base env vars
+  # Often configured automatically by the chart if maybe.env is set,
+  # but double-check the chart's logic or set them explicitly here too.
+  env:
+    DATABASE_URL:
+      valueFrom: { secretKeyRef: { name: maybe-postgres-secret, key: DATABASE_URL } }
+    REDIS_URL:
+      value: "redis://maybe-finance-redis-master.default.svc.cluster.local:6379"
+    SECRET_KEY_BASE:
+      valueFrom: { secretKeyRef: { name: maybe-rails-secret, key: SECRET_KEY_BASE } }
+    RAILS_ENV: production
+    RAILS_LOG_TO_STDOUT: "true"
+    TZ: "Asia/Singapore"
+
+# Disable the chart's built-in Caddy, use ingress-nginx instead
+caddy:
+  enabled: false
+
+# Enable standard Kubernetes Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # Tell nginx backend is HTTP (Maybe app serves HTTP)
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    # Use cert-manager (use staging first, then prod)
+    cert-manager.io/cluster-issuer: letsencrypt-prod #<-- Assuming staging worked
+  hosts:
+    - host: budget.khzaw.dev # Use your real domain subdomain
+      paths:
+        - path: /
+          pathType: Prefix
+          # Service name/port usually handled by chart when ingress enabled
+  tls:
+    - hosts:
+        - budget.khzaw.dev
+      secretName: budget-tls # Cert will be stored here
+
+# Enable and configure PostgreSQL subchart
+postgresql:
+  enabled: true
+  auth:
+    # Reference the secret created manually for the password
+    existingSecret: "maybe-postgres-secret"
+    secretKeys:
+      # Map the key in your secret to the key the chart expects for postgres password
+      postgresPasswordKey: POSTGRES_PASSWORD
+    database: "maybe_db"    # Name of the database to create
+    username: "maybe_user"  # Username to create
+  # Configure persistence for postgresql
+  persistence:
+    enabled: true
+    storageClass: "longhorn" # Use your Longhorn storage class
+    size: 10Gi # Adjust size as needed
+
+# Enable and configure Redis subchart
+redis:
+  enabled: true
+  auth:
+    enabled: false # Disable Redis password unless required
+  # Configure persistence for redis (optional, often disabled for cache)
+  # persistence:
+  #   enabled: true
+  #   storageClass: "longhorn"
+  #   size: 2Gi

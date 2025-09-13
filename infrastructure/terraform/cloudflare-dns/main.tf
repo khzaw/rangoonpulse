@@ -39,7 +39,7 @@ resource "cloudflare_record" "actual_budget" {
   proxied = false
 }
 
-resource "cloudflare_record" "qbittorrent" {
+resource "cloudflare_record" "transmission" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "torrent"
   content = var.metallb_ip
@@ -69,6 +69,15 @@ resource "cloudflare_record" "sonarr" {
 resource "cloudflare_record" "jellyfin" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "jellyfin"
+  content = var.metallb_ip
+  type    = "A"
+  ttl     = 1
+  proxied = false
+}
+
+resource "cloudflare_record" "prowlarr" {
+  zone_id = data.cloudflare_zone.primary.id
+  name    = "prowlarr"
   content = var.metallb_ip
   type    = "A"
   ttl     = 1

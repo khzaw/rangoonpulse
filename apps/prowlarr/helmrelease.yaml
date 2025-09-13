@@ -46,8 +46,8 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
-                  name: prowlarr
-                  port: 9696
+                  identifier: main
+                  port: http
 
         annotations:
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
