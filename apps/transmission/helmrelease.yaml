@@ -1,4 +1,5 @@
 ---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-4.2.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -34,6 +35,16 @@ spec:
         ports:
           http:
             port: 9091
+          p2p-tcp:
+            enabled: true
+            port: 51413
+            targetPort: 51413
+            protocol: TCP
+          p2p-udp:
+            enabled: true
+            port: 51413
+            targetPort: 51413
+            protocol: UDP
 
     ingress:
       main:
