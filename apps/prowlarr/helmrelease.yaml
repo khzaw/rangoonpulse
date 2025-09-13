@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: radarr
+  name: prowlarr
   namespace: default
 spec:
   interval: 15m
@@ -23,7 +23,7 @@ spec:
         containers:
           main:
             image:
-              repository: lscr.io/linuxserver/radarr
+              repository: lscr.io/linuxserver/prowlarr
               tag: latest
             env:
               TZ: "Asia/Singapore"
@@ -34,20 +34,20 @@ spec:
       main:
         ports:
           http:
-            port: 7878
+            port: 9696
 
     ingress:
       main:
         enabled: true
         className: nginx
         hosts:
-          - host: radarr.khzaw.dev
+          - host: prowlarr.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
                 service:
-                  name: radarr
-                  port: 7878
+                  name: prowlarr
+                  port: 9696
 
         annotations:
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
@@ -55,9 +55,9 @@ spec:
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
-          - secretName: radarr-tls
+          - secretName: prowlarr-tls
             hosts:
-              - radarr.khzaw.dev
+              - prowlarr.khzaw.dev
 
     persistence:
       config:
@@ -68,21 +68,4 @@ spec:
           main:
             main:
               - path: /config
-                subPath: radarr
-
-      downloads:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: downloads
-        globalMounts:
-          - path: /downloads
-
-      media:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: media
-        advancedMounts:
-          main:
-            main:
-              - path: /movies
-                subPath: movies
+                subPath: prowlarr

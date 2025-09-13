@@ -34,8 +34,8 @@ resources:
   - ./kustomizations/actualbudget.yaml
   # - ./kustomizations/ghost.yaml
   - ./kustomizations/democratic-csi.yaml
-  - ./kustomizations/qbittorrent.yaml
   - ./kustomizations/transmission.yaml
+  - ./kustomizations/prowlarr.yaml
   - ./kustomizations/radarr.yaml
   - ./kustomizations/sonarr.yaml
   - ./kustomizations/jellyfin.yaml

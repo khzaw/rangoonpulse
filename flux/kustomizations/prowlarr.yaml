@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: prowlarr
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./apps/prowlarr
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: default # Namespace where app runs
+  timeout: 5m
+  dependsOn:
+    - name: infra-storage-media
+    - name: ingress-nginx
