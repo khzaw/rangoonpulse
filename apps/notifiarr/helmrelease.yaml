@@ -23,7 +23,7 @@ spec:
         containers:
           main:
             image:
-              repository: golift/notifier
+              repository: golift/notifiarr
               tag: latest
             env:
               - name: TZ
