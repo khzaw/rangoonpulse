@@ -55,7 +55,7 @@ spec:
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
-          - secretName: radarr-tls
+          - secretName: bazarr-tls
             hosts:
               - bazarr.khzaw.dev
 
