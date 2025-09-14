@@ -32,7 +32,6 @@ resources:
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web.yaml
   - ./kustomizations/actualbudget.yaml
-  # - ./kustomizations/ghost.yaml
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/flaresolverr.yaml
   - ./kustomizations/transmission.yaml
