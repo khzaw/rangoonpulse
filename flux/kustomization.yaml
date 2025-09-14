@@ -34,6 +34,7 @@ resources:
   - ./kustomizations/actualbudget.yaml
   # - ./kustomizations/ghost.yaml
   - ./kustomizations/democratic-csi.yaml
+  - ./kustomizations/flaresolverr.yaml
   - ./kustomizations/transmission.yaml
   - ./kustomizations/prowlarr.yaml
   - ./kustomizations/radarr.yaml

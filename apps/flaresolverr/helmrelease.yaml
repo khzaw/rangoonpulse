@@ -1,0 +1,38 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s-labs/helm-charts/app-template-4.2.0/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flaresolverr
+  namespace: default
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: flaresolverr/flaresolverr
+              tag: latest
+            env:
+              TZ: "Asia/Singapore"
+              LOG_LEVEL: "debug"
+              LOG_HTML: "true"
+    service:
+     main:
+        ports:
+          http:
+            port: 8191
+
+# flaresolverr is stateless and doesn't need persistenace or ingress. It only needs to be accessible inside the cluster.
