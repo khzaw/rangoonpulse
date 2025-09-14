@@ -38,6 +38,7 @@ resources:
   - ./kustomizations/prowlarr.yaml
   - ./kustomizations/radarr.yaml
   - ./kustomizations/sonarr.yaml
+  - ./kustomizations/bazarr.yaml
   - ./kustomizations/jellyfin.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
