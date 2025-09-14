@@ -40,5 +40,6 @@ resources:
   - ./kustomizations/sonarr.yaml
   - ./kustomizations/bazarr.yaml
   - ./kustomizations/jellyfin.yaml
+  - ./kustomizations/notifiarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
