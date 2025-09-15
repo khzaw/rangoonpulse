@@ -72,9 +72,6 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: app-configs-pvc
-        advancedMounts:
-          main:
-            main:
-              - path: /config
-                subPath: notifiarr
+        storageClass: local-path
+        size: 2Gi
+        accessMode: ReadWriteOnce
