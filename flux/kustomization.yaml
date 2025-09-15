@@ -28,6 +28,7 @@ resources:
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/infra-storage-calibre.yaml
   - ./kustomizations/infra-storage-media.yaml
+  - ./kustomizations/local-storage.yaml
   - ./kustomizations/uptime-kuma.yaml
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web.yaml

@@ -10,7 +10,6 @@ controllers:
           repository: louislam/uptime-kuma
           tag: latest
 
-
 service:
   main:
     controller: main
