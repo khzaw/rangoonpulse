@@ -79,12 +79,9 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: app-configs-pvc
-        advancedMounts:
-          main:
-            main:
-              - path: /config
-                subPath: transmission
+        storageClass: local-path
+        size: 1Gi
+        accessMode: ReadWriteOnce
 
       downloads:
         enabled: true
