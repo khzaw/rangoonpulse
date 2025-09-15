@@ -63,12 +63,9 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: app-configs-pvc
-        advancedMounts:
-          main:
-            main:
-              - path: /config
-                subPath: jellyfin
+        storageClassName: truenas-hdd-config
+        size: 5Gi
+        accessMode: ReadWriteOnce
 
       media:
         enabled: true
