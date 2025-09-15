@@ -63,12 +63,9 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: app-configs-pvc
-        advancedMounts:
-          main:
-            main:
-              - path: /config
-                subPath: bazarr
+        storageClass: local-path
+        size: 1Gi
+        accessMode: ReadWriteOnce
 
       media:
         enabled: true

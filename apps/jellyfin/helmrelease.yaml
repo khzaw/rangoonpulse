@@ -63,8 +63,8 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        storageClassName: truenas-hdd-config
-        size: 5Gi
+        storageClassName: local-path
+        size: 10Gi
         accessMode: ReadWriteOnce
 
       media:

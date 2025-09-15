@@ -63,12 +63,9 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: app-configs-pvc
-        advancedMounts:
-          main:
-            main:
-              - path: /config
-                subPath: sonarr
+        storageClass: local-path
+        size: 10Gi
+        accessMode: ReadWriteOnce
 
       downloads:
         enabled: true
