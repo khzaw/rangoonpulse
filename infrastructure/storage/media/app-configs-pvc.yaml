@@ -10,4 +10,4 @@ spec:
   storageClassName: truenas-hdd-config
   resources:
     requests:
-      storage: 3Gi
+      storage: 1Gi
