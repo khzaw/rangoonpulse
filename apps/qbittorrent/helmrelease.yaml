@@ -30,11 +30,27 @@ spec:
               TZ: "Asia/Singapore"
               PUID: "1000"
               GUID: "1000"
+              WEBUI_PORT: "8080"
+              TORRENTING_PORT: "6881"
     service:
       main:
         ports:
           http:
             port: 8080
+      p2p:
+        enabled: true
+        type: LoadBalancer
+        ports:
+          tcp:
+            enabled: true
+            port: 6881
+            protocol: TCP
+            targetPort: 6881
+          udp:
+            enabled: true
+            port: 6881
+            protocol: UDP
+            targetPort: 6881
 
     ingress:
       main:
