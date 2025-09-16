@@ -25,6 +25,8 @@ spec:
               - 104
         containers:
           main:
+            securityContext:
+              privileged: true
             image:
               repository: lscr.io/linuxserver/jellyfin
               tag: latest
