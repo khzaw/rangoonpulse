@@ -63,7 +63,7 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        storageClassName: local-path
+        storageClass: local-path
         size: 150Gi
         accessMode: ReadWriteOnce
 
