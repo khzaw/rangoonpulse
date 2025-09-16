@@ -74,3 +74,8 @@ spec:
         globalMounts:
           - path: /media
             readOnly: true
+
+      gpu:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/dri
