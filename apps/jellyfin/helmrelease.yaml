@@ -19,6 +19,10 @@ spec:
   values:
     controllers:
       main:
+        pod:
+          securityContext:
+            supplementalGroups:
+              - 104
         containers:
           main:
             image:
