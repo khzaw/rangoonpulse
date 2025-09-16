@@ -14,5 +14,5 @@ spec:
   targetNamespace: default # Namespace where app runs
   timeout: 5m
   dependsOn:
-    - name: local-storage
+    - name: local-path-provisioner
     - name: ingress-nginx
