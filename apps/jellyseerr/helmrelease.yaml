@@ -39,7 +39,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: watch.khzaw.dev
+          - host: entertainment.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
@@ -55,7 +55,7 @@ spec:
         tls:
           - secretName: jellyseerr-tls
             hosts:
-              - watch.khzaw.dev
+              - entertainment.khzaw.dev
 
     persistence:
       config:
