@@ -24,4 +24,4 @@ spec:
   storageClassName: truenas-hdd-media
   resources:
     requests:
-      storage: 4Ti
+      storage: 5Ti
