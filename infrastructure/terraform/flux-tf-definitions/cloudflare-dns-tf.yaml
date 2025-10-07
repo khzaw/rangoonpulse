@@ -23,7 +23,7 @@ spec:
     - name: domain_name
       value: "khzaw.dev"
     - name: metallb_ip
-      value: "10.254.250.0"
+      value: "10.0.0.230"
 
   runnerPodTemplate:
     spec:
