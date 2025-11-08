@@ -29,7 +29,7 @@ spec:
               TZ: "Asia/Singapore"
               PUID: "1000"
               GUID: "1000"
-              PATH: "/app/radarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              PATH: "/app/sonarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
     service:
       main:
