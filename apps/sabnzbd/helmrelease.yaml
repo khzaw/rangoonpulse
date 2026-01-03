@@ -67,6 +67,8 @@ spec:
         storageClass: local-path
         size: 1Gi
         accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /config
 
       downloads:
         enabled: true
