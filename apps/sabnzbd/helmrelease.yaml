@@ -76,4 +76,3 @@ spec:
         existingClaim: downloads
         globalMounts:
           - path: /downloads
-            subPath: sabnzbd
