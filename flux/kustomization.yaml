@@ -38,6 +38,7 @@ resources:
   - ./kustomizations/flaresolverr.yaml
   - ./kustomizations/transmission.yaml
   - ./kustomizations/qbittorrent.yaml
+  - ./kustomizations/sabnzbd.yaml
   - ./kustomizations/prowlarr.yaml
   - ./kustomizations/radarr.yaml
   - ./kustomizations/sonarr.yaml

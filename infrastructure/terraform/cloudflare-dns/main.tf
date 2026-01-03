@@ -92,6 +92,16 @@ resource "cloudflare_record" "bazarr" {
   ttl     = 1
   proxied = false
 }
+
+
+resource "cloudflare_record" "sabnzbd" {
+  zone_id = data.cloudflare_zone.primary.id
+  name    = "sabnzbd"
+  content = var.metallb_ip
+  type    = "A"
+  ttl     = 1
+  proxied = false
+}
 # resource "cloudflare_record" "ghost" {
 #   zone_id = data.cloudflare_zone.primary.id
 #   name = "blog"

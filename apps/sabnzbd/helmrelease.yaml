@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: transmission
+  name: sabnzbd
   namespace: default
 spec:
   interval: 15m
@@ -23,39 +23,25 @@ spec:
         containers:
           main:
             image:
-              repository: lscr.io/linuxserver/transmission
+              repository: lscr.io/linuxserver/sabnzbd
               tag: latest
             env:
               TZ: "Asia/Singapore"
               PUID: "1000"
-              GUID: "1000"
+              PGID: "1000"
 
     service:
       main:
         ports:
           http:
-            port: 9091
-      p2p:
-        enabled: true
-        type: LoadBalancer
-        ports:
-          tcp:
-            enabled: true
-            port: 51413
-            protocol: TCP
-            targetPort: 51413
-          udp:
-            enabled: true
-            port: 51413
-            protocol: UDP
-            targetPort: 51413
+            port: 8080
 
     ingress:
       main:
         enabled: true
         className: nginx
         hosts:
-          - host: torrent.khzaw.dev
+          - host: sabnzbd.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
@@ -69,9 +55,9 @@ spec:
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
-          - secretName: transmission-tls
+          - secretName: sabnzbd-tls
             hosts:
-              - torrent.khzaw.dev
+              - sabnzbd.khzaw.dev
 
     persistence:
       config:
@@ -85,3 +71,5 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         existingClaim: downloads
+        globalMounts:
+          - path: /downloads
