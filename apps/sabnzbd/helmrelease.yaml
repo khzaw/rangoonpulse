@@ -29,6 +29,7 @@ spec:
               TZ: "Asia/Singapore"
               PUID: "1000"
               PGID: "1000"
+              SABNZBD__HOST_WHITELIST: "sabnzbd.khzaw.dev"
 
     service:
       main:
@@ -73,3 +74,4 @@ spec:
         existingClaim: downloads
         globalMounts:
           - path: /downloads
+          - path: /incomplete-downloads
