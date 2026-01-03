@@ -31,37 +31,37 @@ spec:
           tag: next
 
     storageClasses:
-    - name: truenas-nfs
-      defaultClass: true
-      reclaimPolicy: Retain
-      volumeBindingMode: Immediate
-      allowVolumeExpansion: true
-      parameters:
-        fsType: nfs
-      mountOptions:
-      - noatime
-      - nfsvers=4
+      - name: truenas-nfs
+        defaultClass: true
+        reclaimPolicy: Retain
+        volumeBindingMode: Immediate
+        allowVolumeExpansion: true
+        parameters:
+          fsType: nfs
+        mountOptions:
+          - noatime
+          - nfsvers=4
 
-    - name: truenas-hdd-media
-      defaultClass: false
-      reclaimPolicy: Retain
-      volumeBindingMode: Immediate
-      allowVolumeExpansion: true
-      parameters:
-        fsType: nfs
-      mountOptions:
-      - noatime
-      - nfsvers=4
+      - name: truenas-hdd-media
+        defaultClass: false
+        reclaimPolicy: Retain
+        volumeBindingMode: Immediate
+        allowVolumeExpansion: true
+        parameters:
+          fsType: nfs
+        mountOptions:
+          - noatime
+          - nfsvers=4
 
-    - name: truenas-hdd-config
-      defaultClass: false
-      reclaimPolicy: Retain
-      volumeBindingMode: Immediate
-      parameters:
-        fsType: nfs
-      mountOptions:
-      - noatime
-      - nfsvers=4
+      - name: truenas-hdd-config
+        defaultClass: false
+        reclaimPolicy: Retain
+        volumeBindingMode: Immediate
+        parameters:
+          fsType: nfs
+        mountOptions:
+          - noatime
+          - nfsvers=4
 
     driver:
       config:
@@ -85,18 +85,18 @@ spec:
             "org.freenas:description": "{{ parameters.[csi.storage.k8s.io/pvc/namespace] }}/{{ parameters.[csi.storage.k8s.io/pvc/name] }}"
         nfs:
           shareHost: 10.0.0.210
-          shareAllowedNetworks: ['10.0.0.0/8']
-          shareMaprootUser: ''
-          shareMaprootGroup: ''
+          shareAllowedNetworks: ["10.0.0.0/8"]
+          shareMaprootUser: ""
+          shareMaprootGroup: ""
           shareMapallUser: root
           shareMapallGroup: root
 
   valuesFrom:
-  - kind: Secret
-    name: truenas-credentials
-    valuesKey: username
-    targetPath: driver.config.httpConnection.username
-  - kind: Secret
-    name: truenas-credentials
-    valuesKey: password
-    targetPath: driver.config.httpConnection.password
+    - kind: Secret
+      name: truenas-credentials
+      valuesKey: username
+      targetPath: driver.config.httpConnection.username
+    - kind: Secret
+      name: truenas-credentials
+      valuesKey: password
+      targetPath: driver.config.httpConnection.password
