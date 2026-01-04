@@ -31,6 +31,7 @@ resources:
   - ./kustomizations/infra-storage-media.yaml
   - ./kustomizations/local-storage.yaml
   - ./kustomizations/uptime-kuma.yaml
+  - ./kustomizations/audiobookshelf.yaml
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web.yaml
   - ./kustomizations/actualbudget.yaml

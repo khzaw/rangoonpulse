@@ -7,7 +7,7 @@ variable "cloudflare_zone_id" {
 variable "metallb_ip" {
   type        = string
   description = "The External IP assigned by MetalLB to ingress-nginx"
-  default     = "10.254.250.0"
+  default     = "10.0.0.231"
 }
 
 variable "domain_name" {
