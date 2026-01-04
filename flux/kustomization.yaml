@@ -37,7 +37,6 @@ resources:
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/flaresolverr.yaml
   - ./kustomizations/transmission.yaml
-  - ./kustomizations/qbittorrent.yaml
   - ./kustomizations/sabnzbd.yaml
   - ./kustomizations/prowlarr.yaml
   - ./kustomizations/radarr.yaml
