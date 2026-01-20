@@ -21,13 +21,23 @@ spec:
   values:
     controllers:
       main:
+        pod:
+          securityContext:
+            supplementalGroups:
+              - 104
+              - 44
         containers:
           main:
+            securityContext:
+              privileged: true
             image:
               repository: ghcr.io/chrisbenincasa/tunarr
               tag: latest
             env:
               TZ: "Asia/Singapore"
+              # Force the modern Intel driver
+              LIBVA_DRIVER_NAME: "iHD"
+              LIBVA_DRIVERS_PATH: "/usr/local/lib/x86_64-linux-gnu/dri"
             probes:
               liveness:
                 spec:

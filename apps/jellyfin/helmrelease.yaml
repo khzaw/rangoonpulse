@@ -23,6 +23,7 @@ spec:
           securityContext:
             supplementalGroups:
               - 104
+              - 44
         containers:
           main:
             securityContext:
