@@ -16,8 +16,8 @@ spec:
         kind: HelmRepository
         name: bjw-s-charts
         namespace: flux-system
-  install: { remediation: { retries: 3}}
-  upgrade: { remediation: { retries: 3}}
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
   values:
     controllers:
       main:
@@ -29,10 +29,10 @@ spec:
             env:
               TZ: "Asia/Singapore"
     service:
-        main:
-          ports:
-            http:
-              port: 8000
+      main:
+        ports:
+          http:
+            port: 8000
 
     ingress:
       main:
@@ -64,6 +64,8 @@ spec:
         storageClass: local-path
         size: 5Gi
         accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /config/tunarr
 
       gpu:
         enabled: true
