@@ -46,5 +46,6 @@ resources:
   - ./kustomizations/jellyfin.yaml
   - ./kustomizations/jellyseerr.yaml
   - ./kustomizations/notifiarr.yaml
+  - ./kustomizations/tunarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
