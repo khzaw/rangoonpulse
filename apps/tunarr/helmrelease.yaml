@@ -28,6 +28,13 @@ spec:
               tag: latest
             env:
               TZ: "Asia/Singapore"
+            probes:
+              liveness:
+                spec:
+                  initialDelaySeconds: 30
+              readiness:
+                spec:
+                  initialDelaySeconds: 30
     service:
       main:
         ports:
@@ -64,8 +71,6 @@ spec:
         storageClass: local-path
         size: 5Gi
         accessMode: ReadWriteOnce
-        globalMounts:
-          - path: /config/tunarr
 
       gpu:
         enabled: true
