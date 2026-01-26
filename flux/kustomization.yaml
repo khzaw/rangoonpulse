@@ -45,6 +45,7 @@ resources:
   - ./kustomizations/bazarr.yaml
   - ./kustomizations/jellyfin.yaml
   - ./kustomizations/jellyseerr.yaml
+  - ./kustomizations/jellystat.yaml
   - ./kustomizations/notifiarr.yaml
   - ./kustomizations/tunarr.yaml
   # - ./kustomizations/grafana.yaml
