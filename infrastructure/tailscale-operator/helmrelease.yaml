@@ -17,7 +17,7 @@ spec:
         name: tailscale-charts
         namespace: flux-system
   install:
-    createNamespace: true
+    createNamespace: false
     remediation: { retries: 3 }
   upgrade:
     remediation: { retries: 3 }
