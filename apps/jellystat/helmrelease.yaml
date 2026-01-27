@@ -116,4 +116,3 @@ spec:
           main:
             db: # Container Name
               - path: /var/lib/postgresql/data
-                subPath: pgdata
