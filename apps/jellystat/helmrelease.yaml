@@ -99,5 +99,7 @@ spec:
         accessMode: ReadWriteOnce
         advancedMounts:
           db: # Container Name
-            path: /var/lib/postgresql/data
-            subPath: pgdata
+            path:
+              - /var/lib/postgresql/data
+            subPath:
+              - pgdata
