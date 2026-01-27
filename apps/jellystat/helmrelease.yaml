@@ -26,6 +26,21 @@ spec:
             image:
               repository: cyfershepard/jellystat
               tag: latest
+            command:
+              - sh
+              - -c
+            args:
+              - |
+                echo "Waiting for PostgreSQL..."
+                for i in $(seq 1 60); do
+                  if nc -z 127.0.0.1 5432 2>/dev/null; then
+                    echo "PostgreSQL is ready!"
+                    break
+                  fi
+                  echo "Attempt $i/60..."
+                  sleep 2
+                done
+                exec npm start
             env:
               - name: POSTGRES_USER
                 value: "jellystat"
