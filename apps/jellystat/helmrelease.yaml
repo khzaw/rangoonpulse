@@ -98,6 +98,7 @@ spec:
         size: 5Gi
         accessMode: ReadWriteOnce
         advancedMounts:
-          db: # Container Name
-            - path: /var/lib/postgresql/data
-              subPath: pgdata
+          main:
+            db: # Container Name
+              - path: /var/lib/postgresql/data
+                subPath: pgdata
