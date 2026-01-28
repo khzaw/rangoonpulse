@@ -1,0 +1,81 @@
+# infrastructure/tailscale/dns-server.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: tailscale
+data:
+  Corefile: |
+    khzaw.dev:53 {
+        template IN A {
+          match ".*\.khzaw\.dev"
+          answer "{{ .Name }} 60 IN A 100.107.172.81"
+          fallthrough
+        }
+        forward . 1.1.1.1
+        log
+        errors
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns-tailscale
+  namespace: tailscale
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coredns-tailscale
+  template:
+    metadata:
+      labels:
+        app: coredns-tailscale
+    spec:
+      containers:
+      - name: coredns
+        image: coredns/coredns:1.11.1
+        args: ["-conf", "/etc/coredns/Corefile"]
+        volumeMounts:
+        - name: config
+          mountPath: /etc/coredns
+        ports:
+        - containerPort: 53
+          protocol: UDP
+          name: dns-udp
+        - containerPort: 53
+          protocol: TCP
+          name: dns-tcp
+        resources:
+          requests:
+            cpu: 10m
+            memory: 20Mi
+          limits:
+            cpu: 50m
+            memory: 50Mi
+      volumes:
+      - name: config
+        configMap:
+          name: coredns-custom
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns-tailscale
+  namespace: tailscale
+  annotations:
+    tailscale.com/expose: "true"
+    tailscale.com/hostname: "homelab-dns"
+spec:
+  selector:
+    app: coredns-tailscale
+  ports:
+  - port: 53
+    protocol: UDP
+    targetPort: 53
+    name: dns-udp
+  - port: 53
+    protocol: TCP
+    targetPort: 53
+    name: dns-tcp
