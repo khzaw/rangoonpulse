@@ -24,4 +24,4 @@ spec:
 
   values:
     apiServerProxyConfig:
-      mode: "false"
+      mode: "true"
