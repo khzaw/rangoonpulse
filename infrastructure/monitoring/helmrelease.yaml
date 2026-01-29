@@ -1,0 +1,126 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "68.x.x"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    alertmanager:
+      enabled: false
+
+    prometheus:
+
+      prometheusSpec:
+        retention: 7d
+        retentionSize: "5GB"
+        scrapeInterval: 60s
+        resources:
+          requests:
+            cpu: 50m
+            memory: 400Mi
+          limits:
+            cpu: 200m
+            memory: 800Mi
+        securityContext:
+          fsGroup: 2000
+          runAsGroup: 2000
+          runAsNonRoot: true
+          runAsUser: 1000
+
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 7Gi
+
+        serviceMonitorSelectorNilUsesHelmValues: false
+    grafana:
+      enabled: true
+      adminPassword: "admin"
+
+      persistence:
+        enabled: true
+        storageClassName: local-path
+        size: 1Gi
+
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+
+      ingress:
+        enabled: true
+        ingressClassName: nginx
+        hosts:
+          - grafana.khzaw.dev
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls:
+          - secretName: grafana-tls
+            hosts:
+              - grafana.khzaw.dev
+
+
+      dashboards:
+
+        default:
+          node-exporter:
+            gnetId: 1860
+            revision: 37
+            datasource: Prometheus
+          kubernetes-pods:
+            gnetId: 6417
+            revision: 1
+            datasource: Prometheus
+
+    prometheusOperator:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+
+    kube-state-metrics:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 50m
+          memory: 128Mi
+
+    prometheus-node-exporter:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 50m
+          memory: 64Mi
