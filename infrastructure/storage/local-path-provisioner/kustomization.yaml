@@ -20,6 +20,18 @@ patches:
                 }
                 ]
         }
+      setup: |-
+        #!/bin/sh
+        set -eu
+        mkdir -m 0777 -p "$VOL_DIR"
+        # Fix permissions for subPath support
+        chmod 777 "$VOL_DIR"
+        # Allow any user to write (needed for subPath)
+        chown -R 0:0 "$VOL_DIR"
+      teardown: |-
+        #!/bin/sh
+        set -eu
+        rm -rf "$VOL_DIR"
 - patch: |-
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
