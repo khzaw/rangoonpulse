@@ -29,6 +29,13 @@ spec:
               TZ: "Asia/Singapore"
               LOG_LEVEL: "debug"
               LOG_HTML: "true"
+            resources:
+              requests:
+                cpu: 500m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 1Gi
     service:
      main:
         ports:
