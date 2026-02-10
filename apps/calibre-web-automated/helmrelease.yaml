@@ -38,7 +38,7 @@ spec:
               repository: crocodilestick/calibre-web-automated
               tag: latest
             env:
-              TZ: 'Asia/Singapore'
+              TZ: "Asia/Singapore"
               PUID: "1000"
               PGID: "1000"
             resources:
@@ -91,4 +91,4 @@ spec:
         type: persistentVolumeClaim
         existingClaim: calibre-books
         globalMounts:
-          - path: /books
+          - path: /calibre-library
