@@ -120,9 +120,18 @@ resource "cloudflare_record" "tunarr" {
   proxied = false
 }
 
-resource "cloudflare_record" "tunarr" {
+resource "cloudflare_record" "jellystat" {
   zone_id = data.cloudflare_zone.primary.id
   name    = "jellystat"
+  content = var.metallb_ip
+  type    = "A"
+  ttl     = 1
+  proxied = false
+}
+
+resource "cloudflare_record" "calibre_web_automated" {
+  zone_id = data.cloudflare_zone.primary.id
+  name    = "calibre-web"
   content = var.metallb_ip
   type    = "A"
   ttl     = 1
