@@ -55,6 +55,8 @@ spec:
     grafana:
       enabled: true
       adminPassword: "admin"
+      initChownData:
+        enabled: false
 
       persistence:
         enabled: true
