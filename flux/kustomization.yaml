@@ -17,6 +17,7 @@ resources:
   - ./repositories/community-charts.yaml
   - ./repositories/prometheus.yaml
   - ./repositories/immich-charts.yaml
+  - ./repositories/homepage-charts.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
@@ -51,6 +52,7 @@ resources:
   - ./kustomizations/jellystat.yaml
   - ./kustomizations/notifiarr.yaml
   - ./kustomizations/immich.yaml
+  - ./kustomizations/homepage.yaml
   - ./kustomizations/tunarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml

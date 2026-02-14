@@ -1,0 +1,175 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: homepage
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 10m
+  chart:
+    spec:
+      chart: homepage
+      version: "2.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: homepage-charts
+        namespace: flux-system
+      interval: 5m
+  install: { remediation: { retries: 3 } }
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+    cleanupOnFail: true
+  values:
+    env:
+      - name: TZ
+        value: Asia/Singapore
+      - name: HOMEPAGE_ALLOWED_HOSTS
+        value: hq.khzaw.dev,localhost,127.0.0.1
+
+    ingress:
+      main:
+        enabled: true
+        ingressClassName: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: hq.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - host: hq.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+        tls:
+          - secretName: homepage-tls
+            hosts:
+              - hq.khzaw.dev
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+    config:
+      bookmarks: []
+      kubernetes:
+        mode: disable
+      settings:
+        title: KHZ HQ
+        description: Rangoonpulse Homelab
+        theme: dark
+        color: slate
+        iconStyle: theme
+        headerStyle: clean
+        statusStyle: dot
+        fullWidth: true
+        useEqualHeights: true
+        hideVersion: true
+        target: _self
+        quicklaunch:
+          provider: duckduckgo
+          searchDescriptions: true
+          showSearchSuggestions: true
+        layout:
+          Media:
+            style: row
+            columns: 4
+          Arr Stack:
+            style: row
+            columns: 5
+          Utilities:
+            style: row
+            columns: 4
+      services:
+        - Media:
+            - Immich:
+                icon: mdi-image-multiple
+                href: https://photos.khzaw.dev
+                description: Photos and memories
+            - Jellyfin:
+                icon: mdi-movie-open
+                href: https://jellyfin.khzaw.dev
+                description: Media streaming
+            - Jellyseerr:
+                icon: mdi-television-guide
+                href: https://entertainment.khzaw.dev
+                description: Requests
+            - Audiobookshelf:
+                icon: mdi-book-music
+                href: https://audiobookshelf.khzaw.dev
+                description: Books and audiobooks
+            - Calibre Web:
+                icon: mdi-book-open-page-variant
+                href: https://calibre.khzaw.dev
+                description: eBook library
+            - Tunarr:
+                icon: mdi-television-play
+                href: https://tunarr.khzaw.dev
+                description: Channel scheduler
+        - Arr Stack:
+            - Sonarr:
+                icon: mdi-television-classic
+                href: https://sonarr.khzaw.dev
+                description: Series manager
+            - Radarr:
+                icon: mdi-movie-roll
+                href: https://radarr.khzaw.dev
+                description: Movie manager
+            - Bazarr:
+                icon: mdi-subtitles
+                href: https://bazarr.khzaw.dev
+                description: Subtitles
+            - Prowlarr:
+                icon: mdi-radar
+                href: https://prowlarr.khzaw.dev
+                description: Indexer manager
+            - SABnzbd:
+                icon: mdi-download-network
+                href: https://sabnzbd.khzaw.dev
+                description: Usenet downloader
+            - Transmission:
+                icon: mdi-arrow-down-circle
+                href: https://torrent.khzaw.dev
+                description: Torrent client
+            - Jellystat:
+                icon: mdi-chart-box
+                href: https://jellystat.khzaw.dev
+                description: Jellyfin analytics
+        - Utilities:
+            - Actual Budget:
+                icon: mdi-currency-usd
+                href: https://actual.khzaw.dev
+                description: Personal finance
+            - Uptime Kuma:
+                icon: mdi-heart-pulse
+                href: https://uptime-kuma.khzaw.dev
+                description: Service monitoring
+            - Notifiarr:
+                icon: mdi-bell-ring-outline
+                href: https://notifiarr.khzaw.dev
+                description: Notifications
+            - Calibre Manage:
+                icon: mdi-book-edit-outline
+                href: https://calibre-manage.khzaw.dev
+                description: Calibre management
+            - HQ:
+                icon: mdi-view-dashboard
+                href: https://hq.khzaw.dev
+                description: Dashboard
+      widgets:
+        - search:
+            provider: duckduckgo
+            target: _blank
+            showSearchSuggestions: true
+        - datetime:
+            text_size: xl
+            format:
+              dateStyle: medium
+              timeStyle: short
+              hourCycle: h23
