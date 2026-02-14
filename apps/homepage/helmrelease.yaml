@@ -39,7 +39,7 @@ spec:
         enabled: true
         ingressClassName: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: hq.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: hq.khzaw.dev, home.khzaw.dev
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
@@ -86,7 +86,7 @@ spec:
             columns: 4
           Acquisition:
             style: row
-            columns: 6
+            columns: 7
           Books:
             style: row
             columns: 3
@@ -94,52 +94,23 @@ spec:
             style: row
             columns: 6
       services:
-        - Watch & Listen:
-            - Immich:
-                icon: mdi-image-multiple
-                href: https://photos.khzaw.dev
-                description: Photos and memories
+        - Apps:
+            - Actual Budget:
+                icon: mdi-currency-usd
+                href: https://actual.khzaw.dev
+                description: Personal finance
             - Jellyfin:
                 icon: mdi-movie-open
                 href: https://jellyfin.khzaw.dev
                 description: Media streaming
+            - Immich:
+                icon: mdi-image-multiple
+                href: https://photos.khzaw.dev
+                description: Photos management
             - Jellyseerr:
                 icon: mdi-television-guide
                 href: https://entertainment.khzaw.dev
-                description: Requests
-            - Tunarr:
-                icon: mdi-television-play
-                href: https://tunarr.khzaw.dev
-                description: Channel scheduler
-            - Jellystat:
-                icon: mdi-chart-box
-                href: https://jellystat.khzaw.dev
-                description: Jellyfin analytics
-        - Acquisition:
-            - Prowlarr:
-                icon: mdi-radar
-                href: https://prowlarr.khzaw.dev
-                description: Indexer manager
-            - Sonarr:
-                icon: mdi-television-classic
-                href: https://sonarr.khzaw.dev
-                description: Series manager
-            - Radarr:
-                icon: mdi-movie-roll
-                href: https://radarr.khzaw.dev
-                description: Movie manager
-            - Bazarr:
-                icon: mdi-subtitles
-                href: https://bazarr.khzaw.dev
-                description: Subtitles
-            - SABnzbd:
-                icon: mdi-download-network
-                href: https://sabnzbd.khzaw.dev
-                description: Usenet downloader
-            - Transmission:
-                icon: mdi-arrow-down-circle
-                href: https://torrent.khzaw.dev
-                description: Torrent client
+                description: Media requests
         - Books:
             - Audiobookshelf:
                 icon: mdi-book-music
@@ -153,34 +124,64 @@ spec:
                 icon: mdi-book-edit-outline
                 href: https://calibre-manage.khzaw.dev
                 description: Calibre VNC
-        - Ops:
-            - Uptime Kuma:
-                icon: mdi-heart-pulse
-                href: https://uptime-kuma.khzaw.dev
-                description: Monitoring
+        - Arr Stack:
+            - Sonarr:
+                icon: mdi-television-classic
+                href: https://sonarr.khzaw.dev
+                description: Series manager
+            - Radarr:
+                icon: mdi-movie-roll
+                href: https://radarr.khzaw.dev
+                description: Movie manager
+            - Tunarr:
+                icon: mdi-television-play
+                href: https://tunarr.khzaw.dev
+                description: TV Channels scheduler
+            - Prowlarr:
+                icon: mdi-radar
+                href: https://prowlarr.khzaw.dev
+                description: Indexer manager
+            - Bazarr:
+                icon: mdi-subtitles
+                href: https://bazarr.khzaw.dev
+                description: Subtitles
             - Notifiarr:
                 icon: mdi-bell-ring-outline
                 href: https://notifiarr.khzaw.dev
-                description: Notifications
-            - Actual Budget:
-                icon: mdi-currency-usd
-                href: https://actual.khzaw.dev
-                description: Personal finance
-            - HQ:
-                icon: mdi-view-dashboard
-                href: https://hq.khzaw.dev
-                description: Dashboard
+                description: Trash guides sync
+        - Downloaders:
+            - Transmission:
+                icon: mdi-arrow-down-circle
+                href: https://torrent.khzaw.dev
+                description: Torrent
+            - SABnzbd:
+                icon: mdi-download-network
+                href: https://sabnzbd.khzaw.dev
+                description: Usenet downloader
+        - Ops:
+            - Jellystat:
+                icon: mdi-chart-box
+                href: https://jellystat.khzaw.dev
+                description: Jellyfin analytics
+            - Grafana:
+                icon: mdi-chart-box
+                href: https://grafana.khzaw.dev
+                description: Grafana
+            - Uptime:
+                icon: mdi-heart-pulse
+                href: https://uptime-kuma.khzaw.dev
+                description: Uptime checks
             - Router:
                 icon: mdi-router-network
                 href: http://10.0.0.1
                 description: Router
-            - NFS:
+            - NAS:
                 icon: mdi-nas
                 href: http://10.0.0.210
-                description: NAS
+                description: TrueNAS Scale
       widgets:
         - search:
-            provider: duckduckgo
+            provider: google
             target: _blank
             showSearchSuggestions: true
         - datetime:
