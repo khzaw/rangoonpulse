@@ -120,6 +120,7 @@ spec:
           memory: 128Mi
 
     prometheus-node-exporter:
+      enabled: false
       resources:
         requests:
           cpu: 10m
