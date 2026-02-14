@@ -20,6 +20,8 @@ spec:
     controllers:
       main:
         replicas: 1
+        serviceAccount:
+          identifier: default
         containers:
           main:
             image:
@@ -38,6 +40,35 @@ spec:
                   secretKeyRef:
                     name: cloudflare-api-token
                     key: token
+    serviceAccount:
+      default:
+        enabled: true
+    rbac:
+      roles:
+        external-dns:
+          enabled: true
+          type: ClusterRole
+          rules:
+            - apiGroups: [""]
+              resources: ["services", "endpoints", "pods", "nodes", "namespaces"]
+              verbs: ["get", "watch", "list"]
+            - apiGroups: ["networking.k8s.io", "extensions"]
+              resources: ["ingresses"]
+              verbs: ["get", "watch", "list"]
+            - apiGroups: ["discovery.k8s.io"]
+              resources: ["endpointslices"]
+              verbs: ["get", "watch", "list"]
+            - apiGroups: [""]
+              resources: ["events"]
+              verbs: ["create", "patch"]
+      bindings:
+        external-dns:
+          enabled: true
+          type: ClusterRoleBinding
+          roleRef:
+            identifier: external-dns
+          subjects:
+            - identifier: default
     service:
       main:
         enabled: false
