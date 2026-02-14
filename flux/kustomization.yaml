@@ -16,6 +16,7 @@ resources:
   - ./repositories/democratic-csi.yaml
   - ./repositories/community-charts.yaml
   - ./repositories/prometheus.yaml
+  - ./repositories/immich-charts.yaml
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
@@ -49,6 +50,7 @@ resources:
   - ./kustomizations/jellyseerr.yaml
   - ./kustomizations/jellystat.yaml
   - ./kustomizations/notifiarr.yaml
+  - ./kustomizations/immich.yaml
   - ./kustomizations/tunarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml

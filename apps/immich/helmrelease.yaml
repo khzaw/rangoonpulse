@@ -1,0 +1,141 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich-postgres
+  namespace: default
+spec:
+  interval: 15m
+  # Requires `immich-db-secret` (key: POSTGRES_PASSWORD) in namespace `default`.
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: pgvector/pgvector
+              tag: pg16
+            env:
+              TZ: "Asia/Singapore"
+              POSTGRES_USER: "immich"
+              POSTGRES_DB: "immich"
+              POSTGRES_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-db-secret
+                    key: POSTGRES_PASSWORD
+              PGDATA: "/var/lib/postgresql/data/pgdata"
+
+    service:
+      main:
+        ports:
+          postgres:
+            port: 5432
+
+    persistence:
+      db-data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: local-path
+        size: 10Gi
+        accessMode: ReadWriteOnce
+        advancedMounts:
+          main:
+            main:
+              - path: /var/lib/postgresql/data
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: immich
+  namespace: default
+spec:
+  interval: 15m
+  # Requires `immich-db-secret` (key: POSTGRES_PASSWORD) in namespace `default`.
+  dependsOn:
+    - name: immich-postgres
+  chart:
+    spec:
+      chart: immich
+      version: "0.10.3"
+      sourceRef:
+        kind: HelmRepository
+        name: immich-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        containers:
+          main:
+            env:
+              TZ: "Asia/Singapore"
+              DB_HOSTNAME: immich-postgres
+              DB_PORT: "5432"
+              DB_USERNAME: immich
+              DB_DATABASE_NAME: immich
+              DB_VECTOR_EXTENSION: pgvector
+              DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: immich-db-secret
+                    key: POSTGRES_PASSWORD
+
+    immich:
+      persistence:
+        library:
+          existingClaim: immich-library
+
+    valkey:
+      enabled: true
+      persistence:
+        data:
+          enabled: true
+          type: persistentVolumeClaim
+          storageClass: local-path
+          size: 2Gi
+          accessMode: ReadWriteOnce
+
+    machine-learning:
+      persistence:
+        cache:
+          enabled: true
+          type: persistentVolumeClaim
+          storageClass: local-path
+          size: 20Gi
+          accessMode: ReadWriteOnce
+
+    server:
+      ingress:
+        main:
+          enabled: true
+          className: nginx
+          annotations:
+            external-dns.alpha.kubernetes.io/hostname: photos.khzaw.dev
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/proxy-body-size: "0"
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+          hosts:
+            - host: photos.khzaw.dev
+              paths:
+                - path: /
+                  pathType: Prefix
+                  service:
+                    identifier: main
+          tls:
+            - secretName: immich-tls
+              hosts:
+                - photos.khzaw.dev
