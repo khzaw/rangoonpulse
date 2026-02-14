@@ -65,8 +65,8 @@ spec:
       kubernetes:
         mode: disable
       settings:
-        title: KHZ HQ
-        description: Rangoonpulse Homelab
+        title: Rangoonpulse — HQ
+        description: Rangoonpulse
         theme: dark
         color: zinc
         iconStyle: theme
@@ -81,102 +81,113 @@ spec:
           searchDescriptions: true
           showSearchSuggestions: true
         layout:
-          Watch & Listen:
-            style: row
-            columns: 4
-          Acquisition:
-            style: row
-            columns: 7
-          Books:
-            style: row
-            columns: 3
-          Ops:
+          Apps:
             style: row
             columns: 6
+          Downloaders:
+            style: row
+            columns: 2
+          Arr Stack:
+            style: row
+            columns: 8
+          Books:
+            style: row
+            columns: 8
+          Ops:
+            style: row
+            columns: 8
       services:
         - Apps:
             - Actual Budget:
-                icon: mdi-currency-usd
+                icon: actual-budget.png
                 href: https://actual.khzaw.dev
                 description: Personal finance
             - Jellyfin:
-                icon: mdi-movie-open
+                icon: jellyfin.png
                 href: https://jellyfin.khzaw.dev
                 description: Media streaming
             - Immich:
-                icon: mdi-image-multiple
+                icon: immich.png
                 href: https://photos.khzaw.dev
                 description: Photos management
-            - Jellyseerr:
-                icon: mdi-television-guide
-                href: https://entertainment.khzaw.dev
-                description: Media requests
         - Books:
             - Audiobookshelf:
-                icon: mdi-book-music
+                icon: audiobookshelf.png
                 href: https://audiobookshelf.khzaw.dev
                 description: Books and audiobooks
             - Calibre Web:
-                icon: mdi-book-open-page-variant
+                icon: calibre-web.png
                 href: https://calibre.khzaw.dev
                 description: Calibre
             - Calibre Manage:
-                icon: mdi-book-edit-outline
+                icon: calibre.png
                 href: https://calibre-manage.khzaw.dev
                 description: Calibre VNC
         - Arr Stack:
             - Sonarr:
-                icon: mdi-television-classic
+                icon: sonarr.png
                 href: https://sonarr.khzaw.dev
                 description: Series manager
             - Radarr:
-                icon: mdi-movie-roll
+                icon: radarr.png
                 href: https://radarr.khzaw.dev
                 description: Movie manager
+            - Jellyseerr:
+                icon: jellyseerr.png
+                href: https://entertainment.khzaw.dev
+                description: Media requests
             - Tunarr:
-                icon: mdi-television-play
+                icon: tunarr.png
                 href: https://tunarr.khzaw.dev
                 description: TV Channels scheduler
             - Prowlarr:
-                icon: mdi-radar
+                icon: prowlarr.png
                 href: https://prowlarr.khzaw.dev
                 description: Indexer manager
             - Bazarr:
-                icon: mdi-subtitles
+                icon: bazarr.png
                 href: https://bazarr.khzaw.dev
                 description: Subtitles
             - Notifiarr:
-                icon: mdi-bell-ring-outline
+                icon: notifiarr.png
                 href: https://notifiarr.khzaw.dev
                 description: Trash guides sync
         - Downloaders:
             - Transmission:
-                icon: mdi-arrow-down-circle
+                icon: transmission.png
                 href: https://torrent.khzaw.dev
                 description: Torrent
             - SABnzbd:
-                icon: mdi-download-network
+                icon: sabnzbd.png
                 href: https://sabnzbd.khzaw.dev
                 description: Usenet downloader
         - Ops:
+            - Glance:
+                icon: glance.png
+                href: https://glance.khzaw.dev
+                description: Minimal dashboard
+            - Vaultwarden:
+                icon: vaultwarden.png
+                href: https://passwords.khzaw.dev
+                description: Password manager
             - Jellystat:
-                icon: mdi-chart-box
+                icon: jellystat.png
                 href: https://jellystat.khzaw.dev
                 description: Jellyfin analytics
             - Grafana:
-                icon: mdi-chart-box
+                icon: grafana.png
                 href: https://grafana.khzaw.dev
                 description: Grafana
             - Uptime:
-                icon: mdi-heart-pulse
+                icon: uptime-kuma.png
                 href: https://uptime-kuma.khzaw.dev
                 description: Uptime checks
             - Router:
-                icon: mdi-router-network
+                icon: router.png
                 href: http://10.0.0.1
                 description: Router
             - NAS:
-                icon: mdi-nas
+                icon: truenas.png
                 href: http://10.0.0.210
                 description: TrueNAS Scale
       widgets:
