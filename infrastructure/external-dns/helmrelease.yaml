@@ -30,8 +30,7 @@ spec:
               - --provider=cloudflare
               - --policy=upsert-only
               - --registry=txt
-              - --txt-owner-name=external-dns
-              - --domain-filters=khzaw.dev
+              - --domain-filter=khzaw.dev
               - --interval=1m
             env:
               - name: CF_API_TOKEN
