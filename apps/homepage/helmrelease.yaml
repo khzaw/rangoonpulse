@@ -68,9 +68,9 @@ spec:
         title: KHZ HQ
         description: Rangoonpulse Homelab
         theme: dark
-        color: slate
+        color: zinc
         iconStyle: theme
-        headerStyle: clean
+        headerStyle: boxedWidgets
         statusStyle: dot
         fullWidth: true
         useEqualHeights: true
@@ -81,17 +81,20 @@ spec:
           searchDescriptions: true
           showSearchSuggestions: true
         layout:
-          Media:
+          Watch & Listen:
             style: row
             columns: 4
-          Arr Stack:
+          Acquisition:
             style: row
-            columns: 5
-          Utilities:
+            columns: 6
+          Books:
+            style: row
+            columns: 3
+          Ops:
             style: row
             columns: 4
       services:
-        - Media:
+        - Watch & Listen:
             - Immich:
                 icon: mdi-image-multiple
                 href: https://photos.khzaw.dev
@@ -104,19 +107,19 @@ spec:
                 icon: mdi-television-guide
                 href: https://entertainment.khzaw.dev
                 description: Requests
-            - Audiobookshelf:
-                icon: mdi-book-music
-                href: https://audiobookshelf.khzaw.dev
-                description: Books and audiobooks
-            - Calibre Web:
-                icon: mdi-book-open-page-variant
-                href: https://calibre.khzaw.dev
-                description: eBook library
             - Tunarr:
                 icon: mdi-television-play
                 href: https://tunarr.khzaw.dev
                 description: Channel scheduler
-        - Arr Stack:
+            - Jellystat:
+                icon: mdi-chart-box
+                href: https://jellystat.khzaw.dev
+                description: Jellyfin analytics
+        - Acquisition:
+            - Prowlarr:
+                icon: mdi-radar
+                href: https://prowlarr.khzaw.dev
+                description: Indexer manager
             - Sonarr:
                 icon: mdi-television-classic
                 href: https://sonarr.khzaw.dev
@@ -129,10 +132,6 @@ spec:
                 icon: mdi-subtitles
                 href: https://bazarr.khzaw.dev
                 description: Subtitles
-            - Prowlarr:
-                icon: mdi-radar
-                href: https://prowlarr.khzaw.dev
-                description: Indexer manager
             - SABnzbd:
                 icon: mdi-download-network
                 href: https://sabnzbd.khzaw.dev
@@ -141,15 +140,20 @@ spec:
                 icon: mdi-arrow-down-circle
                 href: https://torrent.khzaw.dev
                 description: Torrent client
-            - Jellystat:
-                icon: mdi-chart-box
-                href: https://jellystat.khzaw.dev
-                description: Jellyfin analytics
-        - Utilities:
-            - Actual Budget:
-                icon: mdi-currency-usd
-                href: https://actual.khzaw.dev
-                description: Personal finance
+        - Books:
+            - Audiobookshelf:
+                icon: mdi-book-music
+                href: https://audiobookshelf.khzaw.dev
+                description: Books and audiobooks
+            - Calibre Web:
+                icon: mdi-book-open-page-variant
+                href: https://calibre.khzaw.dev
+                description: eBook library
+            - Calibre Manage:
+                icon: mdi-book-edit-outline
+                href: https://calibre-manage.khzaw.dev
+                description: Calibre management
+        - Ops:
             - Uptime Kuma:
                 icon: mdi-heart-pulse
                 href: https://uptime-kuma.khzaw.dev
@@ -158,10 +162,10 @@ spec:
                 icon: mdi-bell-ring-outline
                 href: https://notifiarr.khzaw.dev
                 description: Notifications
-            - Calibre Manage:
-                icon: mdi-book-edit-outline
-                href: https://calibre-manage.khzaw.dev
-                description: Calibre management
+            - Actual Budget:
+                icon: mdi-currency-usd
+                href: https://actual.khzaw.dev
+                description: Personal finance
             - HQ:
                 icon: mdi-view-dashboard
                 href: https://hq.khzaw.dev
