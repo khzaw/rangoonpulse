@@ -38,6 +38,13 @@ spec:
               # Force the modern Intel driver
               LIBVA_DRIVER_NAME: "iHD"
               LIBVA_DRIVERS_PATH: "/usr/local/lib/x86_64-linux-gnu/dri"
+            resources:
+              requests:
+                cpu: "200m"
+                memory: "512Mi"
+              limits:
+                cpu: "1500m"
+                memory: "2Gi"
             probes:
               liveness:
                 spec:

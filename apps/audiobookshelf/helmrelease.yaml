@@ -38,6 +38,13 @@ spec:
               tag: latest
             env:
               TZ: "Asia/Singapore"
+            resources:
+              requests:
+                cpu: "75m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "1Gi"
     service:
       main:
         ports:

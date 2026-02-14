@@ -62,6 +62,13 @@ spec:
                     key: JWT_SECRET
               - name: TZ
                 value: "Asia/Singapore"
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "768Mi"
           db:
             image:
               repository: postgres
@@ -75,6 +82,13 @@ spec:
                 valueFrom: *db_password_ref
               - name: PGDATA
                 value: "/var/lib/postgresql/data/pgdata" # Subpath prevents permission issue
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "1Gi"
 
     service:
       main:

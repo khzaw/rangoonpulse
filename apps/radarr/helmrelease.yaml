@@ -30,6 +30,13 @@ spec:
               PUID: "1000"
               GUID: "1000"
               PATH: "/app/radarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "1Gi"
 
     service:
       main:

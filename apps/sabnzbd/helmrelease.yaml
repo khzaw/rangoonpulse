@@ -30,6 +30,13 @@ spec:
               PUID: "1000"
               PGID: "1000"
               SABNZBD__HOST_WHITELIST: "sabnzbd.khzaw.dev"
+            resources:
+              requests:
+                cpu: "150m"
+                memory: "512Mi"
+              limits:
+                cpu: "1500m"
+                memory: "2Gi"
 
     service:
       main:

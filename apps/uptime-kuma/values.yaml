@@ -9,6 +9,13 @@ controllers:
         image:
           repository: louislam/uptime-kuma
           tag: latest
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
 
 service:
   main:
@@ -17,13 +24,6 @@ service:
     ports:
       http:
         port: 3001
-
-resources:
-  requests:
-    cpu: 25m
-    memory: 64Mi
-  limits:
-    memory: 128Mi
 
 persistence:
   data:

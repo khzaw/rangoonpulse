@@ -15,10 +15,11 @@ controllers:
           PGID: "1000"
         resources:
           requests:
-            cpu: 50m
-            memory: 128Mi
+            cpu: 150m
+            memory: 512Mi
           limits:
-            memory: 2Gi
+            cpu: 1000m
+            memory: 3Gi
 
 service:
   main:

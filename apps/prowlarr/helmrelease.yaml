@@ -29,6 +29,13 @@ spec:
               TZ: "Asia/Singapore"
               PUID: "1000"
               GUID: "1000"
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "1Gi"
 
     service:
       main:

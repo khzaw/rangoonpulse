@@ -27,6 +27,13 @@ spec:
             env:
               TZ: "Asia/Singapore"
               LOG_LEVEL: "info"
+            resources:
+              requests:
+                cpu: "75m"
+                memory: "192Mi"
+              limits:
+                cpu: "500m"
+                memory: "768Mi"
 
     service:
       main:

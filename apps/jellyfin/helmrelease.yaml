@@ -36,6 +36,13 @@ spec:
               PUID: "1000"
               GUID: "1000"
               JELLYFIN_PublishedServerUrl: "https://jellyfin.khzaw.dev"
+            resources:
+              requests:
+                cpu: "400m"
+                memory: "1Gi"
+              limits:
+                cpu: "2500m"
+                memory: "4Gi"
 
     service:
       main:

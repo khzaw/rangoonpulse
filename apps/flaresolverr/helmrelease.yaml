@@ -31,11 +31,11 @@ spec:
               LOG_HTML: "true"
             resources:
               requests:
-                cpu: 500m
+                cpu: 150m
                 memory: 512Mi
               limits:
                 cpu: 1000m
-                memory: 1Gi
+                memory: 2Gi
     service:
      main:
         ports:
