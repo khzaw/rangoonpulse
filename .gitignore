@@ -1,0 +1,7 @@
+auth
+basic-auth.yaml
+kubeconfig
+migration-pod.yaml
+ghost-passwords.txt
+talos
+.agent-shell/
