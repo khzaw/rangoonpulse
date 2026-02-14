@@ -32,14 +32,18 @@ spec:
             args:
               - |
                 echo "Waiting for PostgreSQL..."
-                for i in $(seq 1 60); do
-                  if nc -z 127.0.0.1 5432 2>/dev/null; then
-                    echo "PostgreSQL is ready!"
-                    break
-                  fi
-                  echo "Attempt $i/60..."
-                  sleep 2
-                done
+                if command -v nc >/dev/null 2>&1; then
+                  for i in $(seq 1 60); do
+                    if nc -z 127.0.0.1 5432 2>/dev/null; then
+                      echo "PostgreSQL is ready!"
+                      break
+                    fi
+                    echo "Attempt $i/60..."
+                    sleep 2
+                  done
+                else
+                  echo "nc not found; skipping TCP wait and starting Jellystat."
+                fi
                 exec npm start
             env:
               - name: POSTGRES_USER
