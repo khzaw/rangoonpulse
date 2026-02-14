@@ -24,6 +24,10 @@ spec:
       remediateLastFailure: true
     cleanupOnFail: true
   values:
+    image:
+      repository: ghcr.io/gethomepage/homepage
+      tag: v1.10.1
+
     env:
       - name: TZ
         value: Asia/Singapore
