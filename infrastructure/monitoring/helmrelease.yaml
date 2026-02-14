@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: kube-prometheus-stack
-      version: "68.x.x"
+      version: "81.x.x"
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
@@ -30,8 +30,8 @@ spec:
     prometheus:
 
       prometheusSpec:
-        retention: 7d
-        retentionSize: "5GB"
+        retention: 3d
+        retentionSize: "3GB"
         scrapeInterval: 60s
         resources:
           requests:
@@ -46,14 +46,10 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
 
+        # Ephemeral TSDB keeps this lightweight and avoids local-path PVC/subPath issues.
         storageSpec:
-          volumeClaimTemplate:
-            spec:
-              storageClassName: local-path
-              accessModes: ["ReadWriteOnce"]
-              resources:
-                requests:
-                  storage: 7Gi
+          emptyDir:
+            sizeLimit: 4Gi
 
         serviceMonitorSelectorNilUsesHelmValues: false
     grafana:
@@ -76,13 +72,18 @@ spec:
       ingress:
         enabled: true
         ingressClassName: nginx
+        pathType: Prefix
         hosts:
+          - monitoring.khzaw.dev
           - grafana.khzaw.dev
         annotations:
+          external-dns.alpha.kubernetes.io/hostname: monitoring.khzaw.dev,grafana.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: grafana-tls
             hosts:
+              - monitoring.khzaw.dev
               - grafana.khzaw.dev
 
 
