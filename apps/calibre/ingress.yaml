@@ -5,6 +5,7 @@ metadata:
   name: calibre
   namespace: default
   annotations:
+    external-dns.alpha.kubernetes.io/hostname: calibre-manage.khzaw.dev
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"

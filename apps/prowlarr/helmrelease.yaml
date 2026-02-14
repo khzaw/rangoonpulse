@@ -50,6 +50,7 @@ spec:
                   port: http
 
         annotations:
+          external-dns.alpha.kubernetes.io/hostname: prowlarr.khzaw.dev
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
