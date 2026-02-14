@@ -92,7 +92,7 @@ spec:
             columns: 3
           Ops:
             style: row
-            columns: 4
+            columns: 6
       services:
         - Watch & Listen:
             - Immich:
@@ -148,16 +148,16 @@ spec:
             - Calibre Web:
                 icon: mdi-book-open-page-variant
                 href: https://calibre.khzaw.dev
-                description: eBook library
+                description: Calibre
             - Calibre Manage:
                 icon: mdi-book-edit-outline
                 href: https://calibre-manage.khzaw.dev
-                description: Calibre management
+                description: Calibre VNC
         - Ops:
             - Uptime Kuma:
                 icon: mdi-heart-pulse
                 href: https://uptime-kuma.khzaw.dev
-                description: Service monitoring
+                description: Monitoring
             - Notifiarr:
                 icon: mdi-bell-ring-outline
                 href: https://notifiarr.khzaw.dev
@@ -170,6 +170,14 @@ spec:
                 icon: mdi-view-dashboard
                 href: https://hq.khzaw.dev
                 description: Dashboard
+            - Router:
+                icon: mdi-router-network
+                href: http://10.0.0.1
+                description: Router
+            - NFS:
+                icon: mdi-nas
+                href: http://10.0.0.210
+                description: NAS
       widgets:
         - search:
             provider: duckduckgo
