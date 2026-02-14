@@ -1,0 +1,274 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: glance
+  namespace: default
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: glanceapp/glance
+              tag: v0.8.4
+            env:
+              TZ: "Asia/Singapore"
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "128Mi"
+              limits:
+                cpu: "300m"
+                memory: "384Mi"
+
+    service:
+      main:
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: glance.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: glance.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+
+        tls:
+          - secretName: glance-tls
+            hosts:
+              - glance.khzaw.dev
+
+    configMaps:
+      config:
+        enabled: true
+        data:
+          glance.yml: |
+            server:
+              proxied: true
+
+            branding:
+              logo-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
+              favicon-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
+              app-name: KHZ Glance
+              app-icon-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
+              app-background-color: "#0a0a0a"
+              hide-footer: true
+
+            theme:
+              background-color: 0 0 6
+              primary-color: 0 0 88
+              positive-color: 0 0 78
+              negative-color: 0 72 66
+              contrast-multiplier: 1.2
+              text-saturation-multiplier: 0
+              disable-picker: true
+
+            pages:
+              - name: Home
+                hide-desktop-navigation: true
+                head-widgets:
+                  - type: search
+                    search-engine: google
+                    new-tab: true
+                    bangs:
+                      - title: YouTube
+                        shortcut: "!yt"
+                        url: https://www.youtube.com/results?search_query={QUERY}
+                      - title: GitHub
+                        shortcut: "!gh"
+                        url: https://github.com/search?q={QUERY}
+                      - title: Reddit
+                        shortcut: "!rd"
+                        url: https://www.reddit.com/search?q={QUERY}
+                columns:
+                  - size: small
+                    widgets:
+                      - type: clock
+                        hour-format: 24h
+                        timezones:
+                          - timezone: Asia/Singapore
+                            label: Home
+                          - timezone: America/New_York
+                            label: US East
+                      - type: calendar
+                        first-day-of-week: monday
+                      - type: weather
+                        location: Singapore, Singapore
+                        units: metric
+                        hour-format: 24h
+                      - type: markets
+                        markets:
+                          - symbol: SPY
+                            name: S&P 500
+                          - symbol: BTC-USD
+                            name: Bitcoin
+                          - symbol: NVDA
+                            name: NVIDIA
+                          - symbol: AAPL
+                            name: Apple
+
+                  - size: full
+                    widgets:
+                      - type: bookmarks
+                        groups:
+                          - title: Media
+                            links:
+                              - title: Jellyfin
+                                url: https://jellyfin.khzaw.dev
+                                icon: di:jellyfin
+                              - title: Immich
+                                url: https://photos.khzaw.dev
+                                icon: di:immich
+                              - title: Jellyseerr
+                                url: https://entertainment.khzaw.dev
+                                icon: di:jellyseerr
+                              - title: Audiobookshelf
+                                url: https://audiobookshelf.khzaw.dev
+                                icon: di:audiobookshelf
+                          - title: Acquisition
+                            links:
+                              - title: Sonarr
+                                url: https://sonarr.khzaw.dev
+                                icon: di:sonarr
+                              - title: Radarr
+                                url: https://radarr.khzaw.dev
+                                icon: di:radarr
+                              - title: Prowlarr
+                                url: https://prowlarr.khzaw.dev
+                                icon: di:prowlarr
+                              - title: Bazarr
+                                url: https://bazarr.khzaw.dev
+                                icon: di:bazarr
+                              - title: Notifiarr
+                                url: https://notifiarr.khzaw.dev
+                                icon: di:notifiarr
+                              - title: Transmission
+                                url: https://torrent.khzaw.dev
+                                icon: di:transmission
+                              - title: SABnzbd
+                                url: https://sabnzbd.khzaw.dev
+                                icon: di:sabnzbd
+                          - title: Ops
+                            links:
+                              - title: Homepage
+                                url: https://hq.khzaw.dev
+                                icon: di:homepage
+                              - title: Grafana
+                                url: https://grafana.khzaw.dev
+                                icon: di:grafana
+                              - title: Jellystat
+                                url: https://jellystat.khzaw.dev
+                                icon: di:jellystat
+                              - title: Uptime Kuma
+                                url: https://uptime-kuma.khzaw.dev
+                                icon: di:uptime-kuma
+                              - title: Vaultwarden
+                                url: https://passwords.khzaw.dev
+                                icon: di:vaultwarden
+                              - title: Router
+                                url: http://10.0.0.1
+                                icon: mdi:router-network
+                              - title: TrueNAS
+                                url: http://10.0.0.210
+                                icon: di:truenas
+                      - type: releases
+                        cache: 6h
+                        show-source-icon: true
+                        repositories:
+                          - immich-app/immich
+                          - gethomepage/homepage
+                          - glanceapp/glance
+                          - dani-garcia/vaultwarden
+                          - fluxcd/flux2
+                          - grafana/grafana
+                      - type: rss
+                        title: Homelab News
+                        style: horizontal-cards
+                        limit: 12
+                        collapse-after: 4
+                        feeds:
+                          - url: https://selfh.st/rss/
+                            title: selfh.st
+                          - url: https://www.reddit.com/r/selfhosted/.rss
+                            title: r/selfhosted
+                          - url: https://blog.cloudflare.com/rss/
+                            title: Cloudflare
+
+                  - size: small
+                    widgets:
+                      - type: server-stats
+                        servers:
+                          - type: local
+                            name: Mini PC
+                            hide-mountpoints-by-default: true
+                      - type: monitor
+                        title: Service Health
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Homepage
+                            url: https://hq.khzaw.dev
+                            icon: di:homepage
+                          - title: Glance
+                            url: https://glance.khzaw.dev
+                            icon: di:glance
+                          - title: Immich
+                            url: https://photos.khzaw.dev
+                            icon: di:immich
+                          - title: Jellyfin
+                            url: https://jellyfin.khzaw.dev
+                            icon: di:jellyfin
+                          - title: Grafana
+                            url: https://grafana.khzaw.dev
+                            icon: di:grafana
+                          - title: Vaultwarden
+                            url: https://passwords.khzaw.dev
+                            icon: di:vaultwarden
+                          - title: Router
+                            url: http://10.0.0.1
+                            icon: mdi:router-network
+                            alt-status-codes:
+                              - 401
+                              - 403
+                          - title: TrueNAS
+                            url: http://10.0.0.210
+                            icon: di:truenas
+                            alt-status-codes:
+                              - 401
+                              - 403
+
+    persistence:
+      config:
+        enabled: true
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /app/config/glance.yml
+            subPath: glance.yml
+            readOnly: true
