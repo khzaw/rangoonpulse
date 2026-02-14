@@ -129,15 +129,6 @@ resource "cloudflare_record" "jellystat" {
   proxied = false
 }
 
-resource "cloudflare_record" "calibre_web_automated" {
-  zone_id = data.cloudflare_zone.primary.id
-  name    = "calibre-web"
-  content = var.metallb_ip
-  type    = "A"
-  ttl     = 1
-  proxied = false
-}
-
 # resource "cloudflare_record" "ghost" {
 #   zone_id = data.cloudflare_zone.primary.id
 #   name = "blog"

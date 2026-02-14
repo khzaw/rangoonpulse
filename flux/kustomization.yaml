@@ -35,7 +35,6 @@ resources:
   - ./kustomizations/uptime-kuma.yaml
   - ./kustomizations/audiobookshelf.yaml
   - ./kustomizations/calibre.yaml
-  - ./kustomizations/calibre-web.yaml
   - ./kustomizations/calibre-web-automated.yaml
   - ./kustomizations/actualbudget.yaml
   - ./kustomizations/democratic-csi.yaml

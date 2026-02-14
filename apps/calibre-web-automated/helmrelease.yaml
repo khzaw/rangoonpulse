@@ -59,7 +59,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: calibre-web.khzaw.dev
+          - host: calibre.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
@@ -73,7 +73,7 @@ spec:
         tls:
           - secretName: calibre-web-automated-tls
             hosts:
-              - calibre-web.khzaw.dev
+              - calibre.khzaw.dev
 
     persistence:
       config:
