@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/app-template-3.7.3/charts/other/app-template/values.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: flux-system
+spec:
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  values:
+    controllers:
+      main:
+        replicas: 1
+        containers:
+          main:
+            image:
+              repository: registry.k8s.io/external-dns/external-dns
+              tag: v0.14.2
+            args:
+              - --source=ingress
+              - --provider=cloudflare
+              - --policy=upsert-only
+              - --registry=txt
+              - --txt-owner-name=external-dns
+              - --domain-filters=khzaw.dev
+              - --interval=1m
+            env:
+              - name: CF_API_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: cloudflare-api-token
+                    key: token
+    service:
+      main:
+        enabled: false
+    ingress:
+      main:
+        enabled: false

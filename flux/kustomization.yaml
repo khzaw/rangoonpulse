@@ -25,7 +25,7 @@ resources:
   - ./kustomizations/cert-manager.yaml
   - ./kustomizations/cert-manager-config.yaml
   - ./kustomizations/tofu-controller.yaml
-  - ./kustomizations/terraform-dns.yaml
+  - ./kustomizations/external-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/monitoring.yaml
 
