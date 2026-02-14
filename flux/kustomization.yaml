@@ -53,6 +53,7 @@ resources:
   - ./kustomizations/notifiarr.yaml
   - ./kustomizations/immich.yaml
   - ./kustomizations/homepage.yaml
+  - ./kustomizations/vaultwarden.yaml
   - ./kustomizations/tunarr.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
