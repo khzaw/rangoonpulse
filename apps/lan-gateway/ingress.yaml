@@ -6,7 +6,7 @@ metadata:
   namespace: default
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    external-dns.alpha.kubernetes.io/hostname: nas.khzaw.dev,router.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: nas.khzaw.dev
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
@@ -24,18 +24,7 @@ spec:
                 name: nas-lan
                 port:
                   number: 80
-    - host: router.khzaw.dev
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: router-lan
-                port:
-                  number: 80
   tls:
     - secretName: lan-gateway-tls
       hosts:
         - nas.khzaw.dev
-        - router.khzaw.dev
