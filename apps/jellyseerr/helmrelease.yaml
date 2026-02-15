@@ -19,11 +19,27 @@ spec:
   values:
     controllers:
       main:
+        pod:
+          securityContext:
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
         containers:
           main:
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: false
+              runAsNonRoot: true
+              privileged: false
+              runAsUser: 1000
+              runAsGroup: 1000
+              seccompProfile:
+                type: RuntimeDefault
             image:
-              repository: fallenbagel/jellyseerr
-              tag: "3.0.1"
+              repository: ghcr.io/seerr-team/seerr
+              tag: "v3.0.1"
             env:
               TZ: "Asia/Singapore"
               LOG_LEVEL: "info"
