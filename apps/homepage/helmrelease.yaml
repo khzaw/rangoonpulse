@@ -82,6 +82,12 @@ spec:
             name: homepage-widget-secrets
             key: SABNZBD_API_KEY
             optional: true
+      - name: HOMEPAGE_VAR_JELLYFIN_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: JELLYFIN_API_KEY
+            optional: true
       # - name: HOMEPAGE_VAR_SPEEDTEST_API_KEY
       #   valueFrom:
       #     secretKeyRef:
@@ -147,20 +153,32 @@ spec:
             columns: 4
           Books:
             style: row
-            columns: 8
+            columns: 6
           Ops:
             style: row
-            columns: 8
+            columns: 6
       services:
         - Apps:
             - Actual Budget:
                 icon: actual-budget.png
                 href: https://actual.khzaw.dev
                 description: Personal finance
+            - Vaultwarden:
+                icon: vaultwarden.png
+                href: https://passwords.khzaw.dev
+                description: Password manager
             - Jellyfin:
                 icon: jellyfin.png
                 href: https://jellyfin.khzaw.dev
                 description: Media streaming
+                widget:
+                  type: jellyfin
+                  url: https://jellyfin.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+                  version: 2
+                  enableBlocks: 2
+                  enableNowPlaying: true
+                  enableUser: true
             - Immich:
                 icon: immich.png
                 href: https://photos.khzaw.dev
@@ -258,14 +276,6 @@ spec:
                   url: https://sabnzbd.khzaw.dev
                   key: "{{HOMEPAGE_VAR_SABNZBD_API_KEY}}"
         - Ops:
-            - Glance:
-                icon: glance.png
-                href: https://glance.khzaw.dev
-                description: Minimal dashboard
-            - Vaultwarden:
-                icon: vaultwarden.png
-                href: https://passwords.khzaw.dev
-                description: Password manager
             - Jellystat:
                 icon: jellystat.png
                 href: https://jellystat.khzaw.dev
@@ -274,7 +284,19 @@ spec:
                   type: jellystat
                   url: https://jellystat.khzaw.dev
                   key: "{{HOMEPAGE_VAR_JELLYSTAT_API_KEY}}"
-                  days: 30
+                  days: 90
+            - Uptime:
+                icon: uptime-kuma.png
+                href: https://uptime-kuma.khzaw.dev
+                description: Uptime checks
+                widget:
+                  type: uptimekuma
+                  url: http://uptime-kuma.default.svc.cluster.local:3001
+                  slug: rangoonpulse
+            - Glance:
+                icon: glance.png
+                href: https://glance.khzaw.dev
+                description: Minimal dashboard
             - Grafana:
                 icon: grafana.png
                 href: https://grafana.khzaw.dev
@@ -289,14 +311,6 @@ spec:
             #       key: "{{HOMEPAGE_VAR_SPEEDTEST_API_KEY}}"
             #       version: 2
             #       bitratePrecision: 1
-            - Uptime:
-                icon: uptime-kuma.png
-                href: https://uptime-kuma.khzaw.dev
-                description: Uptime checks
-                widget:
-                  type: uptimekuma
-                  url: http://uptime-kuma.default.svc.cluster.local:3001
-                  slug: rangoonpulse
             - Router:
                 icon: router.png
                 href: http://10.0.0.1
