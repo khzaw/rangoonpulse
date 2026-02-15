@@ -192,10 +192,10 @@ spec:
                                 url: https://passwords.khzaw.dev
                                 icon: di:vaultwarden
                               - title: Router
-                                url: http://10.0.0.1
+                                url: https://router.khzaw.dev
                                 icon: mdi:router-network
                               - title: TrueNAS
-                                url: http://10.0.0.210
+                                url: https://nas.khzaw.dev
                                 icon: di:truenas
                       - type: releases
                         cache: 6h
@@ -251,13 +251,13 @@ spec:
                             url: https://passwords.khzaw.dev
                             icon: di:vaultwarden
                           - title: Router
-                            url: http://10.0.0.1
+                            url: https://router.khzaw.dev
                             icon: mdi:router-network
                             alt-status-codes:
                               - 401
                               - 403
                           - title: TrueNAS
-                            url: http://10.0.0.210
+                            url: https://nas.khzaw.dev
                             icon: di:truenas
                             alt-status-codes:
                               - 401

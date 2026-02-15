@@ -321,11 +321,11 @@ spec:
             #       bitratePrecision: 1
             - Router:
                 icon: router.png
-                href: http://10.0.0.1
+                href: https://router.khzaw.dev
                 description: Router
             - NAS:
                 icon: truenas.png
-                href: http://10.0.0.210
+                href: https://nas.khzaw.dev
                 description: TrueNAS Scale
       widgets:
         - search:
