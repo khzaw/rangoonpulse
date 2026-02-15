@@ -9,15 +9,15 @@ data:
   Corefile: |
     khzaw.dev:53 {
         template IN A {
-          match '^nas\.khzaw\.dev\.?$'
+          match ^nas\.khzaw\.dev\.?$
           answer "{{ .Name }} 60 IN A 10.0.0.210"
         }
         template IN A {
-          match '^router\.khzaw\.dev\.?$'
+          match ^router\.khzaw\.dev\.?$
           answer "{{ .Name }} 60 IN A 10.0.0.1"
         }
         template IN A {
-          match '^.*\.khzaw\.dev\.?$'
+          match ^.*\.khzaw\.dev\.?$
           answer "{{ .Name }} 60 IN A 10.0.0.231"
           fallthrough
         }
