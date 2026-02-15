@@ -26,13 +26,3 @@ patches:
       kind: Deployment
       name: ingress-nginx-controller
       namespace: ingress-nginx
-
-  - patch: |-
-      apiVersion: v1
-      kind: Service
-      metadata:
-        name: ingress-nginx-controller
-        namespace: ingress-nginx
-        annotations:
-          tailscale.com/expose: "true"
-    target: { kind: Service, name: ingress-nginx-controller, namespace: ingress-nginx }
