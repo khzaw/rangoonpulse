@@ -88,6 +88,12 @@ spec:
             name: homepage-widget-secrets
             key: JELLYFIN_API_KEY
             optional: true
+      - name: HOMEPAGE_VAR_FINNHUB_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: FINNHUB_API_KEY
+            optional: true
       # - name: HOMEPAGE_VAR_SPEEDTEST_API_KEY
       #   valueFrom:
       #     secretKeyRef:
@@ -137,6 +143,8 @@ spec:
         useEqualHeights: true
         hideVersion: true
         target: _self
+        providers:
+          finnhub: "{{HOMEPAGE_VAR_FINNHUB_API_KEY}}"
         quicklaunch:
           provider: duckduckgo
           searchDescriptions: true
@@ -330,3 +338,17 @@ spec:
               dateStyle: medium
               timeStyle: short
               hourCycle: h23
+        - stocks:
+            provider: finnhub
+            color: true
+            cache: 1
+            watchlist:
+              - CSPX.L
+              - DHER.BE
+              - META
+              - NET
+              - AAPL
+              - MSFT
+              - GOOGL
+              - AMZN
+              - TSLA
