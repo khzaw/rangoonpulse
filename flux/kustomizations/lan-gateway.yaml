@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./apps/lan-gateway
+  path: ./infrastructure/lan-gateway
   prune: true
   sourceRef:
     kind: GitRepository
