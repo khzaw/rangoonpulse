@@ -24,6 +24,7 @@ resources:
   - ./kustomizations/metallb.yaml
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/tailscale-operator.yaml
+  - ./kustomizations/tailscale-subnet-router.yaml
   - ./kustomizations/cert-manager.yaml
   - ./kustomizations/cert-manager-config.yaml
   - ./kustomizations/tofu-controller.yaml
