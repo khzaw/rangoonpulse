@@ -7,4 +7,3 @@ resources:
   - rbac-patch-clusterrole.yaml
   - rbac-patch-clusterrolebinding.yaml
   - helmrelease.yaml
-  - dns-server.yaml
