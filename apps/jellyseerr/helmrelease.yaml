@@ -23,7 +23,7 @@ spec:
           main:
             image:
               repository: fallenbagel/jellyseerr
-              tag: latest
+              tag: "3.0.1"
             env:
               TZ: "Asia/Singapore"
               LOG_LEVEL: "info"
