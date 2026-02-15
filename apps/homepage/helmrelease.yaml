@@ -33,6 +33,42 @@ spec:
         value: Asia/Singapore
       - name: HOMEPAGE_ALLOWED_HOSTS
         value: hq.khzaw.dev,localhost,127.0.0.1
+      - name: HOMEPAGE_VAR_SONARR_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: SONARR_API_KEY
+            optional: true
+      - name: HOMEPAGE_VAR_RADARR_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: RADARR_API_KEY
+            optional: true
+      - name: HOMEPAGE_VAR_JELLYSEERR_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: JELLYSEERR_API_KEY
+            optional: true
+      - name: HOMEPAGE_VAR_PROWLARR_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: PROWLARR_API_KEY
+            optional: true
+      - name: HOMEPAGE_VAR_JELLYSTAT_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: JELLYSTAT_API_KEY
+            optional: true
+      - name: HOMEPAGE_VAR_BAZARR_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: BAZARR_API_KEY
+            optional: true
 
     ingress:
       main:
@@ -128,14 +164,33 @@ spec:
                 icon: sonarr.png
                 href: https://sonarr.khzaw.dev
                 description: Series manager
+                widget:
+                  type: sonarr
+                  url: https://sonarr.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_SONARR_API_KEY}}"
+                  enableQueue: true
             - Radarr:
                 icon: radarr.png
                 href: https://radarr.khzaw.dev
                 description: Movie manager
+                widget:
+                  type: radarr
+                  url: https://radarr.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
+                  enableQueue: true
             - Jellyseerr:
                 icon: jellyseerr.png
                 href: https://entertainment.khzaw.dev
                 description: Media requests
+                widget:
+                  type: jellyseerr
+                  url: https://entertainment.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+                  fields:
+                    - pending
+                    - approved
+                    - available
+                    - issues
             - Tunarr:
                 icon: tunarr.png
                 href: https://tunarr.khzaw.dev
@@ -144,10 +199,18 @@ spec:
                 icon: prowlarr.png
                 href: https://prowlarr.khzaw.dev
                 description: Indexer manager
+                widget:
+                  type: prowlarr
+                  url: https://prowlarr.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}"
             - Bazarr:
                 icon: bazarr.png
                 href: https://bazarr.khzaw.dev
                 description: Subtitles
+                widget:
+                  type: bazarr
+                  url: https://bazarr.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}"
             - Notifiarr:
                 icon: notifiarr.png
                 href: https://notifiarr.khzaw.dev
@@ -174,6 +237,11 @@ spec:
                 icon: jellystat.png
                 href: https://jellystat.khzaw.dev
                 description: Jellyfin analytics
+                widget:
+                  type: jellystat
+                  url: https://jellystat.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_JELLYSTAT_API_KEY}}"
+                  days: 30
             - Grafana:
                 icon: grafana.png
                 href: https://grafana.khzaw.dev
