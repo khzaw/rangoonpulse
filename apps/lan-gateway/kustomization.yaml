@@ -6,3 +6,4 @@ resources:
   - nas-service.yaml
   - router-service.yaml
   - ingress.yaml
+  - router-ingress.yaml

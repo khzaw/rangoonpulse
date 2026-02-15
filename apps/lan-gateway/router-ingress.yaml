@@ -1,0 +1,33 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-gateway-router
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/hostname: router.khzaw.dev
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/upstream-vhost: "10.0.0.1"
+    nginx.ingress.kubernetes.io/proxy-redirect-from: "http://10.0.0.1"
+    nginx.ingress.kubernetes.io/proxy-redirect-to: "https://router.khzaw.dev"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: router.khzaw.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: router-lan
+                port:
+                  number: 80
+  tls:
+    - secretName: router-tls
+      hosts:
+        - router.khzaw.dev
