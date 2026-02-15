@@ -5,3 +5,4 @@ migration-pod.yaml
 ghost-passwords.txt
 talos
 .agent-shell/
+.superset
