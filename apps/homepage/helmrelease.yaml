@@ -182,7 +182,7 @@ spec:
                 widget:
                   type: jellyfin
                   url: https://jellyfin.khzaw.dev
-                  key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+                  key: "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}"
                   version: 2
                   enableBlocks: 2
                   enableNowPlaying: true
@@ -343,8 +343,6 @@ spec:
             color: true
             cache: 1
             watchlist:
-              - CSPX.L
-              - DHER.BE
               - META
               - NET
               - AAPL
