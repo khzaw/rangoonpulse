@@ -59,8 +59,8 @@ spec:
               - path: /
                 pathType: Prefix
                 service:
-                  name: jellyseerr
-                  port: 5055
+                  identifier: main
+                  port: http
 
         annotations:
           external-dns.alpha.kubernetes.io/hostname: entertainment.khzaw.dev
@@ -69,7 +69,7 @@ spec:
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
-          - secretName: jellyseerr-tls
+          - secretName: seerr-tls
             hosts:
               - entertainment.khzaw.dev
 

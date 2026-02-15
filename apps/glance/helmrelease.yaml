@@ -145,7 +145,7 @@ spec:
                               - title: Immich
                                 url: https://photos.khzaw.dev
                                 icon: di:immich
-                              - title: Jellyseerr
+                              - title: Seerr
                                 url: https://entertainment.khzaw.dev
                                 icon: di:jellyseerr
                               - title: Audiobookshelf

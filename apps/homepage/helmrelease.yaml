@@ -178,7 +178,7 @@ spec:
                   url: https://radarr.khzaw.dev
                   key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
                   enableQueue: false
-            - Jellyseerr:
+            - Seerr:
                 icon: jellyseerr.png
                 href: https://entertainment.khzaw.dev
                 description: Media requests
@@ -250,6 +250,10 @@ spec:
                 icon: uptime-kuma.png
                 href: https://uptime-kuma.khzaw.dev
                 description: Uptime checks
+                widget:
+                  type: uptimekuma
+                  url: http://uptime-kuma.default.svc.cluster.local:3001
+                  slug: rangoonpulse
             - Router:
                 icon: router.png
                 href: http://10.0.0.1

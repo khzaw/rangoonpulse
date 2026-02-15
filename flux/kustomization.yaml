@@ -48,7 +48,7 @@ resources:
   - ./kustomizations/sonarr.yaml
   - ./kustomizations/bazarr.yaml
   - ./kustomizations/jellyfin.yaml
-  - ./kustomizations/jellyseerr.yaml
+  - ./kustomizations/seerr.yaml
   - ./kustomizations/jellystat.yaml
   - ./kustomizations/notifiarr.yaml
   - ./kustomizations/immich.yaml
