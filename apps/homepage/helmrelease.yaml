@@ -168,7 +168,7 @@ spec:
                   type: sonarr
                   url: https://sonarr.khzaw.dev
                   key: "{{HOMEPAGE_VAR_SONARR_API_KEY}}"
-                  enableQueue: true
+                  enableQueue: false
             - Radarr:
                 icon: radarr.png
                 href: https://radarr.khzaw.dev
@@ -177,7 +177,7 @@ spec:
                   type: radarr
                   url: https://radarr.khzaw.dev
                   key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
-                  enableQueue: true
+                  enableQueue: false
             - Jellyseerr:
                 icon: jellyseerr.png
                 href: https://entertainment.khzaw.dev
