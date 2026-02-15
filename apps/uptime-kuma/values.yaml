@@ -3,12 +3,12 @@
 controllers:
   main:
     replicas: 1
-    strategy: RollingUpdate
+    strategy: Recreate
     containers:
       main:
         image:
           repository: louislam/uptime-kuma
-          tag: latest
+          tag: "2.1.1"
         resources:
           requests:
             cpu: 50m
