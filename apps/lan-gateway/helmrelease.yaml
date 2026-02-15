@@ -118,7 +118,7 @@ spec:
       config:
         enabled: true
         type: configMap
-        name: config
+        identifier: config
         advancedMounts:
           main:
             main:
