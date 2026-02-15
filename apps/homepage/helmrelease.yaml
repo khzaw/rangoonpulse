@@ -33,6 +33,13 @@ spec:
         value: Asia/Singapore
       - name: HOMEPAGE_ALLOWED_HOSTS
         value: hq.khzaw.dev,localhost,127.0.0.1
+      # Requires secret `homepage-widget-secrets` in namespace `default`.
+      - name: HOMEPAGE_VAR_IMMICH_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: IMMICH_API_KEY
+            optional: true
       - name: HOMEPAGE_VAR_SONARR_API_KEY
         valueFrom:
           secretKeyRef:
@@ -69,6 +76,18 @@ spec:
             name: homepage-widget-secrets
             key: BAZARR_API_KEY
             optional: true
+      - name: HOMEPAGE_VAR_SABNZBD_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: homepage-widget-secrets
+            key: SABNZBD_API_KEY
+            optional: true
+      # - name: HOMEPAGE_VAR_SPEEDTEST_API_KEY
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: homepage-widget-secrets
+      #       key: SPEEDTEST_API_KEY
+      #       optional: true
 
     ingress:
       main:
@@ -125,7 +144,7 @@ spec:
             columns: 2
           Arr Stack:
             style: row
-            columns: 8
+            columns: 4
           Books:
             style: row
             columns: 8
@@ -146,13 +165,18 @@ spec:
                 icon: immich.png
                 href: https://photos.khzaw.dev
                 description: Photos management
+                widget:
+                  type: immich
+                  url: https://photos.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_IMMICH_API_KEY}}"
+                  version: 2
         - Books:
             - Audiobookshelf:
                 icon: audiobookshelf.png
                 href: https://audiobookshelf.khzaw.dev
                 description: Books and audiobooks
             - Calibre Web:
-                icon: calibre-web.png
+                icon: calibre.png
                 href: https://calibre.khzaw.dev
                 description: Calibre
             - Calibre Manage:
@@ -191,10 +215,6 @@ spec:
                     - approved
                     - available
                     - issues
-            - Tunarr:
-                icon: tunarr.png
-                href: https://tunarr.khzaw.dev
-                description: TV Channels scheduler
             - Prowlarr:
                 icon: prowlarr.png
                 href: https://prowlarr.khzaw.dev
@@ -211,6 +231,10 @@ spec:
                   type: bazarr
                   url: https://bazarr.khzaw.dev
                   key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}"
+            - Tunarr:
+                icon: tunarr.png
+                href: https://tunarr.khzaw.dev
+                description: TV Channels scheduler
             - Notifiarr:
                 icon: notifiarr.png
                 href: https://notifiarr.khzaw.dev
@@ -220,10 +244,19 @@ spec:
                 icon: transmission.png
                 href: https://torrent.khzaw.dev
                 description: Torrent
+                widget:
+                  type: transmission
+                  url: https://torrent.khzaw.dev
+                  username: ""
+                  password: ""
             - SABnzbd:
                 icon: sabnzbd.png
                 href: https://sabnzbd.khzaw.dev
                 description: Usenet downloader
+                widget:
+                  type: sabnzbd
+                  url: https://sabnzbd.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_SABNZBD_API_KEY}}"
         - Ops:
             - Glance:
                 icon: glance.png
@@ -246,6 +279,16 @@ spec:
                 icon: grafana.png
                 href: https://grafana.khzaw.dev
                 description: Grafana
+            # - Speedtest:
+            #     icon: speedtest.png
+            #     href: https://speedtest.khzaw.dev
+            #     description: Internet speed trend
+            #     widget:
+            #       type: speedtest
+            #       url: https://speedtest.khzaw.dev
+            #       key: "{{HOMEPAGE_VAR_SPEEDTEST_API_KEY}}"
+            #       version: 2
+            #       bitratePrecision: 1
             - Uptime:
                 icon: uptime-kuma.png
                 href: https://uptime-kuma.khzaw.dev
