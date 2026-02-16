@@ -222,7 +222,7 @@ class PromClient:
 
 
 def pod_regex_for_workload(workload: str, kind: str) -> str:
-    escaped = re.escape(workload)
+    escaped = re.escape(workload).replace("\\-", "-")
     if kind == "statefulsets":
         return f"{escaped}-[0-9]+"
     return f"{escaped}-.+"
