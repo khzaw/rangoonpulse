@@ -9,7 +9,7 @@
       "memory": 22.3
     }
   },
-  "generated_at": "2026-02-16T09:41:00Z",
+  "generated_at": "2026-02-16T09:51:27Z",
   "mode": "pr",
   "recommendations": [
     {
@@ -50,7 +50,7 @@
         }
       },
       "release": "kube-prometheus-stack",
-      "restarts_7d": 19.01,
+      "restarts_7d": 19.0,
       "workload": "kube-prometheus-stack-kube-state-metrics"
     },
     {
