@@ -1,71 +1,144 @@
 # AGENTS.md - rangoonpulse
 
 ## Project Overview
+Homelab Kubernetes infrastructure-as-code repository using Flux CD GitOps.
 
-Homelab Kubernetes infrastructure-as-code repository using GitOps practices with Flux CD.
+This file documents how this cluster is operated today so a new LLM session can
+continue work without re-discovery.
 
-## Tech Stack
+## Cluster Profile
+- Kubernetes: Talos Linux cluster (single primary worker profile, resource-constrained homelab)
+- GitOps: Flux CD v2 (`Kustomization` + `HelmRelease`)
+- Primary ingress: ingress-nginx with MetalLB
+- DNS/TLS: Cloudflare + external-dns + cert-manager (Let's Encrypt)
+- Remote access: Tailscale operator + subnet router (`Connector`)
+- Storage mix: `local-path`, TrueNAS NFS classes (`truenas-*`), democratic-csi present
+- Timezone standard: `Asia/Singapore`
 
-- **Kubernetes**: Talos Linux cluster
-- **GitOps**: Flux CD v2 with Kustomizations and HelmReleases
-- **Helm Charts**: bjw-s app-template, various community charts
-- **Infrastructure**: MetalLB, cert-manager, ingress-nginx, Tailscale operator
-- **Storage**: Longhorn, democratic-csi, local-path
-- **Monitoring**: Prometheus, Grafana, Loki
-- **DNS/TLS**: Cloudflare (via Terraform/OpenTofu), Let's Encrypt
-- **IaC**: OpenTofu (tofu-controller)
+## Repository Structure
+- `apps/`: user-facing applications (mostly `namespace: default`)
+- `core/`: core components (for example ingress-nginx base install/patch)
+- `infrastructure/`: infra components and non-app services
+- `flux/`: Helm repositories + Flux Kustomizations
+- `talos/`: Talos machine configuration
+- `docs/`: architectural notes, migration docs, backup planning
 
-## Directory Structure
+## Non-Negotiable Working Rules
+- Use GitOps. Do not rely on direct `kubectl apply` for permanent changes.
+- `kubectl apply --dry-run=client` is fine for validation.
+- Prefer `HelmRelease` changes over raw manifests.
+- Do not introduce a separate `values.yaml` when an app can be fully configured inline in `helmrelease.yaml`.
+- Keep ingress, DNS annotation, and TLS settings aligned for every externally accessed app.
+- Do not commit plaintext passwords/API keys in manifests.
 
-- `apps/` - Application deployments (media stack, tools)
-- `core/` - Core cluster components (ingress-nginx)
-- `flux/` - Flux CD configuration (kustomizations, repositories)
-- `infrastructure/` - Infrastructure components (cert-manager, metallb, monitoring, storage, terraform)
-- `talos/` - Talos Linux machine configs
+## Current Access Model (Important)
+The cluster uses a simplified unified path:
+- LAN path: user -> `10.0.0.231` (MetalLB ingress IP)
+- Remote path: user on Tailscale -> routed to `10.0.0.231` via subnet router
 
-## Conventions
+Implemented via:
+- `infrastructure/tailscale-subnet-router/connector.yaml`
+  - advertises routes:
+    - `10.0.0.231/32` (ingress)
+    - `10.0.0.210/32` (NAS)
+    - `10.0.0.1/32` (router)
+- `infrastructure/lan-gateway/` for NAS/router hostname access through ingress
+  - `nas.khzaw.dev` -> service/endpoints -> `10.0.0.210:80`
+  - `router.khzaw.dev` -> service/endpoints -> `10.0.0.1:80`
+  - TLS terminates at ingress with cert-manager
 
-For the most part, raw k8s manifest should not be applied directly. Follow the practices of GitOps.
+Notes:
+- Old Tailscale ingress-proxy/DNS indirection was removed in favor of subnet routing.
+- `lan-access` Flux kustomization points to `./infrastructure/lan-gateway`.
 
-### Kubernetes Manifests
+## Ingress and DNS Pattern
+For public or tailnet-only app hostnames, use:
+- ingress class: `nginx`
+- annotation: `external-dns.alpha.kubernetes.io/hostname`
+- annotation: `cert-manager.io/cluster-issuer: letsencrypt-prod`
+- annotation: `nginx.ingress.kubernetes.io/ssl-redirect: "true"`
+- TLS section with matching hosts
 
-- Use `helmrelease.yaml` + `kustomization.yaml` per app
-- HelmReleases use `helm.toolkit.fluxcd.io/v2` API
-- App-template chart from bjw-s-charts for most apps
-- Namespace: `default` for apps, dedicated namespaces for infrastructure
-- Ingress class: `nginx`
-- TLS: cert-manager with `letsencrypt-prod` ClusterIssuer
-- Domain: `*.khzaw.dev`
+## App Deployment Conventions
+- Standard app layout:
+  - `apps/<name>/helmrelease.yaml`
+  - `apps/<name>/kustomization.yaml`
+  - `flux/kustomizations/<name>.yaml`
+  - add entry in `flux/kustomization.yaml`
+- Most apps use `bjw-s-charts/app-template` chart.
+- Keep resources explicit (requests and limits) for homelab capacity control.
+- Validate manifests before pushing.
 
-### YAML Style
+## Storage Conventions and Current Decisions
+- Immich:
+  - photos/library on NFS PVC `immich-library` (`truenas-hdd-media`, RWX, 500Gi, expandable)
+  - Postgres on `local-path` for low-latency/stability
+- Vaultwarden:
+  - data on NFS (`truenas-nfs`, 5Gi, expandable)
+- Grafana:
+  - persistent storage enabled on `local-path` (currently 1Gi PVC)
+- PVC object names in Kubernetes are dynamically generated by the provisioner and are not controlled by desired claim name.
 
-- Use `---` document separator at file start
-- Include yaml-language-server schema comments where applicable
-- Timezone: `Asia/Singapore`
+## Secrets and Credentials
+- Current state: native Kubernetes Secrets (no SOPS/SealedSecrets yet).
+- Expected usage pattern in manifests:
+  - `env` or chart values referencing `secretKeyRef`
+  - no inline plaintext credentials
+- Homepage widget API keys are pulled from `homepage-widget-secrets` via env vars (`HOMEPAGE_VAR_*`).
+- Future secret-management direction is tracked in:
+  - `docs/secrets-management-current-state-options-and-plan.md`
 
-## Commands
+## Monitoring/Grafana Notes
+- Monitoring stack: `infrastructure/monitoring/helmrelease.yaml`
+- Current critical settings:
+  - `nodeExporter.enabled: false` (correct key for chart line in use)
+  - Grafana persistence enabled
+  - Grafana `defaultDashboardsTimezone: browser`
+- If Grafana auth/state seems wrong, first verify PVC mount and user records before assuming full data loss.
 
+## Naming and Migration Notes
+- Jellyseerr -> Seerr migration is in progress.
+- Path is `apps/seerr`, image is Seerr (`ghcr.io/seerr-team/seerr`), but some legacy Kubernetes object names still use `jellyseerr` for continuity.
+- Do not rename release/object names casually when PVC/state continuity matters.
+
+## Resource Tuning Guidance
+- This is a single-node homelab with mixed workloads (media + photos + utilities).
+- Keep requests realistic and limits bounded to reduce OOM/restart loops.
+- Jellyfin can have occasional higher transcode load (rare 3-4 streams); avoid over-allocation across the rest of the stack.
+- When tuning, prefer incremental adjustments and check restart counts/events after reconciliation.
+
+## Validation and Operations Commands
 ```bash
-# Validate manifests
+# Validate manifest structure
 kubectl apply --dry-run=client -f <file>
 
-# Describe a helmrelease
-kubectl describe hr <name>
+# Flux health and rollout status
+flux get kustomizations
+flux get hr -A
+flux reconcile kustomization <name> --with-source
 
-# Flux reconciliation
-flux reconcile kustomization flux-system --with-source
+# Troubleshooting
+kubectl get pods -A
+kubectl describe hr -n <ns> <name>
+kubectl get events -n <ns> --sort-by=.lastTimestamp
 
-# Check Flux status
-flux get all
-
-# Talos cluster management
-talosctl -n 10.0.0.197 <command>
+# Talos node checks
+talosctl -n 10.0.0.197 dashboard
 ```
 
-## Adding New Applications
+## Commit Message Convention
+Use:
+- `<service>: <message>`
 
-1. Create directory under `apps/<app-name>/`
-2. Add `helmrelease.yaml` using app-template chart pattern
-3. Add `kustomization.yaml` referencing the helmrelease
-4. Add kustomization entry in `flux/kustomization.yaml`
-5. Add flux kustomization in `flux/kustomizations/<app>.yaml`
+Examples:
+- `tailscale-operator: bump chart to latest stable`
+- `monitoring: fix nodeExporter disable key`
+- `homepage: reorganize groups and widgets`
+
+## Useful Reference Docs
+- `docs/networking-current-state-and-simplification.md`
+- `docs/networking-simplified-migration-todo.md`
+- `docs/lan-access-current-state-and-lean-plan.md`
+- `docs/secrets-management-current-state-options-and-plan.md`
+- `docs/backup-plan.md`
+- `docs/blog-static-site-gitops-deployment-plan.md`
