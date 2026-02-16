@@ -137,10 +137,10 @@ spec:
         theme: dark
         color: zinc
         iconStyle: theme
-        headerStyle: boxedWidgets
+        headerStyle: clean
         statusStyle: dot
         fullWidth: true
-        useEqualHeights: true
+        useEqualHeights: false
         hideVersion: true
         target: _self
         providers:
@@ -152,7 +152,7 @@ spec:
         layout:
           Apps:
             style: row
-            columns: 6
+            columns: 4
           Downloaders:
             style: row
             columns: 2
@@ -161,7 +161,7 @@ spec:
             columns: 4
           Books:
             style: row
-            columns: 6
+            columns: 3
           Ops:
             style: row
             columns: 6
@@ -333,7 +333,7 @@ spec:
             target: _blank
             showSearchSuggestions: true
         - datetime:
-            text_size: xl
+            text_size: lg
             format:
               dateStyle: medium
               timeStyle: short
