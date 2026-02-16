@@ -1,0 +1,248 @@
+{
+  "budgets": {
+    "cpu_m": 5940.0,
+    "memory_mi": 25039.3
+  },
+  "constraints": {
+    "max_apply_changes_per_run": 5,
+    "max_request_percent_cpu": 60.0,
+    "max_request_percent_memory": 65.0,
+    "min_data_days_for_downsize": 14.0,
+    "min_data_days_for_upsize": 14.0
+  },
+  "current_requests": {
+    "cpu_m": 3205.0,
+    "memory_mi": 10320.0
+  },
+  "generated_at": "2026-02-16T10:16:48Z",
+  "metrics_coverage_days_estimate": 1.77,
+  "metrics_window": "14d",
+  "projected_requests_after_selected": {
+    "cpu_m": 3186.0,
+    "memory_mi": 10368.0
+  },
+  "selected": [
+    {
+      "container": "main",
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "192Mi"
+        }
+      },
+      "delta": {
+        "requests_cpu_m": -19.0,
+        "requests_memory_mi": 48.0
+      },
+      "namespace": "default",
+      "notes": [
+        "restart_guard"
+      ],
+      "path": "apps/seerr/helmrelease.yaml",
+      "priority": [
+        1,
+        4.67,
+        49.9
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "774Mi"
+        },
+        "requests": {
+          "cpu": "56m",
+          "memory": "240Mi"
+        }
+      },
+      "release": "jellyseerr",
+      "selection_reason": "upsize_within_budget",
+      "workload": "jellyseerr"
+    }
+  ],
+  "skipped": [
+    {
+      "container": "kube-state-metrics",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack"
+    },
+    {
+      "container": "config-reloader",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack-prometheus"
+    },
+    {
+      "container": "prometheus",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack-prometheus"
+    },
+    {
+      "container": "grafana-sc-dashboard",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack"
+    },
+    {
+      "container": "grafana-sc-datasources",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "bazarr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "calibre"
+    },
+    {
+      "container": "homepage",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "homepage"
+    },
+    {
+      "container": "main",
+      "reason": "not_allowlisted",
+      "release": "immich"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "jellyfin"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "prowlarr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "radarr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "sabnzbd"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "sonarr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_upsize",
+      "release": "uptime-kuma"
+    },
+    {
+      "container": "kube-prometheus-stack",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack"
+    },
+    {
+      "container": "grafana",
+      "reason": "not_allowlisted",
+      "release": "kube-prometheus-stack"
+    },
+    {
+      "container": "actualbudget",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "actualbudget"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "audiobookshelf"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "calibre-web-automated"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "flaresolverr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "glance"
+    },
+    {
+      "container": "db",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "jellystat"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "jellystat"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "notifiarr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "transmission"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "tunarr"
+    },
+    {
+      "container": "main",
+      "coverage_days": 1.77,
+      "min_days": 14.0,
+      "reason": "insufficient_data_for_downsize",
+      "release": "vaultwarden"
+    }
+  ]
+}
