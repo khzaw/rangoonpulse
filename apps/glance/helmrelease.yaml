@@ -361,7 +361,7 @@ spec:
                                 headers:
                                   X-Api-Key: ${SONARR_API_KEY}
                             template: |
-                              {{ $queue := .Subrequest "queue" }}
+                              {{`{{ $queue := .Subrequest "queue" }}
                               <div class="flex justify-between text-center">
                                 <div>
                                   <div class="color-highlight size-h3">{{ .JSON.Int "totalRecords" | formatNumber }}</div>
@@ -375,7 +375,7 @@ spec:
                                   <div class="size-h3">{{ if ($queue.JSON.Bool "errors") }}ERR{{ else if ($queue.JSON.Bool "warnings") }}WARN{{ else }}OK{{ end }}</div>
                                   <div class="size-h6">HEALTH</div>
                                 </div>
-                              </div>
+                              </div>`}}
                           - type: custom-api
                             title: Radarr
                             cache: 2m
@@ -388,7 +388,7 @@ spec:
                                 headers:
                                   X-Api-Key: ${RADARR_API_KEY}
                             template: |
-                              {{ $queue := .Subrequest "queue" }}
+                              {{`{{ $queue := .Subrequest "queue" }}
                               <div class="flex justify-between text-center">
                                 <div>
                                   <div class="color-highlight size-h3">{{ .JSON.Int "totalRecords" | formatNumber }}</div>
@@ -402,7 +402,7 @@ spec:
                                   <div class="size-h3">{{ if ($queue.JSON.Bool "errors") }}ERR{{ else if ($queue.JSON.Bool "warnings") }}WARN{{ else }}OK{{ end }}</div>
                                   <div class="size-h6">HEALTH</div>
                                 </div>
-                              </div>
+                              </div>`}}
                           - type: custom-api
                             title: Prowlarr
                             cache: 5m
@@ -419,7 +419,7 @@ spec:
                                 headers:
                                   X-Api-Key: ${PROWLARR_API_KEY}
                             template: |
-                              {{ $indexers := .JSON.Array "" }}
+                              {{`{{ $indexers := .JSON.Array "" }}
                               {{ $status := (.Subrequest "status").JSON.Array "" }}
                               {{ $health := (.Subrequest "health").JSON.Array "" }}
                               <div class="flex justify-between text-center">
@@ -435,7 +435,7 @@ spec:
                                   <div class="size-h3">{{ len $health | formatNumber }}</div>
                                   <div class="size-h6">WARNINGS</div>
                                 </div>
-                              </div>
+                              </div>`}}
                           - type: custom-api
                             title: Bazarr
                             cache: 5m
@@ -443,7 +443,7 @@ spec:
                             headers:
                               X-Api-Key: ${BAZARR_API_KEY}
                             template: |
-                              <div class="flex justify-between text-center">
+                              {{`<div class="flex justify-between text-center">
                                 <div>
                                   <div class="color-highlight size-h3">{{ .JSON.Int "episodes" | formatNumber }}</div>
                                   <div class="size-h6">EP WANTED</div>
@@ -456,13 +456,13 @@ spec:
                                   <div class="size-h3">{{ .JSON.Int "providers" | formatNumber }}</div>
                                   <div class="size-h6">PROVIDERS</div>
                                 </div>
-                              </div>
+                              </div>`}}
                           - type: custom-api
                             title: Jellyfin
                             cache: 5m
                             url: "https://jellyfin.khzaw.dev/Items/Counts?api_key=${JELLYFIN_API_KEY}"
                             template: |
-                              <div class="flex justify-between text-center">
+                              {{`<div class="flex justify-between text-center">
                                 <div>
                                   <div class="color-highlight size-h3">{{ .JSON.Int "MovieCount" | formatNumber }}</div>
                                   <div class="size-h6">MOVIES</div>
@@ -475,7 +475,7 @@ spec:
                                   <div class="size-h3">{{ .JSON.Int "EpisodeCount" | formatNumber }}</div>
                                   <div class="size-h6">EPISODES</div>
                                 </div>
-                              </div>
+                              </div>`}}
                           - type: custom-api
                             title: Immich
                             cache: 5m
@@ -484,7 +484,7 @@ spec:
                               x-api-key: ${IMMICH_API_KEY}
                               Accept: application/json
                             template: |
-                              <div class="flex justify-between text-center">
+                              {{`<div class="flex justify-between text-center">
                                 <div>
                                   <div class="color-highlight size-h3">{{ .JSON.Int "photos" | formatNumber }}</div>
                                   <div class="size-h6">PHOTOS</div>
@@ -497,79 +497,7 @@ spec:
                                   <div class="size-h3">{{ div (.JSON.Int "usage" | toFloat) 1073741824 | printf "%.1f" }} GB</div>
                                   <div class="size-h6">USAGE</div>
                                 </div>
-                              </div>
-
-              - name: Arr Stack
-                columns:
-                  - size: small
-                    widgets:
-                      - type: bookmarks
-                        groups:
-                          - title: Arr Services
-                            links:
-                              - title: Sonarr
-                                url: https://sonarr.khzaw.dev
-                                icon: di:sonarr
-                              - title: Radarr
-                                url: https://radarr.khzaw.dev
-                                icon: di:radarr
-                              - title: Prowlarr
-                                url: https://prowlarr.khzaw.dev
-                                icon: di:prowlarr
-                              - title: Bazarr
-                                url: https://bazarr.khzaw.dev
-                                icon: di:bazarr
-                              - title: Notifiarr
-                                url: https://notifiarr.khzaw.dev
-                                icon: di:notifiarr
-                              - title: Tunarr
-                                url: https://tunarr.khzaw.dev
-                                icon: di:tunarr
-                          - title: Download
-                            links:
-                              - title: Transmission
-                                url: https://torrent.khzaw.dev
-                                icon: di:transmission
-                              - title: SABnzbd
-                                url: https://sabnzbd.khzaw.dev
-                                icon: di:sabnzbd
-
-                  - size: full
-                    widgets:
-                      - type: monitor
-                        title: Arr Services Health
-                        cache: 1m
-                        style: compact
-                        sites:
-                          - title: Sonarr
-                            url: https://sonarr.khzaw.dev
-                            icon: di:sonarr
-                          - title: Radarr
-                            url: https://radarr.khzaw.dev
-                            icon: di:radarr
-                          - title: Prowlarr
-                            url: https://prowlarr.khzaw.dev
-                            icon: di:prowlarr
-                          - title: Bazarr
-                            url: https://bazarr.khzaw.dev
-                            icon: di:bazarr
-                          - title: Notifiarr
-                            url: https://notifiarr.khzaw.dev
-                            icon: di:notifiarr
-                          - title: Tunarr
-                            url: https://tunarr.khzaw.dev
-                            icon: di:tunarr
-                      - type: monitor
-                        title: Download Clients
-                        cache: 1m
-                        style: compact
-                        sites:
-                          - title: Transmission
-                            url: https://torrent.khzaw.dev
-                            icon: di:transmission
-                          - title: SABnzbd
-                            url: https://sabnzbd.khzaw.dev
-                            icon: di:sabnzbd
+                              </div>`}}
 
     persistence:
       config:
