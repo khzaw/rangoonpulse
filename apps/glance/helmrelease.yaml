@@ -92,7 +92,7 @@ spec:
               contrast-multiplier: 1.2
               text-saturation-multiplier: 0
               disable-picker: true
-              font-family: Berkeley Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace
+              font-family: "'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
 
             pages:
               - name: Home
