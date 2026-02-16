@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
+import base64
 import datetime as dt
 import json
-import math
 import os
 import re
-import shutil
 import ssl
-import subprocess
-import sys
-import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -37,17 +33,6 @@ def env_float(name: str, default: float) -> float:
         return default
 
 
-def env_int(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if not value:
-        return default
-    try:
-        return int(value)
-    except ValueError:
-        log(f"Invalid int for {name}: {value!r}; using default {default}")
-        return default
-
-
 def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(value, high))
 
@@ -65,6 +50,7 @@ def parse_mem_to_mi(value: str | None) -> float:
     if not value:
         return 0.0
     value = str(value).strip()
+
     unit_map = {
         "Ki": 1 / 1024,
         "Mi": 1,
@@ -75,12 +61,13 @@ def parse_mem_to_mi(value: str | None) -> float:
         "M": 1000 * 1000 / (1024 * 1024),
         "G": 1000 * 1000 * 1000 / (1024 * 1024),
         "T": 1000 * 1000 * 1000 * 1000 / (1024 * 1024),
-        "E": 1000 * 1000 * 1000 * 1000 * 1000 * 1000 / (1024 * 1024),
     }
+
     for unit, factor in unit_map.items():
         if value.endswith(unit):
             return float(value[: -len(unit)]) * factor
-    # bytes
+
+    # Treat bare numeric values as bytes.
     return float(value) / (1024 * 1024)
 
 
@@ -103,17 +90,20 @@ class KubeClient:
         self.host = os.getenv("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
         self.port = os.getenv("KUBERNETES_SERVICE_PORT", "443")
         self.base = f"https://{self.host}:{self.port}"
+
         token_path = Path("/var/run/secrets/kubernetes.io/serviceaccount/token")
         ca_path = Path("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
         self.token = token_path.read_text().strip() if token_path.exists() else ""
 
-        self.ssl_context = ssl.create_default_context(cafile=str(ca_path)) if ca_path.exists() else ssl.create_default_context()
+        self.ssl_context = (
+            ssl.create_default_context(cafile=str(ca_path))
+            if ca_path.exists()
+            else ssl.create_default_context()
+        )
 
     def request_json(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict]:
         url = f"{self.base}{path}"
-        headers = {
-            "Accept": "application/json",
-        }
+        headers = {"Accept": "application/json"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
 
@@ -125,16 +115,14 @@ class KubeClient:
         req = urllib.request.Request(url=url, method=method, headers=headers, data=data)
         try:
             with urllib.request.urlopen(req, context=self.ssl_context, timeout=30) as resp:
-                status = resp.getcode()
-                payload = json.loads(resp.read().decode("utf-8"))
-                return status, payload
+                raw = resp.read().decode("utf-8")
+                return resp.getcode(), json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
-            payload = {}
+            detail = exc.read().decode("utf-8", errors="replace")
             try:
-                payload = json.loads(exc.read().decode("utf-8"))
+                return exc.code, json.loads(detail)
             except Exception:
-                payload = {"error": str(exc)}
-            return exc.code, payload
+                return exc.code, {"message": detail}
 
     def list_workloads(self, namespace: str, kind: str) -> list[dict]:
         status, payload = self.request_json("GET", f"/apis/apps/v1/namespaces/{namespace}/{kind}")
@@ -160,7 +148,9 @@ class KubeClient:
                 "metadata": {"name": name, "namespace": namespace},
                 "data": data,
             }
-            create_status, create_payload = self.request_json("POST", f"/api/v1/namespaces/{namespace}/configmaps", body)
+            create_status, create_payload = self.request_json(
+                "POST", f"/api/v1/namespaces/{namespace}/configmaps", body
+            )
             if create_status not in (200, 201):
                 log(f"Failed to create configmap {namespace}/{name}: {create_status} {create_payload}")
                 return
@@ -182,7 +172,9 @@ class KubeClient:
             },
             "data": data,
         }
-        put_status, put_payload = self.request_json("PUT", f"/api/v1/namespaces/{namespace}/configmaps/{name}", body)
+        put_status, put_payload = self.request_json(
+            "PUT", f"/api/v1/namespaces/{namespace}/configmaps/{name}", body
+        )
         if put_status != 200:
             log(f"Failed to update configmap {namespace}/{name}: {put_status} {put_payload}")
             return
@@ -199,6 +191,10 @@ class PromClient:
         try:
             with urllib.request.urlopen(url, timeout=45) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            log(f"Prometheus query failed ({exc.code}): {detail}")
+            return None
         except Exception as exc:
             log(f"Prometheus query failed: {exc}")
             return None
@@ -241,16 +237,126 @@ def recommend(current: float, target: float, max_step_percent: float) -> float:
     return clamp(target, low, high)
 
 
-def safe_run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(cwd) if cwd else None, check=True, text=True, capture_output=True)
-
-
 def write_outputs(report: dict, markdown: str) -> None:
     output_dir = Path(os.getenv("OUTPUT_DIR", "/tmp/resource-advisor"))
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "latest.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     (output_dir / "latest.md").write_text(markdown)
     log(f"Wrote local outputs to {output_dir}")
+
+
+def github_request(method: str, url: str, token: str, payload: dict | None = None) -> tuple[int, dict]:
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+
+    req = urllib.request.Request(
+        url=url,
+        method=method,
+        data=data,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw = resp.read().decode("utf-8")
+            return resp.getcode(), json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        try:
+            return exc.code, json.loads(detail)
+        except Exception:
+            return exc.code, {"message": detail}
+
+
+def ensure_branch(repository: str, base_branch: str, branch: str, token: str) -> bool:
+    base_ref_url = (
+        f"https://api.github.com/repos/{repository}/git/ref/heads/{urllib.parse.quote(base_branch, safe='')}"
+    )
+    status, payload = github_request("GET", base_ref_url, token)
+    if status != 200:
+        log(f"Failed to fetch base branch ref {base_branch}: {status} {payload}")
+        return False
+
+    base_sha = payload.get("object", {}).get("sha")
+    if not base_sha:
+        log(f"Missing SHA for base branch {base_branch}")
+        return False
+
+    branch_ref_url = (
+        f"https://api.github.com/repos/{repository}/git/ref/heads/{urllib.parse.quote(branch, safe='')}"
+    )
+    status, payload = github_request("GET", branch_ref_url, token)
+    if status == 200:
+        return True
+    if status != 404:
+        log(f"Failed to check head branch {branch}: {status} {payload}")
+        return False
+
+    create_url = f"https://api.github.com/repos/{repository}/git/refs"
+    create_payload = {
+        "ref": f"refs/heads/{branch}",
+        "sha": base_sha,
+    }
+    create_status, create_resp = github_request("POST", create_url, token, create_payload)
+    if create_status not in (200, 201):
+        log(f"Failed to create branch {branch}: {create_status} {create_resp}")
+        return False
+
+    log(f"Created branch {branch} from {base_branch}")
+    return True
+
+
+def update_repo_file(
+    repository: str,
+    branch: str,
+    path: str,
+    content: str,
+    token: str,
+    commit_message: str,
+) -> bool:
+    file_ref = urllib.parse.quote(branch, safe="")
+    file_url = f"https://api.github.com/repos/{repository}/contents/{path}?ref={file_ref}"
+    status, payload = github_request("GET", file_url, token)
+
+    existing_sha = None
+    existing_content = None
+
+    if status == 200:
+        existing_sha = payload.get("sha")
+        encoded = (payload.get("content") or "").replace("\n", "")
+        if encoded:
+            try:
+                existing_content = base64.b64decode(encoded).decode("utf-8")
+            except Exception:
+                existing_content = None
+    elif status != 404:
+        log(f"Failed to read {path} on branch {branch}: {status} {payload}")
+        return False
+
+    if existing_content == content:
+        return False
+
+    put_url = f"https://api.github.com/repos/{repository}/contents/{path}"
+    put_payload = {
+        "message": commit_message,
+        "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
+        "branch": branch,
+    }
+    if existing_sha:
+        put_payload["sha"] = existing_sha
+
+    put_status, put_resp = github_request("PUT", put_url, token, put_payload)
+    if put_status not in (200, 201):
+        log(f"Failed to update {path}: {put_status} {put_resp}")
+        return False
+
+    log(f"Updated {path} on {branch}")
+    return True
 
 
 def open_or_update_pr(report: dict, markdown: str) -> None:
@@ -264,15 +370,47 @@ def open_or_update_pr(report: dict, markdown: str) -> None:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")
         return
 
-    owner, _repo = repository.split("/", 1)
+    owner, _ = repository.split("/", 1)
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
     branch = os.getenv("GITHUB_HEAD_BRANCH", "codex/resource-advisor-recommendations").strip()
 
-    author_name = os.getenv("GIT_AUTHOR_NAME", "resource-advisor")
-    author_email = os.getenv("GIT_AUTHOR_EMAIL", "resource-advisor@khzaw.dev")
+    if not ensure_branch(repository, base_branch, branch, token):
+        return
 
-    title = f"resource-advisor: tuning recommendations ({dt.datetime.utcnow().strftime('%Y-%m-%d')})"
+    commit_message = "resource-advisor: refresh tuning recommendations"
+    changed = False
+
+    changed = (
+        update_repo_file(
+            repository=repository,
+            branch=branch,
+            path="docs/resource-advisor/latest.json",
+            content=json.dumps(report, indent=2, sort_keys=True) + "\n",
+            token=token,
+            commit_message=commit_message,
+        )
+        or changed
+    )
+
+    changed = (
+        update_repo_file(
+            repository=repository,
+            branch=branch,
+            path="docs/resource-advisor/latest.md",
+            content=markdown,
+            token=token,
+            commit_message=commit_message,
+        )
+        or changed
+    )
+
+    if not changed:
+        log("No change in generated report artifacts; skipping PR")
+        return
+
     summary = report.get("summary", {})
+    now_utc = dt.datetime.now(dt.timezone.utc)
+    title = f"resource-advisor: tuning recommendations ({now_utc.strftime('%Y-%m-%d')})"
     body = (
         "Automated Resource Advisor report.\n\n"
         f"- Containers analyzed: {summary.get('containers_analyzed', 0)}\n"
@@ -282,66 +420,15 @@ def open_or_update_pr(report: dict, markdown: str) -> None:
         "This PR updates generated recommendation artifacts only."
     )
 
-    with tempfile.TemporaryDirectory(prefix="resource-advisor-") as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
-        repo_dir = temp_dir / "repo"
-
-        token_quoted = urllib.parse.quote(token, safe="")
-        clone_url = f"https://x-access-token:{token_quoted}@github.com/{repository}.git"
-
-        log(f"Cloning {repository}")
-        safe_run(["git", "clone", "--depth", "1", "--branch", base_branch, clone_url, str(repo_dir)])
-        safe_run(["git", "checkout", "-B", branch], cwd=repo_dir)
-        safe_run(["git", "config", "user.name", author_name], cwd=repo_dir)
-        safe_run(["git", "config", "user.email", author_email], cwd=repo_dir)
-
-        docs_dir = repo_dir / "docs" / "resource-advisor"
-        docs_dir.mkdir(parents=True, exist_ok=True)
-        json_path = docs_dir / "latest.json"
-        md_path = docs_dir / "latest.md"
-
-        json_content = json.dumps(report, indent=2, sort_keys=True) + "\n"
-        md_content = markdown
-
-        old_json = json_path.read_text() if json_path.exists() else ""
-        old_md = md_path.read_text() if md_path.exists() else ""
-
-        if old_json == json_content and old_md == md_content:
-            log("No change in generated report artifacts; skipping PR")
-            return
-
-        json_path.write_text(json_content)
-        md_path.write_text(md_content)
-
-        safe_run(["git", "add", "docs/resource-advisor/latest.json", "docs/resource-advisor/latest.md"], cwd=repo_dir)
-        status = safe_run(["git", "status", "--porcelain"], cwd=repo_dir)
-        if not status.stdout.strip():
-            log("Git status is clean after add; nothing to commit")
-            return
-
-        safe_run(["git", "commit", "-m", "resource-advisor: refresh tuning recommendations"], cwd=repo_dir)
-        safe_run(["git", "push", "-u", "origin", branch], cwd=repo_dir)
-
     pulls_url = f"https://api.github.com/repos/{repository}/pulls"
-    existing_url = f"{pulls_url}?state=open&head={owner}:{branch}"
-    req_existing = urllib.request.Request(
-        existing_url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-        method="GET",
-    )
-
-    try:
-        with urllib.request.urlopen(req_existing, timeout=30) as resp:
-            existing = json.loads(resp.read().decode("utf-8"))
-        if isinstance(existing, list) and existing:
-            log(f"PR already exists for branch {branch}: {existing[0].get('html_url')}")
-            return
-    except Exception as exc:
-        log(f"Failed checking existing PRs, continuing create step: {exc}")
+    existing_url = f"{pulls_url}?state=open&head={owner}:{branch}&base={base_branch}"
+    existing_status, existing = github_request("GET", existing_url, token)
+    if existing_status == 200 and isinstance(existing, list) and existing:
+        log(f"PR already exists for branch {branch}: {existing[0].get('html_url')}")
+        return
+    if existing_status != 200:
+        log(f"Failed checking existing PRs: {existing_status} {existing}")
+        return
 
     payload = {
         "title": title,
@@ -349,34 +436,23 @@ def open_or_update_pr(report: dict, markdown: str) -> None:
         "base": base_branch,
         "body": body,
     }
-    req_create = urllib.request.Request(
-        pulls_url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+    create_status, created = github_request("POST", pulls_url, token, payload)
+    if create_status not in (200, 201):
+        log(f"Failed to create PR: {create_status} {created}")
+        return
 
-    try:
-        with urllib.request.urlopen(req_create, timeout=30) as resp:
-            created = json.loads(resp.read().decode("utf-8"))
-            log(f"Created PR: {created.get('html_url')}")
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        log(f"Failed to create PR: {exc.code} {detail}")
+    log(f"Created PR: {created.get('html_url')}")
 
 
 def build_report() -> tuple[dict, str]:
     mode = os.getenv("MODE", "report").strip().lower() or "report"
     namespaces = env_list("TARGET_NAMESPACES", "default,monitoring")
-    downscale_exclude = set(env_list(
-        "DOWNSCALE_EXCLUDE",
-        "jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack",
-    ))
+    downscale_exclude = set(
+        env_list(
+            "DOWNSCALE_EXCLUDE",
+            "jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack",
+        )
+    )
 
     max_step_percent = env_float("MAX_STEP_PERCENT", 25.0)
     request_buffer_percent = env_float("REQUEST_BUFFER_PERCENT", 30.0)
@@ -384,7 +460,9 @@ def build_report() -> tuple[dict, str]:
     min_cpu_m = env_float("MIN_CPU_M", 25.0)
     min_mem_mi = env_float("MIN_MEM_MI", 64.0)
 
-    prom = PromClient(os.getenv("PROMETHEUS_URL", "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"))
+    prom = PromClient(
+        os.getenv("PROMETHEUS_URL", "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090")
+    )
     kube = KubeClient()
 
     alloc_cpu_m = 0.0
@@ -394,14 +472,15 @@ def build_report() -> tuple[dict, str]:
         alloc_cpu_m += parse_cpu_to_m(alloc.get("cpu"))
         alloc_mem_mi += parse_mem_to_mi(alloc.get("memory"))
 
-    recommendations = []
+    recommendations: list[dict] = []
     containers_analyzed = 0
     containers_with_data = 0
     skipped_no_metrics = 0
 
     for namespace in namespaces:
         for kind in ("deployments", "statefulsets"):
-            for workload in kube.list_workloads(namespace, kind):
+            workloads = kube.list_workloads(namespace, kind)
+            for workload in workloads:
                 meta = workload.get("metadata", {})
                 spec = workload.get("spec", {}).get("template", {}).get("spec", {})
                 labels = meta.get("labels", {})
@@ -422,12 +501,12 @@ def build_report() -> tuple[dict, str]:
                     cur_lim_mem = parse_mem_to_mi(lim.get("memory"))
 
                     cpu_query = (
-                        f'quantile_over_time(0.95, sum(rate(container_cpu_usage_seconds_total{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[5m]))[7d:1h])'
+                        f'quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{{namespace="{namespace}",'
+                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[5m])[7d:1h])'
                     )
                     mem_query = (
-                        f'quantile_over_time(0.95, max(container_memory_working_set_bytes{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}})[7d:1h])'
+                        f'quantile_over_time(0.95, container_memory_working_set_bytes{{namespace="{namespace}",'
+                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[7d:1h])'
                     )
                     restart_query = (
                         f'sum(increase(kube_pod_container_status_restarts_total{{namespace="{namespace}",'
@@ -459,7 +538,6 @@ def build_report() -> tuple[dict, str]:
 
                     notes: list[str] = []
 
-                    # Guardrail: avoid reducing memory on restart-heavy containers.
                     if restart_7d > 0:
                         if rec_req_mem < cur_req_mem:
                             rec_req_mem = cur_req_mem
@@ -467,7 +545,6 @@ def build_report() -> tuple[dict, str]:
                             rec_lim_mem = cur_lim_mem
                         notes.append("restart_guard")
 
-                    # Guardrail: keep high-variance media/ML apps from auto-downscale.
                     if release in downscale_exclude:
                         if rec_req_cpu < cur_req_cpu:
                             rec_req_cpu = cur_req_cpu
@@ -511,12 +588,24 @@ def build_report() -> tuple[dict, str]:
                             "cpu_p95_m": round(cpu_p95_m, 1),
                             "mem_p95_mi": round(mem_p95_mi, 1),
                             "current": {
-                                "requests": {"cpu": fmt_cpu_m(cur_req_cpu), "memory": fmt_mem_mi(cur_req_mem)},
-                                "limits": {"cpu": fmt_cpu_m(cur_lim_cpu), "memory": fmt_mem_mi(cur_lim_mem)},
+                                "requests": {
+                                    "cpu": fmt_cpu_m(cur_req_cpu),
+                                    "memory": fmt_mem_mi(cur_req_mem),
+                                },
+                                "limits": {
+                                    "cpu": fmt_cpu_m(cur_lim_cpu),
+                                    "memory": fmt_mem_mi(cur_lim_mem),
+                                },
                             },
                             "recommended": {
-                                "requests": {"cpu": fmt_cpu_m(rec_req_cpu), "memory": fmt_mem_mi(rec_req_mem)},
-                                "limits": {"cpu": fmt_cpu_m(rec_lim_cpu), "memory": fmt_mem_mi(rec_lim_mem)},
+                                "requests": {
+                                    "cpu": fmt_cpu_m(rec_req_cpu),
+                                    "memory": fmt_mem_mi(rec_req_mem),
+                                },
+                                "limits": {
+                                    "cpu": fmt_cpu_m(rec_lim_cpu),
+                                    "memory": fmt_mem_mi(rec_lim_mem),
+                                },
                             },
                             "delta_percent": {
                                 "requests_cpu": round(req_cpu_delta, 1),
@@ -542,8 +631,6 @@ def build_report() -> tuple[dict, str]:
         )
     )
 
-    total_cur_req_cpu = sum(parse_cpu_to_m(x["current"]["requests"]["cpu"]) for x in recommendations)
-    total_cur_req_mem = sum(parse_mem_to_mi(x["current"]["requests"]["memory"]) for x in recommendations)
     total_rec_req_cpu = sum(parse_cpu_to_m(x["recommended"]["requests"]["cpu"]) for x in recommendations)
     total_rec_req_mem = sum(parse_mem_to_mi(x["recommended"]["requests"]["memory"]) for x in recommendations)
 
@@ -558,8 +645,9 @@ def build_report() -> tuple[dict, str]:
         },
     }
 
+    generated_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     report = {
-        "generated_at": dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "generated_at": generated_at,
         "mode": mode,
         "summary": {
             "containers_analyzed": containers_analyzed,
@@ -574,32 +662,39 @@ def build_report() -> tuple[dict, str]:
         "recommendations": recommendations,
     }
 
-    lines = []
-    lines.append("# Resource Advisor Report")
-    lines.append("")
-    lines.append(f"- Generated at: `{report['generated_at']}`")
-    lines.append(f"- Mode: `{mode}`")
-    lines.append(f"- Containers analyzed: **{containers_analyzed}**")
-    lines.append(f"- Containers with metrics: **{containers_with_data}**")
-    lines.append(f"- Recommendations: **{len(recommendations)}**")
-    lines.append("")
-    lines.append("## Cluster Budget Snapshot")
-    lines.append("")
-    lines.append(f"- Allocatable CPU: `{budget['allocatable']['cpu']}`")
-    lines.append(f"- Allocatable Memory: `{budget['allocatable']['memory']}`")
-    lines.append(
-        f"- Recommended requests as % allocatable CPU: `{budget['recommended_requests_percent_of_allocatable']['cpu']}`"
-    )
-    lines.append(
-        f"- Recommended requests as % allocatable Memory: `{budget['recommended_requests_percent_of_allocatable']['memory']}`"
-    )
-    lines.append("")
+    lines = [
+        "# Resource Advisor Report",
+        "",
+        f"- Generated at: `{generated_at}`",
+        f"- Mode: `{mode}`",
+        f"- Containers analyzed: **{containers_analyzed}**",
+        f"- Containers with metrics: **{containers_with_data}**",
+        f"- Recommendations: **{len(recommendations)}**",
+        "",
+        "## Cluster Budget Snapshot",
+        "",
+        f"- Allocatable CPU: `{budget['allocatable']['cpu']}`",
+        f"- Allocatable Memory: `{budget['allocatable']['memory']}`",
+        (
+            "- Recommended requests as % allocatable CPU: "
+            f"`{budget['recommended_requests_percent_of_allocatable']['cpu']}`"
+        ),
+        (
+            "- Recommended requests as % allocatable Memory: "
+            f"`{budget['recommended_requests_percent_of_allocatable']['memory']}`"
+        ),
+        "",
+    ]
 
     if recommendations:
-        lines.append("## Recommendations")
-        lines.append("")
-        lines.append("| Namespace | Workload | Container | CPU req | CPU rec | Mem req | Mem rec | Action | Notes |")
-        lines.append("|---|---|---|---:|---:|---:|---:|---|---|")
+        lines.extend(
+            [
+                "## Recommendations",
+                "",
+                "| Namespace | Workload | Container | CPU req | CPU rec | Mem req | Mem rec | Action | Notes |",
+                "|---|---|---|---:|---:|---:|---:|---|---|",
+            ]
+        )
         for rec in recommendations:
             lines.append(
                 "| {ns} | {wl} | {c} | {cur_cpu} | {rec_cpu} | {cur_mem} | {rec_mem} | {action} | {notes} |".format(
@@ -615,9 +710,7 @@ def build_report() -> tuple[dict, str]:
                 )
             )
     else:
-        lines.append("## Recommendations")
-        lines.append("")
-        lines.append("No significant tuning deltas were identified in this run.")
+        lines.extend(["## Recommendations", "", "No significant tuning deltas were identified in this run."])
 
     markdown = "\n".join(lines) + "\n"
     return report, markdown

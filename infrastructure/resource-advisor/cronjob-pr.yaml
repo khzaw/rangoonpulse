@@ -16,13 +16,24 @@ spec:
         spec:
           serviceAccountName: resource-advisor
           restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: advisor
               image: python:3.12-alpine
               imagePullPolicy: IfNotPresent
               command: ["/bin/sh", "-c"]
               args:
-                - apk add --no-cache git >/dev/null 2>&1 && python /opt/resource-advisor/advisor.py
+                - python /opt/resource-advisor/advisor.py
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
               env:
                 - name: MODE
                   value: pr
