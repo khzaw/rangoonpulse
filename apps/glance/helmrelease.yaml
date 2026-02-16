@@ -248,37 +248,87 @@ spec:
                         show-source-icon: true
                         style: compact-list
                         repositories:
-                          # Media & Entertainment
+                          # Apps: media and content
                           - immich-app/immich
                           - jellyfin/jellyfin
                           - advplyr/audiobookshelf
                           - seerr-team/seerr
-                          # Arr Stack
+                          - CyferShepard/Jellystat
+                          - chrisbenincasa/tunarr
+                          - actualbudget/actual
+                          - dani-garcia/vaultwarden
+                          - louislam/uptime-kuma
+                          - flaresolverr/flaresolverr
+                          - linuxserver/docker-calibre
+                          - crocodilestick/Calibre-Web-Automated
+                          # Apps: arr and download stack
                           - Sonarr/Sonarr
                           - Radarr/Radarr
                           - Prowlarr/Prowlarr
                           - morpheus65535/bazarr
-                          - Notifiarr/Notifiarr
-                          - chrisbenincasa/tunarr
-                          # Downloaders
+                          - Notifiarr/notifiarr
                           - transmission/transmission
                           - sabnzbd/sabnzbd
-                          # Infrastructure & Ops
+                          # Apps: dashboard and ux
                           - gethomepage/homepage
                           - glanceapp/glance
-                          - dani-garcia/vaultwarden
-                          - louislam/uptime-kuma
-                          - CyferShepard/Jellystat
+                          # Infrastructure and charts
                           - fluxcd/flux2
+                          - kubernetes/ingress-nginx
                           - grafana/grafana
                           - prometheus-community/helm-charts
+                          - prometheus/prometheus
                           - cert-manager/cert-manager
                           - metallb/metallb
                           - tailscale/tailscale
                           - kubernetes-sigs/external-dns
-                          # Other Apps
-                          - actualbudget/actual
-                          - linuxserver/calibre-web
+                          - democratic-csi/democratic-csi
+                          - bjw-s-labs/helm-charts
+                          - immich-app/immich-charts
+                          - jameswynn/helm-charts
+                          - community-charts/helm-charts
+                      - type: split-column
+                        title: Community Feeds
+                        max-columns: 2
+                        widgets:
+                          - type: hacker-news
+                            sort-by: top
+                            extra-sort-by: engagement
+                            limit: 18
+                            collapse-after: 6
+                          - type: lobsters
+                            sort-by: hot
+                            limit: 18
+                            collapse-after: 6
+                      - type: monitor
+                        title: Arr and Download Health
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Sonarr
+                            url: https://sonarr.khzaw.dev
+                            icon: di:sonarr
+                          - title: Radarr
+                            url: https://radarr.khzaw.dev
+                            icon: di:radarr
+                          - title: Prowlarr
+                            url: https://prowlarr.khzaw.dev
+                            icon: di:prowlarr
+                          - title: Bazarr
+                            url: https://bazarr.khzaw.dev
+                            icon: di:bazarr
+                          - title: Seerr
+                            url: https://entertainment.khzaw.dev
+                            icon: di:jellyseerr
+                          - title: Notifiarr
+                            url: https://notifiarr.khzaw.dev
+                            icon: di:notifiarr
+                          - title: Transmission
+                            url: https://torrent.khzaw.dev
+                            icon: di:transmission
+                          - title: SABnzbd
+                            url: https://sabnzbd.khzaw.dev
+                            icon: di:sabnzbd
                       - type: split-column
                         title: Stats
                         max-columns: 3
