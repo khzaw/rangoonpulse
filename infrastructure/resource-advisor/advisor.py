@@ -525,7 +525,18 @@ def ensure_pull_request(
 
     existing_status, existing = github_request("GET", existing_url, token)
     if existing_status == 200 and isinstance(existing, list) and existing:
-        log(f"PR already exists for branch {head_branch}: {existing[0].get('html_url')}")
+        pr = existing[0]
+        number = pr.get("number")
+        update_url = f"https://api.github.com/repos/{repository}/pulls/{number}"
+        update_payload = {"title": title, "body": body}
+        update_status, update_resp = github_request("PATCH", update_url, token, update_payload)
+        if update_status in (200, 201):
+            log(f"Updated existing PR for branch {head_branch}: {pr.get('html_url')}")
+        else:
+            log(
+                "Failed to update existing PR metadata for branch "
+                f"{head_branch}: {update_status} {update_resp}"
+            )
         return
     if existing_status != 200:
         log(f"Failed checking existing PRs: {existing_status} {existing}")
@@ -1316,13 +1327,53 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
 
     today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
     title = f"resource-advisor: apply safe tuning ({today})"
+    skip_reason_counts: dict[str, int] = {}
+    for item in plan.get("skipped", []):
+        reason = item.get("reason", "unknown")
+        skip_reason_counts[reason] = skip_reason_counts.get(reason, 0) + 1
+
+    selected_lines = []
+    for item in selected[:20]:
+        selected_lines.append(
+            "- `{release}/{container}`: CPU `{cur_cpu}` -> `{new_cpu}`, "
+            "Memory `{cur_mem}` -> `{new_mem}`; rationale: `{reason}`; notes: `{notes}`".format(
+                release=item.get("release"),
+                container=item.get("container"),
+                cur_cpu=item.get("current", {}).get("requests", {}).get("cpu"),
+                new_cpu=item.get("recommended", {}).get("requests", {}).get("cpu"),
+                cur_mem=item.get("current", {}).get("requests", {}).get("memory"),
+                new_mem=item.get("recommended", {}).get("requests", {}).get("memory"),
+                reason=item.get("selection_reason", "policy-selected"),
+                notes=",".join(item.get("notes", [])) or "none",
+            )
+        )
+    if len(selected) > 20:
+        selected_lines.append(f"- ... and {len(selected) - 20} more")
+
+    skipped_lines = []
+    for reason, count in sorted(skip_reason_counts.items()):
+        skipped_lines.append(f"- `{reason}`: {count}")
+    if not skipped_lines:
+        skipped_lines.append("- none")
+
     body = (
         "Automated safe resource apply proposal.\n\n"
-        f"- Selected changes: {len(selected)}\n"
-        f"- Coverage estimate: {plan.get('metrics_coverage_days_estimate')} days\n"
-        f"- CPU request budget: {plan.get('budgets', {}).get('cpu_m')}m\n"
-        f"- Memory request budget: {plan.get('budgets', {}).get('memory_mi')}Mi\n\n"
-        "Includes:\n"
+        "This PR is **not auto-merged**. Changes apply only after manual review and merge.\n\n"
+        "## Constraints\n"
+        f"- Metrics window: `{report.get('metrics_window')}`\n"
+        f"- Metrics coverage estimate: `{plan.get('metrics_coverage_days_estimate')}` days\n"
+        f"- CPU request budget: `{plan.get('budgets', {}).get('cpu_m')}m`\n"
+        f"- Memory request budget: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n"
+        f"- Current requests: CPU `{plan.get('current_requests', {}).get('cpu_m')}m`, "
+        f"Memory `{plan.get('current_requests', {}).get('memory_mi')}Mi`\n"
+        f"- Projected requests after selected changes: CPU "
+        f"`{plan.get('projected_requests_after_selected', {}).get('cpu_m')}m`, Memory "
+        f"`{plan.get('projected_requests_after_selected', {}).get('memory_mi')}Mi`\n\n"
+        "## Selected Changes\n"
+        + "\n".join(selected_lines)
+        + "\n\n## Skipped Candidates (Reason Summary)\n"
+        + "\n".join(skipped_lines)
+        + "\n\nIncludes:\n"
         "- latest report artifacts\n"
         "- apply plan artifacts\n"
         "- HelmRelease resource changes for allowlisted app-template releases only\n"
