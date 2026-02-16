@@ -12,6 +12,30 @@ import urllib.request
 from pathlib import Path
 
 
+APP_TEMPLATE_RELEASE_FILE_MAP = {
+    "actualbudget": "apps/actualbudget/helmrelease.yaml",
+    "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",
+    "bazarr": "apps/bazarr/helmrelease.yaml",
+    "calibre": "apps/calibre/helmrelease.yaml",
+    "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",
+    "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
+    "glance": "apps/glance/helmrelease.yaml",
+    "homepage": "apps/homepage/helmrelease.yaml",
+    "jellyfin": "apps/jellyfin/helmrelease.yaml",
+    "jellyseerr": "apps/seerr/helmrelease.yaml",
+    "jellystat": "apps/jellystat/helmrelease.yaml",
+    "notifiarr": "apps/notifiarr/helmrelease.yaml",
+    "prowlarr": "apps/prowlarr/helmrelease.yaml",
+    "radarr": "apps/radarr/helmrelease.yaml",
+    "sabnzbd": "apps/sabnzbd/helmrelease.yaml",
+    "sonarr": "apps/sonarr/helmrelease.yaml",
+    "transmission": "apps/transmission/helmrelease.yaml",
+    "tunarr": "apps/tunarr/helmrelease.yaml",
+    "uptime-kuma": "apps/uptime-kuma/helmrelease.yaml",
+    "vaultwarden": "apps/vaultwarden/helmrelease.yaml",
+}
+
+
 def log(message: str) -> None:
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     print(f"[{now}] {message}", flush=True)
@@ -33,6 +57,17 @@ def env_float(name: str, default: float) -> float:
         return default
 
 
+def env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        log(f"Invalid int for {name}: {value!r}; using default {default}")
+        return default
+
+
 def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(value, high))
 
@@ -40,7 +75,7 @@ def clamp(value: float, low: float, high: float) -> float:
 def parse_cpu_to_m(value: str | None) -> float:
     if not value:
         return 0.0
-    value = str(value).strip()
+    value = str(value).strip().strip('"').strip("'")
     if value.endswith("m"):
         return float(value[:-1])
     return float(value) * 1000.0
@@ -49,7 +84,7 @@ def parse_cpu_to_m(value: str | None) -> float:
 def parse_mem_to_mi(value: str | None) -> float:
     if not value:
         return 0.0
-    value = str(value).strip()
+    value = str(value).strip().strip('"').strip("'")
 
     unit_map = {
         "Ki": 1 / 1024,
@@ -67,7 +102,6 @@ def parse_mem_to_mi(value: str | None) -> float:
         if value.endswith(unit):
             return float(value[: -len(unit)]) * factor
 
-    # Treat bare numeric values as bytes.
     return float(value) / (1024 * 1024)
 
 
@@ -83,6 +117,118 @@ def pct_delta(old: float, new: float) -> float:
     if old <= 0:
         return 100.0 if new > 0 else 0.0
     return ((new - old) / old) * 100.0
+
+
+def leading_spaces(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def block_end(lines: list[str], start_idx: int, indent: int) -> int:
+    for i in range(start_idx + 1, len(lines)):
+        stripped = lines[i].strip()
+        if not stripped:
+            continue
+        if leading_spaces(lines[i]) <= indent:
+            return i
+    return len(lines)
+
+
+def find_key_line(lines: list[str], start: int, end: int, indent: int, key: str) -> int | None:
+    pattern = re.compile(rf"^ {{{indent}}}{re.escape(key)}:\s*$")
+    for i in range(start, min(end, len(lines))):
+        if pattern.match(lines[i]):
+            return i
+    return None
+
+
+def resources_block(indent: int, req_cpu: str, req_mem: str, lim_cpu: str, lim_mem: str) -> list[str]:
+    return [
+        " " * indent + "resources:\n",
+        " " * (indent + 2) + "requests:\n",
+        " " * (indent + 4) + f'cpu: "{req_cpu}"\n',
+        " " * (indent + 4) + f'memory: "{req_mem}"\n',
+        " " * (indent + 2) + "limits:\n",
+        " " * (indent + 4) + f'cpu: "{lim_cpu}"\n',
+        " " * (indent + 4) + f'memory: "{lim_mem}"\n',
+    ]
+
+
+def patch_app_template_resources(
+    content: str,
+    container_name: str,
+    req_cpu: str,
+    req_mem: str,
+    lim_cpu: str,
+    lim_mem: str,
+) -> tuple[str, bool, str]:
+    lines = content.splitlines(keepends=True)
+
+    idx_values = None
+    values_indent = 0
+    for i, line in enumerate(lines):
+        if line.strip() == "values:":
+            idx_values = i
+            values_indent = leading_spaces(line)
+            break
+
+    if idx_values is None:
+        return content, False, "values_not_found"
+
+    values_end = block_end(lines, idx_values, values_indent)
+
+    idx_controllers = find_key_line(lines, idx_values + 1, values_end, values_indent + 2, "controllers")
+    if idx_controllers is None:
+        return content, False, "controllers_not_found"
+
+    controllers_end = block_end(lines, idx_controllers, values_indent + 2)
+
+    idx_main = find_key_line(lines, idx_controllers + 1, controllers_end, values_indent + 4, "main")
+    if idx_main is None:
+        return content, False, "controllers_main_not_found"
+
+    main_end = block_end(lines, idx_main, values_indent + 4)
+
+    idx_containers = find_key_line(lines, idx_main + 1, main_end, values_indent + 6, "containers")
+    if idx_containers is None:
+        return content, False, "containers_not_found"
+
+    containers_end = block_end(lines, idx_containers, values_indent + 6)
+
+    idx_container = find_key_line(
+        lines,
+        idx_containers + 1,
+        containers_end,
+        values_indent + 8,
+        container_name,
+    )
+    if idx_container is None:
+        return content, False, f"container_{container_name}_not_found"
+
+    container_indent = values_indent + 8
+    container_end = block_end(lines, idx_container, container_indent)
+
+    idx_resources = find_key_line(
+        lines,
+        idx_container + 1,
+        container_end,
+        container_indent + 2,
+        "resources",
+    )
+
+    new_block = resources_block(container_indent + 2, req_cpu, req_mem, lim_cpu, lim_mem)
+
+    if idx_resources is None:
+        lines[container_end:container_end] = new_block
+        return "".join(lines), True, "resources_inserted"
+
+    resources_end = block_end(lines, idx_resources, container_indent + 2)
+    old_block = lines[idx_resources:resources_end]
+
+    if old_block == new_block:
+        return content, False, "resources_unchanged"
+
+    lines[idx_resources:resources_end] = new_block
+    return "".join(lines), True, "resources_replaced"
 
 
 class KubeClient:
@@ -311,6 +457,27 @@ def ensure_branch(repository: str, base_branch: str, branch: str, token: str) ->
     return True
 
 
+def read_repo_file(repository: str, branch: str, path: str, token: str) -> tuple[int, str | None, str | None]:
+    file_ref = urllib.parse.quote(branch, safe="")
+    url = f"https://api.github.com/repos/{repository}/contents/{path}?ref={file_ref}"
+    status, payload = github_request("GET", url, token)
+
+    if status == 404:
+        return 404, None, None
+    if status != 200:
+        log(f"Failed to read {path} on branch {branch}: {status} {payload}")
+        return status, None, None
+
+    encoded = (payload.get("content") or "").replace("\n", "")
+    content = ""
+    if encoded:
+        try:
+            content = base64.b64decode(encoded).decode("utf-8")
+        except Exception:
+            content = ""
+    return 200, payload.get("sha"), content
+
+
 def update_repo_file(
     repository: str,
     branch: str,
@@ -319,26 +486,11 @@ def update_repo_file(
     token: str,
     commit_message: str,
 ) -> bool:
-    file_ref = urllib.parse.quote(branch, safe="")
-    file_url = f"https://api.github.com/repos/{repository}/contents/{path}?ref={file_ref}"
-    status, payload = github_request("GET", file_url, token)
-
-    existing_sha = None
-    existing_content = None
-
-    if status == 200:
-        existing_sha = payload.get("sha")
-        encoded = (payload.get("content") or "").replace("\n", "")
-        if encoded:
-            try:
-                existing_content = base64.b64decode(encoded).decode("utf-8")
-            except Exception:
-                existing_content = None
-    elif status != 404:
-        log(f"Failed to read {path} on branch {branch}: {status} {payload}")
+    status, sha, existing = read_repo_file(repository, branch, path, token)
+    if status not in (200, 404):
         return False
 
-    if existing_content == content:
+    if existing == content:
         return False
 
     put_url = f"https://api.github.com/repos/{repository}/contents/{path}"
@@ -347,8 +499,8 @@ def update_repo_file(
         "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
         "branch": branch,
     }
-    if existing_sha:
-        put_payload["sha"] = existing_sha
+    if sha:
+        put_payload["sha"] = sha
 
     put_status, put_resp = github_request("PUT", put_url, token, put_payload)
     if put_status not in (200, 201):
@@ -359,72 +511,21 @@ def update_repo_file(
     return True
 
 
-def open_or_update_pr(report: dict, markdown: str) -> None:
-    token = os.getenv("GITHUB_TOKEN", "").strip()
-    if not token:
-        log("GITHUB_TOKEN is not set; skipping PR mode work")
-        return
-
-    repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
-    if "/" not in repository:
-        log(f"Invalid GITHUB_REPOSITORY: {repository}")
-        return
-
+def ensure_pull_request(
+    repository: str,
+    token: str,
+    head_branch: str,
+    base_branch: str,
+    title: str,
+    body: str,
+) -> None:
     owner, _ = repository.split("/", 1)
-    base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    branch = os.getenv("GITHUB_HEAD_BRANCH", "codex/resource-advisor-recommendations").strip()
-
-    if not ensure_branch(repository, base_branch, branch, token):
-        return
-
-    commit_message = "resource-advisor: refresh tuning recommendations"
-    changed = False
-
-    changed = (
-        update_repo_file(
-            repository=repository,
-            branch=branch,
-            path="docs/resource-advisor/latest.json",
-            content=json.dumps(report, indent=2, sort_keys=True) + "\n",
-            token=token,
-            commit_message=commit_message,
-        )
-        or changed
-    )
-
-    changed = (
-        update_repo_file(
-            repository=repository,
-            branch=branch,
-            path="docs/resource-advisor/latest.md",
-            content=markdown,
-            token=token,
-            commit_message=commit_message,
-        )
-        or changed
-    )
-
-    if not changed:
-        log("No change in generated report artifacts; skipping PR")
-        return
-
-    summary = report.get("summary", {})
-    now_utc = dt.datetime.now(dt.timezone.utc)
-    title = f"resource-advisor: tuning recommendations ({now_utc.strftime('%Y-%m-%d')})"
-    body = (
-        "Automated Resource Advisor report.\n\n"
-        f"- Containers analyzed: {summary.get('containers_analyzed', 0)}\n"
-        f"- Recommendations: {summary.get('recommendation_count', 0)}\n"
-        f"- Up adjustments: {summary.get('upsize_count', 0)}\n"
-        f"- Down adjustments: {summary.get('downsize_count', 0)}\n\n"
-        "This PR updates generated recommendation artifacts only."
-    )
-
     pulls_url = f"https://api.github.com/repos/{repository}/pulls"
-    existing_url = f"{pulls_url}?state=open&head={owner}:{branch}&base={base_branch}"
+    existing_url = f"{pulls_url}?state=open&head={owner}:{head_branch}&base={base_branch}"
+
     existing_status, existing = github_request("GET", existing_url, token)
     if existing_status == 200 and isinstance(existing, list) and existing:
-        log(f"PR already exists for branch {branch}: {existing[0].get('html_url')}")
+        log(f"PR already exists for branch {head_branch}: {existing[0].get('html_url')}")
         return
     if existing_status != 200:
         log(f"Failed checking existing PRs: {existing_status} {existing}")
@@ -432,7 +533,7 @@ def open_or_update_pr(report: dict, markdown: str) -> None:
 
     payload = {
         "title": title,
-        "head": branch,
+        "head": head_branch,
         "base": base_branch,
         "body": body,
     }
@@ -442,6 +543,15 @@ def open_or_update_pr(report: dict, markdown: str) -> None:
         return
 
     log(f"Created PR: {created.get('html_url')}")
+
+
+def estimate_coverage_days(prom: PromClient) -> float:
+    seconds = prom.query_scalar("time() - (max(prometheus_tsdb_lowest_timestamp) / 1000)")
+    if seconds is None:
+        seconds = prom.query_scalar('time() - max(process_start_time_seconds{job=~".*prometheus.*"})')
+    if seconds is None:
+        return 0.0
+    return round(max(0.0, seconds) / 86400.0, 2)
 
 
 def build_report() -> tuple[dict, str]:
@@ -460,10 +570,15 @@ def build_report() -> tuple[dict, str]:
     min_cpu_m = env_float("MIN_CPU_M", 25.0)
     min_mem_mi = env_float("MIN_MEM_MI", 64.0)
 
+    metrics_window = os.getenv("METRICS_WINDOW", "14d").strip()
+    metrics_resolution = os.getenv("METRICS_RESOLUTION", "1h").strip()
+
     prom = PromClient(
         os.getenv("PROMETHEUS_URL", "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090")
     )
     kube = KubeClient()
+
+    coverage_days = estimate_coverage_days(prom)
 
     alloc_cpu_m = 0.0
     alloc_mem_mi = 0.0
@@ -476,6 +591,11 @@ def build_report() -> tuple[dict, str]:
     containers_analyzed = 0
     containers_with_data = 0
     skipped_no_metrics = 0
+
+    total_current_req_cpu_m = 0.0
+    total_current_req_mem_mi = 0.0
+    total_recommended_req_cpu_m = 0.0
+    total_recommended_req_mem_mi = 0.0
 
     for namespace in namespaces:
         for kind in ("deployments", "statefulsets"):
@@ -500,25 +620,30 @@ def build_report() -> tuple[dict, str]:
                     cur_lim_cpu = parse_cpu_to_m(lim.get("cpu"))
                     cur_lim_mem = parse_mem_to_mi(lim.get("memory"))
 
+                    total_current_req_cpu_m += cur_req_cpu
+                    total_current_req_mem_mi += cur_req_mem
+
                     cpu_query = (
                         f'quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[5m])[7d:1h])'
+                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[5m])[{metrics_window}:{metrics_resolution}])'
                     )
                     mem_query = (
                         f'quantile_over_time(0.95, container_memory_working_set_bytes{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[7d:1h])'
+                        f'pod=~"{pod_regex}",container="{container_name}",image!=""}}[{metrics_window}:{metrics_resolution}])'
                     )
                     restart_query = (
                         f'sum(increase(kube_pod_container_status_restarts_total{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}"}}[7d]))'
+                        f'pod=~"{pod_regex}",container="{container_name}"}}[{metrics_window}]))'
                     )
 
                     cpu_p95_cores = prom.query_scalar(cpu_query)
                     mem_p95_bytes = prom.query_scalar(mem_query)
-                    restart_7d = prom.query_scalar(restart_query) or 0.0
+                    restart_lookback = prom.query_scalar(restart_query) or 0.0
 
                     if cpu_p95_cores is None and mem_p95_bytes is None:
                         skipped_no_metrics += 1
+                        total_recommended_req_cpu_m += cur_req_cpu
+                        total_recommended_req_mem_mi += cur_req_mem
                         continue
 
                     containers_with_data += 1
@@ -538,7 +663,7 @@ def build_report() -> tuple[dict, str]:
 
                     notes: list[str] = []
 
-                    if restart_7d > 0:
+                    if restart_lookback > 0:
                         if rec_req_mem < cur_req_mem:
                             rec_req_mem = cur_req_mem
                         if rec_lim_mem < cur_lim_mem:
@@ -556,6 +681,9 @@ def build_report() -> tuple[dict, str]:
                             rec_lim_mem = cur_lim_mem
                         notes.append("downscale_excluded")
 
+                    total_recommended_req_cpu_m += rec_req_cpu
+                    total_recommended_req_mem_mi += rec_req_mem
+
                     req_cpu_delta = pct_delta(cur_req_cpu, rec_req_cpu)
                     req_mem_delta = pct_delta(cur_req_mem, rec_req_mem)
                     lim_cpu_delta = pct_delta(cur_lim_cpu, rec_lim_cpu)
@@ -565,17 +693,15 @@ def build_report() -> tuple[dict, str]:
                         abs(delta) >= 5.0
                         for delta in (req_cpu_delta, req_mem_delta, lim_cpu_delta, lim_mem_delta)
                     )
-                    if not significant_change and restart_7d <= 0:
+                    if not significant_change and restart_lookback <= 0:
                         continue
 
-                    action = "no-change"
-                    if any(delta > 5.0 for delta in (req_cpu_delta, req_mem_delta, lim_cpu_delta, lim_mem_delta)):
+                    if req_cpu_delta > 5.0 or req_mem_delta > 5.0:
                         action = "upsize"
-                    if (
-                        action == "no-change"
-                        and any(delta < -5.0 for delta in (req_cpu_delta, req_mem_delta, lim_cpu_delta, lim_mem_delta))
-                    ):
+                    elif req_cpu_delta < -5.0 or req_mem_delta < -5.0:
                         action = "downsize"
+                    else:
+                        action = "no-change"
 
                     recommendations.append(
                         {
@@ -584,7 +710,7 @@ def build_report() -> tuple[dict, str]:
                             "workload": workload_name,
                             "release": release,
                             "container": container_name,
-                            "restarts_7d": round(restart_7d, 2),
+                            "restarts_window": round(restart_lookback, 2),
                             "cpu_p95_m": round(cpu_p95_m, 1),
                             "mem_p95_mi": round(mem_p95_mi, 1),
                             "current": {
@@ -621,7 +747,7 @@ def build_report() -> tuple[dict, str]:
     recommendations.sort(
         key=lambda item: (
             item.get("action") != "upsize",
-            -(item.get("restarts_7d", 0.0)),
+            -(item.get("restarts_window", 0.0)),
             -max(
                 abs(item.get("delta_percent", {}).get("requests_memory", 0.0)),
                 abs(item.get("delta_percent", {}).get("limits_memory", 0.0)),
@@ -631,17 +757,18 @@ def build_report() -> tuple[dict, str]:
         )
     )
 
-    total_rec_req_cpu = sum(parse_cpu_to_m(x["recommended"]["requests"]["cpu"]) for x in recommendations)
-    total_rec_req_mem = sum(parse_mem_to_mi(x["recommended"]["requests"]["memory"]) for x in recommendations)
-
     budget = {
         "allocatable": {
             "cpu": fmt_cpu_m(alloc_cpu_m),
             "memory": fmt_mem_mi(alloc_mem_mi),
         },
+        "current_requests_percent_of_allocatable": {
+            "cpu": round((total_current_req_cpu_m / alloc_cpu_m) * 100.0, 1) if alloc_cpu_m > 0 else None,
+            "memory": round((total_current_req_mem_mi / alloc_mem_mi) * 100.0, 1) if alloc_mem_mi > 0 else None,
+        },
         "recommended_requests_percent_of_allocatable": {
-            "cpu": round((total_rec_req_cpu / alloc_cpu_m) * 100.0, 1) if alloc_cpu_m > 0 else None,
-            "memory": round((total_rec_req_mem / alloc_mem_mi) * 100.0, 1) if alloc_mem_mi > 0 else None,
+            "cpu": round((total_recommended_req_cpu_m / alloc_cpu_m) * 100.0, 1) if alloc_cpu_m > 0 else None,
+            "memory": round((total_recommended_req_mem_mi / alloc_mem_mi) * 100.0, 1) if alloc_mem_mi > 0 else None,
         },
     }
 
@@ -649,6 +776,8 @@ def build_report() -> tuple[dict, str]:
     report = {
         "generated_at": generated_at,
         "mode": mode,
+        "metrics_window": metrics_window,
+        "metrics_coverage_days_estimate": coverage_days,
         "summary": {
             "containers_analyzed": containers_analyzed,
             "containers_with_metrics": containers_with_data,
@@ -657,6 +786,10 @@ def build_report() -> tuple[dict, str]:
             "upsize_count": sum(1 for item in recommendations if item["action"] == "upsize"),
             "downsize_count": sum(1 for item in recommendations if item["action"] == "downsize"),
             "no_change_count": sum(1 for item in recommendations if item["action"] == "no-change"),
+            "total_current_requests_cpu_m": round(total_current_req_cpu_m, 1),
+            "total_current_requests_memory_mi": round(total_current_req_mem_mi, 1),
+            "total_recommended_requests_cpu_m": round(total_recommended_req_cpu_m, 1),
+            "total_recommended_requests_memory_mi": round(total_recommended_req_mem_mi, 1),
         },
         "budget": budget,
         "recommendations": recommendations,
@@ -667,6 +800,8 @@ def build_report() -> tuple[dict, str]:
         "",
         f"- Generated at: `{generated_at}`",
         f"- Mode: `{mode}`",
+        f"- Metrics window: `{metrics_window}`",
+        f"- Metrics coverage estimate: `{coverage_days}` days",
         f"- Containers analyzed: **{containers_analyzed}**",
         f"- Containers with metrics: **{containers_with_data}**",
         f"- Recommendations: **{len(recommendations)}**",
@@ -675,6 +810,14 @@ def build_report() -> tuple[dict, str]:
         "",
         f"- Allocatable CPU: `{budget['allocatable']['cpu']}`",
         f"- Allocatable Memory: `{budget['allocatable']['memory']}`",
+        (
+            "- Current requests as % allocatable CPU: "
+            f"`{budget['current_requests_percent_of_allocatable']['cpu']}`"
+        ),
+        (
+            "- Current requests as % allocatable Memory: "
+            f"`{budget['current_requests_percent_of_allocatable']['memory']}`"
+        ),
         (
             "- Recommended requests as % allocatable CPU: "
             f"`{budget['recommended_requests_percent_of_allocatable']['cpu']}`"
@@ -685,6 +828,15 @@ def build_report() -> tuple[dict, str]:
         ),
         "",
     ]
+
+    if coverage_days < 14:
+        lines.append("## Data Maturity Notice")
+        lines.append("")
+        lines.append(
+            "Prometheus coverage is below 14 days. Use extra caution for downsizing decisions "
+            "until the 14-day window is fully populated."
+        )
+        lines.append("")
 
     if recommendations:
         lines.extend(
@@ -716,15 +868,485 @@ def build_report() -> tuple[dict, str]:
     return report, markdown
 
 
+def build_apply_plan(report: dict) -> tuple[dict, str]:
+    recommendations = report.get("recommendations", [])
+    coverage_days = float(report.get("metrics_coverage_days_estimate") or 0.0)
+
+    cpu_budget_pct = env_float("MAX_REQUESTS_PERCENT_CPU", 60.0)
+    mem_budget_pct = env_float("MAX_REQUESTS_PERCENT_MEMORY", 65.0)
+    max_changes = env_int("MAX_APPLY_CHANGES_PER_RUN", 5)
+    min_days_upsize = env_float("MIN_DATA_DAYS_FOR_UPSIZE", 14.0)
+    min_days_downsize = env_float("MIN_DATA_DAYS_FOR_DOWNSIZE", 14.0)
+
+    allowlist_default = ",".join(sorted(APP_TEMPLATE_RELEASE_FILE_MAP.keys()))
+    allowlist = set(env_list("APPLY_ALLOWLIST", allowlist_default))
+
+    alloc_cpu_m = parse_cpu_to_m(report.get("budget", {}).get("allocatable", {}).get("cpu"))
+    alloc_mem_mi = parse_mem_to_mi(report.get("budget", {}).get("allocatable", {}).get("memory"))
+    cpu_budget_m = alloc_cpu_m * (cpu_budget_pct / 100.0)
+    mem_budget_mi = alloc_mem_mi * (mem_budget_pct / 100.0)
+
+    current_cpu_m = float(report.get("summary", {}).get("total_current_requests_cpu_m", 0.0))
+    current_mem_mi = float(report.get("summary", {}).get("total_current_requests_memory_mi", 0.0))
+
+    downsizes = []
+    upsizes = []
+    skipped = []
+
+    for rec in recommendations:
+        release = rec.get("release", "")
+        container = rec.get("container", "")
+        notes = rec.get("notes", [])
+
+        if release not in allowlist:
+            skipped.append({"reason": "not_allowlisted", "release": release, "container": container})
+            continue
+
+        path = APP_TEMPLATE_RELEASE_FILE_MAP.get(release)
+        if not path:
+            skipped.append({"reason": "path_not_mapped", "release": release, "container": container})
+            continue
+
+        cur_req_cpu = parse_cpu_to_m(rec.get("current", {}).get("requests", {}).get("cpu"))
+        cur_req_mem = parse_mem_to_mi(rec.get("current", {}).get("requests", {}).get("memory"))
+        rec_req_cpu = parse_cpu_to_m(rec.get("recommended", {}).get("requests", {}).get("cpu"))
+        rec_req_mem = parse_mem_to_mi(rec.get("recommended", {}).get("requests", {}).get("memory"))
+
+        cur_lim_cpu = rec.get("current", {}).get("limits", {}).get("cpu", "0m")
+        cur_lim_mem = rec.get("current", {}).get("limits", {}).get("memory", "0Mi")
+        rec_lim_cpu = rec.get("recommended", {}).get("limits", {}).get("cpu", "0m")
+        rec_lim_mem = rec.get("recommended", {}).get("limits", {}).get("memory", "0Mi")
+
+        delta_cpu = rec_req_cpu - cur_req_cpu
+        delta_mem = rec_req_mem - cur_req_mem
+
+        if abs(delta_cpu) < 1.0 and abs(delta_mem) < 1.0:
+            continue
+
+        item = {
+            "namespace": rec.get("namespace"),
+            "workload": rec.get("workload"),
+            "release": release,
+            "container": container,
+            "path": path,
+            "notes": notes,
+            "current": {
+                "requests": {
+                    "cpu": rec.get("current", {}).get("requests", {}).get("cpu", "0m"),
+                    "memory": rec.get("current", {}).get("requests", {}).get("memory", "0Mi"),
+                },
+                "limits": {
+                    "cpu": cur_lim_cpu,
+                    "memory": cur_lim_mem,
+                },
+            },
+            "recommended": {
+                "requests": {
+                    "cpu": rec.get("recommended", {}).get("requests", {}).get("cpu", "0m"),
+                    "memory": rec.get("recommended", {}).get("requests", {}).get("memory", "0Mi"),
+                },
+                "limits": {
+                    "cpu": rec_lim_cpu,
+                    "memory": rec_lim_mem,
+                },
+            },
+            "delta": {
+                "requests_cpu_m": round(delta_cpu, 1),
+                "requests_memory_mi": round(delta_mem, 1),
+            },
+            "priority": (
+                1 if "restart_guard" in notes else 0,
+                rec.get("restarts_window", 0),
+                abs(delta_mem) + abs(delta_cpu / 10.0),
+            ),
+        }
+
+        is_upsize = delta_cpu > 0 or delta_mem > 0
+
+        if is_upsize:
+            if coverage_days < min_days_upsize and "restart_guard" not in notes:
+                skipped.append({
+                    "reason": "insufficient_data_for_upsize",
+                    "coverage_days": coverage_days,
+                    "min_days": min_days_upsize,
+                    "release": release,
+                    "container": container,
+                })
+                continue
+            upsizes.append(item)
+            continue
+
+        # Downsize path
+        if "restart_guard" in notes:
+            skipped.append({"reason": "restart_guard_blocks_downsize", "release": release, "container": container})
+            continue
+        if "downscale_excluded" in notes:
+            skipped.append({"reason": "downscale_excluded", "release": release, "container": container})
+            continue
+        if coverage_days < min_days_downsize:
+            skipped.append({
+                "reason": "insufficient_data_for_downsize",
+                "coverage_days": coverage_days,
+                "min_days": min_days_downsize,
+                "release": release,
+                "container": container,
+            })
+            continue
+        downsizes.append(item)
+
+    downsizes.sort(key=lambda x: -(abs(x["delta"]["requests_memory_mi"]) + abs(x["delta"]["requests_cpu_m"] / 10.0)))
+    upsizes.sort(key=lambda x: (-x["priority"][0], -x["priority"][1], -x["priority"][2]))
+
+    selected = []
+    projected_cpu_m = current_cpu_m
+    projected_mem_mi = current_mem_mi
+
+    for item in downsizes:
+        if len(selected) >= max_changes:
+            skipped.append({"reason": "max_changes_reached", "release": item["release"], "container": item["container"]})
+            continue
+        projected_cpu_m += item["delta"]["requests_cpu_m"]
+        projected_mem_mi += item["delta"]["requests_memory_mi"]
+        item["selection_reason"] = "downsize_with_mature_data"
+        selected.append(item)
+
+    for item in upsizes:
+        if len(selected) >= max_changes:
+            skipped.append({"reason": "max_changes_reached", "release": item["release"], "container": item["container"]})
+            continue
+
+        next_cpu = projected_cpu_m + item["delta"]["requests_cpu_m"]
+        next_mem = projected_mem_mi + item["delta"]["requests_memory_mi"]
+
+        if next_cpu > cpu_budget_m or next_mem > mem_budget_mi:
+            skipped.append(
+                {
+                    "reason": "budget_guard_block",
+                    "release": item["release"],
+                    "container": item["container"],
+                    "projected_cpu_m": round(next_cpu, 1),
+                    "projected_mem_mi": round(next_mem, 1),
+                    "cpu_budget_m": round(cpu_budget_m, 1),
+                    "mem_budget_mi": round(mem_budget_mi, 1),
+                }
+            )
+            continue
+
+        projected_cpu_m = next_cpu
+        projected_mem_mi = next_mem
+        item["selection_reason"] = "upsize_within_budget"
+        selected.append(item)
+
+    plan = {
+        "generated_at": report.get("generated_at"),
+        "metrics_window": report.get("metrics_window"),
+        "metrics_coverage_days_estimate": coverage_days,
+        "constraints": {
+            "max_request_percent_cpu": cpu_budget_pct,
+            "max_request_percent_memory": mem_budget_pct,
+            "min_data_days_for_upsize": min_days_upsize,
+            "min_data_days_for_downsize": min_days_downsize,
+            "max_apply_changes_per_run": max_changes,
+        },
+        "current_requests": {
+            "cpu_m": round(current_cpu_m, 1),
+            "memory_mi": round(current_mem_mi, 1),
+        },
+        "projected_requests_after_selected": {
+            "cpu_m": round(projected_cpu_m, 1),
+            "memory_mi": round(projected_mem_mi, 1),
+        },
+        "budgets": {
+            "cpu_m": round(cpu_budget_m, 1),
+            "memory_mi": round(mem_budget_mi, 1),
+        },
+        "selected": selected,
+        "skipped": skipped,
+    }
+
+    md_lines = [
+        "# Resource Advisor Apply Plan",
+        "",
+        f"- Generated at: `{plan['generated_at']}`",
+        f"- Metrics window: `{plan['metrics_window']}`",
+        f"- Coverage estimate: `{coverage_days}` days",
+        f"- Selected changes: **{len(selected)}**",
+        f"- Skipped candidates: **{len(skipped)}**",
+        "",
+        "## Node Constraint Gates",
+        "",
+        f"- CPU budget (`requests`): `{plan['budgets']['cpu_m']}m`",
+        f"- Memory budget (`requests`): `{plan['budgets']['memory_mi']}Mi`",
+        f"- Current CPU requests: `{plan['current_requests']['cpu_m']}m`",
+        f"- Current Memory requests: `{plan['current_requests']['memory_mi']}Mi`",
+        f"- Projected CPU requests: `{plan['projected_requests_after_selected']['cpu_m']}m`",
+        f"- Projected Memory requests: `{plan['projected_requests_after_selected']['memory_mi']}Mi`",
+        "",
+    ]
+
+    if selected:
+        md_lines.extend(
+            [
+                "## Selected Changes",
+                "",
+                "| Release | Container | CPU req | CPU new | Mem req | Mem new | Reason |",
+                "|---|---|---:|---:|---:|---:|---|",
+            ]
+        )
+        for item in selected:
+            md_lines.append(
+                "| {release} | {container} | {cur_cpu} | {new_cpu} | {cur_mem} | {new_mem} | {reason} |".format(
+                    release=item["release"],
+                    container=item["container"],
+                    cur_cpu=item["current"]["requests"]["cpu"],
+                    new_cpu=item["recommended"]["requests"]["cpu"],
+                    cur_mem=item["current"]["requests"]["memory"],
+                    new_mem=item["recommended"]["requests"]["memory"],
+                    reason=item.get("selection_reason", ""),
+                )
+            )
+    else:
+        md_lines.extend(["## Selected Changes", "", "No changes selected for apply in this run."])
+
+    md_lines.append("")
+    md_lines.append("## Skipped Candidates")
+    md_lines.append("")
+    skip_reason_counts: dict[str, int] = {}
+    for item in skipped:
+        reason = item.get("reason", "unknown")
+        skip_reason_counts[reason] = skip_reason_counts.get(reason, 0) + 1
+
+    if skip_reason_counts:
+        for reason, count in sorted(skip_reason_counts.items()):
+            md_lines.append(f"- `{reason}`: {count}")
+    else:
+        md_lines.append("- none")
+
+    md_lines.append("")
+
+    return plan, "\n".join(md_lines) + "\n"
+
+
+def update_report_artifacts(
+    repository: str,
+    token: str,
+    branch: str,
+    report: dict,
+    report_md: str,
+    commit_message: str,
+) -> bool:
+    changed = False
+    changed = (
+        update_repo_file(
+            repository=repository,
+            branch=branch,
+            path="docs/resource-advisor/latest.json",
+            content=json.dumps(report, indent=2, sort_keys=True) + "\n",
+            token=token,
+            commit_message=commit_message,
+        )
+        or changed
+    )
+    changed = (
+        update_repo_file(
+            repository=repository,
+            branch=branch,
+            path="docs/resource-advisor/latest.md",
+            content=report_md,
+            token=token,
+            commit_message=commit_message,
+        )
+        or changed
+    )
+    return changed
+
+
+def open_or_update_report_pr(report: dict, report_md: str) -> None:
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    if not token:
+        log("GITHUB_TOKEN is not set; skipping PR mode work")
+        return
+
+    repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
+    base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
+    head_branch = os.getenv("GITHUB_HEAD_BRANCH", "codex/resource-advisor-recommendations").strip()
+
+    if "/" not in repository:
+        log(f"Invalid GITHUB_REPOSITORY: {repository}")
+        return
+
+    if not ensure_branch(repository, base_branch, head_branch, token):
+        return
+
+    changed = update_report_artifacts(
+        repository=repository,
+        token=token,
+        branch=head_branch,
+        report=report,
+        report_md=report_md,
+        commit_message="resource-advisor: refresh tuning recommendations",
+    )
+
+    if not changed:
+        log("No change in generated report artifacts; skipping PR")
+        return
+
+    summary = report.get("summary", {})
+    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+    title = f"resource-advisor: tuning recommendations ({today})"
+    body = (
+        "Automated Resource Advisor report.\n\n"
+        f"- Containers analyzed: {summary.get('containers_analyzed', 0)}\n"
+        f"- Recommendations: {summary.get('recommendation_count', 0)}\n"
+        f"- Up adjustments: {summary.get('upsize_count', 0)}\n"
+        f"- Down adjustments: {summary.get('downsize_count', 0)}\n"
+        f"- Metrics coverage estimate: {report.get('metrics_coverage_days_estimate')} days\n\n"
+        "This PR updates generated recommendation artifacts only."
+    )
+
+    ensure_pull_request(
+        repository=repository,
+        token=token,
+        head_branch=head_branch,
+        base_branch=base_branch,
+        title=title,
+        body=body,
+    )
+
+
+def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: str) -> None:
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    if not token:
+        log("GITHUB_TOKEN is not set; skipping apply PR mode work")
+        return
+
+    repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
+    base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
+    head_branch = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "codex/resource-advisor-apply").strip()
+
+    if "/" not in repository:
+        log(f"Invalid GITHUB_REPOSITORY: {repository}")
+        return
+
+    if not ensure_branch(repository, base_branch, head_branch, token):
+        return
+
+    changed = False
+
+    changed = (
+        update_repo_file(
+            repository=repository,
+            branch=head_branch,
+            path="docs/resource-advisor/apply-plan.json",
+            content=json.dumps(plan, indent=2, sort_keys=True) + "\n",
+            token=token,
+            commit_message="resource-advisor: refresh apply plan",
+        )
+        or changed
+    )
+    changed = (
+        update_repo_file(
+            repository=repository,
+            branch=head_branch,
+            path="docs/resource-advisor/apply-plan.md",
+            content=plan_md,
+            token=token,
+            commit_message="resource-advisor: refresh apply plan",
+        )
+        or changed
+    )
+
+    changed = update_report_artifacts(
+        repository=repository,
+        token=token,
+        branch=head_branch,
+        report=report,
+        report_md=report_md,
+        commit_message="resource-advisor: refresh tuning recommendations",
+    ) or changed
+
+    selected = plan.get("selected", [])
+
+    grouped: dict[str, list[dict]] = {}
+    for item in selected:
+        grouped.setdefault(item["path"], []).append(item)
+
+    for path, items in grouped.items():
+        status, _sha, content = read_repo_file(repository, head_branch, path, token)
+        if status != 200 or content is None:
+            log(f"Skipping {path}; unable to fetch content")
+            continue
+
+        patched = content
+        any_item_applied = False
+
+        for item in items:
+            patched, item_changed, reason = patch_app_template_resources(
+                content=patched,
+                container_name=item["container"],
+                req_cpu=item["recommended"]["requests"]["cpu"],
+                req_mem=item["recommended"]["requests"]["memory"],
+                lim_cpu=item["recommended"]["limits"]["cpu"],
+                lim_mem=item["recommended"]["limits"]["memory"],
+            )
+            if item_changed:
+                any_item_applied = True
+            else:
+                log(
+                    "No patch for "
+                    f"{item['release']}:{item['container']} in {path} ({reason})"
+                )
+
+        if not any_item_applied:
+            continue
+
+        file_changed = update_repo_file(
+            repository=repository,
+            branch=head_branch,
+            path=path,
+            content=patched,
+            token=token,
+            commit_message="resource-advisor: apply safe resource tuning",
+        )
+        changed = file_changed or changed
+
+    if not changed:
+        log("No repository changes for apply mode; skipping PR")
+        return
+
+    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+    title = f"resource-advisor: apply safe tuning ({today})"
+    body = (
+        "Automated safe resource apply proposal.\n\n"
+        f"- Selected changes: {len(selected)}\n"
+        f"- Coverage estimate: {plan.get('metrics_coverage_days_estimate')} days\n"
+        f"- CPU request budget: {plan.get('budgets', {}).get('cpu_m')}m\n"
+        f"- Memory request budget: {plan.get('budgets', {}).get('memory_mi')}Mi\n\n"
+        "Includes:\n"
+        "- latest report artifacts\n"
+        "- apply plan artifacts\n"
+        "- HelmRelease resource changes for allowlisted app-template releases only\n"
+    )
+
+    ensure_pull_request(
+        repository=repository,
+        token=token,
+        head_branch=head_branch,
+        base_branch=base_branch,
+        title=title,
+        body=body,
+    )
+
+
 def main() -> int:
     mode = os.getenv("MODE", "report").strip().lower() or "report"
     configmap_namespace = os.getenv("CONFIGMAP_NAMESPACE", "monitoring")
     configmap_name = os.getenv("CONFIGMAP_NAME", "resource-advisor-latest")
 
     log(f"Starting resource advisor in mode={mode}")
-    report, markdown = build_report()
+    report, report_md = build_report()
 
-    write_outputs(report, markdown)
+    write_outputs(report, report_md)
 
     kube = KubeClient()
     kube.upsert_configmap(
@@ -732,14 +1354,17 @@ def main() -> int:
         name=configmap_name,
         data={
             "latest.json": json.dumps(report, indent=2, sort_keys=True),
-            "latest.md": markdown,
+            "latest.md": report_md,
             "lastRunAt": report.get("generated_at", ""),
             "mode": mode,
         },
     )
 
     if mode == "pr":
-        open_or_update_pr(report, markdown)
+        open_or_update_report_pr(report, report_md)
+    elif mode == "apply-pr":
+        plan, plan_md = build_apply_plan(report)
+        open_or_update_apply_pr(report, report_md, plan, plan_md)
 
     log("Resource advisor run completed")
     return 0

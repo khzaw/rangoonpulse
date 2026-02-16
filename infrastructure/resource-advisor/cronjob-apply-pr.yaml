@@ -1,0 +1,103 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: resource-advisor-apply-pr
+  namespace: monitoring
+spec:
+  schedule: "30 3 * * 1"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: resource-advisor
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: advisor
+              image: python:3.12-alpine
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - python /opt/resource-advisor/advisor.py
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
+              env:
+                - name: MODE
+                  value: apply-pr
+                - name: PROMETHEUS_URL
+                  value: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+                - name: METRICS_WINDOW
+                  value: 14d
+                - name: METRICS_RESOLUTION
+                  value: 1h
+                - name: TARGET_NAMESPACES
+                  value: default,monitoring
+                - name: CONFIGMAP_NAMESPACE
+                  value: monitoring
+                - name: CONFIGMAP_NAME
+                  value: resource-advisor-latest
+                - name: DOWNSCALE_EXCLUDE
+                  value: jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack
+                - name: MAX_STEP_PERCENT
+                  value: "25"
+                - name: REQUEST_BUFFER_PERCENT
+                  value: "30"
+                - name: LIMIT_BUFFER_PERCENT
+                  value: "60"
+                - name: MIN_CPU_M
+                  value: "25"
+                - name: MIN_MEM_MI
+                  value: "64"
+                - name: MAX_REQUESTS_PERCENT_CPU
+                  value: "60"
+                - name: MAX_REQUESTS_PERCENT_MEMORY
+                  value: "65"
+                - name: MIN_DATA_DAYS_FOR_UPSIZE
+                  value: "14"
+                - name: MIN_DATA_DAYS_FOR_DOWNSIZE
+                  value: "14"
+                - name: MAX_APPLY_CHANGES_PER_RUN
+                  value: "5"
+                - name: APPLY_ALLOWLIST
+                  value: actualbudget,audiobookshelf,bazarr,calibre,calibre-web-automated,flaresolverr,glance,homepage,jellyfin,jellyseerr,jellystat,notifiarr,prowlarr,radarr,sabnzbd,sonarr,transmission,tunarr,uptime-kuma,vaultwarden
+                - name: GITHUB_REPOSITORY
+                  value: khzaw/rangoonpulse
+                - name: GITHUB_BASE_BRANCH
+                  value: master
+                - name: GITHUB_APPLY_HEAD_BRANCH
+                  value: codex/resource-advisor-apply
+                - name: GITHUB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: resource-advisor-github
+                      key: token
+                      optional: true
+              volumeMounts:
+                - name: advisor-script
+                  mountPath: /opt/resource-advisor
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 150m
+                  memory: 256Mi
+                limits:
+                  cpu: 600m
+                  memory: 768Mi
+          volumes:
+            - name: advisor-script
+              configMap:
+                name: resource-advisor-script
+                defaultMode: 0555
