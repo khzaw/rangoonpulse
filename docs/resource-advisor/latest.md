@@ -1,6 +1,6 @@
 # Resource Advisor Report
 
-- Generated at: `2026-02-16T10:05:35Z`
+- Generated at: `2026-02-16T10:07:59Z`
 - Mode: `apply-pr`
 - Metrics window: `14d`
 - Metrics coverage estimate: `1.77` days
