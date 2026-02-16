@@ -438,6 +438,23 @@ def ensure_branch(repository: str, base_branch: str, branch: str, token: str) ->
     )
     status, payload = github_request("GET", branch_ref_url, token)
     if status == 200:
+        current_sha = payload.get("object", {}).get("sha")
+        if current_sha == base_sha:
+            return True
+
+        # Force-reset the working branch to the latest base so every run starts from current master.
+        update_url = (
+            f"https://api.github.com/repos/{repository}/git/refs/heads/{urllib.parse.quote(branch, safe='')}"
+        )
+        update_payload = {"sha": base_sha, "force": True}
+        update_status, update_resp = github_request("PATCH", update_url, token, update_payload)
+        if update_status not in (200, 201):
+            log(
+                f"Failed to reset branch {branch} to {base_branch}: "
+                f"{update_status} {update_resp}"
+            )
+            return False
+        log(f"Reset branch {branch} to latest {base_branch} ({base_sha[:12]})")
         return True
     if status != 404:
         log(f"Failed to check head branch {branch}: {status} {payload}")
@@ -1180,7 +1197,7 @@ def open_or_update_report_pr(report: dict, report_md: str) -> None:
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch = os.getenv("GITHUB_HEAD_BRANCH", "codex/resource-advisor-recommendations").strip()
+    head_branch = os.getenv("GITHUB_HEAD_BRANCH", "resource-advisor-recommendations").strip()
 
     if "/" not in repository:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")
@@ -1233,7 +1250,7 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "codex/resource-advisor-apply").strip()
+    head_branch = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "resource-advisor-apply").strip()
 
     if "/" not in repository:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")

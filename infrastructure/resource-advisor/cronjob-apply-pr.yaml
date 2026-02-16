@@ -78,7 +78,7 @@ spec:
                 - name: GITHUB_BASE_BRANCH
                   value: master
                 - name: GITHUB_APPLY_HEAD_BRANCH
-                  value: codex/resource-advisor-apply
+                  value: resource-advisor-apply
                 - name: GITHUB_TOKEN
                   valueFrom:
                     secretKeyRef:
