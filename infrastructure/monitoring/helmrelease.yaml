@@ -65,11 +65,13 @@ spec:
 
       resources:
         requests:
-          cpu: 50m
-          memory: 128Mi
-        limits:
-          cpu: 200m
+          cpu: 100m
           memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
+      defaultDashboardsTimezone: browser
 
       ingress:
         enabled: true
@@ -119,8 +121,10 @@ spec:
           cpu: 50m
           memory: 128Mi
 
-    prometheus-node-exporter:
+    nodeExporter:
       enabled: false
+
+    prometheus-node-exporter:
       resources:
         requests:
           cpu: 10m
