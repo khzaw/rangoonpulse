@@ -1,6 +1,6 @@
 # Resource Advisor Report
 
-- Generated at: `2026-02-16T09:41:00Z`
+- Generated at: `2026-02-16T09:51:27Z`
 - Mode: `pr`
 - Containers analyzed: **32**
 - Containers with metrics: **32**
