@@ -1,0 +1,64 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: resource-advisor-report
+  namespace: monitoring
+spec:
+  schedule: "30 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: resource-advisor
+          restartPolicy: OnFailure
+          containers:
+            - name: advisor
+              image: python:3.12-alpine
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - python /opt/resource-advisor/advisor.py
+              env:
+                - name: MODE
+                  value: report
+                - name: PROMETHEUS_URL
+                  value: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+                - name: TARGET_NAMESPACES
+                  value: default,monitoring
+                - name: CONFIGMAP_NAMESPACE
+                  value: monitoring
+                - name: CONFIGMAP_NAME
+                  value: resource-advisor-latest
+                - name: DOWNSCALE_EXCLUDE
+                  value: jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack
+                - name: MAX_STEP_PERCENT
+                  value: "25"
+                - name: REQUEST_BUFFER_PERCENT
+                  value: "30"
+                - name: LIMIT_BUFFER_PERCENT
+                  value: "60"
+                - name: MIN_CPU_M
+                  value: "25"
+                - name: MIN_MEM_MI
+                  value: "64"
+              volumeMounts:
+                - name: advisor-script
+                  mountPath: /opt/resource-advisor
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 250m
+                  memory: 256Mi
+          volumes:
+            - name: advisor-script
+              configMap:
+                name: resource-advisor-script
+                defaultMode: 0555

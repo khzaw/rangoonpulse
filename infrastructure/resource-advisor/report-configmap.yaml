@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: resource-advisor-latest
+  namespace: monitoring
+data:
+  latest.json: "{}"
+  latest.md: |
+    # Resource Advisor
+  mode: "init"
+  lastRunAt: ""
