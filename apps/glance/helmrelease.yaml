@@ -279,74 +279,8 @@ spec:
                           # Other Apps
                           - actualbudget/actual
                           - linuxserver/calibre-web
-                      - type: rss
-                        title: Homelab News
-                        style: horizontal-cards
-                        limit: 12
-                        collapse-after: 4
-                        feeds:
-                          - url: https://www.reddit.com/r/emacs/.rss
-                            title: r/emacs
-                          - url: https://selfh.st/rss/
-                            title: selfh.st
-                          - url: https://www.reddit.com/r/selfhosted/.rss
-                            title: r/selfhosted
-                          - url: https://blog.cloudflare.com/rss/
-                            title: Cloudflare
-
-                  - size: small
-                    widgets:
-                      - type: server-stats
-                        servers:
-                          - type: local
-                            name: Mini PC
-                            hide-mountpoints-by-default: true
-                      - type: monitor
-                        title: Service Health
-                        cache: 1m
-                        style: compact
-                        sites:
-                          - title: Homepage
-                            url: https://hq.khzaw.dev
-                            icon: di:homepage
-                          - title: Glance
-                            url: https://glance.khzaw.dev
-                            icon: di:glance
-                          - title: Immich
-                            url: https://photos.khzaw.dev
-                            icon: di:immich
-                          - title: Jellyfin
-                            url: https://jellyfin.khzaw.dev
-                            icon: di:jellyfin
-                          - title: Grafana
-                            url: https://grafana.khzaw.dev
-                            icon: di:grafana
-                          - title: Vaultwarden
-                            url: https://passwords.khzaw.dev
-                            icon: di:vaultwarden
-                          - title: Router
-                            url: https://router.khzaw.dev
-                            icon: mdi:router-network
-                            alt-status-codes:
-                              - 401
-                              - 403
-                          - title: TrueNAS
-                            url: https://nas.khzaw.dev
-                            icon: di:truenas
-                            alt-status-codes:
-                              - 401
-                              - 403
-              - name: Arr Stack
-                slug: arr
-                width: wide
-                head-widgets:
-                  - type: search
-                    search-engine: google
-                    new-tab: true
-                columns:
-                  - size: full
-                    widgets:
                       - type: split-column
+                        title: Stats
                         max-columns: 3
                         widgets:
                           - type: custom-api
@@ -498,6 +432,49 @@ spec:
                                   <div class="size-h6">USAGE</div>
                                 </div>
                               </div>`}}
+
+                  - size: small
+                    widgets:
+                      - type: server-stats
+                        servers:
+                          - type: local
+                            name: Mini PC
+                            hide-mountpoints-by-default: true
+                      - type: monitor
+                        title: Service Health
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Homepage
+                            url: https://hq.khzaw.dev
+                            icon: di:homepage
+                          - title: Glance
+                            url: https://glance.khzaw.dev
+                            icon: di:glance
+                          - title: Immich
+                            url: https://photos.khzaw.dev
+                            icon: di:immich
+                          - title: Jellyfin
+                            url: https://jellyfin.khzaw.dev
+                            icon: di:jellyfin
+                          - title: Grafana
+                            url: https://grafana.khzaw.dev
+                            icon: di:grafana
+                          - title: Vaultwarden
+                            url: https://passwords.khzaw.dev
+                            icon: di:vaultwarden
+                          - title: Router
+                            url: https://router.khzaw.dev
+                            icon: mdi:router-network
+                            alt-status-codes:
+                              - 401
+                              - 403
+                          - title: TrueNAS
+                            url: https://nas.khzaw.dev
+                            icon: di:truenas
+                            alt-status-codes:
+                              - 401
+                              - 403
 
     persistence:
       config:
