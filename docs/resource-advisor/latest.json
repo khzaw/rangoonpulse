@@ -1,0 +1,1161 @@
+{
+  "budget": {
+    "allocatable": {
+      "cpu": "9900m",
+      "memory": "38522Mi"
+    },
+    "current_requests_percent_of_allocatable": {
+      "cpu": 32.4,
+      "memory": 26.8
+    },
+    "recommended_requests_percent_of_allocatable": {
+      "cpu": 29.4,
+      "memory": 27.9
+    }
+  },
+  "generated_at": "2026-02-16T10:21:32Z",
+  "metrics_coverage_days_estimate": 1.78,
+  "metrics_window": "14d",
+  "mode": "apply-pr",
+  "recommendations": [
+    {
+      "action": "upsize",
+      "container": "kube-state-metrics",
+      "cpu_p95_m": 2.8,
+      "current": {
+        "limits": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        },
+        "requests": {
+          "cpu": "10m",
+          "memory": "64Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 0.0,
+        "limits_memory": 21.0,
+        "requests_cpu": 25.0,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 79.4,
+      "namespace": "monitoring",
+      "notes": [
+        "restart_guard",
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "50m",
+          "memory": "155Mi"
+        },
+        "requests": {
+          "cpu": "12m",
+          "memory": "80Mi"
+        }
+      },
+      "release": "kube-prometheus-stack",
+      "restarts_window": 19.0,
+      "workload": "kube-prometheus-stack-kube-state-metrics"
+    },
+    {
+      "action": "upsize",
+      "container": "config-reloader",
+      "cpu_p95_m": 0.4,
+      "current": {
+        "limits": {
+          "cpu": "0m",
+          "memory": "0Mi"
+        },
+        "requests": {
+          "cpu": "0m",
+          "memory": "0Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 100.0,
+        "limits_memory": 100.0,
+        "requests_cpu": 100.0,
+        "requests_memory": 100.0
+      },
+      "kind": "statefulset",
+      "mem_p95_mi": 14.4,
+      "namespace": "monitoring",
+      "notes": [
+        "restart_guard"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "50m",
+          "memory": "96Mi"
+        },
+        "requests": {
+          "cpu": "25m",
+          "memory": "64Mi"
+        }
+      },
+      "release": "kube-prometheus-stack-prometheus",
+      "restarts_window": 7.0,
+      "workload": "prometheus-kube-prometheus-stack-prometheus"
+    },
+    {
+      "action": "upsize",
+      "container": "prometheus",
+      "cpu_p95_m": 60.3,
+      "current": {
+        "limits": {
+          "cpu": "200m",
+          "memory": "800Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "400Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -21.6,
+        "limits_memory": 0.0,
+        "requests_cpu": 25.0,
+        "requests_memory": 25.0
+      },
+      "kind": "statefulset",
+      "mem_p95_mi": 404.5,
+      "namespace": "monitoring",
+      "notes": [
+        "restart_guard"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "157m",
+          "memory": "800Mi"
+        },
+        "requests": {
+          "cpu": "62m",
+          "memory": "500Mi"
+        }
+      },
+      "release": "kube-prometheus-stack-prometheus",
+      "restarts_window": 7.0,
+      "workload": "prometheus-kube-prometheus-stack-prometheus"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 13.4,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "192Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": 0.8,
+        "requests_cpu": -25.0,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 396.9,
+      "namespace": "default",
+      "notes": [
+        "restart_guard"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "774Mi"
+        },
+        "requests": {
+          "cpu": "56m",
+          "memory": "240Mi"
+        }
+      },
+      "release": "jellyseerr",
+      "restarts_window": 4.67,
+      "workload": "jellyseerr"
+    },
+    {
+      "action": "upsize",
+      "container": "grafana-sc-dashboard",
+      "cpu_p95_m": 20.4,
+      "current": {
+        "limits": {
+          "cpu": "0m",
+          "memory": "0Mi"
+        },
+        "requests": {
+          "cpu": "0m",
+          "memory": "0Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 100.0,
+        "limits_memory": 100.0,
+        "requests_cpu": 100.0,
+        "requests_memory": 100.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 73.7,
+      "namespace": "monitoring",
+      "notes": [
+        "restart_guard",
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "53m",
+          "memory": "144Mi"
+        },
+        "requests": {
+          "cpu": "27m",
+          "memory": "96Mi"
+        }
+      },
+      "release": "kube-prometheus-stack",
+      "restarts_window": 4.0,
+      "workload": "kube-prometheus-stack-grafana"
+    },
+    {
+      "action": "upsize",
+      "container": "grafana-sc-datasources",
+      "cpu_p95_m": 24.8,
+      "current": {
+        "limits": {
+          "cpu": "0m",
+          "memory": "0Mi"
+        },
+        "requests": {
+          "cpu": "0m",
+          "memory": "0Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 100.0,
+        "limits_memory": 100.0,
+        "requests_cpu": 100.0,
+        "requests_memory": 100.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 72.4,
+      "namespace": "monitoring",
+      "notes": [
+        "restart_guard",
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "64m",
+          "memory": "141Mi"
+        },
+        "requests": {
+          "cpu": "32m",
+          "memory": "94Mi"
+        }
+      },
+      "release": "kube-prometheus-stack",
+      "restarts_window": 4.0,
+      "workload": "kube-prometheus-stack-grafana"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 28.4,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 248.0,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "320Mi"
+        }
+      },
+      "release": "bazarr",
+      "restarts_window": 0.0,
+      "workload": "bazarr"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 35.7,
+      "current": {
+        "limits": {
+          "cpu": "1000m",
+          "memory": "3072Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "512Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 752.8,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "750m",
+          "memory": "2304Mi"
+        },
+        "requests": {
+          "cpu": "112m",
+          "memory": "640Mi"
+        }
+      },
+      "release": "calibre",
+      "restarts_window": 0.0,
+      "workload": "calibre"
+    },
+    {
+      "action": "upsize",
+      "container": "homepage",
+      "cpu_p95_m": 21.3,
+      "current": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "256Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -7.8,
+        "requests_cpu": -25.0,
+        "requests_memory": 23.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 121.1,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "225m",
+          "memory": "236Mi"
+        },
+        "requests": {
+          "cpu": "38m",
+          "memory": "157Mi"
+        }
+      },
+      "release": "homepage",
+      "restarts_window": 0.0,
+      "workload": "homepage"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 4.9,
+      "current": {
+        "limits": {
+          "cpu": "1000m",
+          "memory": "2048Mi"
+        },
+        "requests": {
+          "cpu": "200m",
+          "memory": "768Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 0.0,
+        "limits_memory": 0.0,
+        "requests_cpu": 0.0,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 798.4,
+      "namespace": "default",
+      "notes": [
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "1000m",
+          "memory": "2048Mi"
+        },
+        "requests": {
+          "cpu": "200m",
+          "memory": "960Mi"
+        }
+      },
+      "release": "immich",
+      "restarts_window": 0.0,
+      "workload": "immich-server"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 83.6,
+      "current": {
+        "limits": {
+          "cpu": "2500m",
+          "memory": "4096Mi"
+        },
+        "requests": {
+          "cpu": "400m",
+          "memory": "1024Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 0.0,
+        "limits_memory": 0.0,
+        "requests_cpu": 0.0,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 1358.5,
+      "namespace": "default",
+      "notes": [
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "2500m",
+          "memory": "4096Mi"
+        },
+        "requests": {
+          "cpu": "400m",
+          "memory": "1280Mi"
+        }
+      },
+      "release": "jellyfin",
+      "restarts_window": 0.0,
+      "workload": "jellyfin"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 1.4,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": 8.2
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 213.0,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "277Mi"
+        }
+      },
+      "release": "prowlarr",
+      "restarts_window": 0.0,
+      "workload": "prowlarr"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 5.6,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": 24.2
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 244.6,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "318Mi"
+        }
+      },
+      "release": "radarr",
+      "restarts_window": 0.0,
+      "workload": "radarr"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 150.1,
+      "current": {
+        "limits": {
+          "cpu": "1500m",
+          "memory": "2048Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "512Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": 25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 170.5,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "1125m",
+          "memory": "1536Mi"
+        },
+        "requests": {
+          "cpu": "188m",
+          "memory": "384Mi"
+        }
+      },
+      "release": "sabnzbd",
+      "restarts_window": 0.0,
+      "workload": "sabnzbd"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 3.4,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": 10.9
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 218.5,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "284Mi"
+        }
+      },
+      "release": "sonarr",
+      "restarts_window": 0.0,
+      "workload": "sonarr"
+    },
+    {
+      "action": "upsize",
+      "container": "main",
+      "cpu_p95_m": 35.7,
+      "current": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -7.1,
+        "requests_memory": 25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 166.9,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "225m",
+          "memory": "384Mi"
+        },
+        "requests": {
+          "cpu": "46m",
+          "memory": "160Mi"
+        }
+      },
+      "release": "uptime-kuma",
+      "restarts_window": 0.0,
+      "workload": "uptime-kuma"
+    },
+    {
+      "action": "upsize",
+      "container": "kube-prometheus-stack",
+      "cpu_p95_m": 2.8,
+      "current": {
+        "limits": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        },
+        "requests": {
+          "cpu": "20m",
+          "memory": "64Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 0.0,
+        "limits_memory": 0.0,
+        "requests_cpu": 25.0,
+        "requests_memory": 0.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 26.7,
+      "namespace": "monitoring",
+      "notes": [
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        },
+        "requests": {
+          "cpu": "25m",
+          "memory": "64Mi"
+        }
+      },
+      "release": "kube-prometheus-stack",
+      "restarts_window": 0.0,
+      "workload": "kube-prometheus-stack-operator"
+    },
+    {
+      "action": "no-change",
+      "container": "grafana",
+      "cpu_p95_m": 18.9,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": 0.0,
+        "limits_memory": 0.0,
+        "requests_cpu": 0.0,
+        "requests_memory": 0.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 145.3,
+      "namespace": "monitoring",
+      "notes": [
+        "restart_guard",
+        "downscale_excluded"
+      ],
+      "recommended": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "release": "kube-prometheus-stack",
+      "restarts_window": 4.0,
+      "workload": "kube-prometheus-stack-grafana"
+    },
+    {
+      "action": "downsize",
+      "container": "actualbudget",
+      "cpu_p95_m": 1.1,
+      "current": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 73.5,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "225m",
+          "memory": "384Mi"
+        },
+        "requests": {
+          "cpu": "38m",
+          "memory": "96Mi"
+        }
+      },
+      "release": "actualbudget",
+      "restarts_window": 0.0,
+      "workload": "actualbudget"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.3,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 124.4,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "56m",
+          "memory": "192Mi"
+        }
+      },
+      "release": "audiobookshelf",
+      "restarts_window": 0.0,
+      "workload": "audiobookshelf"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.7,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -6.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 185.1,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "56m",
+          "memory": "241Mi"
+        }
+      },
+      "release": "calibre-web-automated",
+      "restarts_window": 0.0,
+      "workload": "calibre-web-automated"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.1,
+      "current": {
+        "limits": {
+          "cpu": "1000m",
+          "memory": "2048Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "512Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 272.4,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "750m",
+          "memory": "1536Mi"
+        },
+        "requests": {
+          "cpu": "112m",
+          "memory": "384Mi"
+        }
+      },
+      "release": "flaresolverr",
+      "restarts_window": 0.0,
+      "workload": "flaresolverr"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.1,
+      "current": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "384Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 10.9,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "225m",
+          "memory": "288Mi"
+        },
+        "requests": {
+          "cpu": "38m",
+          "memory": "96Mi"
+        }
+      },
+      "release": "glance",
+      "restarts_window": 0.0,
+      "workload": "glance"
+    },
+    {
+      "action": "downsize",
+      "container": "db",
+      "cpu_p95_m": 7.1,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "1024Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -5.5
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 186.0,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "242Mi"
+        }
+      },
+      "release": "jellystat",
+      "restarts_window": 0.0,
+      "workload": "jellystat"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 5.0,
+      "current": {
+        "limits": {
+          "cpu": "500m",
+          "memory": "768Mi"
+        },
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 140.1,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "375m",
+          "memory": "576Mi"
+        },
+        "requests": {
+          "cpu": "75m",
+          "memory": "192Mi"
+        }
+      },
+      "release": "jellystat",
+      "restarts_window": 0.0,
+      "workload": "jellystat"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.5,
+      "current": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 9.4,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "225m",
+          "memory": "384Mi"
+        },
+        "requests": {
+          "cpu": "38m",
+          "memory": "96Mi"
+        }
+      },
+      "release": "notifiarr",
+      "restarts_window": 0.0,
+      "workload": "notifiarr"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 41.4,
+      "current": {
+        "limits": {
+          "cpu": "1000m",
+          "memory": "2048Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "512Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 44.5,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "750m",
+          "memory": "1536Mi"
+        },
+        "requests": {
+          "cpu": "112m",
+          "memory": "384Mi"
+        }
+      },
+      "release": "transmission",
+      "restarts_window": 0.0,
+      "workload": "transmission"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.8,
+      "current": {
+        "limits": {
+          "cpu": "1500m",
+          "memory": "2048Mi"
+        },
+        "requests": {
+          "cpu": "200m",
+          "memory": "512Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 233.7,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "1125m",
+          "memory": "1536Mi"
+        },
+        "requests": {
+          "cpu": "150m",
+          "memory": "384Mi"
+        }
+      },
+      "release": "tunarr",
+      "restarts_window": 0.0,
+      "workload": "tunarr"
+    },
+    {
+      "action": "downsize",
+      "container": "main",
+      "cpu_p95_m": 0.1,
+      "current": {
+        "limits": {
+          "cpu": "300m",
+          "memory": "512Mi"
+        },
+        "requests": {
+          "cpu": "50m",
+          "memory": "128Mi"
+        }
+      },
+      "delta_percent": {
+        "limits_cpu": -25.0,
+        "limits_memory": -25.0,
+        "requests_cpu": -25.0,
+        "requests_memory": -25.0
+      },
+      "kind": "deployment",
+      "mem_p95_mi": 16.6,
+      "namespace": "default",
+      "notes": [],
+      "recommended": {
+        "limits": {
+          "cpu": "225m",
+          "memory": "384Mi"
+        },
+        "requests": {
+          "cpu": "38m",
+          "memory": "96Mi"
+        }
+      },
+      "release": "vaultwarden",
+      "restarts_window": 0.0,
+      "workload": "vaultwarden"
+    }
+  ],
+  "summary": {
+    "containers_analyzed": 32,
+    "containers_skipped_no_metrics": 0,
+    "containers_with_metrics": 32,
+    "downsize_count": 11,
+    "no_change_count": 1,
+    "recommendation_count": 29,
+    "total_current_requests_cpu_m": 3205.0,
+    "total_current_requests_memory_mi": 10320.0,
+    "total_recommended_requests_cpu_m": 2911.5,
+    "total_recommended_requests_memory_mi": 10752.6,
+    "upsize_count": 17
+  }
+}
