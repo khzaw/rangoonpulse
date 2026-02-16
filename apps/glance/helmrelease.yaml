@@ -88,6 +88,7 @@ spec:
               contrast-multiplier: 1.2
               text-saturation-multiplier: 0
               disable-picker: true
+              font-family: Berkeley Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace
 
             pages:
               - name: Home
@@ -113,9 +114,11 @@ spec:
                         hour-format: 24h
                         timezones:
                           - timezone: Asia/Singapore
-                            label: Home
+                            label: Local
+                          - timezone: Europe/Berlin
+                            label: Berlin
                           - timezone: America/New_York
-                            label: US East
+                            label: New York City
                       - type: calendar
                         first-day-of-week: monday
                       - type: weather
@@ -124,20 +127,51 @@ spec:
                         hour-format: 24h
                       - type: markets
                         markets:
-                          - symbol: SPY
-                            name: S&P 500
                           - symbol: BTC-USD
                             name: Bitcoin
+                          - symbol: ETH-USD
+                            name: Ethereum
+                          - symbol: SPY
+                            name: S&P 500
+                          - symbol: TQQQ
+                            name: TQQQ
+                          - symbol: CSPX.L
+                            name: CSPX
+                          - symbol: META
+                            name: Facebook
+                          - symbol: GOOGL
+                            name: Google
                           - symbol: NVDA
                             name: NVIDIA
                           - symbol: AAPL
                             name: Apple
+                          - symbol: MSFT
+                            name: Microsoft
+                          - symbol: TSLA
+                            name: Tesla
+                          - symbol: NET
+                            name: Cloudflare
 
                   - size: full
                     widgets:
+                      - type: rss
+                        title: News
+                        style: horizontal-cards
+                        limit: 16
+                        collapse-after: 4
+                        feeds:
+                          - url: https://www.reddit.com/r/emacs/.rss
+                            title: r/emacs
+                          - url: https://selfh.st/rss/
+                            title: selfh.st
+                          - url: https://www.reddit.com/r/selfhosted/.rss
+                            title: r/selfhosted
+                          - url: https://www.reddit.com/r/cscareerquestions/.rss
+                            title: r/cscareerquestions
+
                       - type: bookmarks
                         groups:
-                          - title: Media
+                          - title: Apps
                             links:
                               - title: Jellyfin
                                 url: https://jellyfin.khzaw.dev
@@ -151,7 +185,19 @@ spec:
                               - title: Audiobookshelf
                                 url: https://audiobookshelf.khzaw.dev
                                 icon: di:audiobookshelf
-                          - title: Acquisition
+                              - title: Calibre
+                                url: https://calibre.khzaw.dev
+                                icon: di:calibre
+                              - title: Calibre VNC
+                                url: https://calibre-manage.khzaw.dev
+                                icon: di:calibre
+                              - title: Actual Budget
+                                url: https://actual.khzaw.dev
+                                icon: di:actual-budget
+                              - title: Vaultwarden
+                                url: https://passwords.khzaw.dev
+                                icon: di:vaultwarden
+                          - title: Arr Stack
                             links:
                               - title: Sonarr
                                 url: https://sonarr.khzaw.dev
@@ -188,37 +234,49 @@ spec:
                               - title: Uptime Kuma
                                 url: https://uptime-kuma.khzaw.dev
                                 icon: di:uptime-kuma
-                              - title: Vaultwarden
-                                url: https://passwords.khzaw.dev
-                                icon: di:vaultwarden
                               - title: Router
                                 url: https://router.khzaw.dev
                                 icon: mdi:router-network
                               - title: TrueNAS
                                 url: https://nas.khzaw.dev
                                 icon: di:truenas
+
                       - type: releases
                         cache: 6h
                         show-source-icon: true
+                        style: compact-list
                         repositories:
+                          # Media & Entertainment
                           - immich-app/immich
+                          - jellyfin/jellyfin
+                          - advplyr/audiobookshelf
+                          - seerr-team/seerr
+                          # Arr Stack
+                          - Sonarr/Sonarr
+                          - Radarr/Radarr
+                          - Prowlarr/Prowlarr
+                          - morpheus65535/bazarr
+                          - Notifiarr/Notifiarr
+                          - chrisbenincasa/tunarr
+                          # Downloaders
+                          - transmission/transmission
+                          - sabnzbd/sabnzbd
+                          # Infrastructure & Ops
                           - gethomepage/homepage
                           - glanceapp/glance
                           - dani-garcia/vaultwarden
+                          - louislam/uptime-kuma
+                          - CyferShepard/Jellystat
                           - fluxcd/flux2
                           - grafana/grafana
-                      - type: rss
-                        title: Homelab News
-                        style: horizontal-cards
-                        limit: 12
-                        collapse-after: 4
-                        feeds:
-                          - url: https://selfh.st/rss/
-                            title: selfh.st
-                          - url: https://www.reddit.com/r/selfhosted/.rss
-                            title: r/selfhosted
-                          - url: https://blog.cloudflare.com/rss/
-                            title: Cloudflare
+                          - prometheus-community/helm-charts
+                          - cert-manager/cert-manager
+                          - metallb/metallb
+                          - tailscale/tailscale
+                          - kubernetes-sigs/external-dns
+                          # Other Apps
+                          - actualbudget/actual
+                          - linuxserver/calibre-web
 
                   - size: small
                     widgets:
@@ -262,6 +320,78 @@ spec:
                             alt-status-codes:
                               - 401
                               - 403
+
+              - name: Arr Stack
+                columns:
+                  - size: small
+                    widgets:
+                      - type: bookmarks
+                        groups:
+                          - title: Arr Services
+                            links:
+                              - title: Sonarr
+                                url: https://sonarr.khzaw.dev
+                                icon: di:sonarr
+                              - title: Radarr
+                                url: https://radarr.khzaw.dev
+                                icon: di:radarr
+                              - title: Prowlarr
+                                url: https://prowlarr.khzaw.dev
+                                icon: di:prowlarr
+                              - title: Bazarr
+                                url: https://bazarr.khzaw.dev
+                                icon: di:bazarr
+                              - title: Notifiarr
+                                url: https://notifiarr.khzaw.dev
+                                icon: di:notifiarr
+                              - title: Tunarr
+                                url: https://tunarr.khzaw.dev
+                                icon: di:tunarr
+                          - title: Download
+                            links:
+                              - title: Transmission
+                                url: https://torrent.khzaw.dev
+                                icon: di:transmission
+                              - title: SABnzbd
+                                url: https://sabnzbd.khzaw.dev
+                                icon: di:sabnzbd
+
+                  - size: full
+                    widgets:
+                      - type: monitor
+                        title: Arr Services Health
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Sonarr
+                            url: https://sonarr.khzaw.dev
+                            icon: di:sonarr
+                          - title: Radarr
+                            url: https://radarr.khzaw.dev
+                            icon: di:radarr
+                          - title: Prowlarr
+                            url: https://prowlarr.khzaw.dev
+                            icon: di:prowlarr
+                          - title: Bazarr
+                            url: https://bazarr.khzaw.dev
+                            icon: di:bazarr
+                          - title: Notifiarr
+                            url: https://notifiarr.khzaw.dev
+                            icon: di:notifiarr
+                          - title: Tunarr
+                            url: https://tunarr.khzaw.dev
+                            icon: di:tunarr
+                      - type: monitor
+                        title: Download Clients
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Transmission
+                            url: https://torrent.khzaw.dev
+                            icon: di:transmission
+                          - title: SABnzbd
+                            url: https://sabnzbd.khzaw.dev
+                            icon: di:sabnzbd
 
     persistence:
       config:
