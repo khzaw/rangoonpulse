@@ -244,11 +244,12 @@ spec:
                                 url: https://nas.khzaw.dev
                                 icon: di:truenas
                       - type: releases
-                        cache: 6h
+                        cache: 24h
                         show-source-icon: true
-                        style: compact-list
+                        limit: 24
+                        collapse-after: 8
                         repositories:
-                          # Apps: media and content
+                          # Apps in this cluster (kept lean to avoid GitHub API rate-limit)
                           - immich-app/immich
                           - jellyfin/jellyfin
                           - advplyr/audiobookshelf
@@ -258,10 +259,9 @@ spec:
                           - actualbudget/actual
                           - dani-garcia/vaultwarden
                           - louislam/uptime-kuma
-                          - flaresolverr/flaresolverr
-                          - linuxserver/docker-calibre
-                          - crocodilestick/Calibre-Web-Automated
-                          # Apps: arr and download stack
+                          - gethomepage/homepage
+                          - glanceapp/glance
+                          # Arr and download stack
                           - Sonarr/Sonarr
                           - Radarr/Radarr
                           - Prowlarr/Prowlarr
@@ -269,37 +269,9 @@ spec:
                           - Notifiarr/notifiarr
                           - transmission/transmission
                           - sabnzbd/sabnzbd
-                          # Apps: dashboard and ux
-                          - gethomepage/homepage
-                          - glanceapp/glance
-                          # Infrastructure and charts
-                          - fluxcd/flux2
-                          - kubernetes/ingress-nginx
-                          - grafana/grafana
-                          - prometheus-community/helm-charts
-                          - prometheus/prometheus
-                          - cert-manager/cert-manager
-                          - metallb/metallb
-                          - tailscale/tailscale
-                          - kubernetes-sigs/external-dns
-                          - democratic-csi/democratic-csi
-                          - bjw-s-labs/helm-charts
-                          - immich-app/immich-charts
-                          - jameswynn/helm-charts
-                          - community-charts/helm-charts
-                      - type: split-column
-                        title: Community Feeds
-                        max-columns: 2
-                        widgets:
-                          - type: hacker-news
-                            sort-by: top
-                            extra-sort-by: engagement
-                            limit: 18
-                            collapse-after: 6
-                          - type: lobsters
-                            sort-by: hot
-                            limit: 18
-                            collapse-after: 6
+                          - flaresolverr/flaresolverr
+                          - linuxserver/docker-calibre
+                          - crocodilestick/Calibre-Web-Automated
                       - type: monitor
                         title: Arr and Download Health
                         cache: 1m
@@ -490,6 +462,12 @@ spec:
                           - type: local
                             name: Mini PC
                             hide-mountpoints-by-default: true
+                      - type: hacker-news
+                        title: Hacker News
+                        sort-by: top
+                        extra-sort-by: engagement
+                        limit: 12
+                        collapse-after: 4
                       - type: monitor
                         title: Service Health
                         cache: 1m
