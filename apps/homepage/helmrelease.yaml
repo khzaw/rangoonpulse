@@ -343,6 +343,7 @@ spec:
             color: true
             cache: 1
             watchlist:
+              - TQQQ
               - META
               - NET
               - AAPL
