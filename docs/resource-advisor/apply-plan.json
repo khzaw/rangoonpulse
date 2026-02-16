@@ -14,7 +14,7 @@
     "cpu_m": 3205.0,
     "memory_mi": 10320.0
   },
-  "generated_at": "2026-02-16T10:05:35Z",
+  "generated_at": "2026-02-16T10:07:59Z",
   "metrics_coverage_days_estimate": 1.77,
   "metrics_window": "14d",
   "projected_requests_after_selected": {
