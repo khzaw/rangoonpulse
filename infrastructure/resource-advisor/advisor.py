@@ -119,6 +119,17 @@ def pct_delta(old: float, new: float) -> float:
     return ((new - old) / old) * 100.0
 
 
+def is_material_delta(
+    delta_percent: float,
+    delta_absolute: float,
+    deadband_percent: float,
+    deadband_absolute: float,
+) -> bool:
+    pct_threshold = max(0.0, deadband_percent)
+    abs_threshold = max(0.0, deadband_absolute)
+    return abs(delta_percent) >= pct_threshold or abs(delta_absolute) >= abs_threshold
+
+
 def leading_spaces(line: str) -> int:
     return len(line) - len(line.lstrip(" "))
 
@@ -599,6 +610,9 @@ def build_report() -> tuple[dict, str]:
     limit_buffer_percent = env_float("LIMIT_BUFFER_PERCENT", 60.0)
     min_cpu_m = env_float("MIN_CPU_M", 25.0)
     min_mem_mi = env_float("MIN_MEM_MI", 64.0)
+    deadband_percent = max(0.0, env_float("DEADBAND_PERCENT", 10.0))
+    deadband_cpu_m = max(0.0, env_float("DEADBAND_CPU_M", 25.0))
+    deadband_mem_mi = max(0.0, env_float("DEADBAND_MEM_MI", 64.0))
 
     metrics_window = os.getenv("METRICS_WINDOW", "14d").strip()
     metrics_resolution = os.getenv("METRICS_RESOLUTION", "1h").strip()
@@ -719,16 +733,80 @@ def build_report() -> tuple[dict, str]:
                     lim_cpu_delta = pct_delta(cur_lim_cpu, rec_lim_cpu)
                     lim_mem_delta = pct_delta(cur_lim_mem, rec_lim_mem)
 
+                    req_cpu_abs_delta = abs(rec_req_cpu - cur_req_cpu)
+                    req_mem_abs_delta = abs(rec_req_mem - cur_req_mem)
+                    lim_cpu_abs_delta = abs(rec_lim_cpu - cur_lim_cpu)
+                    lim_mem_abs_delta = abs(rec_lim_mem - cur_lim_mem)
+
                     significant_change = any(
-                        abs(delta) >= 5.0
-                        for delta in (req_cpu_delta, req_mem_delta, lim_cpu_delta, lim_mem_delta)
+                        (
+                            is_material_delta(
+                                req_cpu_delta,
+                                req_cpu_abs_delta,
+                                deadband_percent,
+                                deadband_cpu_m,
+                            ),
+                            is_material_delta(
+                                req_mem_delta,
+                                req_mem_abs_delta,
+                                deadband_percent,
+                                deadband_mem_mi,
+                            ),
+                            is_material_delta(
+                                lim_cpu_delta,
+                                lim_cpu_abs_delta,
+                                deadband_percent,
+                                deadband_cpu_m,
+                            ),
+                            is_material_delta(
+                                lim_mem_delta,
+                                lim_mem_abs_delta,
+                                deadband_percent,
+                                deadband_mem_mi,
+                            ),
+                        )
                     )
-                    if not significant_change and restart_lookback <= 0:
+                    if not significant_change:
                         continue
 
-                    if req_cpu_delta > 5.0 or req_mem_delta > 5.0:
+                    up_signal = (
+                        (rec_req_cpu > cur_req_cpu)
+                        and is_material_delta(
+                            req_cpu_delta,
+                            req_cpu_abs_delta,
+                            deadband_percent,
+                            deadband_cpu_m,
+                        )
+                    ) or (
+                        (rec_req_mem > cur_req_mem)
+                        and is_material_delta(
+                            req_mem_delta,
+                            req_mem_abs_delta,
+                            deadband_percent,
+                            deadband_mem_mi,
+                        )
+                    )
+                    down_signal = (
+                        (rec_req_cpu < cur_req_cpu)
+                        and is_material_delta(
+                            req_cpu_delta,
+                            req_cpu_abs_delta,
+                            deadband_percent,
+                            deadband_cpu_m,
+                        )
+                    ) or (
+                        (rec_req_mem < cur_req_mem)
+                        and is_material_delta(
+                            req_mem_delta,
+                            req_mem_abs_delta,
+                            deadband_percent,
+                            deadband_mem_mi,
+                        )
+                    )
+
+                    if up_signal:
                         action = "upsize"
-                    elif req_cpu_delta < -5.0 or req_mem_delta < -5.0:
+                    elif down_signal:
                         action = "downsize"
                     else:
                         action = "no-change"
@@ -808,6 +886,14 @@ def build_report() -> tuple[dict, str]:
         "mode": mode,
         "metrics_window": metrics_window,
         "metrics_coverage_days_estimate": coverage_days,
+        "policy": {
+            "max_step_percent": round(max_step_percent, 2),
+            "request_buffer_percent": round(request_buffer_percent, 2),
+            "limit_buffer_percent": round(limit_buffer_percent, 2),
+            "deadband_percent": round(deadband_percent, 2),
+            "deadband_cpu_m": round(deadband_cpu_m, 2),
+            "deadband_mem_mi": round(deadband_mem_mi, 2),
+        },
         "summary": {
             "containers_analyzed": containers_analyzed,
             "containers_with_metrics": containers_with_data,
@@ -838,6 +924,11 @@ def build_report() -> tuple[dict, str]:
         "",
         "## Cluster Budget Snapshot",
         "",
+        (
+            "- Deadband policy: "
+            f"`{deadband_percent}%` or CPU delta `>= {deadband_cpu_m}m` or "
+            f"Memory delta `>= {deadband_mem_mi}Mi`"
+        ),
         f"- Allocatable CPU: `{budget['allocatable']['cpu']}`",
         f"- Allocatable Memory: `{budget['allocatable']['memory']}`",
         (
@@ -1077,6 +1168,9 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             "min_data_days_for_upsize": min_days_upsize,
             "min_data_days_for_downsize": min_days_downsize,
             "max_apply_changes_per_run": max_changes,
+            "deadband_percent": report.get("policy", {}).get("deadband_percent"),
+            "deadband_cpu_m": report.get("policy", {}).get("deadband_cpu_m"),
+            "deadband_mem_mi": report.get("policy", {}).get("deadband_mem_mi"),
         },
         "current_requests": {
             "cpu_m": round(current_cpu_m, 1),
@@ -1105,6 +1199,12 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         "",
         "## Node Constraint Gates",
         "",
+        (
+            "- Deadband policy: "
+            f"`{plan['constraints']['deadband_percent']}%` or CPU delta "
+            f"`>= {plan['constraints']['deadband_cpu_m']}m` or Memory delta "
+            f"`>= {plan['constraints']['deadband_mem_mi']}Mi`"
+        ),
         f"- CPU budget (`requests`): `{plan['budgets']['cpu_m']}m`",
         f"- Memory budget (`requests`): `{plan['budgets']['memory_mi']}Mi`",
         f"- Current CPU requests: `{plan['current_requests']['cpu_m']}m`",
@@ -1331,6 +1431,9 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
         "## Constraints\n"
         f"- Metrics window: `{report.get('metrics_window')}`\n"
         f"- Metrics coverage estimate: `{plan.get('metrics_coverage_days_estimate')}` days\n"
+        f"- Deadband policy: `{report.get('policy', {}).get('deadband_percent')}%` "
+        f"or CPU delta `>= {report.get('policy', {}).get('deadband_cpu_m')}m` "
+        f"or Memory delta `>= {report.get('policy', {}).get('deadband_mem_mi')}Mi`\n"
         f"- CPU request budget: `{plan.get('budgets', {}).get('cpu_m')}m`\n"
         f"- Memory request budget: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n"
         f"- Current requests: CPU `{plan.get('current_requests', {}).get('cpu_m')}m`, "

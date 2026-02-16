@@ -30,6 +30,7 @@ Apply PR cleanliness:
 - only HelmRelease resource diffs are committed
 - no generated `docs/resource-advisor/*.json` or `*.md` artifacts are committed
 - all rationale is embedded in the PR description
+- PR description includes deadband, budget, maturity, selected changes, and skipped reason summary
 
 ## GitOps Paths
 - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/`
@@ -65,6 +66,10 @@ Downsizes are blocked until the 14-day window is sufficiently populated.
 ## Guardrails
 - Max per-run adjustment step is capped (`MAX_STEP_PERCENT`, default 25%).
 - Request/limit buffer percentages are configurable.
+- Deadband policy ignores small deltas:
+  - `DEADBAND_PERCENT` (default 10%)
+  - `DEADBAND_CPU_M` (default 25m)
+  - `DEADBAND_MEM_MI` (default 64Mi)
 - Memory downscaling is blocked when restart activity is detected.
 - High-variance workloads can be excluded from automatic downscaling.
 - Apply mode is allowlisted to app-template-backed releases only.

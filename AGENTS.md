@@ -124,6 +124,10 @@ For public or tailnet-only app hostnames, use:
   - commit only HelmRelease resource changes
   - do not commit generated report/apply artifacts into repository
   - include decision rationale, constraints, and skipped reasons in PR description
+  - do not chase raw averages; deadband is enforced by default:
+    - `DEADBAND_PERCENT=10`
+    - `DEADBAND_CPU_M=25`
+    - `DEADBAND_MEM_MI=64`
 - Required secret for apply PR creation:
   - `monitoring/resource-advisor-github` with key `token`
   - token scopes: repo contents write + pull requests write

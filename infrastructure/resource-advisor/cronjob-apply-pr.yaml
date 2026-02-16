@@ -61,6 +61,12 @@ spec:
                   value: "25"
                 - name: MIN_MEM_MI
                   value: "64"
+                - name: DEADBAND_PERCENT
+                  value: "10"
+                - name: DEADBAND_CPU_M
+                  value: "25"
+                - name: DEADBAND_MEM_MI
+                  value: "64"
                 - name: MAX_REQUESTS_PERCENT_CPU
                   value: "60"
                 - name: MAX_REQUESTS_PERCENT_MEMORY
