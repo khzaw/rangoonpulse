@@ -1,6 +1,6 @@
 # Resource Advisor Apply Plan
 
-- Generated at: `2026-02-16T10:05:35Z`
+- Generated at: `2026-02-16T10:07:59Z`
 - Metrics window: `14d`
 - Coverage estimate: `1.77` days
 - Selected changes: **1**
