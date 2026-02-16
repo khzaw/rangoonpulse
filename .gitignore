@@ -6,3 +6,5 @@ ghost-passwords.txt
 talos
 .agent-shell/
 .superset
+__pycache__/
+*.pyc
