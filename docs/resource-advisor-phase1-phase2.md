@@ -24,6 +24,8 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
   - creates a unique `tune/...` branch from the latest `master`
   - opens one apply PR per run when eligible changes exist
   - applies only allowlisted HelmRelease resource changes
+- finished jobs are auto-cleaned by TTL:
+  - `ttlSecondsAfterFinished: 21600` (6 hours)
 - reporting PR flow is disabled by design
 
 Apply PR cleanliness:

@@ -6,9 +6,7 @@ resources:
   # Source for helm charts
   - ./repositories/bitnami.yaml
   - ./repositories/bjw-s-charts.yaml
-  - ./repositories/longhorn-charts.yaml
   - ./repositories/metallb.yaml
-  - ./repositories/tofu-controller.yaml
   - ./repositories/jetstack.yaml
   - ./repositories/vicsufer-charts.yaml
   - ./repositories/tailscale-charts.yaml
@@ -27,7 +25,6 @@ resources:
   - ./kustomizations/tailscale-subnet-router.yaml
   - ./kustomizations/cert-manager.yaml
   - ./kustomizations/cert-manager-config.yaml
-  - ./kustomizations/tofu-controller.yaml
   - ./kustomizations/external-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/monitoring.yaml

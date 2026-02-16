@@ -11,6 +11,7 @@ continue work without re-discovery.
 - GitOps: Flux CD v2 (`Kustomization` + `HelmRelease`)
 - Primary ingress: ingress-nginx with MetalLB
 - DNS/TLS: Cloudflare + external-dns + cert-manager (Let's Encrypt)
+- DNS automation model: external-dns (Cloudflare); tofu/terraform controller path is not active
 - Remote access: Tailscale operator + subnet router (`Connector`)
 - Storage mix: `local-path`, TrueNAS NFS classes (`truenas-*`), democratic-csi present
 - Timezone standard: `Asia/Singapore`
@@ -70,6 +71,7 @@ For public or tailnet-only app hostnames, use:
 - Validate manifests before pushing.
 
 ## Storage Conventions and Current Decisions
+- Default StorageClass intent: `truenas-nfs` (NFS-backed default), not `local-path`.
 - Immich:
   - photos/library on NFS PVC `immich-library` (`truenas-hdd-media`, RWX, 500Gi, expandable)
   - Postgres on `local-path` for low-latency/stability
@@ -92,6 +94,10 @@ For public or tailnet-only app hostnames, use:
 - Monitoring stack: `infrastructure/monitoring/helmrelease.yaml`
 - Current critical settings:
   - `nodeExporter.enabled: false` (correct key for chart line in use)
+  - Prometheus retention policy tuned for advisor window:
+    - `retention: 14d`
+    - `retentionSize: 6GB`
+    - `storageSpec.emptyDir.sizeLimit: 8Gi`
   - Grafana persistence enabled
   - Grafana `defaultDashboardsTimezone: browser`
 - If Grafana auth/state seems wrong, first verify PVC mount and user records before assuming full data loss.

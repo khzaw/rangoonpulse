@@ -30,8 +30,8 @@ spec:
     prometheus:
 
       prometheusSpec:
-        retention: 3d
-        retentionSize: "3GB"
+        retention: 14d
+        retentionSize: "6GB"
         scrapeInterval: 60s
         resources:
           requests:
@@ -49,7 +49,7 @@ spec:
         # Ephemeral TSDB keeps this lightweight and avoids local-path PVC/subPath issues.
         storageSpec:
           emptyDir:
-            sizeLimit: 4Gi
+            sizeLimit: 8Gi
 
         serviceMonitorSelectorNilUsesHelmValues: false
     grafana:
