@@ -1191,6 +1191,45 @@ def update_report_artifacts(
     return changed
 
 
+def describe_tune_action(item: dict) -> str:
+    delta = item.get("delta", {})
+    delta_cpu = float(delta.get("requests_cpu_m", 0.0) or 0.0)
+    delta_mem = float(delta.get("requests_memory_mi", 0.0) or 0.0)
+
+    cpu_action = "Increase" if delta_cpu > 0 else "Decrease" if delta_cpu < 0 else ""
+    mem_action = "Increase" if delta_mem > 0 else "Decrease" if delta_mem < 0 else ""
+
+    if cpu_action and mem_action:
+        if cpu_action == mem_action:
+            return f"{cpu_action} CPU and memory"
+        return f"{cpu_action} CPU and {mem_action.lower()} memory"
+    if mem_action:
+        return f"{mem_action} memory"
+    if cpu_action:
+        return f"{cpu_action} CPU"
+    return "Adjust resources"
+
+
+def sanitize_tune_subject(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "resource-advisor"
+
+
+def build_apply_pr_title(plan: dict) -> str:
+    selected = plan.get("selected", [])
+    if not selected:
+        return "tune/resource-advisor: refresh apply plan"
+
+    primary = selected[0]
+    service = sanitize_tune_subject(str(primary.get("release", "resource-advisor")))
+    action = describe_tune_action(primary)
+
+    if len(selected) == 1:
+        return f"tune/{service}: {action}"
+
+    return f"tune/{service}: {action} (+{len(selected) - 1} more)"
+
+
 def open_or_update_report_pr(report: dict, report_md: str) -> None:
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
@@ -1222,8 +1261,7 @@ def open_or_update_report_pr(report: dict, report_md: str) -> None:
         return
 
     summary = report.get("summary", {})
-    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
-    title = f"resource-advisor: tuning recommendations ({today})"
+    title = "tune/resource-advisor: refresh recommendations"
     body = (
         "Automated Resource Advisor report.\n\n"
         f"- Containers analyzed: {summary.get('containers_analyzed', 0)}\n"
@@ -1344,8 +1382,7 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
         log("No repository changes for apply mode; skipping PR")
         return
 
-    today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
-    title = f"resource-advisor: apply safe tuning ({today})"
+    title = build_apply_pr_title(plan)
     skip_reason_counts: dict[str, int] = {}
     for item in plan.get("skipped", []):
         reason = item.get("reason", "unknown")
@@ -1377,7 +1414,6 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
 
     body = (
         "Automated safe resource apply proposal.\n\n"
-        "This PR is **not auto-merged**. Changes apply only after manual review and merge.\n\n"
         "## Constraints\n"
         f"- Metrics window: `{report.get('metrics_window')}`\n"
         f"- Metrics coverage estimate: `{plan.get('metrics_coverage_days_estimate')}` days\n"
