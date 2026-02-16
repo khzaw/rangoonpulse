@@ -538,7 +538,9 @@ def ensure_pull_request(
 ) -> None:
     owner, _ = repository.split("/", 1)
     pulls_url = f"https://api.github.com/repos/{repository}/pulls"
-    existing_url = f"{pulls_url}?state=open&head={owner}:{head_branch}&base={base_branch}"
+    head_query = urllib.parse.quote(f"{owner}:{head_branch}", safe="")
+    base_query = urllib.parse.quote(base_branch, safe="")
+    existing_url = f"{pulls_url}?state=open&head={head_query}&base={base_query}"
 
     existing_status, existing = github_request("GET", existing_url, token)
     if existing_status == 200 and isinstance(existing, list) and existing:
@@ -1197,7 +1199,7 @@ def open_or_update_report_pr(report: dict, report_md: str) -> None:
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch = os.getenv("GITHUB_HEAD_BRANCH", "resource-advisor-recommendations").strip()
+    head_branch = os.getenv("GITHUB_HEAD_BRANCH", "tune/resource-advisor-recommendations").strip()
 
     if "/" not in repository:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")
@@ -1250,7 +1252,7 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "resource-advisor-apply").strip()
+    head_branch = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
 
     if "/" not in repository:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")

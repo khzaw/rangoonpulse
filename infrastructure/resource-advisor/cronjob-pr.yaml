@@ -62,7 +62,7 @@ spec:
                 - name: GITHUB_BASE_BRANCH
                   value: master
                 - name: GITHUB_HEAD_BRANCH
-                  value: resource-advisor-recommendations
+                  value: tune/resource-advisor-recommendations
                 - name: GIT_AUTHOR_NAME
                   value: resource-advisor
                 - name: GIT_AUTHOR_EMAIL
