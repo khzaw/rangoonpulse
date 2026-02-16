@@ -10,6 +10,27 @@ Phase 2 (report PR generation) is intentionally disabled to keep the repository 
 
 It is intentionally lightweight and runs as short-lived CronJobs in the `monitoring` namespace.
 
+## Automation Contract (Current Behavior)
+This is fully automated with Kubernetes CronJobs. No manual trigger is required for normal operation.
+
+- `resource-advisor-report` (`batch/v1 CronJob`, namespace `monitoring`)
+  - runs daily (`02:30`)
+  - computes resource analysis
+  - writes report data to ConfigMap `monitoring/resource-advisor-latest`
+  - does not create branches or PRs
+- `resource-advisor-apply-pr` (`batch/v1 CronJob`, namespace `monitoring`)
+  - runs weekly (`03:30` Monday)
+  - computes safe, budget-aware apply plan
+  - creates a unique `tune/...` branch from the latest `master`
+  - opens one apply PR per run when eligible changes exist
+  - applies only allowlisted HelmRelease resource changes
+- reporting PR flow is disabled by design
+
+Apply PR cleanliness:
+- only HelmRelease resource diffs are committed
+- no generated `docs/resource-advisor/*.json` or `*.md` artifacts are committed
+- all rationale is embedded in the PR description
+
 ## GitOps Paths
 - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/`
 - `/Users/khz/Code/rangoonpulse/flux/kustomizations/resource-advisor.yaml`
@@ -84,6 +105,18 @@ Token must be authorized for `khzaw/rangoonpulse` with:
 ```bash
 kubectl create job -n monitoring --from=cronjob/resource-advisor-report resource-advisor-report-manual-$(date +%s)
 kubectl create job -n monitoring --from=cronjob/resource-advisor-apply-pr resource-advisor-apply-pr-manual-$(date +%s)
+```
+
+## Verification Commands
+```bash
+# Confirm CronJobs exist
+kubectl get cronjobs -n monitoring | rg resource-advisor
+
+# Inspect latest report in-cluster
+kubectl get configmap resource-advisor-latest -n monitoring -o yaml
+
+# Inspect recent jobs
+kubectl get jobs -n monitoring | rg resource-advisor
 ```
 
 ## Workflow After Phase 3

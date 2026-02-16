@@ -107,6 +107,33 @@ For public or tailnet-only app hostnames, use:
 - Jellyfin can have occasional higher transcode load (rare 3-4 streams); avoid over-allocation across the rest of the stack.
 - When tuning, prefer incremental adjustments and check restart counts/events after reconciliation.
 
+## Resource Advisor Automation (Important)
+- GitOps path: `infrastructure/resource-advisor/` via Flux Kustomization `resource-advisor`.
+- Runtime model is Kubernetes CronJobs in namespace `monitoring`:
+  - `resource-advisor-report`:
+    - daily run at `02:30`
+    - report-only mode
+    - writes `latest.json` and `latest.md` to ConfigMap `resource-advisor-latest`
+  - `resource-advisor-apply-pr`:
+    - weekly run at `03:30` Monday
+    - apply-PR mode with budget and data-maturity guards
+    - creates unique `tune/...` branches from latest `master`
+    - supports multiple simultaneous recommendation branches/PRs
+- Report PR flow is disabled by design.
+- Apply PR flow rules:
+  - commit only HelmRelease resource changes
+  - do not commit generated report/apply artifacts into repository
+  - include decision rationale, constraints, and skipped reasons in PR description
+- Required secret for apply PR creation:
+  - `monitoring/resource-advisor-github` with key `token`
+  - token scopes: repo contents write + pull requests write
+- Troubleshooting sequence:
+  - `flux get kustomizations`
+  - `kubectl get cronjobs -n monitoring | rg resource-advisor`
+  - `kubectl get jobs -n monitoring | rg resource-advisor`
+  - `kubectl logs -n monitoring job/<job-name>`
+  - `kubectl get configmap resource-advisor-latest -n monitoring -o yaml`
+
 ## Validation and Operations Commands
 ```bash
 # Validate manifest structure
@@ -136,6 +163,7 @@ Examples:
 - `homepage: reorganize groups and widgets`
 
 ## Useful Reference Docs
+- `docs/resource-advisor-phase1-phase2.md`
 - `docs/networking-current-state-and-simplification.md`
 - `docs/networking-simplified-migration-todo.md`
 - `docs/lan-access-current-state-and-lean-plan.md`
