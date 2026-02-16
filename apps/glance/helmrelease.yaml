@@ -27,6 +27,10 @@ spec:
               tag: v0.8.4
             env:
               TZ: "Asia/Singapore"
+            envFrom:
+              - secretRef:
+                  name: homepage-widget-secrets
+                  optional: true
             resources:
               requests:
                 cpu: "50m"
@@ -92,7 +96,6 @@ spec:
 
             pages:
               - name: Home
-                hide-desktop-navigation: true
                 head-widgets:
                   - type: search
                     search-engine: google
@@ -240,7 +243,6 @@ spec:
                               - title: TrueNAS
                                 url: https://nas.khzaw.dev
                                 icon: di:truenas
-
                       - type: releases
                         cache: 6h
                         show-source-icon: true
@@ -277,6 +279,20 @@ spec:
                           # Other Apps
                           - actualbudget/actual
                           - linuxserver/calibre-web
+                      - type: rss
+                        title: Homelab News
+                        style: horizontal-cards
+                        limit: 12
+                        collapse-after: 4
+                        feeds:
+                          - url: https://www.reddit.com/r/emacs/.rss
+                            title: r/emacs
+                          - url: https://selfh.st/rss/
+                            title: selfh.st
+                          - url: https://www.reddit.com/r/selfhosted/.rss
+                            title: r/selfhosted
+                          - url: https://blog.cloudflare.com/rss/
+                            title: Cloudflare
 
                   - size: small
                     widgets:
@@ -320,6 +336,168 @@ spec:
                             alt-status-codes:
                               - 401
                               - 403
+              - name: Arr Stack
+                slug: arr
+                width: wide
+                head-widgets:
+                  - type: search
+                    search-engine: google
+                    new-tab: true
+                columns:
+                  - size: full
+                    widgets:
+                      - type: split-column
+                        max-columns: 3
+                        widgets:
+                          - type: custom-api
+                            title: Sonarr
+                            cache: 2m
+                            url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
+                            headers:
+                              X-Api-Key: ${SONARR_API_KEY}
+                            subrequests:
+                              queue:
+                                url: https://sonarr.khzaw.dev/api/v3/queue/status
+                                headers:
+                                  X-Api-Key: ${SONARR_API_KEY}
+                            template: |
+                              {{ $queue := .Subrequest "queue" }}
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "totalRecords" | formatNumber }}</div>
+                                  <div class="size-h6">WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ $queue.JSON.Int "totalCount" | formatNumber }}</div>
+                                  <div class="size-h6">QUEUE</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ if ($queue.JSON.Bool "errors") }}ERR{{ else if ($queue.JSON.Bool "warnings") }}WARN{{ else }}OK{{ end }}</div>
+                                  <div class="size-h6">HEALTH</div>
+                                </div>
+                              </div>
+                          - type: custom-api
+                            title: Radarr
+                            cache: 2m
+                            url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
+                            headers:
+                              X-Api-Key: ${RADARR_API_KEY}
+                            subrequests:
+                              queue:
+                                url: https://radarr.khzaw.dev/api/v3/queue/status
+                                headers:
+                                  X-Api-Key: ${RADARR_API_KEY}
+                            template: |
+                              {{ $queue := .Subrequest "queue" }}
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "totalRecords" | formatNumber }}</div>
+                                  <div class="size-h6">WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ $queue.JSON.Int "totalCount" | formatNumber }}</div>
+                                  <div class="size-h6">QUEUE</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ if ($queue.JSON.Bool "errors") }}ERR{{ else if ($queue.JSON.Bool "warnings") }}WARN{{ else }}OK{{ end }}</div>
+                                  <div class="size-h6">HEALTH</div>
+                                </div>
+                              </div>
+                          - type: custom-api
+                            title: Prowlarr
+                            cache: 5m
+                            url: https://prowlarr.khzaw.dev/api/v1/indexer
+                            headers:
+                              X-Api-Key: ${PROWLARR_API_KEY}
+                            subrequests:
+                              status:
+                                url: https://prowlarr.khzaw.dev/api/v1/indexerstatus
+                                headers:
+                                  X-Api-Key: ${PROWLARR_API_KEY}
+                              health:
+                                url: https://prowlarr.khzaw.dev/api/v1/health
+                                headers:
+                                  X-Api-Key: ${PROWLARR_API_KEY}
+                            template: |
+                              {{ $indexers := .JSON.Array "" }}
+                              {{ $status := (.Subrequest "status").JSON.Array "" }}
+                              {{ $health := (.Subrequest "health").JSON.Array "" }}
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ len $indexers | formatNumber }}</div>
+                                  <div class="size-h6">INDEXERS</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ len $status | formatNumber }}</div>
+                                  <div class="size-h6">UNAVAILABLE</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ len $health | formatNumber }}</div>
+                                  <div class="size-h6">WARNINGS</div>
+                                </div>
+                              </div>
+                          - type: custom-api
+                            title: Bazarr
+                            cache: 5m
+                            url: https://bazarr.khzaw.dev/api/badges
+                            headers:
+                              X-Api-Key: ${BAZARR_API_KEY}
+                            template: |
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "episodes" | formatNumber }}</div>
+                                  <div class="size-h6">EP WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "movies" | formatNumber }}</div>
+                                  <div class="size-h6">MOV WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "providers" | formatNumber }}</div>
+                                  <div class="size-h6">PROVIDERS</div>
+                                </div>
+                              </div>
+                          - type: custom-api
+                            title: Jellyfin
+                            cache: 5m
+                            url: "https://jellyfin.khzaw.dev/Items/Counts?api_key=${JELLYFIN_API_KEY}"
+                            template: |
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "MovieCount" | formatNumber }}</div>
+                                  <div class="size-h6">MOVIES</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "SeriesCount" | formatNumber }}</div>
+                                  <div class="size-h6">SERIES</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "EpisodeCount" | formatNumber }}</div>
+                                  <div class="size-h6">EPISODES</div>
+                                </div>
+                              </div>
+                          - type: custom-api
+                            title: Immich
+                            cache: 5m
+                            url: https://photos.khzaw.dev/api/server/statistics
+                            headers:
+                              x-api-key: ${IMMICH_API_KEY}
+                              Accept: application/json
+                            template: |
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "photos" | formatNumber }}</div>
+                                  <div class="size-h6">PHOTOS</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "videos" | formatNumber }}</div>
+                                  <div class="size-h6">VIDEOS</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ div (.JSON.Int "usage" | toFloat) 1073741824 | printf "%.1f" }} GB</div>
+                                  <div class="size-h6">USAGE</div>
+                                </div>
+                              </div>
 
               - name: Arr Stack
                 columns:
