@@ -1,11 +1,12 @@
-# Resource Advisor (Phase 1 + Phase 2 + Phase 3)
+# Resource Advisor (Phase 1 + Phase 3)
 
 ## Overview
 This component provides policy-driven resource tuning recommendations for the homelab cluster.
 
-- Phase 1: report-only analysis (daily CronJob).
-- Phase 2: automated PR generation with report artifacts (weekly CronJob).
+- Phase 1: report-only analysis (daily CronJob) published to Kubernetes ConfigMap.
 - Phase 3: safe apply PR generation with budget and data-maturity gates (weekly CronJob).
+
+Phase 2 (report PR generation) is intentionally disabled to keep the repository clean.
 
 It is intentionally lightweight and runs as short-lived CronJobs in the `monitoring` namespace.
 
@@ -58,23 +59,16 @@ The latest report is written to ConfigMap:
   - `mode`
 
 Repository artifacts:
-- Phase 2 branch/PR updates:
-  - `docs/resource-advisor/latest.json`
-  - `docs/resource-advisor/latest.md`
-- Phase 3 branch/PR updates:
-  - `docs/resource-advisor/latest.json`
-  - `docs/resource-advisor/latest.md`
-  - `docs/resource-advisor/apply-plan.json`
-  - `docs/resource-advisor/apply-plan.md`
+- Phase 3 apply PR branch updates only:
   - selected HelmRelease resource blocks for allowlisted apps
+  - no generated report/apply JSON or Markdown artifacts are committed
 
 ## Schedules
 - `resource-advisor-report`: daily at `02:30`.
-- `resource-advisor-pr`: weekly at `03:00` on Monday.
 - `resource-advisor-apply-pr`: weekly at `03:30` on Monday.
 
-## Phase 2 and Phase 3 Requirements
-Both PR phases require a GitHub token secret:
+## Phase 3 Requirements
+Apply PR generation requires a GitHub token secret:
 
 ```bash
 kubectl create secret generic resource-advisor-github \
@@ -89,15 +83,15 @@ Token must be authorized for `khzaw/rangoonpulse` with:
 ## Manual Trigger
 ```bash
 kubectl create job -n monitoring --from=cronjob/resource-advisor-report resource-advisor-report-manual-$(date +%s)
-kubectl create job -n monitoring --from=cronjob/resource-advisor-pr resource-advisor-pr-manual-$(date +%s)
 kubectl create job -n monitoring --from=cronjob/resource-advisor-apply-pr resource-advisor-apply-pr-manual-$(date +%s)
 ```
 
 ## Workflow After Phase 3
-1. Phase 2 keeps publishing visibility reports.
+1. Phase 1 keeps publishing visibility reports to `monitoring/resource-advisor-latest`.
 2. Phase 3 proposes safe, budget-constrained HelmRelease updates in a dedicated apply PR.
-3. Operator reviews and merges the apply PR.
-4. Flux reconciles and applies.
-5. Next cycles adjust incrementally from new baseline.
+3. Apply PR description contains decision rationale, constraints, and skip reasons.
+4. Operator reviews and merges the apply PR.
+5. Flux reconciles and applies.
+6. Next cycles adjust incrementally from new baseline.
 
 This keeps tuning iterative, auditable, and bounded by node constraints.

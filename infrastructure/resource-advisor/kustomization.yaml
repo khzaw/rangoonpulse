@@ -10,7 +10,6 @@ resources:
   - clusterrolebinding.yaml
   - report-configmap.yaml
   - cronjob-report.yaml
-  - cronjob-pr.yaml
   - cronjob-apply-pr.yaml
 configMapGenerator:
   - name: resource-advisor-script

@@ -1157,40 +1157,6 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     return plan, "\n".join(md_lines) + "\n"
 
 
-def update_report_artifacts(
-    repository: str,
-    token: str,
-    branch: str,
-    report: dict,
-    report_md: str,
-    commit_message: str,
-) -> bool:
-    changed = False
-    changed = (
-        update_repo_file(
-            repository=repository,
-            branch=branch,
-            path="docs/resource-advisor/latest.json",
-            content=json.dumps(report, indent=2, sort_keys=True) + "\n",
-            token=token,
-            commit_message=commit_message,
-        )
-        or changed
-    )
-    changed = (
-        update_repo_file(
-            repository=repository,
-            branch=branch,
-            path="docs/resource-advisor/latest.md",
-            content=report_md,
-            token=token,
-            commit_message=commit_message,
-        )
-        or changed
-    )
-    return changed
-
-
 def describe_tune_action(item: dict) -> str:
     delta = item.get("delta", {})
     delta_cpu = float(delta.get("requests_cpu_m", 0.0) or 0.0)
@@ -1256,62 +1222,15 @@ def build_apply_branch_name(branch_hint: str, plan: dict) -> str:
     return branch
 
 
-def open_or_update_report_pr(report: dict, report_md: str) -> None:
-    token = os.getenv("GITHUB_TOKEN", "").strip()
-    if not token:
-        log("GITHUB_TOKEN is not set; skipping PR mode work")
-        return
-
-    repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
-    base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch = os.getenv("GITHUB_HEAD_BRANCH", "tune/resource-advisor-recommendations").strip()
-
-    if "/" not in repository:
-        log(f"Invalid GITHUB_REPOSITORY: {repository}")
-        return
-
-    if not ensure_branch(repository, base_branch, head_branch, token):
-        return
-
-    changed = update_report_artifacts(
-        repository=repository,
-        token=token,
-        branch=head_branch,
-        report=report,
-        report_md=report_md,
-        commit_message="resource-advisor: refresh tuning recommendations",
-    )
-
-    if not changed:
-        log("No change in generated report artifacts; skipping PR")
-        return
-
-    summary = report.get("summary", {})
-    title = "tune/resource-advisor: refresh recommendations"
-    body = (
-        "Automated Resource Advisor report.\n\n"
-        f"- Containers analyzed: {summary.get('containers_analyzed', 0)}\n"
-        f"- Recommendations: {summary.get('recommendation_count', 0)}\n"
-        f"- Up adjustments: {summary.get('upsize_count', 0)}\n"
-        f"- Down adjustments: {summary.get('downsize_count', 0)}\n"
-        f"- Metrics coverage estimate: {report.get('metrics_coverage_days_estimate')} days\n\n"
-        "This PR updates generated recommendation artifacts only."
-    )
-
-    ensure_pull_request(
-        repository=repository,
-        token=token,
-        head_branch=head_branch,
-        base_branch=base_branch,
-        title=title,
-        body=body,
-    )
-
-
-def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: str) -> None:
+def open_or_update_apply_pr(report: dict, plan: dict) -> None:
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
         log("GITHUB_TOKEN is not set; skipping apply PR mode work")
+        return
+
+    selected = plan.get("selected", [])
+    if not selected:
+        log("No selected recommendations for apply mode; skipping PR")
         return
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
@@ -1329,40 +1248,6 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
         return
 
     changed = False
-
-    changed = (
-        update_repo_file(
-            repository=repository,
-            branch=head_branch,
-            path="docs/resource-advisor/apply-plan.json",
-            content=json.dumps(plan, indent=2, sort_keys=True) + "\n",
-            token=token,
-            commit_message="resource-advisor: refresh apply plan",
-        )
-        or changed
-    )
-    changed = (
-        update_repo_file(
-            repository=repository,
-            branch=head_branch,
-            path="docs/resource-advisor/apply-plan.md",
-            content=plan_md,
-            token=token,
-            commit_message="resource-advisor: refresh apply plan",
-        )
-        or changed
-    )
-
-    changed = update_report_artifacts(
-        repository=repository,
-        token=token,
-        branch=head_branch,
-        report=report,
-        report_md=report_md,
-        commit_message="resource-advisor: refresh tuning recommendations",
-    ) or changed
-
-    selected = plan.get("selected", [])
 
     grouped: dict[str, list[dict]] = {}
     for item in selected:
@@ -1457,10 +1342,10 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
         + "\n".join(selected_lines)
         + "\n\n## Skipped Candidates (Reason Summary)\n"
         + "\n".join(skipped_lines)
-        + "\n\nIncludes:\n"
-        "- latest report artifacts\n"
-        "- apply plan artifacts\n"
-        "- HelmRelease resource changes for allowlisted app-template releases only\n"
+        + "\n\n## Report Source\n"
+        "- Latest machine-readable report is in ConfigMap "
+        "`monitoring/resource-advisor-latest`.\n"
+        "- This PR intentionally includes HelmRelease resource changes only.\n"
     )
 
     ensure_pull_request(
@@ -1496,10 +1381,10 @@ def main() -> int:
     )
 
     if mode == "pr":
-        open_or_update_report_pr(report, report_md)
+        log("Mode=pr is disabled. Reports are published to ConfigMap only.")
     elif mode == "apply-pr":
-        plan, plan_md = build_apply_plan(report)
-        open_or_update_apply_pr(report, report_md, plan, plan_md)
+        plan, _ = build_apply_plan(report)
+        open_or_update_apply_pr(report, plan)
 
     log("Resource advisor run completed")
     return 0
