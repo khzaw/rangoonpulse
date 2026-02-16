@@ -1230,6 +1230,32 @@ def build_apply_pr_title(plan: dict) -> str:
     return f"tune/{service}: {action} (+{len(selected) - 1} more)"
 
 
+def build_apply_branch_name(branch_hint: str, plan: dict) -> str:
+    selected = plan.get("selected", [])
+    now_tag = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S%f")
+
+    if "/" in branch_hint:
+        prefix = sanitize_tune_subject(branch_hint.split("/", 1)[0])
+    else:
+        prefix = "tune"
+
+    if selected:
+        primary = selected[0]
+        service = sanitize_tune_subject(str(primary.get("release", "resource-advisor")))
+        action = sanitize_tune_subject(describe_tune_action(primary))
+        base = f"{prefix}/{service}-{action}"
+    else:
+        base = f"{prefix}/resource-advisor-refresh-apply-plan"
+
+    suffix = f"-{now_tag}"
+    max_len = 120
+    allowed_base_len = max_len - len(suffix)
+    if len(base) > allowed_base_len:
+        base = base[:allowed_base_len].rstrip("-")
+    branch = f"{base}{suffix}"
+    return branch
+
+
 def open_or_update_report_pr(report: dict, report_md: str) -> None:
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
@@ -1290,11 +1316,14 @@ def open_or_update_apply_pr(report: dict, report_md: str, plan: dict, plan_md: s
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
+    head_branch_hint = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
 
     if "/" not in repository:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")
         return
+
+    head_branch = build_apply_branch_name(head_branch_hint, plan)
+    log(f"Using apply PR branch: {head_branch}")
 
     if not ensure_branch(repository, base_branch, head_branch, token):
         return
