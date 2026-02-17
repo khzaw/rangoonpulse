@@ -457,7 +457,7 @@ spec:
                               {{ $name := .String "NowPlayingItem.Name" }}
                               {{ $series := .String "NowPlayingItem.SeriesName" }}
                               {{ $title := $name }}
-                              {{ if ne $series "" }}{{ $title = printf "%s — %s" $series $name }}{{ end }}
+                              {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
 
                               {{ $paused := .Bool "PlayState.IsPaused" }}
                               {{ $pos := (.Int "PlayState.PositionTicks" | toFloat) }}
@@ -474,7 +474,7 @@ spec:
                                   <div>{{ if $paused }}PAUSED{{ else }}PLAYING{{ end }}</div>
                                 </div>
                                 <div style="height: 4px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; margin-top: 6px;">
-                                  <div style="height: 100%; background: rgba(255,255,255,.35); width: {{ printf \"%.0f%%\" $pct }}"></div>
+                                  <div style="height: 100%; background: rgba(255,255,255,.35); width: {{ printf "%.0f%%" $pct }}"></div>
                                 </div>
                               </div>
                               {{ end }}
