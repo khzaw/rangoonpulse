@@ -112,13 +112,16 @@ Important external-dns behavior:
   - refs: `infrastructure/storage/democratic-csi/hr-hdd.yaml`, `infrastructure/storage/democratic-csi/hr-nvme.yaml`
 
 ## Secrets and Credentials
-- Current state: native Kubernetes Secrets (no SOPS/SealedSecrets yet).
+- Runtime state: native Kubernetes Secrets.
+- GitOps state: **SOPS + age** encrypted secret manifests under `infrastructure/secrets/**`, decrypted by Flux.
+  - Flux decryption key Secret: `flux-system/sops-age`
+  - SOPS rules: `.sops.yaml`
 - Expected usage pattern in manifests:
   - `env` or chart values referencing `secretKeyRef`
   - no inline plaintext credentials
 - Dashboard widget API keys are stored in `homepage-widget-secrets` and consumed by Glance via `envFrom`.
-- Future secret-management direction is tracked in:
-  - `docs/secrets-management-current-state-options-and-plan.md`
+- Secret inventory (service -> secret mapping): `docs/secrets-inventory.md`
+- Background/plan doc: `docs/secrets-management-current-state-options-and-plan.md`
 
 ## Dashboard (Glance)
 - Glance:

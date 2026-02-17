@@ -3,13 +3,12 @@
 ## Purpose
 This document captures the current state of secrets handling in the homelab cluster, evaluates practical options under budget and resource constraints, and records the agreed plan for later implementation.
 
-## Current State
-- Secrets are currently managed as native Kubernetes `Secret` objects.
-- Secret creation and updates are mostly CLI-driven.
-- No SOPS, Sealed Secrets, or external secret manager is currently in place.
-- Flux CD is already used for GitOps delivery, but secret encryption/decryption flow is not configured.
-- A centralized UI for secret management is not currently in use.
-- Lens is available, but secret visibility appears limited (likely RBAC-related for the current kube context/account).
+## Current State (As Of 2026-02-18)
+- Runtime secrets are native Kubernetes `Secret` objects.
+- **Git secrets are encrypted** using **SOPS + age** and decrypted by Flux at reconcile time.
+- GitOps secret path: `infrastructure/secrets/**`
+- Flux decryption key is stored in-cluster as `flux-system/sops-age`.
+- Inventory doc (service -> secret mapping): `docs/secrets-inventory.md`
 
 ## Constraints and Requirements
 - Budget-constrained: avoid paid secret platforms and expensive managed services.
@@ -92,19 +91,18 @@ Best fit:
 - Best immediate UX with low change risk: Option 2 (native secrets + UI).
 - Best future centralized model: Option 3 (ESO + external source), if needed later.
 
-## Agreed Plan (Shelved for Later)
-The agreed direction is:
-1. Phase 1 (next implementation window): adopt `SOPS + age` with Flux.
-2. Phase 2 (optional, UX-focused): add lightweight UI for cluster resource ops (Headlamp or Dashboard) with strict RBAC.
+## Agreed Plan (Now In Progress)
+The direction is:
+1. Phase 1: `SOPS + age` with Flux (implemented).
+2. Phase 2 (UX-focused): add lightweight UI for cluster resource ops (Headlamp or Dashboard) with strict RBAC (in progress).
 3. Phase 3 (optional, if needed): evaluate ESO with Vaultwarden/Bitwarden path for centralized source-of-truth secrets.
 
-## Phase 1 Outline (When Resumed)
-1. Generate and securely store an `age` keypair.
-2. Store the decryption key in-cluster for Flux (`flux-system`).
-3. Configure SOPS creation rules for this repo.
-4. Convert existing plaintext secret manifests to encrypted SOPS manifests.
-5. Reconcile Flux and verify decryption/apply success.
-6. Remove plaintext secret material from repo history going forward.
+## Phase 1 Outline (What Was Done)
+1. Generated an `age` keypair.
+2. Stored the decryption key in-cluster for Flux: `flux-system/sops-age`.
+3. Added SOPS creation rules: `.sops.yaml`.
+4. Converted in-use Secrets into SOPS-encrypted manifests under `infrastructure/secrets/**`.
+5. Reconciled Flux and verified secrets decrypt/apply successfully.
 
 ## Operational Notes
 - For Lens secret visibility, verify RBAC before assuming product limitation:
