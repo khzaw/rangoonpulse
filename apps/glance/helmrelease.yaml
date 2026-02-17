@@ -433,6 +433,55 @@ spec:
                                 </div>
                               </div>`}}
                           - type: custom-api
+                            title: Jellyfin Now Playing
+                            cache: 15s
+                            url: "https://jellyfin.khzaw.dev/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
+                            template: |
+                              {{`{{ $sessions := .JSON.Array "" }}
+                              {{ $active := 0.0 }}
+                              {{ range $sessions }}
+                              {{ if ne (.String "NowPlayingItem.Name") "" }}{{ $active = add $active 1 }}{{ end }}
+                              {{ end }}
+
+                              {{ if eq $active 0 }}
+                              <div class="size-h5">No active streams</div>
+                              <div class="size-h6">Jellyfin is idle.</div>
+                              {{ else }}
+                              <div class="size-h6"><span class="color-highlight">{{ $active | toInt }}</span> active stream{{ if ne ($active | toInt) 1 }}s{{ end }}</div>
+                              <div class="flex flex-col" style="gap: 10px; margin-top: 10px;">
+                              {{ $shown := 0.0 }}
+                              {{ range $sessions }}
+                              {{ if and (ne (.String "NowPlayingItem.Name") "") (lt $shown 3) }}
+                              {{ $shown = add $shown 1 }}
+                              {{ $user := .String "UserName" }}
+                              {{ $name := .String "NowPlayingItem.Name" }}
+                              {{ $series := .String "NowPlayingItem.SeriesName" }}
+                              {{ $title := $name }}
+                              {{ if ne $series "" }}{{ $title = printf "%s — %s" $series $name }}{{ end }}
+
+                              {{ $paused := .Bool "PlayState.IsPaused" }}
+                              {{ $pos := (.Int "PlayState.PositionTicks" | toFloat) }}
+                              {{ $rt := (.Int "NowPlayingItem.RunTimeTicks" | toFloat) }}
+                              {{ $pct := 0.0 }}
+                              {{ if gt $rt 0.0 }}{{ $pct = mul (div $pos $rt) 100 }}{{ end }}
+                              {{ if gt $pct 100.0 }}{{ $pct = 100.0 }}{{ end }}
+                              {{ if lt $pct 0.0 }}{{ $pct = 0.0 }}{{ end }}
+
+                              <div>
+                                <div class="size-h5">{{ $title }}</div>
+                                <div class="flex justify-between size-h6">
+                                  <div>{{ $user }}</div>
+                                  <div>{{ if $paused }}PAUSED{{ else }}PLAYING{{ end }}</div>
+                                </div>
+                                <div style="height: 4px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; margin-top: 6px;">
+                                  <div style="height: 100%; background: rgba(255,255,255,.35); width: {{ printf \"%.0f%%\" $pct }}"></div>
+                                </div>
+                              </div>
+                              {{ end }}
+                              {{ end }}
+                              </div>
+                              {{ end }}`}}
+                          - type: custom-api
                             title: Immich
                             cache: 5m
                             url: https://photos.khzaw.dev/api/server/statistics
