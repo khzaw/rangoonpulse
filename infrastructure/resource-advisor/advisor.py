@@ -15,6 +15,7 @@ from pathlib import Path
 APP_TEMPLATE_RELEASE_FILE_MAP = {
     "actualbudget": "apps/actualbudget/helmrelease.yaml",
     "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",
+    "autobrr": "apps/autobrr/helmrelease.yaml",
     "bazarr": "apps/bazarr/helmrelease.yaml",
     "calibre": "apps/calibre/helmrelease.yaml",
     "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",

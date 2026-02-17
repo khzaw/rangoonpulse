@@ -38,6 +38,7 @@ resources:
   - ./kustomizations/calibre-web-automated.yaml
   - ./kustomizations/chartsdb.yaml
   - ./kustomizations/profilarr.yaml
+  - ./kustomizations/autobrr.yaml
   - ./kustomizations/actualbudget.yaml
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/flaresolverr.yaml

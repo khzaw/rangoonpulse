@@ -263,6 +263,9 @@ spec:
                               - title: Profilarr
                                 url: https://profilarr.khzaw.dev
                                 icon: mdi:format-list-bulleted
+                              - title: autobrr
+                                url: https://autobrr.khzaw.dev
+                                icon: mdi:autorenew
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
@@ -622,6 +625,9 @@ spec:
                           - title: Profilarr
                             url: https://profilarr.khzaw.dev
                             icon: mdi:format-list-bulleted
+                          - title: autobrr
+                            url: https://autobrr.khzaw.dev
+                            icon: mdi:autorenew
                           - title: Grafana
                             url: https://grafana.khzaw.dev
                             icon: di:grafana
