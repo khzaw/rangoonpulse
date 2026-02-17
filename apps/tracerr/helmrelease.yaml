@@ -22,6 +22,10 @@ spec:
     controllers:
       main:
         strategy: Recreate
+        pod:
+          securityContext:
+            # Ensure the Timescale/Postgres container can write to the mounted PVC.
+            fsGroup: 999
         containers:
           main:
             image:
@@ -91,6 +95,10 @@ spec:
             image:
               repository: timescale/timescaledb
               tag: 2.25.0-pg16
+            securityContext:
+              runAsUser: 999
+              runAsGroup: 999
+              allowPrivilegeEscalation: false
             command:
               - postgres
               - -c
