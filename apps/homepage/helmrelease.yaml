@@ -32,7 +32,7 @@ spec:
       - name: TZ
         value: Asia/Singapore
       - name: HOMEPAGE_ALLOWED_HOSTS
-        value: hq.khzaw.dev,localhost,127.0.0.1
+        value: hp.khzaw.dev,localhost,127.0.0.1
       # Requires secret `homepage-widget-secrets` in namespace `default`.
       - name: HOMEPAGE_VAR_IMMICH_API_KEY
         valueFrom:
@@ -106,18 +106,18 @@ spec:
         enabled: true
         ingressClassName: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: hq.khzaw.dev, home.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: hp.khzaw.dev
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: hq.khzaw.dev
+          - host: hp.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
         tls:
           - secretName: homepage-tls
             hosts:
-              - hq.khzaw.dev
+              - hp.khzaw.dev
 
     resources:
       requests:
@@ -132,7 +132,7 @@ spec:
       kubernetes:
         mode: disable
       settings:
-        title: Rangoonpulse — HQ
+        title: Rangoonpulse — Homepage
         description: Rangoonpulse
         theme: dark
         color: zinc
@@ -228,19 +228,6 @@ spec:
                   url: https://radarr.khzaw.dev
                   key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
                   enableQueue: false
-            - Seerr:
-                icon: jellyseerr.png
-                href: https://entertainment.khzaw.dev
-                description: Media requests
-                widget:
-                  type: jellyseerr
-                  url: https://entertainment.khzaw.dev
-                  key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
-                  fields:
-                    - pending
-                    - approved
-                    - available
-                    - issues
             - Prowlarr:
                 icon: prowlarr.png
                 href: https://prowlarr.khzaw.dev
@@ -257,10 +244,27 @@ spec:
                   type: bazarr
                   url: https://bazarr.khzaw.dev
                   key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}"
+            - Seerr:
+                icon: jellyseerr.png
+                href: https://entertainment.khzaw.dev
+                description: Media requests
+                widget:
+                  type: jellyseerr
+                  url: https://entertainment.khzaw.dev
+                  key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+                  fields:
+                    - pending
+                    - approved
+                    - available
+                    - issues
             - Tunarr:
                 icon: tunarr.png
                 href: https://tunarr.khzaw.dev
                 description: TV Channels scheduler
+            - ErsatzTV:
+                icon: ersatztv.png
+                href: https://ersatztv.khzaw.dev
+                description: IPTV channel streaming
             - Notifiarr:
                 icon: notifiarr.png
                 href: https://notifiarr.khzaw.dev
@@ -303,7 +307,7 @@ spec:
                   slug: rangoonpulse
             - Glance:
                 icon: glance.png
-                href: https://glance.khzaw.dev
+                href: https://hq.khzaw.dev
                 description: Minimal dashboard
             - Grafana:
                 icon: grafana.png
