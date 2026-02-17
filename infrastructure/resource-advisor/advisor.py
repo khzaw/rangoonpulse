@@ -15,7 +15,6 @@ from pathlib import Path
 APP_TEMPLATE_RELEASE_FILE_MAP = {
     "actualbudget": "apps/actualbudget/helmrelease.yaml",
     "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",
-    "autobrr": "apps/autobrr/helmrelease.yaml",
     "bazarr": "apps/bazarr/helmrelease.yaml",
     "calibre": "apps/calibre/helmrelease.yaml",
     "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",
@@ -23,7 +22,6 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
     "glance": "apps/glance/helmrelease.yaml",
     "isponsorblock-tv": "apps/isponsorblock-tv/helmrelease.yaml",
-    "profilarr": "apps/profilarr/helmrelease.yaml",
     "tracerr": "apps/tracerr/helmrelease.yaml",
     "jellyfin": "apps/jellyfin/helmrelease.yaml",
     "jellyseerr": "apps/seerr/helmrelease.yaml",
