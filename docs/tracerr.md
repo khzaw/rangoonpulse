@@ -14,7 +14,7 @@ Tracerr runs as a single app-template release:
 Postgres/TimescaleDB is provided by the shared in-cluster instance `media-postgres`.
 
 ## Storage
-- Redis data: `truenas-nfs` PVC (`tracerr-redis-data`)
+- Redis data: `truenas-nfs` PVC (`tracerr`)
 
 ## Required Secrets (Not In Git)
 Tracerr expects two Secrets in `default`:
