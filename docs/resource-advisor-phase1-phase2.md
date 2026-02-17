@@ -14,12 +14,12 @@ It is intentionally lightweight and runs as short-lived CronJobs in the `monitor
 This is fully automated with Kubernetes CronJobs. No manual trigger is required for normal operation.
 
 - `resource-advisor-report` (`batch/v1 CronJob`, namespace `monitoring`)
-  - runs daily (`02:30`)
+  - runs daily (`02:30`, timezone `Asia/Singapore`)
   - computes resource analysis
   - writes report data to ConfigMap `monitoring/resource-advisor-latest`
   - does not create branches or PRs
 - `resource-advisor-apply-pr` (`batch/v1 CronJob`, namespace `monitoring`)
-  - runs weekly (`03:30` Monday)
+  - runs weekly (`03:30` Monday, timezone `Asia/Singapore`)
   - computes safe, budget-aware apply plan
   - creates a unique `tune/...` branch from the latest `master`
   - opens one apply PR per run when eligible changes exist
@@ -86,14 +86,19 @@ The latest report is written to ConfigMap:
   - `lastRunAt`
   - `mode`
 
+Important:
+- `resource-advisor-latest` is runtime state owned by the CronJobs. It should not be reconciled by Flux, or it will
+  be reset back to the Git version on every reconciliation interval.
+- The CronJobs create the ConfigMap automatically if it does not exist.
+
 Repository artifacts:
 - Phase 3 apply PR branch updates only:
   - selected HelmRelease resource blocks for allowlisted apps
   - no generated report/apply JSON or Markdown artifacts are committed
 
 ## Schedules
-- `resource-advisor-report`: daily at `02:30`.
-- `resource-advisor-apply-pr`: weekly at `03:30` on Monday.
+- `resource-advisor-report`: daily at `02:30` (`Asia/Singapore`).
+- `resource-advisor-apply-pr`: weekly at `03:30` on Monday (`Asia/Singapore`).
 
 ## Phase 3 Requirements
 Apply PR generation requires a GitHub token secret:

@@ -175,6 +175,8 @@ For public or tailnet-only app hostnames, use:
   - `kubectl get jobs -n monitoring | rg resource-advisor`
   - `kubectl logs -n monitoring job/<job-name>`
   - `kubectl get configmap resource-advisor-latest -n monitoring -o yaml`
+  - Note: `resource-advisor-latest` is runtime-owned state and should not be reconciled by Flux. The CronJobs
+    create/update it directly.
 
 ## Validation and Operations Commands
 ```bash

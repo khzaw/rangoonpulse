@@ -8,7 +8,6 @@ resources:
   - rolebinding.yaml
   - clusterrole.yaml
   - clusterrolebinding.yaml
-  - report-configmap.yaml
   - cronjob-report.yaml
   - cronjob-apply-pr.yaml
 configMapGenerator:
