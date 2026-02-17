@@ -34,6 +34,11 @@ spec:
               - --policy=sync
               - --registry=txt
               - --domain-filter=khzaw.dev
+              # We declare hostnames explicitly via the external-dns annotation on each Ingress.
+              # This avoids accidentally publishing DNS for every Ingress rule/TLS host and lets us
+              # do things like CNAME aliases cleanly.
+              - --ignore-ingress-rules-spec
+              - --ignore-ingress-tls-spec
               - --interval=1m
             env:
               - name: CF_API_TOKEN
