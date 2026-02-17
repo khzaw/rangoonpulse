@@ -85,9 +85,12 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: local-path
+        storageClass: truenas-nfs
         size: 5Gi
         accessMode: ReadWriteOnce
+        # Tunarr stores its state under /root/.local/share/tunarr (not /config).
+        globalMounts:
+          - path: /root/.local/share/tunarr
 
       gpu:
         enabled: true

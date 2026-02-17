@@ -16,4 +16,3 @@ spec:
   dependsOn:
     - name: infra-storage-media
     - name: ingress-nginx
-    - name: local-path-provisioner
