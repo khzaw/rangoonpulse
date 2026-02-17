@@ -22,6 +22,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
     "glance": "apps/glance/helmrelease.yaml",
     "isponsorblock-tv": "apps/isponsorblock-tv/helmrelease.yaml",
+    "profilarr": "apps/profilarr/helmrelease.yaml",
     "tracerr": "apps/tracerr/helmrelease.yaml",
     "jellyfin": "apps/jellyfin/helmrelease.yaml",
     "jellyseerr": "apps/seerr/helmrelease.yaml",

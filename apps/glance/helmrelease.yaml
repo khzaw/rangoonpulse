@@ -260,6 +260,9 @@ spec:
                               - title: SponsorBlock TV
                                 url: https://sponsorblocktv.khzaw.dev
                                 icon: mdi:skip-forward-outline
+                              - title: Profilarr
+                                url: https://profilarr.khzaw.dev
+                                icon: mdi:format-list-bulleted
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
@@ -616,6 +619,9 @@ spec:
                           - title: SponsorBlock TV
                             url: https://sponsorblocktv.khzaw.dev
                             icon: mdi:skip-forward-outline
+                          - title: Profilarr
+                            url: https://profilarr.khzaw.dev
+                            icon: mdi:format-list-bulleted
                           - title: Grafana
                             url: https://grafana.khzaw.dev
                             icon: di:grafana
