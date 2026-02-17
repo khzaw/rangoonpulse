@@ -259,35 +259,6 @@ spec:
                               - title: TrueNAS
                                 url: https://nas.khzaw.dev
                                 icon: di:truenas
-                      - type: releases
-                        cache: 24h
-                        show-source-icon: true
-                        limit: 24
-                        collapse-after: 8
-                        repositories:
-                          # Apps in this cluster (kept lean to avoid GitHub API rate-limit)
-                          - immich-app/immich
-                          - jellyfin/jellyfin
-                          - advplyr/audiobookshelf
-                          - seerr-team/seerr
-                          - CyferShepard/Jellystat
-                          - chrisbenincasa/tunarr
-                          - actualbudget/actual
-                          - dani-garcia/vaultwarden
-                          - louislam/uptime-kuma
-                          - gethomepage/homepage
-                          - glanceapp/glance
-                          # Arr and download stack
-                          - Sonarr/Sonarr
-                          - Radarr/Radarr
-                          - Prowlarr/Prowlarr
-                          - morpheus65535/bazarr
-                          - Notifiarr/notifiarr
-                          - transmission/transmission
-                          - sabnzbd/sabnzbd
-                          - flaresolverr/flaresolverr
-                          - linuxserver/docker-calibre
-                          - crocodilestick/Calibre-Web-Automated
                       - type: monitor
                         title: Arr and Download Health
                         cache: 1m
@@ -565,6 +536,36 @@ spec:
                                 </div>
                               </div>
                               {{ end }}`}}
+
+                      - type: releases
+                        cache: 24h
+                        show-source-icon: true
+                        limit: 24
+                        collapse-after: 8
+                        repositories:
+                          # Apps in this cluster (kept lean to avoid GitHub API rate-limit)
+                          - immich-app/immich
+                          - jellyfin/jellyfin
+                          - advplyr/audiobookshelf
+                          - seerr-team/seerr
+                          - CyferShepard/Jellystat
+                          - chrisbenincasa/tunarr
+                          - actualbudget/actual
+                          - dani-garcia/vaultwarden
+                          - louislam/uptime-kuma
+                          - gethomepage/homepage
+                          - glanceapp/glance
+                          # Arr and download stack
+                          - Sonarr/Sonarr
+                          - Radarr/Radarr
+                          - Prowlarr/Prowlarr
+                          - morpheus65535/bazarr
+                          - Notifiarr/notifiarr
+                          - transmission/transmission
+                          - sabnzbd/sabnzbd
+                          - flaresolverr/flaresolverr
+                          - linuxserver/docker-calibre
+                          - crocodilestick/Calibre-Web-Automated
 
                   - size: small
                     widgets:
