@@ -3,6 +3,21 @@
 ## Goal
 Run a service that can present your Jellyfin media library as IPTV-style "channels" (scheduled programming).
 
+## Nodecast TV (Alternative)
+- Deployment: `apps/nodecast-tv/`
+- URL: `https://tv.khzaw.dev`
+
+### Persistence (SQLite Gotcha)
+Nodecast TV stores a SQLite database under:
+- `/app/data`
+
+SQLite on NFS can have locking/latency issues, so this app uses node-local storage:
+- StorageClass: `local-path`
+
+### Hardware Acceleration
+Nodecast TV mounts the host GPU device:
+- `hostPath: /dev/dri`
+
 ## Tunarr (Primary)
 - Deployment: `apps/tunarr/`
 - URL: `https://tunarr.khzaw.dev`
@@ -56,4 +71,3 @@ Configure VAAPI in the ErsatzTV UI (FFmpeg settings) to use VAAPI with the rende
 - If VAAPI is missing in either service:
   - verify `/dev/dri` is mounted in the pod
   - verify the container user has permission to access `/dev/dri/renderD128`
-

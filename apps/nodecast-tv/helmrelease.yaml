@@ -1,0 +1,112 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nodecast-tv
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+        pod:
+          securityContext:
+            supplementalGroups:
+              - 104
+              - 44
+        containers:
+          main:
+            securityContext:
+              privileged: true
+            image:
+              repository: ghcr.io/technomancer702/nodecast-tv
+              tag: latest
+            env:
+              TZ: "Asia/Singapore"
+              NODE_ENV: production
+            resources:
+              requests:
+                cpu: "200m"
+                memory: "512Mi"
+              limits:
+                cpu: "2000m"
+                memory: "2Gi"
+            probes:
+              liveness:
+                spec:
+                  httpGet:
+                    path: /
+                    port: 3000
+                  initialDelaySeconds: 30
+                  periodSeconds: 20
+              readiness:
+                spec:
+                  httpGet:
+                    path: /
+                    port: 3000
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 3000
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: tv.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: tv.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/proxy-body-size: "0"
+          nginx.ingress.kubernetes.io/proxy-buffering: "off"
+          nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+          nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+          nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls:
+          - secretName: tv-tls
+            hosts:
+              - tv.khzaw.dev
+
+    persistence:
+      # nodecast-tv stores a SQLite database under /app/data. SQLite on NFS can have locking/latency issues,
+      # so we keep this node-local even though most state in this repo prefers NAS-backed PVCs.
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: local-path
+        size: 5Gi
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /app/data
+
+      gpu:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/dri
+

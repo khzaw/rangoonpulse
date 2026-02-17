@@ -25,6 +25,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "jellyfin": "apps/jellyfin/helmrelease.yaml",
     "jellyseerr": "apps/seerr/helmrelease.yaml",
     "jellystat": "apps/jellystat/helmrelease.yaml",
+    "nodecast-tv": "apps/nodecast-tv/helmrelease.yaml",
     "notifiarr": "apps/notifiarr/helmrelease.yaml",
     "prowlarr": "apps/prowlarr/helmrelease.yaml",
     "radarr": "apps/radarr/helmrelease.yaml",

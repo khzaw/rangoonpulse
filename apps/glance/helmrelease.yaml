@@ -234,6 +234,9 @@ spec:
                               - title: ErsatzTV
                                 url: https://ersatztv.khzaw.dev
                                 icon: di:ersatztv
+                              - title: Nodecast TV
+                                url: https://tv.khzaw.dev
+                                icon: mdi:television-classic
                               - title: Transmission
                                 url: https://torrent.khzaw.dev
                                 icon: di:transmission
@@ -604,6 +607,9 @@ spec:
                           - title: Jellyfin
                             url: https://jellyfin.khzaw.dev
                             icon: di:jellyfin
+                          - title: Nodecast TV
+                            url: https://tv.khzaw.dev
+                            icon: mdi:television-classic
                           - title: Grafana
                             url: https://grafana.khzaw.dev
                             icon: di:grafana
