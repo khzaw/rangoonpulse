@@ -18,6 +18,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "bazarr": "apps/bazarr/helmrelease.yaml",
     "calibre": "apps/calibre/helmrelease.yaml",
     "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",
+    "chartsdb": "apps/chartsdb/helmrelease.yaml",
     "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
     "glance": "apps/glance/helmrelease.yaml",
     "tracerr": "apps/tracerr/helmrelease.yaml",

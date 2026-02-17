@@ -36,6 +36,7 @@ resources:
   - ./kustomizations/audiobookshelf.yaml
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web-automated.yaml
+  - ./kustomizations/chartsdb.yaml
   - ./kustomizations/actualbudget.yaml
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/flaresolverr.yaml

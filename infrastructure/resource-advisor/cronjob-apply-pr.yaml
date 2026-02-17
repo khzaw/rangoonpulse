@@ -81,7 +81,7 @@ spec:
                 - name: MAX_APPLY_CHANGES_PER_RUN
                   value: "5"
                 - name: APPLY_ALLOWLIST
-                  value: actualbudget,audiobookshelf,bazarr,calibre,calibre-web-automated,flaresolverr,glance,tracerr,jellyfin,jellyseerr,jellystat,notifiarr,prowlarr,radarr,sabnzbd,sonarr,transmission,tunarr,uptime-kuma,vaultwarden
+                  value: actualbudget,audiobookshelf,bazarr,calibre,calibre-web-automated,chartsdb,flaresolverr,glance,tracerr,jellyfin,jellyseerr,jellystat,notifiarr,prowlarr,radarr,sabnzbd,sonarr,transmission,tunarr,uptime-kuma,vaultwarden
                 - name: GITHUB_REPOSITORY
                   value: khzaw/rangoonpulse
                 - name: GITHUB_BASE_BRANCH

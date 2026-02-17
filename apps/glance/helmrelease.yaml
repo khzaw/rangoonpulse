@@ -251,6 +251,9 @@ spec:
                               - title: Tracerr
                                 url: https://tracerr.khzaw.dev
                                 icon: mdi:graph-box
+                              - title: ChartsDB
+                                url: https://chartsdb.khzaw.dev
+                                icon: mdi:database-outline
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
@@ -592,6 +595,9 @@ spec:
                           - title: Tracerr
                             url: https://tracerr.khzaw.dev
                             icon: mdi:graph-box
+                          - title: ChartsDB
+                            url: https://chartsdb.khzaw.dev
+                            icon: mdi:database-outline
                           - title: Immich
                             url: https://photos.khzaw.dev
                             icon: di:immich
