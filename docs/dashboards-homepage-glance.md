@@ -1,37 +1,10 @@
-# Dashboards: Homepage + Glance
+# Dashboard: Glance
 
-This repository runs two dashboards with slightly different strengths:
-- Homepage: app launcher + built-in widgets (requires less custom templating)
-- Glance: richer "content" dashboard via `glance.yml` and `custom-api` widgets
+Homepage has been decommissioned; Glance is the only dashboard in this repository.
 
 ## Hostnames
-- Homepage: `https://hp.khzaw.dev`
 - Glance: `https://glance.khzaw.dev`
 - Glance alias: `https://hq.khzaw.dev` (historical shortcut)
-
-## Homepage (GetHomepage)
-GitOps source of truth:
-- `apps/homepage/helmrelease.yaml`
-
-### Secrets / API Keys
-Homepage widgets that need API keys should read them from env vars, which are wired from the Secret:
-- `default/homepage-widget-secrets`
-
-Pattern:
-- HelmRelease env var: `HOMEPAGE_VAR_*` from `secretKeyRef`
-- Widget config uses: `{{HOMEPAGE_VAR_*}}`
-
-Do not commit plaintext API keys into manifests.
-
-### Uptime Kuma Widget (No API Key)
-Homepage's `uptimekuma` widget does not use an API key. It calls the public status-page endpoints and needs:
-- `url`: Uptime Kuma base URL (cluster-internal URL is fine)
-- `slug`: published status page slug
-
-If you see:
-- `Status Page Not Found`
-
-create + publish a Status Page in the Uptime Kuma UI with that slug (`Status Pages` -> `New Status Page`).
 
 ## Glance
 GitOps source of truth:
@@ -69,4 +42,3 @@ Use Jellyfin's `Sessions` endpoint to show active streams:
 
 The repository includes a compact Now Playing widget (title/user/play state + progress bar) implemented via
 `custom-api` template.
-

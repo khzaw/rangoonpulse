@@ -20,7 +20,6 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",
     "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
     "glance": "apps/glance/helmrelease.yaml",
-    "homepage": "apps/homepage/helmrelease.yaml",
     "jellyfin": "apps/jellyfin/helmrelease.yaml",
     "jellyseerr": "apps/seerr/helmrelease.yaml",
     "jellystat": "apps/jellystat/helmrelease.yaml",

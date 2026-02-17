@@ -20,7 +20,7 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 - Tailscale operator (subnet router via `Connector`)
 - Storage: TrueNAS SCALE NFS via democratic-csi, with selective use of `local-path`
 - Monitoring: Prometheus + Grafana
-- Dashboards: Homepage + Glance
+- Dashboard: Glance
 - Uptime: Uptime Kuma
 
 ## Access (LAN + Tailscale)
@@ -42,12 +42,6 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
   - TrueNAS SCALE (exports NFS for PVCs)
 
 ## Screenshots
-
-### Homepage
-
-![Homepage 1](.github/screenshots/homepage.png)
-
-![Homepage 2](.github/screenshots/homepage-2.jpeg)
 
 ### Jellyfin
 

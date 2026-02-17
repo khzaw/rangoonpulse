@@ -114,19 +114,11 @@ Important external-dns behavior:
 - Expected usage pattern in manifests:
   - `env` or chart values referencing `secretKeyRef`
   - no inline plaintext credentials
-- Homepage widget API keys are pulled from `homepage-widget-secrets` via env vars (`HOMEPAGE_VAR_*`).
+- Dashboard widget API keys are stored in `homepage-widget-secrets` and consumed by Glance via `envFrom`.
 - Future secret-management direction is tracked in:
   - `docs/secrets-management-current-state-options-and-plan.md`
 
-## Dashboards (Homepage + Glance)
-- Homepage:
-  - `apps/homepage/helmrelease.yaml` defines groups + widgets inline.
-  - Hostname: `https://hp.khzaw.dev`
-  - Widgets that need API keys should reference `HOMEPAGE_VAR_*` env vars wired from `homepage-widget-secrets`.
-  - Uptime Kuma widget does **not** use an API key; it reads the public status page endpoints and requires:
-    - `widget.type: uptimekuma`
-    - `widget.url` (service URL)
-    - `widget.slug` (published status page slug)
+## Dashboard (Glance)
 - Glance:
   - `apps/glance/helmrelease.yaml` embeds `glance.yml` via ConfigMap and uses `envFrom: homepage-widget-secrets`
     so widgets can reference `${SONARR_API_KEY}`, `${JELLYFIN_API_KEY}`, etc.
@@ -135,7 +127,7 @@ Important external-dns behavior:
     so Helm doesn't interpret Glance's `{{ ... }}`.
 
 ## Uptime Kuma Status Page Gotcha
-- If Homepage/Glance shows `Status Page Not Found` for slug `rangoonpulse`, create + publish a Status Page in
+- If Glance shows `Status Page Not Found` for slug `rangoonpulse`, create + publish a Status Page in
   Uptime Kuma with that slug (UI: `Status Pages` -> `New Status Page` -> `Slug` -> `Publish`).
 
 ## Monitoring/Grafana Notes

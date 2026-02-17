@@ -242,9 +242,6 @@ spec:
                                 icon: di:sabnzbd
                           - title: Ops
                             links:
-                              - title: Homepage
-                                url: https://hp.khzaw.dev
-                                icon: di:homepage
                               - title: Grafana
                                 url: https://grafana.khzaw.dev
                                 icon: di:grafana
@@ -586,9 +583,6 @@ spec:
                         cache: 1m
                         style: compact
                         sites:
-                          - title: Homepage
-                            url: https://hq.khzaw.dev
-                            icon: di:homepage
                           - title: Glance
                             url: https://glance.khzaw.dev
                             icon: di:glance
