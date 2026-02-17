@@ -57,6 +57,7 @@ resources:
   - ./kustomizations/vaultwarden.yaml
   - ./kustomizations/tunarr.yaml
   - ./kustomizations/nodecast-tv.yaml
+  - ./kustomizations/isponsorblock-tv.yaml
   - ./kustomizations/ersatztv.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml

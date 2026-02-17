@@ -257,6 +257,9 @@ spec:
                               - title: ChartsDB
                                 url: https://chartsdb.khzaw.dev
                                 icon: mdi:database-outline
+                              - title: SponsorBlock TV
+                                url: https://sponsorblocktv.khzaw.dev
+                                icon: mdi:skip-forward-outline
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
@@ -610,6 +613,9 @@ spec:
                           - title: Nodecast TV
                             url: https://tv.khzaw.dev
                             icon: mdi:television-classic
+                          - title: SponsorBlock TV
+                            url: https://sponsorblocktv.khzaw.dev
+                            icon: mdi:skip-forward-outline
                           - title: Grafana
                             url: https://grafana.khzaw.dev
                             icon: di:grafana

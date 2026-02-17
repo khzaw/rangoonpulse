@@ -1,0 +1,138 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: isponsorblock-tv
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+        pod:
+          # iSponsorBlockTV expects host networking (docker-compose uses `network_mode: host`)
+          # for device discovery and direct LAN access.
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+        containers:
+          main:
+            image:
+              repository: ghcr.io/dmunozv04/isponsorblocktv
+              tag: latest
+            env:
+              TZ: "Asia/Singapore"
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "128Mi"
+              limits:
+                cpu: "400m"
+                memory: "512Mi"
+
+          # iSponsorBlockTV does not expose an HTTP UI. This sidecar serves a small info page so we can
+          # hang a stable hostname off ingress and keep a clickable reference in Glance.
+          info:
+            image:
+              repository: nginxinc/nginx-unprivileged
+              tag: stable-alpine
+            resources:
+              requests:
+                cpu: "10m"
+                memory: "16Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+            targetPort: 8080
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: sponsorblocktv.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: sponsorblocktv.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls:
+          - secretName: sponsorblocktv-tls
+            hosts:
+              - sponsorblocktv.khzaw.dev
+
+    configMaps:
+      info:
+        enabled: true
+        data:
+          index.html: |
+            <!doctype html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <title>iSponsorBlockTV</title>
+                <style>
+                  body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; margin: 2rem; max-width: 60rem; }
+                  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+                  pre { background: #111827; color: #e5e7eb; padding: 1rem; border-radius: 0.5rem; overflow: auto; }
+                  h1 { margin-top: 0; }
+                </style>
+              </head>
+              <body>
+                <h1>iSponsorBlockTV</h1>
+                <p>
+                  This service runs headless (no web UI). Use the pod logs and an interactive exec session for setup and management.
+                </p>
+                <pre><code>kubectl get pods -n default | grep isponsorblock-tv
+                kubectl logs -n default deploy/isponsorblock-tv
+                kubectl exec -n default -it deploy/isponsorblock-tv -c main -- sh</code></pre>
+              </body>
+            </html>
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: truenas-nfs
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        advancedMounts:
+          main:
+            main:
+              - path: /app/data
+
+      info:
+        enabled: true
+        type: configMap
+        identifier: info
+        advancedMounts:
+          main:
+            info:
+              - path: /usr/share/nginx/html/index.html
+                subPath: index.html
+                readOnly: true
