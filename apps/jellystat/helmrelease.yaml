@@ -54,7 +54,7 @@ spec:
                     name: jellystat-db-secret
                     key: POSTGRES_PASSWORD
               - name: POSTGRES_IP
-                value: "127.0.0.1"
+                value: "media-postgres"
               - name: POSTGRES_PORT
                 value: "5432"
               - name: POSTGRES_DB
@@ -73,26 +73,6 @@ spec:
               limits:
                 cpu: "500m"
                 memory: "768Mi"
-          db:
-            image:
-              repository: postgres
-              tag: 16-alpine
-            env:
-              - name: POSTGRES_USER
-                value: "jellystat"
-              - name: POSTGRES_DB
-                value: "jellystat"
-              - name: POSTGRES_PASSWORD
-                valueFrom: *db_password_ref
-              - name: PGDATA
-                value: "/var/lib/postgresql/data/pgdata" # Subpath prevents permission issue
-            resources:
-              requests:
-                cpu: "100m"
-                memory: "256Mi"
-              limits:
-                cpu: "500m"
-                memory: "1Gi"
 
     service:
       main:
@@ -124,14 +104,4 @@ spec:
             hosts:
               - jellystat.khzaw.dev
 
-    persistence:
-      db-data:
-        enabled: true
-        type: persistentVolumeClaim
-        storageClass: local-path
-        size: 5Gi
-        accessMode: ReadWriteOnce
-        advancedMounts:
-          main:
-            db: # Container Name
-              - path: /var/lib/postgresql/data
+    persistence: {}

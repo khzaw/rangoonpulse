@@ -22,10 +22,6 @@ spec:
     controllers:
       main:
         strategy: Recreate
-        pod:
-          securityContext:
-            # Ensure the Timescale/Postgres container can write to the mounted PVC.
-            fsGroup: 999
         containers:
           main:
             image:
@@ -88,63 +84,6 @@ spec:
                     port: 3000
                   initialDelaySeconds: 10
                   periodSeconds: 10
-                  timeoutSeconds: 5
-                  failureThreshold: 6
-
-          db:
-            image:
-              repository: timescale/timescaledb
-              tag: 2.25.0-pg16
-            command:
-              - sh
-              - -c
-            args:
-              - |
-                set -eu
-                exec /usr/local/bin/docker-entrypoint.sh postgres \
-                  -c timescaledb.max_tuples_decompressed_per_dml_transaction=0 \
-                  -c timescaledb.max_tuples_decompressed_per_compression=0 \
-                  -c timescaledb.telemetry_level=off
-            env:
-              - name: POSTGRES_USER
-                value: tracearr
-              - name: POSTGRES_DB
-                value: tracearr
-              - name: POSTGRES_PASSWORD
-                valueFrom: &tracerr_db_password_ref
-                  secretKeyRef:
-                    name: tracerr-db-secret
-                    key: POSTGRES_PASSWORD
-              - name: PGDATA
-                value: "/var/lib/postgresql/data/pgdata" # Subpath prevents permission issue
-            resources:
-              requests:
-                cpu: "200m"
-                memory: "768Mi"
-              limits:
-                cpu: "1500m"
-                memory: "2Gi"
-            probes:
-              readiness:
-                spec:
-                  exec:
-                    command:
-                      - sh
-                      - -c
-                      - pg_isready -U tracearr -d tracearr
-                  initialDelaySeconds: 10
-                  periodSeconds: 10
-                  timeoutSeconds: 5
-                  failureThreshold: 12
-              liveness:
-                spec:
-                  exec:
-                    command:
-                      - sh
-                      - -c
-                      - pg_isready -U tracearr -d tracearr
-                  initialDelaySeconds: 30
-                  periodSeconds: 20
                   timeoutSeconds: 5
                   failureThreshold: 6
 
@@ -216,19 +155,6 @@ spec:
               - tracerr.khzaw.dev
 
     persistence:
-      # Postgres/Timescale data should stay node-local to avoid NFS latency/fsync semantics issues.
-      # This mirrors the existing "DB on local-path" convention used elsewhere in this repo (e.g. Immich/Jellystat).
-      db-data:
-        enabled: true
-        type: persistentVolumeClaim
-        storageClass: local-path
-        size: 10Gi
-        accessMode: ReadWriteOnce
-        advancedMounts:
-          main:
-            db:
-              - path: /var/lib/postgresql/data
-
       redis-data:
         enabled: true
         type: persistentVolumeClaim
