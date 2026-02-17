@@ -72,5 +72,5 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         storageClass: local-path
-        size: 5Gi
+        size: 2Gi
         accessMode: ReadWriteOnce
