@@ -226,5 +226,7 @@ Examples:
 - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
+- `docs/tracerr.md`
+- `docs/isponsorblocktv.md`
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
