@@ -38,12 +38,41 @@ spec:
             args:
               - |
                 set -eu
+                DATA_DIR=/app/data
+                CONFIG_FILE="$DATA_DIR/config.json"
+
+                # Upstream currently prints "Blank config file created" but does not persist
+                # it; create a real initial config file once so the container doesn't churn.
+                if [ ! -f "$CONFIG_FILE" ]; then
+                  python3 - <<'PY'
+                import iSponsorBlockTV.helpers as h
+                h.Config("/app/data").save()
+                print("Wrote blank config to /app/data/config.json")
+                PY
+                fi
+
+                echo "Waiting for at least one configured device in $CONFIG_FILE"
                 while true; do
-                  # The upstream image exits when there is no configured device.
-                  # Keep the container alive and retry periodically; once devices are configured
-                  # under /app/data, the "start" command will stay running.
-                  python3 -m iSponsorBlockTV --data /app/data start || true
-                  echo "iSponsorBlockTV exited. If you have not configured devices yet, run:"
+                  if python3 - "$CONFIG_FILE" <<'PY'
+                import json
+                import sys
+
+                p = sys.argv[1]
+                try:
+                  with open(p, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                except Exception:
+                  sys.exit(1)
+
+                devices = cfg.get("devices") or []
+                sys.exit(0 if isinstance(devices, list) and len(devices) > 0 else 1)
+                PY
+                  then
+                    echo "Device config detected; starting iSponsorBlockTV"
+                    exec python3 -m iSponsorBlockTV --data "$DATA_DIR" start
+                  fi
+
+                  echo "No devices configured yet. Run:"
                   echo "  kubectl exec -n default -it deploy/isponsorblock-tv -c main -- \\"
                   echo "    python3 -m iSponsorBlockTV --data /app/data setup-cli"
                   sleep 60
