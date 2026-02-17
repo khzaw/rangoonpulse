@@ -29,8 +29,9 @@ spec:
               tag: v0.14.2
             args:
               - --source=ingress
+              - --source=service
               - --provider=cloudflare
-              - --policy=upsert-only
+              - --policy=sync
               - --registry=txt
               - --domain-filter=khzaw.dev
               - --interval=1m
