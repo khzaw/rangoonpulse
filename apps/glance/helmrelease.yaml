@@ -454,6 +454,52 @@ spec:
                                   <div class="size-h6">USAGE</div>
                                 </div>
                               </div>`}}
+                          - type: custom-api
+                            title: Uptime Kuma
+                            cache: 1m
+                            url: http://uptime-kuma.default.svc.cluster.local:3001/api/status-page/heartbeat/rangoonpulse
+                            template: |
+                              {{`{{ $ids := .JSON.Array "heartbeatList.@keys" }}
+                              {{ $total := len $ids }}
+                              {{ if eq $total 0 }}
+                              <div class="size-h5">No status page monitors.</div>
+                              <div class="size-h6">Create and publish a status page with slug <span class="color-highlight">rangoonpulse</span>.</div>
+                              {{ else }}
+                              {{ $down := 0.0 }}
+                              {{ range $ids }}
+                              {{ $id := .String "" }}
+                              {{ $s := $.JSON.Int (printf "heartbeatList.%s.0.status" $id) }}
+                              {{ if ne $s 1 }}{{ $down = add $down 1 }}{{ end }}
+                              {{ end }}
+                              {{ $totalF := $total | toFloat }}
+                              {{ $up := sub $totalF $down }}
+
+                              {{ $uptimes := .JSON.Array "uptimeList.@values" }}
+                              {{ $sum := 0.0 }}
+                              {{ $count := 0.0 }}
+                              {{ range $uptimes }}
+                              {{ $sum = add $sum (.Float "") }}
+                              {{ $count = add $count 1 }}
+                              {{ end }}
+                              {{ $avg := 0.0 }}
+                              {{ if gt $count 0 }}{{ $avg = div $sum $count }}{{ end }}
+                              {{ $avgPct := mul $avg 100 }}
+
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ $up | toInt | formatNumber }}</div>
+                                  <div class="size-h6">UP</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ $down | toInt | formatNumber }}</div>
+                                  <div class="size-h6">DOWN</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ printf "%.2f%%" $avgPct }}</div>
+                                  <div class="size-h6">24H</div>
+                                </div>
+                              </div>
+                              {{ end }}`}}
 
                   - size: small
                     widgets:
