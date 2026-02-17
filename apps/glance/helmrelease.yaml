@@ -83,6 +83,7 @@ spec:
           glance.yml: |
             server:
               proxied: true
+              assets-path: /app/assets
 
             branding:
               logo-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
@@ -100,7 +101,7 @@ spec:
               contrast-multiplier: 1.2
               text-saturation-multiplier: 0
               disable-picker: true
-              font-family: "'Berkeley Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+              custom-css-file: /assets/user.css
 
             pages:
               - name: Home
@@ -616,6 +617,15 @@ spec:
                               - 401
                               - 403
 
+      assets:
+        enabled: true
+        data:
+          user.css: |
+            /* Prefer Berkeley Mono if installed; fall back to Glance defaults. */
+            body {
+              font-family: "Berkeley Mono", "JetBrains Mono", monospace;
+            }
+
     persistence:
       config:
         enabled: true
@@ -624,4 +634,11 @@ spec:
         globalMounts:
           - path: /app/config/glance.yml
             subPath: glance.yml
+            readOnly: true
+      assets:
+        enabled: true
+        type: configMap
+        identifier: assets
+        globalMounts:
+          - path: /app/assets
             readOnly: true
