@@ -18,6 +18,7 @@ resources:
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
+  - ./kustomizations/secrets.yaml # sops-encrypted secrets (decrypted by flux)
   - ./kustomizations/metallb.yaml
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/tailscale-operator.yaml
