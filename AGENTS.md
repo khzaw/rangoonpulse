@@ -64,6 +64,12 @@ For public or tailnet-only app hostnames, use:
 - annotation: `nginx.ingress.kubernetes.io/ssl-redirect: "true"`
 - TLS section with matching hosts
 
+Important external-dns behavior:
+- external-dns is configured to ignore `spec.rules[].host` and `spec.tls[].hosts` on Ingress resources.
+  You must declare hostnames via the `external-dns.alpha.kubernetes.io/hostname` annotation or DNS will not be created.
+- external-dns also watches Services (`--source=service`), which enables clean CNAME aliases via `ExternalName`
+  Services (example: `infrastructure/monitoring/monitoring-cname.yaml`).
+
 ## App Deployment Conventions
 - Standard app layout:
   - `apps/<name>/helmrelease.yaml`
@@ -107,6 +113,7 @@ For public or tailnet-only app hostnames, use:
 ## Dashboards (Homepage + Glance)
 - Homepage:
   - `apps/homepage/helmrelease.yaml` defines groups + widgets inline.
+  - Hostname: `https://hp.khzaw.dev`
   - Widgets that need API keys should reference `HOMEPAGE_VAR_*` env vars wired from `homepage-widget-secrets`.
   - Uptime Kuma widget does **not** use an API key; it reads the public status page endpoints and requires:
     - `widget.type: uptimekuma`
@@ -115,6 +122,7 @@ For public or tailnet-only app hostnames, use:
 - Glance:
   - `apps/glance/helmrelease.yaml` embeds `glance.yml` via ConfigMap and uses `envFrom: homepage-widget-secrets`
     so widgets can reference `${SONARR_API_KEY}`, `${JELLYFIN_API_KEY}`, etc.
+  - Hostnames: `https://glance.khzaw.dev` and `https://hq.khzaw.dev` (alias)
   - When writing Glance `custom-api` templates inside HelmRelease YAML, wrap the template in `{{\` ... \`}}`
     so Helm doesn't interpret Glance's `{{ ... }}`.
 
@@ -124,6 +132,9 @@ For public or tailnet-only app hostnames, use:
 
 ## Monitoring/Grafana Notes
 - Monitoring stack: `infrastructure/monitoring/helmrelease.yaml`
+- Grafana hostnames:
+  - primary: `grafana.khzaw.dev`
+  - alias: `monitoring.khzaw.dev` (CNAME via `infrastructure/monitoring/monitoring-cname.yaml`)
 - Current critical settings:
   - `nodeExporter.enabled: false` (correct key for chart line in use)
   - Prometheus retention policy tuned for advisor window:
@@ -149,11 +160,11 @@ For public or tailnet-only app hostnames, use:
 - GitOps path: `infrastructure/resource-advisor/` via Flux Kustomization `resource-advisor`.
 - Runtime model is Kubernetes CronJobs in namespace `monitoring`:
   - `resource-advisor-report`:
-    - daily run at `02:30`
+    - daily run at `02:30` (`Asia/Singapore`)
     - report-only mode
     - writes `latest.json` and `latest.md` to ConfigMap `resource-advisor-latest`
   - `resource-advisor-apply-pr`:
-    - weekly run at `03:30` Monday
+    - weekly run at `03:30` Monday (`Asia/Singapore`)
     - apply-PR mode with budget and data-maturity guards
     - creates unique `tune/...` branches from latest `master`
     - supports multiple simultaneous recommendation branches/PRs
@@ -213,6 +224,7 @@ Examples:
 - `docs/lan-access-current-state-and-lean-plan.md`
 - `docs/secrets-management-current-state-options-and-plan.md`
 - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
+- `docs/dashboards-homepage-glance.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
