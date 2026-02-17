@@ -1,15 +1,17 @@
-* rangoonpulse
+# rangoonpulse
 
 Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD GitOps.
 
-** Philosophy
+## Philosophy
+
 - GitOps-first: everything is reconciled via Flux (`Kustomization` + `HelmRelease`).
-- Keep it boring and repeatable: prefer declarative HelmRelease values over imperative `kubectl apply`.
-- Unified access model: a single ingress VIP on LAN + remote access via Tailscale subnet routing.
+- Keep it boring and repeatable: prefer declarative HelmRelease values over imperative changes.
+- Unified access model: a single ingress VIP on LAN, plus remote access via Tailscale subnet routing.
 - Node-local storage is treated as limited: prefer TrueNAS NFS-backed PVCs for stateful workloads.
 - Explicit resource requests/limits, plus automated suggestions via in-cluster CronJobs.
 
-** Tech Stack
+## Tech Stack
+
 - Talos Linux + Kubernetes
 - Flux CD v2 (GitOps)
 - Helm + Kustomize (app delivery)
@@ -21,7 +23,8 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 - Dashboards: Homepage + Glance
 - Uptime: Uptime Kuma
 
-** Hardware
+## Hardware
+
 - Kubernetes node:
   - Lenovo ThinkCentre M720q
   - Intel Core i5-8400T (6c/6t)
@@ -31,18 +34,25 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 - NAS:
   - TrueNAS SCALE (exports NFS for PVCs)
 
-** Screenshots
-*** Homepage
-[[./.github/screenshots/homepage.png]]
+## Screenshots
 
-*** Stats
-[[./.github/screenshots/stats.jpeg]]
+### Homepage
 
-*** Jellyfin
-[[./.github/screenshots/jellyfin.jpeg]]
+![Homepage](.github/screenshots/homepage.png)
 
-*** Grafana
-[[./.github/screenshots/grafana.jpeg]]
+### Stats
 
-*** Uptime
-[[./.github/screenshots/uptime.jpeg]]
+![Stats](.github/screenshots/stats.jpeg)
+
+### Jellyfin
+
+![Jellyfin](.github/screenshots/jellyfin.jpeg)
+
+### Grafana
+
+![Grafana](.github/screenshots/grafana.jpeg)
+
+### Uptime
+
+![Uptime](.github/screenshots/uptime.jpeg)
+

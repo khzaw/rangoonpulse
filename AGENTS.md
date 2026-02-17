@@ -32,6 +32,14 @@ continue work without re-discovery.
 - Keep ingress, DNS annotation, and TLS settings aligned for every externally accessed app.
 - Do not commit plaintext passwords/API keys in manifests.
 
+## Documentation Hygiene (For Agents)
+- If you change conventions (networking/access model, DNS/hostnames, storage classes, secrets patterns, app charts),
+  update `AGENTS.md` and the most relevant doc(s) under `docs/`.
+- If you find a new operational gotcha or incident pattern, add a short focused doc in `docs/` and link it from
+  `AGENTS.md` ("Useful Reference Docs").
+- Keep docs actionable: file paths, k8s object names, and concrete commands beat long narratives.
+- Don’t churn docs for small tweaks; update docs only when it improves future ops/debugging.
+
 ## Current Access Model (Important)
 The cluster uses a simplified unified path:
 - LAN path: user -> `10.0.0.231` (MetalLB ingress IP)
