@@ -235,7 +235,7 @@ spec:
                                 url: https://jellystat.khzaw.dev
                                 icon: di:jellystat
                               - title: Uptime Kuma
-                                url: https://uptime-kuma.khzaw.dev
+                                url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
                               - title: Router
                                 url: https://router.khzaw.dev

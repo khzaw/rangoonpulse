@@ -4,9 +4,3 @@ kind: Kustomization
 namespace: default
 resources:
   - ./helmrelease.yaml
-configMapGenerator:
-  - name: uptime-kuma-helm-values
-    files:
-      - values.yaml=values.yaml # Creates a key 'values.yaml' in the ConfigMap with the content of the file
-    options:
-      disableNameSuffixHash: true

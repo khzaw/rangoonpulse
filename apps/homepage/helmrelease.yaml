@@ -295,7 +295,7 @@ spec:
                   days: 90
             - Uptime:
                 icon: uptime-kuma.png
-                href: https://uptime-kuma.khzaw.dev
+                href: https://uptime.khzaw.dev
                 description: Uptime checks
                 widget:
                   type: uptimekuma
