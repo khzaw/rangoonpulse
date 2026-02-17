@@ -87,7 +87,7 @@ spec:
             branding:
               logo-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
               favicon-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
-              app-name: KHZ Glance
+              app-name: rangoonpulse
               app-icon-url: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glance.svg
               app-background-color: "#0a0a0a"
               hide-footer: true
