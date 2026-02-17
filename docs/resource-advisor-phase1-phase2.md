@@ -1,12 +1,13 @@
-# Resource Advisor (Phase 1 + Phase 3)
+# Resource Advisor (Phase 1 + Phase 2 + Phase 3)
 
 ## Overview
 This component provides policy-driven resource tuning recommendations for the homelab cluster.
 
 - Phase 1: report-only analysis (daily CronJob) published to Kubernetes ConfigMap.
+- Phase 2: capacity-aware apply planning (node-fit simulation, headroom checks, and tradeoff recommendations).
 - Phase 3: safe apply PR generation with budget and data-maturity gates (weekly CronJob).
 
-Phase 2 (report PR generation) is intentionally disabled to keep the repository clean.
+Report PR generation is intentionally disabled to keep the repository clean.
 
 It is intentionally lightweight and runs as short-lived CronJobs in the `monitoring` namespace.
 
@@ -32,7 +33,7 @@ Apply PR cleanliness:
 - only HelmRelease resource diffs are committed
 - no generated `docs/resource-advisor/*.json` or `*.md` artifacts are committed
 - all rationale is embedded in the PR description
-- PR description includes deadband, budget, maturity, selected changes, and skipped reason summary
+- PR description includes deadband, budget/headroom, node-fit snapshot, selected changes, skipped reason summary, and tradeoff recommendations when upsizes are blocked
 
 ## GitOps Paths
 - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/`
@@ -48,12 +49,13 @@ Apply PR cleanliness:
 ## Node Constraint Awareness
 The report and apply planner are constrained by node capacity:
 - Uses allocatable node CPU/memory from Kubernetes API.
-- Tracks current request footprint and projected request footprint.
+- Phase 2 uses live pod request footprint (Kubernetes API) for headroom checks (includes replicas and all namespaces).
+- Phase 2 runs a node-fit simulation based on current pod placement to reduce single-node saturation risk.
 - Enforces apply budget ceilings:
   - `MAX_REQUESTS_PERCENT_CPU` (default 60%)
   - `MAX_REQUESTS_PERCENT_MEMORY` (default 65%)
 
-This prevents unconstrained upsize drift.
+This prevents unconstrained upsize drift and helps keep the cluster schedulable.
 
 ## Data Maturity Gates
 Prometheus can be recently deployed and data may be immature.

@@ -175,6 +175,7 @@ Important external-dns behavior:
   - commit only HelmRelease resource changes
   - do not commit generated report/apply artifacts into repository
   - include decision rationale, constraints, and skipped reasons in PR description
+  - apply planner uses live pod request footprint + current pod placement for node-fit simulation; see `docs/resource-advisor-phase1-phase2.md`
   - do not chase raw averages; deadband is enforced by default:
     - `DEADBAND_PERCENT=10`
     - `DEADBAND_CPU_M=25`
