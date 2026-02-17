@@ -95,8 +95,11 @@ spec:
             image:
               repository: timescale/timescaledb
               tag: 2.25.0-pg16
-            # Use the image entrypoint (it switches to the postgres user). Only override args.
+            # Use the Timescale entrypoint (it initializes the data dir and drops privileges).
+            command:
+              - /usr/local/bin/docker-entrypoint.sh
             args:
+              - postgres
               - -c
               - timescaledb.max_tuples_decompressed_per_dml_transaction=0
               - -c

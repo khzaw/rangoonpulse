@@ -32,6 +32,22 @@ spec:
             image:
               repository: ghcr.io/dmunozv04/isponsorblocktv
               tag: latest
+            command:
+              - sh
+              - -c
+            args:
+              - |
+                set -eu
+                while true; do
+                  # The upstream image exits when there is no configured device.
+                  # Keep the container alive and retry periodically; once devices are configured
+                  # under /app/data, the "start" command will stay running.
+                  python3 -m iSponsorBlockTV --data /app/data start || true
+                  echo "iSponsorBlockTV exited. If you have not configured devices yet, run:"
+                  echo "  kubectl exec -n default -it deploy/isponsorblock-tv -c main -- \\"
+                  echo "    python3 -m iSponsorBlockTV --data /app/data setup-cli"
+                  sleep 60
+                done
             env:
               TZ: "Asia/Singapore"
             resources:
