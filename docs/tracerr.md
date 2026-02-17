@@ -7,16 +7,13 @@
 - GitOps: `apps/tracerr/`
 - HelmRelease: `apps/tracerr/helmrelease.yaml`
 
-Tracerr is deployed as a single app-template release with multiple containers in one pod:
+Tracerr runs as a single app-template release:
 - `main`: Tracearr web/app
-- `db`: TimescaleDB (Postgres)
 - `redis`: Redis
 
-This keeps the service "capsulated" and avoids cross-namespace dependency sprawl.
+Postgres/TimescaleDB is provided by the shared in-cluster instance `media-postgres`.
 
 ## Storage
-- Timescale/Postgres data: `local-path` PVC (`tracerr-db-data`)
-  - Rationale: Postgres/Timescale durability and fsync/latency characteristics are better on node-local storage than NFS.
 - Redis data: `truenas-nfs` PVC (`tracerr-redis-data`)
 
 ## Required Secrets (Not In Git)
@@ -36,7 +33,7 @@ Example (generates random values locally and applies them):
 POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 JWT_SECRET="$(openssl rand -hex 32)"
 COOKIE_SECRET="$(openssl rand -hex 32)"
-DATABASE_URL="postgres://tracearr:${POSTGRES_PASSWORD}@127.0.0.1:5432/tracearr"
+DATABASE_URL="postgres://tracearr:${POSTGRES_PASSWORD}@media-postgres:5432/tracearr"
 
 kubectl create secret generic tracerr-db-secret -n default \
   --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
@@ -48,4 +45,3 @@ kubectl create secret generic tracerr-app-secret -n default \
   --from-literal=COOKIE_SECRET="$COOKIE_SECRET" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
-

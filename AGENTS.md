@@ -93,6 +93,8 @@ Important external-dns behavior:
 - Immich:
   - photos/library on NFS PVC `immich-library` (`truenas-hdd-media`, RWX, 500Gi, expandable)
   - Postgres on `local-path` for low-latency/stability
+- media-postgres (shared TimescaleDB):
+  - Postgres/Timescale on `local-path` (node-local) for reliability; see `docs/media-postgres.md`
 - Vaultwarden:
   - data on NFS (`truenas-nfs`, 5Gi, expandable)
 - Grafana:
@@ -228,5 +230,6 @@ Examples:
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
 - `docs/isponsorblocktv.md`
+- `docs/media-postgres.md`
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
