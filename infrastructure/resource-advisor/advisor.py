@@ -77,6 +77,14 @@ def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(value, high))
 
 
+def safe_int(value: object, default: int = 1) -> int:
+    try:
+        parsed = int(value)  # type: ignore[arg-type]
+    except Exception:
+        return default
+    return parsed if parsed > 0 else default
+
+
 def parse_cpu_to_m(value: str | None) -> float:
     if not value:
         return 0.0
@@ -300,6 +308,19 @@ class KubeClient:
             return []
         return payload.get("items", [])
 
+    def list_pods(self, namespace: str | None = None) -> list[dict]:
+        if namespace:
+            path = f"/api/v1/namespaces/{namespace}/pods"
+        else:
+            path = "/api/v1/pods"
+
+        status, payload = self.request_json("GET", path)
+        if status != 200:
+            ns = namespace or "*"
+            log(f"Failed to list pods in {ns}: {status} {payload}")
+            return []
+        return payload.get("items", [])
+
     def upsert_configmap(self, namespace: str, name: str, data: dict[str, str]) -> None:
         get_status, get_payload = self.request_json("GET", f"/api/v1/namespaces/{namespace}/configmaps/{name}")
 
@@ -397,6 +418,99 @@ def recommend(current: float, target: float, max_step_percent: float) -> float:
     low = current * (1.0 - step)
     high = current * (1.0 + step)
     return clamp(target, low, high)
+
+
+def pod_effective_requests(pod: dict) -> tuple[float, float]:
+    """Return the pod's effective CPU(m) and memory(Mi) requests.
+
+    Scheduler semantics: sum(containers) vs max(initContainers), per resource.
+    """
+
+    spec = pod.get("spec", {}) or {}
+
+    def sum_requests(containers: list[dict] | None) -> tuple[float, float]:
+        cpu_m = 0.0
+        mem_mi = 0.0
+        for c in containers or []:
+            req = (c.get("resources", {}) or {}).get("requests", {}) or {}
+            cpu_m += parse_cpu_to_m(req.get("cpu"))
+            mem_mi += parse_mem_to_mi(req.get("memory"))
+        return cpu_m, mem_mi
+
+    def max_requests(containers: list[dict] | None) -> tuple[float, float]:
+        cpu_m = 0.0
+        mem_mi = 0.0
+        for c in containers or []:
+            req = (c.get("resources", {}) or {}).get("requests", {}) or {}
+            cpu_m = max(cpu_m, parse_cpu_to_m(req.get("cpu")))
+            mem_mi = max(mem_mi, parse_mem_to_mi(req.get("memory")))
+        return cpu_m, mem_mi
+
+    cont_cpu_m, cont_mem_mi = sum_requests(spec.get("containers"))
+    init_cpu_m, init_mem_mi = max_requests(spec.get("initContainers"))
+    return max(cont_cpu_m, init_cpu_m), max(cont_mem_mi, init_mem_mi)
+
+
+def pod_has_container_name(pod: dict, container_name: str) -> bool:
+    spec = pod.get("spec", {}) or {}
+    for c in spec.get("containers", []) or []:
+        if c.get("name") == container_name:
+            return True
+    return False
+
+
+def build_pod_placement_index(pods: list[dict]) -> dict[tuple[str, str], dict[str, int]]:
+    """Return (release, container) -> {nodeName: pod_count} for scheduled pods."""
+
+    index: dict[tuple[str, str], dict[str, int]] = {}
+    for pod in pods:
+        spec = pod.get("spec", {}) or {}
+        node = spec.get("nodeName")
+        if not node:
+            continue
+
+        meta = pod.get("metadata", {}) or {}
+        labels = meta.get("labels", {}) or {}
+        release = labels.get("app.kubernetes.io/instance") or ""
+        if not release:
+            continue
+
+        for c in spec.get("containers", []) or []:
+            name = c.get("name") or ""
+            if not name:
+                continue
+            key = (release, name)
+            index.setdefault(key, {})
+            index[key][node] = index[key].get(node, 0) + 1
+    return index
+
+
+def build_node_request_footprint(pods: list[dict]) -> tuple[dict[str, dict[str, float]], float, float]:
+    """Return per-node request totals and cluster totals (CPU m, Memory Mi)."""
+
+    per_node: dict[str, dict[str, float]] = {}
+    total_cpu_m = 0.0
+    total_mem_mi = 0.0
+
+    for pod in pods:
+        spec = pod.get("spec", {}) or {}
+        node = spec.get("nodeName")
+        if not node:
+            continue
+
+        status = pod.get("status", {}) or {}
+        phase = (status.get("phase") or "").lower()
+        if phase in ("succeeded", "failed"):
+            continue
+
+        cpu_m, mem_mi = pod_effective_requests(pod)
+        per_node.setdefault(node, {"cpu_m": 0.0, "mem_mi": 0.0})
+        per_node[node]["cpu_m"] += cpu_m
+        per_node[node]["mem_mi"] += mem_mi
+        total_cpu_m += cpu_m
+        total_mem_mi += mem_mi
+
+    return per_node, total_cpu_m, total_mem_mi
 
 
 def write_outputs(report: dict, markdown: str) -> None:
@@ -652,6 +766,7 @@ def build_report() -> tuple[dict, str]:
             for workload in workloads:
                 meta = workload.get("metadata", {})
                 spec = workload.get("spec", {}).get("template", {}).get("spec", {})
+                replicas = safe_int((workload.get("spec", {}) or {}).get("replicas"), 1)
                 labels = meta.get("labels", {})
                 workload_name = meta.get("name", "unknown")
                 release = labels.get("app.kubernetes.io/instance", workload_name)
@@ -669,8 +784,9 @@ def build_report() -> tuple[dict, str]:
                     cur_lim_cpu = parse_cpu_to_m(lim.get("cpu"))
                     cur_lim_mem = parse_mem_to_mi(lim.get("memory"))
 
-                    total_current_req_cpu_m += cur_req_cpu
-                    total_current_req_mem_mi += cur_req_mem
+                    # Budget and headroom checks should reflect real cluster footprint, not per-pod template values.
+                    total_current_req_cpu_m += cur_req_cpu * replicas
+                    total_current_req_mem_mi += cur_req_mem * replicas
 
                     cpu_query = (
                         f'quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{{namespace="{namespace}",'
@@ -691,8 +807,8 @@ def build_report() -> tuple[dict, str]:
 
                     if cpu_p95_cores is None and mem_p95_bytes is None:
                         skipped_no_metrics += 1
-                        total_recommended_req_cpu_m += cur_req_cpu
-                        total_recommended_req_mem_mi += cur_req_mem
+                        total_recommended_req_cpu_m += cur_req_cpu * replicas
+                        total_recommended_req_mem_mi += cur_req_mem * replicas
                         continue
 
                     containers_with_data += 1
@@ -730,8 +846,8 @@ def build_report() -> tuple[dict, str]:
                             rec_lim_mem = cur_lim_mem
                         notes.append("downscale_excluded")
 
-                    total_recommended_req_cpu_m += rec_req_cpu
-                    total_recommended_req_mem_mi += rec_req_mem
+                    total_recommended_req_cpu_m += rec_req_cpu * replicas
+                    total_recommended_req_mem_mi += rec_req_mem * replicas
 
                     req_cpu_delta = pct_delta(cur_req_cpu, rec_req_cpu)
                     req_mem_delta = pct_delta(cur_req_mem, rec_req_mem)
@@ -822,6 +938,7 @@ def build_report() -> tuple[dict, str]:
                             "kind": kind[:-1],
                             "workload": workload_name,
                             "release": release,
+                            "replicas": replicas,
                             "container": container_name,
                             "restarts_window": round(restart_lookback, 2),
                             "cpu_p95_m": round(cpu_p95_m, 1),
@@ -1007,17 +1124,106 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     allowlist_default = ",".join(sorted(APP_TEMPLATE_RELEASE_FILE_MAP.keys()))
     allowlist = set(env_list("APPLY_ALLOWLIST", allowlist_default))
 
-    alloc_cpu_m = parse_cpu_to_m(report.get("budget", {}).get("allocatable", {}).get("cpu"))
-    alloc_mem_mi = parse_mem_to_mi(report.get("budget", {}).get("allocatable", {}).get("memory"))
+    # Phase 2 (Capacity-Aware v2):
+    # Use live pod request footprint for budget and headroom checks (includes replicas + all namespaces),
+    # and simulate node-fit using current pod placement.
+    kube = KubeClient()
+    nodes = kube.list_nodes()
+    pods = kube.list_pods()
+
+    node_alloc: dict[str, dict[str, float]] = {}
+    alloc_cpu_m = 0.0
+    alloc_mem_mi = 0.0
+    for node in nodes:
+        name = (node.get("metadata", {}) or {}).get("name") or ""
+        if not name:
+            continue
+        alloc = (node.get("status", {}) or {}).get("allocatable", {}) or {}
+        cpu_m = parse_cpu_to_m(alloc.get("cpu"))
+        mem_mi = parse_mem_to_mi(alloc.get("memory"))
+        node_alloc[name] = {"cpu_m": cpu_m, "mem_mi": mem_mi}
+        alloc_cpu_m += cpu_m
+        alloc_mem_mi += mem_mi
+
+    node_current, current_cpu_m, current_mem_mi = build_node_request_footprint(pods)
+    placement_index = build_pod_placement_index(pods)
+
     cpu_budget_m = alloc_cpu_m * (cpu_budget_pct / 100.0)
     mem_budget_mi = alloc_mem_mi * (mem_budget_pct / 100.0)
 
-    current_cpu_m = float(report.get("summary", {}).get("total_current_requests_cpu_m", 0.0))
-    current_mem_mi = float(report.get("summary", {}).get("total_current_requests_memory_mi", 0.0))
+    node_cpu_budget: dict[str, float] = {
+        name: node_alloc[name]["cpu_m"] * (cpu_budget_pct / 100.0) for name in node_alloc
+    }
+    node_mem_budget: dict[str, float] = {
+        name: node_alloc[name]["mem_mi"] * (mem_budget_pct / 100.0) for name in node_alloc
+    }
 
     downsizes = []
     upsizes = []
     skipped = []
+
+    def placement_counts_for(item: dict) -> dict[str, int]:
+        placement = (item.get("placement") or {}) if isinstance(item.get("placement"), dict) else {}
+        placement = {k: int(v) for k, v in placement.items() if k in node_alloc and int(v) > 0}
+        if placement:
+            return placement
+        # Fall back to placing on the first allocatable node.
+        if node_alloc:
+            first = sorted(node_alloc.keys())[0]
+            return {first: safe_int(item.get("replicas"), 1)}
+        return {}
+
+    def apply_item_to_projection(
+        proj_by_node: dict[str, dict[str, float]],
+        item: dict,
+    ) -> dict[str, dict[str, float]]:
+        next_by_node = {k: {"cpu_m": v.get("cpu_m", 0.0), "mem_mi": v.get("mem_mi", 0.0)} for k, v in proj_by_node.items()}
+        counts = placement_counts_for(item)
+        delta_cpu_per_pod = float(item.get("delta", {}).get("requests_cpu_m", 0.0) or 0.0)
+        delta_mem_per_pod = float(item.get("delta", {}).get("requests_memory_mi", 0.0) or 0.0)
+        for node, count in counts.items():
+            next_by_node.setdefault(node, {"cpu_m": 0.0, "mem_mi": 0.0})
+            next_by_node[node]["cpu_m"] += delta_cpu_per_pod * float(count)
+            next_by_node[node]["mem_mi"] += delta_mem_per_pod * float(count)
+        return next_by_node
+
+    def totals_from_by_node(by_node: dict[str, dict[str, float]]) -> tuple[float, float]:
+        total_cpu = 0.0
+        total_mem = 0.0
+        for name, vals in by_node.items():
+            total_cpu += float(vals.get("cpu_m", 0.0) or 0.0)
+            total_mem += float(vals.get("mem_mi", 0.0) or 0.0)
+        return total_cpu, total_mem
+
+    def check_fit(by_node: dict[str, dict[str, float]]) -> tuple[bool, dict]:
+        total_cpu, total_mem = totals_from_by_node(by_node)
+        details = {
+            "total_cpu_m": round(total_cpu, 1),
+            "total_mem_mi": round(total_mem, 1),
+            "cpu_budget_m": round(cpu_budget_m, 1),
+            "mem_budget_mi": round(mem_budget_mi, 1),
+            "over_total_cpu_m": round(max(0.0, total_cpu - cpu_budget_m), 1),
+            "over_total_mem_mi": round(max(0.0, total_mem - mem_budget_mi), 1),
+            "over_by_node": {},
+        }
+
+        ok = True
+        if total_cpu > cpu_budget_m + 0.01 or total_mem > mem_budget_mi + 0.01:
+            ok = False
+
+        for name in node_alloc:
+            cpu = float((by_node.get(name) or {}).get("cpu_m", 0.0) or 0.0)
+            mem = float((by_node.get(name) or {}).get("mem_mi", 0.0) or 0.0)
+            over_cpu = max(0.0, cpu - node_cpu_budget.get(name, 0.0))
+            over_mem = max(0.0, mem - node_mem_budget.get(name, 0.0))
+            if over_cpu > 0.01 or over_mem > 0.01:
+                ok = False
+                details["over_by_node"][name] = {
+                    "over_cpu_m": round(over_cpu, 1),
+                    "over_mem_mi": round(over_mem, 1),
+                }
+
+        return ok, details
 
     for rec in recommendations:
         release = rec.get("release", "")
@@ -1049,13 +1255,20 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         if abs(delta_cpu) < 1.0 and abs(delta_mem) < 1.0:
             continue
 
+        placement = placement_index.get((release, container), {})
+        replicas_estimate = sum(placement.values()) if placement else 0
+        if replicas_estimate <= 0:
+            replicas_estimate = safe_int(rec.get("replicas"), 1)
+
         item = {
             "namespace": rec.get("namespace"),
             "workload": rec.get("workload"),
             "release": release,
             "container": container,
+            "replicas": replicas_estimate,
             "path": path,
             "notes": notes,
+            "placement": placement,
             "current": {
                 "requests": {
                     "cpu": rec.get("current", {}).get("requests", {}).get("cpu", "0m"),
@@ -1077,13 +1290,17 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                 },
             },
             "delta": {
+                # Per-pod deltas (these are the values that get written into HelmRelease YAML).
                 "requests_cpu_m": round(delta_cpu, 1),
                 "requests_memory_mi": round(delta_mem, 1),
+                # Total deltas based on current replica placement; used for budget + node-fit simulation.
+                "requests_cpu_m_total": round(delta_cpu * float(replicas_estimate), 1),
+                "requests_memory_mi_total": round(delta_mem * float(replicas_estimate), 1),
             },
             "priority": (
                 1 if "restart_guard" in notes else 0,
                 rec.get("restarts_window", 0),
-                abs(delta_mem) + abs(delta_cpu / 10.0),
+                abs(delta_mem * float(replicas_estimate)) + abs((delta_cpu * float(replicas_estimate)) / 10.0),
             ),
         }
 
@@ -1120,48 +1337,139 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             continue
         downsizes.append(item)
 
-    downsizes.sort(key=lambda x: -(abs(x["delta"]["requests_memory_mi"]) + abs(x["delta"]["requests_cpu_m"] / 10.0)))
+    downsizes.sort(
+        key=lambda x: -(
+            abs(x["delta"].get("requests_memory_mi_total", 0.0))
+            + abs(x["delta"].get("requests_cpu_m_total", 0.0) / 10.0)
+        )
+    )
     upsizes.sort(key=lambda x: (-x["priority"][0], -x["priority"][1], -x["priority"][2]))
 
-    selected = []
-    projected_cpu_m = current_cpu_m
-    projected_mem_mi = current_mem_mi
+    # Start projected state from live pod request footprint (node-aware).
+    projected_by_node = {name: {"cpu_m": 0.0, "mem_mi": 0.0} for name in node_alloc}
+    for name in node_alloc:
+        projected_by_node[name]["cpu_m"] = float((node_current.get(name) or {}).get("cpu_m", 0.0) or 0.0)
+        projected_by_node[name]["mem_mi"] = float((node_current.get(name) or {}).get("mem_mi", 0.0) or 0.0)
 
-    for item in downsizes:
+    selected: list[dict] = []
+
+    def tradeoff_score(down: dict, over: dict) -> float:
+        # Higher score means this downsize reduces the current overages more effectively.
+        cpu_save = max(0.0, -(float(down.get("delta", {}).get("requests_cpu_m_total", 0.0) or 0.0)))
+        mem_save = max(0.0, -(float(down.get("delta", {}).get("requests_memory_mi_total", 0.0) or 0.0)))
+        score = 0.0
+
+        over_cpu = float(over.get("over_total_cpu_m", 0.0) or 0.0)
+        over_mem = float(over.get("over_total_mem_mi", 0.0) or 0.0)
+        if over_cpu > 0.0:
+            score += min(cpu_save, over_cpu) / over_cpu
+        if over_mem > 0.0:
+            score += min(mem_save, over_mem) / over_mem
+
+        # Bonus for targeting node-level overages where the downsize actually runs.
+        by_node = over.get("over_by_node", {}) or {}
+        placement = placement_counts_for(down)
+        delta_cpu_per = float(down.get("delta", {}).get("requests_cpu_m", 0.0) or 0.0)
+        delta_mem_per = float(down.get("delta", {}).get("requests_memory_mi", 0.0) or 0.0)
+        for node, node_over in by_node.items():
+            if node not in placement:
+                continue
+            node_over_cpu = float((node_over or {}).get("over_cpu_m", 0.0) or 0.0)
+            node_over_mem = float((node_over or {}).get("over_mem_mi", 0.0) or 0.0)
+            cpu_save_node = max(0.0, -(delta_cpu_per * float(placement[node])))
+            mem_save_node = max(0.0, -(delta_mem_per * float(placement[node])))
+            if node_over_cpu > 0.0:
+                score += min(cpu_save_node, node_over_cpu) / max(1.0, node_over_cpu)
+            if node_over_mem > 0.0:
+                score += min(mem_save_node, node_over_mem) / max(1.0, node_over_mem)
+
+        return score
+
+    # Tradeoff-first planner:
+    # 1) Try to select highest priority upsizes.
+    # 2) If an upsize doesn't fit, attempt to add a minimal set of downsizes to make it fit.
+    # 3) Fill remaining slots with biggest safe downsizes.
+    remaining_downsizes = list(downsizes)
+
+    for up in upsizes:
         if len(selected) >= max_changes:
-            skipped.append({"reason": "max_changes_reached", "release": item["release"], "container": item["container"]})
+            skipped.append({"reason": "max_changes_reached", "release": up["release"], "container": up["container"]})
             continue
-        projected_cpu_m += item["delta"]["requests_cpu_m"]
-        projected_mem_mi += item["delta"]["requests_memory_mi"]
-        item["selection_reason"] = "downsize_with_mature_data"
-        selected.append(item)
 
-    for item in upsizes:
+        test_with_up = apply_item_to_projection(projected_by_node, up)
+        ok, over = check_fit(test_with_up)
+        if ok:
+            projected_by_node = test_with_up
+            up["selection_reason"] = "upsize_within_budget_and_node_fit"
+            selected.append(up)
+            continue
+
+        # Try to pick tradeoff downsizes that reduce the current overages until the upsize fits.
+        tradeoff_selected: list[dict] = []
+        test_base = {k: {"cpu_m": v["cpu_m"], "mem_mi": v["mem_mi"]} for k, v in projected_by_node.items()}
+        candidates = [d for d in remaining_downsizes]
+        remaining_slots_for_tradeoff = max_changes - len(selected) - 1
+
+        while candidates and remaining_slots_for_tradeoff > 0:
+            candidates.sort(key=lambda d: tradeoff_score(d, over), reverse=True)
+            best = candidates[0]
+            best_score = tradeoff_score(best, over)
+            if best_score <= 0.0:
+                break
+
+            test_base = apply_item_to_projection(test_base, best)
+            remaining_slots_for_tradeoff -= 1
+            tradeoff_selected.append(best)
+            candidates = [d for d in candidates if not (d["release"] == best["release"] and d["container"] == best["container"])]
+
+            test_with_up = apply_item_to_projection(test_base, up)
+            ok, over = check_fit(test_with_up)
+            if ok:
+                break
+
+        if ok:
+            for d in tradeoff_selected:
+                d["selection_reason"] = f"tradeoff_downsize_to_enable_{up['release']}"
+                selected.append(d)
+                remaining_downsizes = [x for x in remaining_downsizes if not (x["release"] == d["release"] and x["container"] == d["container"])]
+            projected_by_node = test_with_up
+            up["selection_reason"] = "upsize_enabled_by_tradeoff_downsizes"
+            selected.append(up)
+            continue
+
+        # Skip this upsize, but include actionable tradeoff suggestions.
+        candidates = [d for d in remaining_downsizes]
+        candidates.sort(key=lambda d: tradeoff_score(d, over), reverse=True)
+        suggestions = []
+        for d in candidates[:5]:
+            suggestions.append(f"{d['release']}/{d['container']} ({d['delta']['requests_cpu_m_total']}m, {d['delta']['requests_memory_mi_total']}Mi)")
+
+        skipped.append(
+            {
+                "reason": "budget_or_node_fit_block",
+                "release": up["release"],
+                "container": up["container"],
+                "over": over,
+                "tradeoff_suggestions": suggestions,
+            }
+        )
+
+    # Fill remaining slots with largest downsizes after upsizes are handled.
+    for down in list(remaining_downsizes):
         if len(selected) >= max_changes:
-            skipped.append({"reason": "max_changes_reached", "release": item["release"], "container": item["container"]})
+            skipped.append({"reason": "max_changes_reached", "release": down["release"], "container": down["container"]})
             continue
-
-        next_cpu = projected_cpu_m + item["delta"]["requests_cpu_m"]
-        next_mem = projected_mem_mi + item["delta"]["requests_memory_mi"]
-
-        if next_cpu > cpu_budget_m or next_mem > mem_budget_mi:
-            skipped.append(
-                {
-                    "reason": "budget_guard_block",
-                    "release": item["release"],
-                    "container": item["container"],
-                    "projected_cpu_m": round(next_cpu, 1),
-                    "projected_mem_mi": round(next_mem, 1),
-                    "cpu_budget_m": round(cpu_budget_m, 1),
-                    "mem_budget_mi": round(mem_budget_mi, 1),
-                }
-            )
+        test = apply_item_to_projection(projected_by_node, down)
+        ok, _over = check_fit(test)
+        # Downsizing should always improve fit, but keep the check for consistency.
+        if not ok:
+            skipped.append({"reason": "unexpected_fit_regression_on_downsize", "release": down["release"], "container": down["container"]})
             continue
+        projected_by_node = test
+        down["selection_reason"] = "downsize_with_mature_data"
+        selected.append(down)
 
-        projected_cpu_m = next_cpu
-        projected_mem_mi = next_mem
-        item["selection_reason"] = "upsize_within_budget"
-        selected.append(item)
+    projected_cpu_m, projected_mem_mi = totals_from_by_node(projected_by_node)
 
     plan = {
         "generated_at": report.get("generated_at"),
@@ -1188,6 +1496,31 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         "budgets": {
             "cpu_m": round(cpu_budget_m, 1),
             "memory_mi": round(mem_budget_mi, 1),
+        },
+        "node_fit": {
+            "assumptions": "Node-fit simulation is based on current pod placement (by label app.kubernetes.io/instance) and current replica counts. Scaling or rescheduling may change the footprint.",
+            "nodes": [
+                {
+                    "name": name,
+                    "allocatable": {
+                        "cpu_m": round(node_alloc[name]["cpu_m"], 1),
+                        "memory_mi": round(node_alloc[name]["mem_mi"], 1),
+                    },
+                    "budget": {
+                        "cpu_m": round(node_cpu_budget.get(name, 0.0), 1),
+                        "memory_mi": round(node_mem_budget.get(name, 0.0), 1),
+                    },
+                    "current_requests": {
+                        "cpu_m": round(float((node_current.get(name) or {}).get("cpu_m", 0.0) or 0.0), 1),
+                        "memory_mi": round(float((node_current.get(name) or {}).get("mem_mi", 0.0) or 0.0), 1),
+                    },
+                    "projected_requests": {
+                        "cpu_m": round(float((projected_by_node.get(name) or {}).get("cpu_m", 0.0) or 0.0), 1),
+                        "memory_mi": round(float((projected_by_node.get(name) or {}).get("mem_mi", 0.0) or 0.0), 1),
+                    },
+                }
+                for name in sorted(node_alloc.keys())
+            ],
         },
         "selected": selected,
         "skipped": skipped,
@@ -1409,15 +1742,23 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
 
     selected_lines = []
     for item in selected[:20]:
+        replicas = safe_int(item.get("replicas"), 1)
+        delta_total_cpu = item.get("delta", {}).get("requests_cpu_m_total")
+        delta_total_mem = item.get("delta", {}).get("requests_memory_mi_total")
         selected_lines.append(
             "- `{release}/{container}`: CPU `{cur_cpu}` -> `{new_cpu}`, "
-            "Memory `{cur_mem}` -> `{new_mem}`; rationale: `{reason}`; notes: `{notes}`".format(
+            "Memory `{cur_mem}` -> `{new_mem}`; replicas: `{replicas}`; "
+            "total delta: CPU `{delta_cpu_total}m`, Mem `{delta_mem_total}Mi`; "
+            "rationale: `{reason}`; notes: `{notes}`".format(
                 release=item.get("release"),
                 container=item.get("container"),
                 cur_cpu=item.get("current", {}).get("requests", {}).get("cpu"),
                 new_cpu=item.get("recommended", {}).get("requests", {}).get("cpu"),
                 cur_mem=item.get("current", {}).get("requests", {}).get("memory"),
                 new_mem=item.get("recommended", {}).get("requests", {}).get("memory"),
+                replicas=replicas,
+                delta_cpu_total=delta_total_cpu if delta_total_cpu is not None else "n/a",
+                delta_mem_total=delta_total_mem if delta_total_mem is not None else "n/a",
                 reason=item.get("selection_reason", "policy-selected"),
                 notes=",".join(item.get("notes", [])) or "none",
             )
@@ -1431,30 +1772,94 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
     if not skipped_lines:
         skipped_lines.append("- none")
 
-    body = (
-        "Automated safe resource apply proposal.\n\n"
-        "## Constraints\n"
-        f"- Metrics window: `{report.get('metrics_window')}`\n"
-        f"- Metrics coverage estimate: `{plan.get('metrics_coverage_days_estimate')}` days\n"
-        f"- Deadband policy: `{report.get('policy', {}).get('deadband_percent')}%` "
-        f"or CPU delta `>= {report.get('policy', {}).get('deadband_cpu_m')}m` "
-        f"or Memory delta `>= {report.get('policy', {}).get('deadband_mem_mi')}Mi`\n"
-        f"- CPU request budget: `{plan.get('budgets', {}).get('cpu_m')}m`\n"
-        f"- Memory request budget: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n"
-        f"- Current requests: CPU `{plan.get('current_requests', {}).get('cpu_m')}m`, "
-        f"Memory `{plan.get('current_requests', {}).get('memory_mi')}Mi`\n"
-        f"- Projected requests after selected changes: CPU "
-        f"`{plan.get('projected_requests_after_selected', {}).get('cpu_m')}m`, Memory "
-        f"`{plan.get('projected_requests_after_selected', {}).get('memory_mi')}Mi`\n\n"
-        "## Selected Changes\n"
-        + "\n".join(selected_lines)
-        + "\n\n## Skipped Candidates (Reason Summary)\n"
-        + "\n".join(skipped_lines)
-        + "\n\n## Report Source\n"
-        "- Latest machine-readable report is in ConfigMap "
-        "`monitoring/resource-advisor-latest`.\n"
-        "- This PR intentionally includes HelmRelease resource changes only.\n"
-    )
+    node_fit = plan.get("node_fit", {}) or {}
+    node_fit_assumptions = str(node_fit.get("assumptions") or "").strip()
+    node_rows = []
+    for node in node_fit.get("nodes", []) or []:
+        name = node.get("name", "unknown")
+        alloc = node.get("allocatable", {}) or {}
+        budget = node.get("budget", {}) or {}
+        cur = node.get("current_requests", {}) or {}
+        proj = node.get("projected_requests", {}) or {}
+        node_rows.append(
+            "| {name} | {alloc_cpu} | {budget_cpu} | {cur_cpu} | {proj_cpu} | {alloc_mem} | {budget_mem} | {cur_mem} | {proj_mem} |".format(
+                name=name,
+                alloc_cpu=fmt_cpu_m(float(alloc.get("cpu_m", 0.0) or 0.0)),
+                budget_cpu=fmt_cpu_m(float(budget.get("cpu_m", 0.0) or 0.0)),
+                cur_cpu=fmt_cpu_m(float(cur.get("cpu_m", 0.0) or 0.0)),
+                proj_cpu=fmt_cpu_m(float(proj.get("cpu_m", 0.0) or 0.0)),
+                alloc_mem=fmt_mem_mi(float(alloc.get("memory_mi", 0.0) or 0.0)),
+                budget_mem=fmt_mem_mi(float(budget.get("memory_mi", 0.0) or 0.0)),
+                cur_mem=fmt_mem_mi(float(cur.get("memory_mi", 0.0) or 0.0)),
+                proj_mem=fmt_mem_mi(float(proj.get("memory_mi", 0.0) or 0.0)),
+            )
+        )
+
+    tradeoff_lines = []
+    for item in plan.get("skipped", []) or []:
+        if item.get("reason") != "budget_or_node_fit_block":
+            continue
+        release = item.get("release")
+        container = item.get("container")
+        over = item.get("over", {}) or {}
+        suggestions = item.get("tradeoff_suggestions") or []
+        over_total_cpu = over.get("over_total_cpu_m")
+        over_total_mem = over.get("over_total_mem_mi")
+        over_nodes = over.get("over_by_node", {}) or {}
+        node_bits = []
+        for n, v in over_nodes.items():
+            node_bits.append(f"{n}: +{v.get('over_cpu_m', 0)}m, +{v.get('over_mem_mi', 0)}Mi")
+        tradeoff_lines.append(
+            "- `{}/{}:` blocked by budget/node-fit (over: CPU `{}m`, Mem `{}Mi`; nodes: {}). Suggested downsizes: {}".format(
+                release,
+                container,
+                over_total_cpu if over_total_cpu is not None else "n/a",
+                over_total_mem if over_total_mem is not None else "n/a",
+                "; ".join(node_bits) if node_bits else "n/a",
+                ", ".join(suggestions) if suggestions else "n/a",
+            )
+        )
+    if not tradeoff_lines:
+        tradeoff_lines.append("- none")
+
+    body_parts = [
+        "Automated safe resource apply proposal.\n\n",
+        "## Constraints\n",
+        f"- Metrics window: `{report.get('metrics_window')}`\n",
+        f"- Metrics coverage estimate: `{plan.get('metrics_coverage_days_estimate')}` days\n",
+        (
+            f"- Deadband policy: `{report.get('policy', {}).get('deadband_percent')}%` "
+            f"or CPU delta `>= {report.get('policy', {}).get('deadband_cpu_m')}m` "
+            f"or Memory delta `>= {report.get('policy', {}).get('deadband_mem_mi')}Mi`\n"
+        ),
+        f"- CPU request budget: `{plan.get('budgets', {}).get('cpu_m')}m`\n",
+        f"- Memory request budget: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n",
+        (
+            f"- Current requests: CPU `{plan.get('current_requests', {}).get('cpu_m')}m`, "
+            f"Memory `{plan.get('current_requests', {}).get('memory_mi')}Mi`\n"
+        ),
+        (
+            f"- Projected requests after selected changes: CPU "
+            f"`{plan.get('projected_requests_after_selected', {}).get('cpu_m')}m`, Memory "
+            f"`{plan.get('projected_requests_after_selected', {}).get('memory_mi')}Mi`\n\n"
+        ),
+        "## Node Fit Simulation\n",
+        f"- Assumptions: {node_fit_assumptions or 'n/a'}\n",
+        "- Policy: node-level budgets are derived from the same percent gates as the cluster budget.\n\n",
+        "| Node | Alloc CPU | Budget CPU | Current CPU | Projected CPU | Alloc Mem | Budget Mem | Current Mem | Projected Mem |\n",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|\n",
+        ("\n".join(node_rows) + "\n\n" if node_rows else "_No node data available._\n\n"),
+        "## Selected Changes\n",
+        "\n".join(selected_lines) + "\n",
+        "\n## Skipped Candidates (Reason Summary)\n",
+        "\n".join(skipped_lines) + "\n",
+        "\n## Tradeoff Recommendations (When Upsizes Were Blocked)\n",
+        "\n".join(tradeoff_lines) + "\n",
+        "\n## Report Source\n",
+        "- Latest machine-readable report is in ConfigMap `monitoring/resource-advisor-latest`.\n",
+        "- This PR intentionally includes HelmRelease resource changes only.\n",
+    ]
+    body = "".join(body_parts)
 
     ensure_pull_request(
         repository=repository,
