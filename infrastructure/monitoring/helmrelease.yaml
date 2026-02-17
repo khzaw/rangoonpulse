@@ -81,7 +81,7 @@ spec:
           - monitoring.khzaw.dev
           - grafana.khzaw.dev
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: monitoring.khzaw.dev,grafana.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: grafana.khzaw.dev
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
