@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: media-postgres
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: timescale/timescaledb
+              tag: 2.25.0-pg16
+            command:
+              - sh
+              - -c
+            args:
+              - |
+                set -eu
+                exec /usr/local/bin/docker-entrypoint.sh postgres \
+                  -c timescaledb.telemetry_level=off
+            env:
+              # Required secret (not in Git): media-postgres-secret (POSTGRES_PASSWORD)
+              - name: POSTGRES_USER
+                value: postgres
+              - name: POSTGRES_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: media-postgres-secret
+                    key: POSTGRES_PASSWORD
+              - name: PGDATA
+                value: /var/lib/postgresql/data/pgdata
+
+              # Used by init script to create per-app roles/DBs.
+              - name: JELLYSTAT_DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: jellystat-db-secret
+                    key: POSTGRES_PASSWORD
+              - name: TRACERR_DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: tracerr-db-secret
+                    key: POSTGRES_PASSWORD
+            resources:
+              requests:
+                cpu: "300m"
+                memory: "1Gi"
+              limits:
+                cpu: "2000m"
+                memory: "2Gi"
+
+    service:
+      main:
+        controller: main
+        ports:
+          postgres:
+            port: 5432
+
+    configMaps:
+      init:
+        enabled: true
+        data:
+          10-init-app-dbs.sh: |
+            (
+              set -eu
+              echo "Initializing app databases/users (jellystat, tracearr) ..."
+
+              # Role: jellystat
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='jellystat'" | grep -q 1; then
+                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE jellystat LOGIN PASSWORD '${JELLYSTAT_DB_PASSWORD}'"
+              fi
+              # DB: jellystat
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='jellystat'" | grep -q 1; then
+                createdb -O jellystat jellystat
+              fi
+
+              # Role: tracearr
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then
+                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE tracearr LOGIN PASSWORD '${TRACERR_DB_PASSWORD}'"
+              fi
+              # DB: tracearr
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='tracearr'" | grep -q 1; then
+                createdb -O tracearr tracearr
+              fi
+
+              # Tracerr requires TimescaleDB.
+              psql -v ON_ERROR_STOP=1 -d tracearr -c "CREATE EXTENSION IF NOT EXISTS timescaledb"
+            )
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: local-path
+        size: 20Gi
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /var/lib/postgresql/data
+      init:
+        enabled: true
+        type: configMap
+        identifier: init
+        globalMounts:
+          - path: /docker-entrypoint-initdb.d/10-init-app-dbs.sh
+            subPath: 10-init-app-dbs.sh
+            readOnly: true
+
