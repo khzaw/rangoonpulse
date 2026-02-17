@@ -148,6 +148,8 @@ spec:
                             name: TQQQ
                           - symbol: CSPX.L
                             name: CSPX
+                          - symbol: DHER.BE
+                            name: Delivery Hero
                           - symbol: META
                             name: Facebook
                           - symbol: GOOGL
