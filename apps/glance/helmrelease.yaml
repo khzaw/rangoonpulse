@@ -228,6 +228,9 @@ spec:
                               - title: Tunarr
                                 url: https://tunarr.khzaw.dev
                                 icon: di:tunarr
+                              - title: ErsatzTV
+                                url: https://ersatztv.khzaw.dev
+                                icon: di:ersatztv
                               - title: Transmission
                                 url: https://torrent.khzaw.dev
                                 icon: di:transmission
