@@ -38,15 +38,31 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 
 ### Homepage
 
-![Homepage](.github/screenshots/homepage.png)
+![Homepage 1](.github/screenshots/homepage.png)
 
-### Stats
-
-![Stats](.github/screenshots/stats.jpeg)
+![Homepage 2](.github/screenshots/homepage-2.jpeg)
 
 ### Jellyfin
 
-![Jellyfin](.github/screenshots/jellyfin.jpeg)
+![Jellyfin 1](.github/screenshots/jellyfin.jpeg)
+
+![Jellyfin 2](.github/screenshots/jellyfin-2.jpeg)
+
+### Sonarr
+
+![Sonarr](.github/screenshots/sonarr.jpeg)
+
+### Radarr
+
+![Radarr](.github/screenshots/radarr.jpeg)
+
+### Calibre
+
+![Calibre](.github/screenshots/calibre.jpeg)
+
+### NAS
+
+![NAS](.github/screenshots/truenas.jpeg)
 
 ### Grafana
 
@@ -55,4 +71,3 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 ### Uptime
 
 ![Uptime](.github/screenshots/uptime.jpeg)
-
