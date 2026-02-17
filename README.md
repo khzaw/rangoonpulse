@@ -2,7 +2,6 @@
 
 Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD GitOps.
 
-- 🕒 Timezone: `Asia/Singapore`
 - 🌐 Unified access: LAN + Tailscale clients both hit ingress at `10.0.0.231`
 - 🖥️ Single-node Talos cluster: i5-8400T (6c/6t), 32 GiB RAM, NVMe + Intel iGPU (`/dev/dri`)
 
@@ -26,24 +25,22 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 - Dashboard: Glance
 - Uptime: Uptime Kuma
 
-## 🔗 Key URLs
+## 🧩 Services (Private)
 
-| Category | URL |
-|---|---|
-| Dashboard | `https://glance.khzaw.dev` (alias `https://hq.khzaw.dev`) |
-| Media | `https://jellyfin.khzaw.dev` |
-| Photos | `https://photos.khzaw.dev` |
-| Requests | `https://entertainment.khzaw.dev` |
-| Monitoring | `https://grafana.khzaw.dev` |
-| Status | `https://uptime.khzaw.dev` |
+These are only reachable from my LAN or approved devices (Tailscale). I intentionally don't publish service links here.
 
-Notable utilities:
-- `https://tracerr.khzaw.dev` (Tracearr)
-- `https://chartsdb.khzaw.dev`
-- `https://tv.khzaw.dev` (nodecast-tv)
-- `https://sponsorblocktv.khzaw.dev` (iSponsorBlockTV info page)
-- `https://profilarr.khzaw.dev`
-- `https://autobrr.khzaw.dev`
+- Glance (dashboard)
+- Jellyfin (media)
+- Immich (photos)
+- Seerr (requests)
+- Grafana (monitoring)
+- Uptime Kuma (status)
+- Tracearr
+- ChartDB
+- nodecast-tv
+- iSponsorBlockTV
+- Profilarr
+- autobrr
 
 ## 🛠️ Ops Cheatsheet
 
