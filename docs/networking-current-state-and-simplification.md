@@ -1,56 +1,59 @@
 # Homelab Access Architecture: Current Setup and Simplification Strategy
 
 ## Purpose
-This document explains your current working access architecture in detail and proposes a simplified target architecture that preserves your non-negotiable requirement:
+This document explains the current access architecture and the "why" behind it.
 
-- You must be able to access `*.khzaw.dev` services from inside your LAN.
-- You must also be able to access the same services when outside your LAN over Tailscale.
-- The same principle should extend to non-Kubernetes LAN services such as NAS (`10.0.0.210`) and router (`10.0.0.1`).
+Non-negotiables:
+- `*.khzaw.dev` services must work on LAN.
+- The same `*.khzaw.dev` services must work remotely when connected to Tailscale.
+- The same model should extend to non-Kubernetes LAN services such as NAS (`10.0.0.210`) and router (`10.0.0.1`).
 
-This is a learning document first. It is intentionally explicit about control plane pieces, packet flow, and DNS behavior.
-
-## Environment Snapshot (Current, Working)
-Observed from live cluster and manifests:
+## Environment Snapshot (Current Baseline)
+This repository now uses a unified destination model:
 
 - Kubernetes ingress entrypoint:
   - `Service/ingress-nginx-controller` in namespace `ingress-nginx`
   - Type `LoadBalancer`
   - MetalLB external IP: `10.0.0.231`
-- All app ingresses currently resolve to that ingress IP (`10.0.0.231`) from standard cluster DNS/public DNS perspective.
-- Tailscale operator is deployed in namespace `tailscale`.
-- Ingress service is additionally exposed to Tailscale via annotation:
-  - `tailscale.com/expose: "true"`
-- This creates a Tailscale proxy pod/statefulset for ingress:
-  - `ts-ingress-nginx-controller-c8rng-0`
-  - Tailnet device IP (current): `100.107.172.81`
-- You also run a custom CoreDNS deployment in namespace `tailscale` (`coredns-tailscale`) exposed over Tailscale.
-- That DNS server currently hardcodes wildcard answers:
-  - `*.khzaw.dev -> 100.107.172.81`
+- DNS:
+  - Cloudflare records for app hostnames resolve to `10.0.0.231` (managed by external-dns)
+  - LAN devices use the same destination IPs
+- Tailscale:
+  - Tailscale operator is deployed in the cluster
+  - Subnet routing is implemented via `tailscale.com/v1alpha1 Connector`:
+    - `infrastructure/tailscale-subnet-router/connector.yaml`
+    - advertises `/32` host routes:
+      - `10.0.0.197/32` (Talos node / Kubernetes API)
+      - `10.0.0.231/32` (ingress VIP)
+      - `10.0.0.210/32` (NAS)
+      - `10.0.0.1/32` (router)
+  - Remote tailnet clients reach the same `10.0.0.x` destinations via subnet routing
+- LAN devices behind ingress (NAS/router):
+  - `infrastructure/lan-gateway/` creates selectorless `Service` + `Endpoints` that point to LAN IPs
+  - `Ingress` terminates TLS with cert-manager and routes to those Services
 
-## Current Architecture
+## Current Architecture (Unified Destination Model)
 
-### Components and Their Roles
-1. `ingress-nginx-controller` (MetalLB IP `10.0.0.231`)
-- Primary LAN entrypoint to all Kubernetes apps.
+### Components And Their Roles
+1. `ingress-nginx-controller` (MetalLB VIP `10.0.0.231`)
+- Single entrypoint for all Kubernetes apps.
 
-2. Tailscale ingress proxy (`ts-ingress-nginx-controller-*`)
-- Created by Tailscale operator from `tailscale.com/expose: true` on ingress service.
-- Acts as a Tailscale-addressable front door (`100.107.172.81`) and forwards to ingress service destination.
+2. Cloudflare DNS + external-dns
+- Keeps public DNS records aligned with ingress state, pointing app hostnames to `10.0.0.231`.
 
-3. Custom Tailscale DNS server (`coredns-tailscale`)
-- Returns wildcard A records for `*.khzaw.dev` as `100.107.172.81`.
-- Makes remote Tailscale clients hit the Tailscale ingress proxy IP.
+3. Tailscale subnet router (`Connector`)
+- Enables tailnet clients to reach `10.0.0.x` LAN destinations without a separate ingress proxy.
 
-4. External DNS + Cloudflare
-- Keeps public DNS records aligned with ingress state, currently `10.0.0.231` for your app hostnames.
+4. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
+- Allows `nas.khzaw.dev` / `router.khzaw.dev` to terminate trusted TLS at ingress while proxying to LAN IPs.
 
-### Data Flow (Current)
+### Data Flow
 
-#### LAN path (working)
+#### LAN path (apps)
 ```mermaid
 sequenceDiagram
     participant U as LAN User Device
-    participant D as LAN/Public DNS
+    participant D as DNS
     participant I as Ingress VIP (10.0.0.231)
     participant N as ingress-nginx-controller
     participant A as Target App Service
@@ -63,130 +66,62 @@ sequenceDiagram
     A-->>U: Response
 ```
 
-#### Outside over Tailscale path (working)
+#### Outside over Tailscale path (apps)
 ```mermaid
 sequenceDiagram
     participant U as Remote User (Tailscale)
-    participant TD as Tailscale DNS (homelab-dns)
-    participant TP as Tailscale Ingress Proxy (100.107.172.81)
-    participant I as Ingress Service (ClusterIP/LB path)
+    participant D as DNS
+    participant T as Tailscale Subnet Routing
+    participant I as Ingress VIP (10.0.0.231)
+    participant N as ingress-nginx-controller
     participant A as Target App Service
 
-    U->>TD: Resolve hq.khzaw.dev
-    TD-->>U: 100.107.172.81
-    U->>TP: HTTPS request over tailnet
-    TP->>I: Forward to ingress destination
-    I->>A: Route to backend by Host
+    U->>D: Resolve hq.khzaw.dev
+    D-->>U: 10.0.0.231
+    U->>T: Send to 10.0.0.231 via advertised routes
+    T->>I: Deliver packets into home LAN
+    I->>N: Route by Host header
+    N->>A: Forward to backend service
     A-->>U: Response
 ```
 
-### Why It Works
-- You have two independently valid ingress entry paths:
-  - LAN/public-style destination (`10.0.0.231`)
-  - Tailscale proxy destination (`100.107.172.81`)
-- DNS determines which path is used.
-- Both paths end at the same ingress layer and route to the same services.
-
-### Complexity and Operational Cost
-The current design is functional but has extra moving parts:
-
-1. Dual ingress paths
-- `10.0.0.231` and `100.107.172.81` both represent entrypoints.
-
-2. Dual DNS behavior for the same FQDNs
-- Depending on resolver context, the same domain can resolve differently.
-
-3. Additional components to maintain
-- Tailscale ingress proxy statefulset.
-- Custom CoreDNS deployment and config.
-
-4. More failure modes
-- If custom Tailscale DNS or proxy path breaks, outside access can fail even if ingress is healthy.
-
-## Simplified Target Architecture
-Goal: a unified destination IP model.
-
-### Core Idea
-For each service name, use LAN destination IPs as canonical addresses.
-
-- `*.khzaw.dev` (k8s apps) -> `10.0.0.231`
-- `nas.khzaw.dev` -> `10.0.0.210`
-- `router.khzaw.dev` -> `10.0.0.1`
-
-When remote users are on Tailscale, Tailscale subnet routing carries traffic to those private IPs.
-
-### Data Flow (Target)
+#### Outside over Tailscale path (NAS example)
 ```mermaid
 sequenceDiagram
-    participant U as User (LAN or Remote+Tailscale)
+    participant U as Remote User (Tailscale)
     participant D as DNS
     participant T as Tailscale Subnet Routing
-    participant H as Home LAN
     participant I as Ingress VIP (10.0.0.231)
-    participant N as NAS (10.0.0.210)
+    participant S as Service/Endpoints (nas-lan -> 10.0.0.210)
+    participant N as TrueNAS (10.0.0.210)
 
-    U->>D: Resolve hq.khzaw.dev / nas.khzaw.dev
-    D-->>U: 10.0.0.231 / 10.0.0.210
-
-    alt User is on LAN
-        U->>H: Direct LAN traffic to 10.0.0.x
-    else User is remote but on tailnet
-        U->>T: Send to 10.0.0.x via advertised routes
-        T->>H: Deliver packets into home LAN
-    end
-
-    H->>I: For app domains
-    H->>N: For NAS domain
+    U->>D: Resolve nas.khzaw.dev
+    D-->>U: 10.0.0.231
+    U->>T: Send to 10.0.0.231 via advertised routes
+    T->>I: Deliver packets into home LAN
+    I->>S: Ingress routes by Host header
+    S->>N: Proxy to LAN IP
+    N-->>U: Response (TLS terminates at ingress)
 ```
 
-### Why This Is Viable
-- You already have a stable LAN ingress IP (`10.0.0.231`) and stable LAN IPs for NAS/router.
-- Tailscale supports subnet routers explicitly for this exact use case.
-- Tailscale operator `Connector` CRD is available in your cluster and supports `subnetRouter.advertiseRoutes`.
+## Why This Is The Baseline
+- One canonical destination IP for Kubernetes apps (`10.0.0.231`) regardless of where the client sits.
+- No dual-DNS behavior (no wildcard answers to a Tailscale proxy IP).
+- No separate Tailscale ingress proxy workloads to keep healthy.
+- Easier to reason about when debugging (DNS always points to LAN IPs; connectivity depends on routes).
 
-## Recommended Route Strategy
-Use host routes first to reduce overlap risk with arbitrary remote networks:
+## Guardrails / Known Failure Modes
+- Keep host routes (`/32`) unless you explicitly want the blast radius of advertising the full LAN subnet.
+- TrueNAS + Tailscale:
+  - Do not enable TrueNAS Tailscale "Accept Routes" unless you know you need it.
+  - Accepting routes on the NAS can cause asymmetric routing and break NFS + TrueNAS API reachability from the node.
+  - Incident write-up: `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
 
-- `10.0.0.231/32` for Kubernetes ingress.
-- `10.0.0.210/32` for NAS.
-- `10.0.0.1/32` for router.
+## Legacy (Decommissioned) Design Notes
+Previously, remote access used:
+- a Tailscale ingress proxy pod created via `tailscale.com/expose` on the ingress service, and
+- a custom tailnet DNS server that returned `*.khzaw.dev -> <Tailscale proxy IP>`.
 
-You can broaden later (for example `10.0.0.0/24`) if desired and if your client environments do not conflict.
+This was functional but added moving parts and dual-resolution behavior. The current baseline removes that
+indirection in favor of subnet routing to the LAN IPs.
 
-## Suggested End State
-1. Keep Cloudflare/public DNS records for app hostnames pointing to `10.0.0.231`.
-2. Add DNS records for NAS/router hostnames to `10.0.0.210` and `10.0.0.1`.
-3. Enable subnet routing in Tailscale (k8s connector or NAS router).
-4. Remove reliance on:
-- Tailscale ingress service proxy for nginx.
-- Custom `coredns-tailscale` wildcard rewrite to `100.107.172.81`.
-
-## Migration Principles
-1. Introduce subnet routing before removing anything.
-2. Validate access from an actual remote Tailscale client.
-3. Cut over DNS behavior only after traffic proves stable.
-4. Keep rollback simple:
-- Re-enable old DNS override and/or ingress Tailscale expose annotation if needed.
-
-## Risks and Mitigations
-1. Route overlap on remote networks
-- Mitigation: start with `/32` host routes.
-
-2. Subnet route not approved in Tailscale admin
-- Mitigation: preconfigure `autoApprovers` for connector tags.
-
-3. DNS cache confusion during cutover
-- Mitigation: lower TTLs before cutover and test with explicit resolvers.
-
-4. Single dependency risk if NAS is chosen as only subnet router
-- Mitigation: use k8s connector for ingress path or run redundant routers.
-
-## Selected Approach
-Use Option A: keep Tailscale subnet routing in Kubernetes with a Tailscale `Connector`.
-
-Rationale:
-- Control remains in GitOps and the cluster repository.
-- Access to Kubernetes apps does not depend on NAS availability.
-- Migration from the current setup is least disruptive.
-
-This document now treats Option A as the implementation baseline.
