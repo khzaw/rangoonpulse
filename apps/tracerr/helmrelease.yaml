@@ -95,17 +95,16 @@ spec:
             image:
               repository: timescale/timescaledb
               tag: 2.25.0-pg16
-            # Use the Timescale entrypoint (it initializes the data dir and drops privileges).
             command:
-              - /usr/local/bin/docker-entrypoint.sh
+              - sh
+              - -c
             args:
-              - postgres
-              - -c
-              - timescaledb.max_tuples_decompressed_per_dml_transaction=0
-              - -c
-              - timescaledb.max_tuples_decompressed_per_compression=0
-              - -c
-              - timescaledb.telemetry_level=off
+              - |
+                set -eu
+                exec /usr/local/bin/docker-entrypoint.sh postgres \
+                  -c timescaledb.max_tuples_decompressed_per_dml_transaction=0 \
+                  -c timescaledb.max_tuples_decompressed_per_compression=0 \
+                  -c timescaledb.telemetry_level=off
             env:
               - name: POSTGRES_USER
                 value: tracearr
