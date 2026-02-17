@@ -57,9 +57,16 @@ spec:
                 service:
                   identifier: main
                   port: http
+          - host: hq.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: glance.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: glance.khzaw.dev,hq.khzaw.dev
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
@@ -67,6 +74,7 @@ spec:
           - secretName: glance-tls
             hosts:
               - glance.khzaw.dev
+              - hq.khzaw.dev
 
     configMaps:
       config:
@@ -217,6 +225,9 @@ spec:
                               - title: Notifiarr
                                 url: https://notifiarr.khzaw.dev
                                 icon: di:notifiarr
+                              - title: Tunarr
+                                url: https://tunarr.khzaw.dev
+                                icon: di:tunarr
                               - title: Transmission
                                 url: https://torrent.khzaw.dev
                                 icon: di:transmission
@@ -226,7 +237,7 @@ spec:
                           - title: Ops
                             links:
                               - title: Homepage
-                                url: https://hq.khzaw.dev
+                                url: https://hp.khzaw.dev
                                 icon: di:homepage
                               - title: Grafana
                                 url: https://grafana.khzaw.dev
