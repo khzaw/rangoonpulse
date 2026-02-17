@@ -20,6 +20,8 @@ spec:
 
     controller:
       enabled: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       driver:
         image:
           tag: next
