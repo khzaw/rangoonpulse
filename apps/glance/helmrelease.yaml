@@ -248,6 +248,9 @@ spec:
                               - title: Jellystat
                                 url: https://jellystat.khzaw.dev
                                 icon: di:jellystat
+                              - title: Tracerr
+                                url: https://tracerr.khzaw.dev
+                                icon: mdi:graph-box
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
@@ -586,6 +589,9 @@ spec:
                           - title: Glance
                             url: https://glance.khzaw.dev
                             icon: di:glance
+                          - title: Tracerr
+                            url: https://tracerr.khzaw.dev
+                            icon: mdi:graph-box
                           - title: Immich
                             url: https://photos.khzaw.dev
                             icon: di:immich
