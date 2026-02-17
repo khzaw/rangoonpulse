@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/community-charts/helm-charts/main/charts/actualbudget/values.schema.json
 ---
 image:
   repository: actualbudget/actual-server
