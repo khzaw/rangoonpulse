@@ -72,5 +72,7 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         storageClass: local-path
-        size: 2Gi
+        # NOTE: Kubernetes PVCs cannot be shrunk in-place; keep this aligned with the
+        # current PVC capacity to avoid Helm upgrade loops.
+        size: 5Gi
         accessMode: ReadWriteOnce
