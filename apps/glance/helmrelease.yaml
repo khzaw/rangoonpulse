@@ -646,6 +646,445 @@ spec:
                               - 401
                               - 403
 
+              - name: Media
+                columns:
+                  - size: full
+                    widgets:
+                      - type: monitor
+                        title: Media Stack
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Seerr
+                            url: https://entertainment.khzaw.dev
+                            icon: di:jellyseerr
+                          - title: Jellyfin
+                            url: https://jellyfin.khzaw.dev
+                            icon: di:jellyfin
+                          - title: Sonarr
+                            url: https://sonarr.khzaw.dev
+                            icon: di:sonarr
+                          - title: Radarr
+                            url: https://radarr.khzaw.dev
+                            icon: di:radarr
+                          - title: Prowlarr
+                            url: https://prowlarr.khzaw.dev
+                            icon: di:prowlarr
+                          - title: Bazarr
+                            url: https://bazarr.khzaw.dev
+                            icon: di:bazarr
+                          - title: Tunarr
+                            url: https://tunarr.khzaw.dev
+                            icon: di:tunarr
+                          - title: ErsatzTV
+                            url: https://ersatztv.khzaw.dev
+                            icon: di:ersatztv
+                          - title: Transmission
+                            url: https://torrent.khzaw.dev
+                            icon: di:transmission
+                          - title: SABnzbd
+                            url: https://sabnzbd.khzaw.dev
+                            icon: di:sabnzbd
+                          - title: Jellystat
+                            url: https://jellystat.khzaw.dev
+                            icon: di:jellystat
+                          - title: Tracerr
+                            url: https://tracerr.khzaw.dev
+                            icon: mdi:graph-box
+
+                      - type: split-column
+                        title: Media Quick Stats
+                        max-columns: 3
+                        widgets:
+                          - type: custom-api
+                            title: Sonarr
+                            cache: 2m
+                            url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
+                            headers:
+                              X-Api-Key: ${SONARR_API_KEY}
+                            subrequests:
+                              queue:
+                                url: https://sonarr.khzaw.dev/api/v3/queue/status
+                                headers:
+                                  X-Api-Key: ${SONARR_API_KEY}
+                            template: |
+                              {{`{{ $queue := .Subrequest "queue" }}
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "totalRecords" | formatNumber }}</div>
+                                  <div class="size-h6">WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ $queue.JSON.Int "totalCount" | formatNumber }}</div>
+                                  <div class="size-h6">QUEUE</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ if ($queue.JSON.Bool "errors") }}ERR{{ else if ($queue.JSON.Bool "warnings") }}WARN{{ else }}OK{{ end }}</div>
+                                  <div class="size-h6">HEALTH</div>
+                                </div>
+                              </div>`}}
+                          - type: custom-api
+                            title: Radarr
+                            cache: 2m
+                            url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
+                            headers:
+                              X-Api-Key: ${RADARR_API_KEY}
+                            subrequests:
+                              queue:
+                                url: https://radarr.khzaw.dev/api/v3/queue/status
+                                headers:
+                                  X-Api-Key: ${RADARR_API_KEY}
+                            template: |
+                              {{`{{ $queue := .Subrequest "queue" }}
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "totalRecords" | formatNumber }}</div>
+                                  <div class="size-h6">WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ $queue.JSON.Int "totalCount" | formatNumber }}</div>
+                                  <div class="size-h6">QUEUE</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ if ($queue.JSON.Bool "errors") }}ERR{{ else if ($queue.JSON.Bool "warnings") }}WARN{{ else }}OK{{ end }}</div>
+                                  <div class="size-h6">HEALTH</div>
+                                </div>
+                              </div>`}}
+                          - type: custom-api
+                            title: Prowlarr
+                            cache: 5m
+                            url: https://prowlarr.khzaw.dev/api/v1/indexer
+                            headers:
+                              X-Api-Key: ${PROWLARR_API_KEY}
+                            subrequests:
+                              status:
+                                url: https://prowlarr.khzaw.dev/api/v1/indexerstatus
+                                headers:
+                                  X-Api-Key: ${PROWLARR_API_KEY}
+                              health:
+                                url: https://prowlarr.khzaw.dev/api/v1/health
+                                headers:
+                                  X-Api-Key: ${PROWLARR_API_KEY}
+                            template: |
+                              {{`{{ $indexers := .JSON.Array "" }}
+                              {{ $status := (.Subrequest "status").JSON.Array "" }}
+                              {{ $health := (.Subrequest "health").JSON.Array "" }}
+                              <div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ len $indexers | formatNumber }}</div>
+                                  <div class="size-h6">INDEXERS</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ len $status | formatNumber }}</div>
+                                  <div class="size-h6">UNAVAILABLE</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ len $health | formatNumber }}</div>
+                                  <div class="size-h6">WARNINGS</div>
+                                </div>
+                              </div>`}}
+                          - type: custom-api
+                            title: Bazarr
+                            cache: 5m
+                            url: https://bazarr.khzaw.dev/api/badges
+                            headers:
+                              X-Api-Key: ${BAZARR_API_KEY}
+                            template: |
+                              {{`<div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "episodes" | formatNumber }}</div>
+                                  <div class="size-h6">EP WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "movies" | formatNumber }}</div>
+                                  <div class="size-h6">MOV WANTED</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "providers" | formatNumber }}</div>
+                                  <div class="size-h6">PROVIDERS</div>
+                                </div>
+                              </div>`}}
+                          - type: custom-api
+                            title: Jellyfin
+                            cache: 5m
+                            url: "https://jellyfin.khzaw.dev/Items/Counts?api_key=${JELLYFIN_API_KEY}"
+                            template: |
+                              {{`<div class="flex justify-between text-center">
+                                <div>
+                                  <div class="color-highlight size-h3">{{ .JSON.Int "MovieCount" | formatNumber }}</div>
+                                  <div class="size-h6">MOVIES</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "SeriesCount" | formatNumber }}</div>
+                                  <div class="size-h6">SERIES</div>
+                                </div>
+                                <div>
+                                  <div class="size-h3">{{ .JSON.Int "EpisodeCount" | formatNumber }}</div>
+                                  <div class="size-h6">EPISODES</div>
+                                </div>
+                              </div>`}}
+
+                      - type: custom-api
+                        title: Jellyfin Now Playing
+                        cache: 15s
+                        url: "https://jellyfin.khzaw.dev/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
+                        template: |
+                          {{`{{ $sessions := .JSON.Array "" }}
+                          {{ $active := 0.0 }}
+                          {{ range $sessions }}
+                          {{ if ne (.String "NowPlayingItem.Name") "" }}{{ $active = add $active 1 }}{{ end }}
+                          {{ end }}
+
+                          {{ if eq $active 0.0 }}
+                          <div class="size-h5">No active streams</div>
+                          <div class="size-h6">Jellyfin is idle.</div>
+                          {{ else }}
+                          <div class="size-h6"><span class="color-highlight">{{ $active | toInt }}</span> active stream{{ if ne ($active | toInt) 1 }}s{{ end }}</div>
+                          <div class="flex flex-col" style="gap: 10px; margin-top: 10px;">
+                          {{ $shown := 0.0 }}
+                          {{ range $sessions }}
+                          {{ if and (ne (.String "NowPlayingItem.Name") "") (lt $shown 5.0) }}
+                          {{ $shown = add $shown 1 }}
+                          {{ $user := .String "UserName" }}
+                          {{ $name := .String "NowPlayingItem.Name" }}
+                          {{ $series := .String "NowPlayingItem.SeriesName" }}
+                          {{ $title := $name }}
+                          {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
+
+                          {{ $paused := .Bool "PlayState.IsPaused" }}
+                          {{ $pos := (.Int "PlayState.PositionTicks" | toFloat) }}
+                          {{ $rt := (.Int "NowPlayingItem.RunTimeTicks" | toFloat) }}
+                          {{ $pct := 0.0 }}
+                          {{ if gt $rt 0.0 }}{{ $pct = mul (div $pos $rt) 100 }}{{ end }}
+                          {{ if gt $pct 100.0 }}{{ $pct = 100.0 }}{{ end }}
+                          {{ if lt $pct 0.0 }}{{ $pct = 0.0 }}{{ end }}
+
+                          {{ $itemId := .String "NowPlayingItem.Id" }}
+                          {{ $img := "" }}
+                          {{ if ne $itemId "" }}
+                          {{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=96&quality=90&api_key=%s" $itemId "${JELLYFIN_API_KEY}" }}
+                          {{ end }}
+
+                          <div class="flex" style="gap: 10px; align-items: center;">
+                            {{ if ne $img "" }}
+                            <img src="{{ $img }}" style="width: 64px; height: 96px; object-fit: cover; border-radius: 8px; background: rgba(255,255,255,.06);" />
+                            {{ else }}
+                            <div style="width: 64px; height: 96px; border-radius: 8px; background: rgba(255,255,255,.06);"></div>
+                            {{ end }}
+                            <div class="flex-1" style="min-width: 0;">
+                              <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                              <div class="flex justify-between size-h6" style="opacity: .85;">
+                                <div>{{ $user }}</div>
+                                <div>{{ if $paused }}PAUSED{{ else }}PLAYING{{ end }}</div>
+                              </div>
+                              <div style="height: 4px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; margin-top: 6px;">
+                                <div style="height: 100%; background: rgba(255,255,255,.35); width: {{ printf \"%.0f%%\" $pct }}"></div>
+                              </div>
+                            </div>
+                          </div>
+                          {{ end }}
+                          {{ end }}
+                          </div>
+                          {{ end }}`}}
+
+                      - type: custom-api
+                        title: Jellyfin Recently Added
+                        cache: 2m
+                        url: "https://jellyfin.khzaw.dev/Items/Latest?Limit=12&IncludeItemTypes=Movie,Episode&api_key=${JELLYFIN_API_KEY}"
+                        template: |
+                          {{`{{ $items := .JSON.Array "" }}
+                          {{ if eq (len $items) 0 }}
+                          <div class="size-h6">No recent items.</div>
+                          {{ else }}
+                          <div class="grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+                          {{ range $items }}
+                          {{ $id := .String "Id" }}
+                          {{ $name := .String "Name" }}
+                          {{ $series := .String "SeriesName" }}
+                          {{ $title := $name }}
+                          {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
+                          {{ $img := "" }}
+                          {{ if ne $id "" }}
+                          {{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=140&quality=90&api_key=%s" $id "${JELLYFIN_API_KEY}" }}
+                          {{ end }}
+                          <div class="flex" style="gap: 10px; align-items: center;">
+                            {{ if ne $img "" }}
+                            <img src="{{ $img }}" style="width: 48px; height: 72px; object-fit: cover; border-radius: 8px; background: rgba(255,255,255,.06);" />
+                            {{ else }}
+                            <div style="width: 48px; height: 72px; border-radius: 8px; background: rgba(255,255,255,.06);"></div>
+                            {{ end }}
+                            <div class="flex-1" style="min-width: 0;">
+                              <div class="size-h6" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                            </div>
+                          </div>
+                          {{ end }}
+                          </div>
+                          {{ end }}`}}
+
+                      - type: bookmarks
+                        title: Media Links
+                        groups:
+                          - title: Streaming
+                            links:
+                              - title: Jellyfin
+                                url: https://jellyfin.khzaw.dev
+                                icon: di:jellyfin
+                              - title: Nodecast TV
+                                url: https://tv.khzaw.dev
+                                icon: mdi:television-classic
+                          - title: Arr Stack
+                            links:
+                              - title: Seerr
+                                url: https://entertainment.khzaw.dev
+                                icon: di:jellyseerr
+                              - title: Sonarr
+                                url: https://sonarr.khzaw.dev
+                                icon: di:sonarr
+                              - title: Radarr
+                                url: https://radarr.khzaw.dev
+                                icon: di:radarr
+                              - title: Prowlarr
+                                url: https://prowlarr.khzaw.dev
+                                icon: di:prowlarr
+                              - title: Bazarr
+                                url: https://bazarr.khzaw.dev
+                                icon: di:bazarr
+                          - title: Downloads
+                            links:
+                              - title: Transmission
+                                url: https://torrent.khzaw.dev
+                                icon: di:transmission
+                              - title: SABnzbd
+                                url: https://sabnzbd.khzaw.dev
+                                icon: di:sabnzbd
+                              - title: autobrr
+                                url: https://autobrr.khzaw.dev
+                                icon: mdi:autorenew
+                          - title: Tools
+                            links:
+                              - title: Tunarr
+                                url: https://tunarr.khzaw.dev
+                                icon: di:tunarr
+                              - title: ErsatzTV
+                                url: https://ersatztv.khzaw.dev
+                                icon: di:ersatztv
+                              - title: Jellystat
+                                url: https://jellystat.khzaw.dev
+                                icon: di:jellystat
+                              - title: Tracerr
+                                url: https://tracerr.khzaw.dev
+                                icon: mdi:graph-box
+
+                  - size: small
+                    widgets:
+                      - type: custom-api
+                        title: Movie Releases
+                        cache: 30m
+                        template: |
+                          {{`{{ $start := now | formatTime "DateOnly" }}
+                          {{ $end := (offsetNow "720h") | formatTime "DateOnly" }}
+
+                          {{ $resp := newRequest "https://radarr.khzaw.dev/api/v3/calendar" | withParameter "start" $start | withParameter "end" $end | withHeader "X-Api-Key" "${RADARR_API_KEY}" | getResponse }}
+                          {{ if ne $resp.StatusCode 200 }}
+                          <div class="size-h6">Radarr error: {{ $resp.StatusCode }}</div>
+                          {{ else }}
+                          {{ $items := where ($resp.JSON.Array "") "hasFile" false }}
+                          {{ if eq (len $items) 0 }}
+                          <div class="size-h6">No upcoming missing movies ({{ $start }} to {{ $end }}).</div>
+                          {{ else }}
+                          <div class="flex flex-col" style="gap: 10px;">
+                            {{ $shown := 0.0 }}
+                            {{ range $items }}
+                            {{ if lt $shown 8.0 }}
+                            {{ $shown = add $shown 1 }}
+                            {{ $title := .String "title" }}
+                            {{ $img := .String "images.0.remoteUrl" }}
+                            {{ if eq $img "" }}{{ $img = .String "images.0.url" }}{{ end }}
+                            {{ $date := .String "digitalRelease" }}
+                            {{ if eq $date "" }}{{ $date = .String "physicalRelease" }}{{ end }}
+                            {{ if eq $date "" }}{{ $date = .String "inCinemas" }}{{ end }}
+
+                            <div class="flex" style="gap: 10px; align-items: center;">
+                              {{ if ne $img "" }}
+                              <img src="{{ $img }}" style="width: 44px; height: 66px; object-fit: cover; border-radius: 6px; background: rgba(255,255,255,.06);" />
+                              {{ else }}
+                              <div style="width: 44px; height: 66px; border-radius: 6px; background: rgba(255,255,255,.06);"></div>
+                              {{ end }}
+                              <div class="flex-1" style="min-width: 0;">
+                                <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                                <div class="size-h6" style="opacity: .8;">{{ if ne $date "" }}Release {{ $date }}{{ else }}Upcoming{{ end }}</div>
+                              </div>
+                              <div class="size-h6" style="padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04);">Missing</div>
+                            </div>
+                            {{ end }}
+                            {{ end }}
+                          </div>
+                          {{ end }}
+                          {{ end }}`}}
+
+                      - type: custom-api
+                        title: TV Show Releases
+                        cache: 30m
+                        template: |
+                          {{`{{ $start := now | formatTime "DateOnly" }}
+                          {{ $end := (offsetNow "336h") | formatTime "DateOnly" }}
+
+                          {{ $resp := newRequest "https://sonarr.khzaw.dev/api/v3/calendar" | withParameter "start" $start | withParameter "end" $end | withHeader "X-Api-Key" "${SONARR_API_KEY}" | getResponse }}
+                          {{ if ne $resp.StatusCode 200 }}
+                          <div class="size-h6">Sonarr error: {{ $resp.StatusCode }}</div>
+                          {{ else }}
+                          {{ $items := sortByTime "airDateUtc" "RFC3339" "asc" ($resp.JSON.Array "") }}
+                          {{ if eq (len $items) 0 }}
+                          <div class="size-h6">No upcoming episodes ({{ $start }} to {{ $end }}).</div>
+                          {{ else }}
+                          <div class="flex flex-col" style="gap: 10px;">
+                            {{ $shown := 0.0 }}
+                            {{ range $items }}
+                            {{ if lt $shown 10.0 }}
+                            {{ $shown = add $shown 1 }}
+
+                            {{ $series := .String "series.title" }}
+                            {{ $ep := .String "title" }}
+                            {{ $season := .Int "seasonNumber" }}
+                            {{ $num := .Int "episodeNumber" }}
+                            {{ $air := .String "airDateUtc" }}
+                            {{ $img := .String "series.images.0.remoteUrl" }}
+                            {{ if eq $img "" }}{{ $img = .String "series.images.0.url" }}{{ end }}
+
+                            {{ $label := "Missing" }}
+                            {{ if .Bool "hasFile" }}{{ $label = "Available" }}{{ end }}
+
+                            <div class="flex" style="gap: 10px; align-items: center;">
+                              {{ if ne $img "" }}
+                              <img src="{{ $img }}" style="width: 44px; height: 66px; object-fit: cover; border-radius: 6px; background: rgba(255,255,255,.06);" />
+                              {{ else }}
+                              <div style="width: 44px; height: 66px; border-radius: 6px; background: rgba(255,255,255,.06);"></div>
+                              {{ end }}
+                              <div class="flex-1" style="min-width: 0;">
+                                <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $series }}</div>
+                                <div class="size-h6" style="opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">S{{ printf "%02d" $season }}E{{ printf "%02d" $num }}: {{ $ep }}</div>
+                                <div class="size-h6" style="opacity: .7;">{{ $air }}</div>
+                              </div>
+                              <div class="size-h6" style="padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04);">{{ $label }}</div>
+                            </div>
+                            {{ end }}
+                            {{ end }}
+                          </div>
+                          {{ end }}
+                          {{ end }}`}}
+
+                      - type: monitor
+                        title: Downloads
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Transmission
+                            url: https://torrent.khzaw.dev
+                            icon: di:transmission
+                          - title: SABnzbd
+                            url: https://sabnzbd.khzaw.dev
+                            icon: di:sabnzbd
+
       assets:
         enabled: true
         data:
