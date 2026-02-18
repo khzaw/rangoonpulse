@@ -12,6 +12,7 @@ continue work without re-discovery.
 - Primary ingress: ingress-nginx with MetalLB
 - DNS/TLS: Cloudflare + external-dns + cert-manager (Let's Encrypt)
 - DNS automation model: external-dns (Cloudflare); tofu/terraform controller path is not active
+- LAN recursive DNS/filtering: AdGuard Home (`Service/adguard-dns`, `10.0.0.233:53`)
 - Remote access: Tailscale operator + subnet router (`Connector`)
 - Storage mix: `local-path`, TrueNAS NFS classes (`truenas-*`), democratic-csi present
 - Timezone standard: `Asia/Singapore`
@@ -96,6 +97,14 @@ Important external-dns behavior:
   You must declare hostnames via the `external-dns.alpha.kubernetes.io/hostname` annotation or DNS will not be created.
 - external-dns also watches Services (`--source=service`), which enables clean CNAME aliases via `ExternalName`
   Services (example: `infrastructure/monitoring/monitoring-cname.yaml`).
+
+## LAN DNS (AdGuard)
+- Deployment: `apps/adguard/helmrelease.yaml`
+- DNS endpoint for router/clients: `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`)
+- Do not use Kubernetes `ClusterIP` addresses in router DNS settings.
+- AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
+- Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.
+- Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`
 
 ## App Deployment Conventions
 - Standard app layout:
@@ -251,6 +260,7 @@ Examples:
 - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
 - `docs/arm64-node-canal-flexvol-exec-format-error.md`
 - `docs/router-dns-rebind-private-a-records.md`
+- `docs/adguard-dns-stack-overview.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
