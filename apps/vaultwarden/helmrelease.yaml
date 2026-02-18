@@ -25,6 +25,7 @@ spec:
 
     controllers:
       main:
+        strategy: Recreate
         containers:
           main:
             image:
@@ -34,13 +35,20 @@ spec:
               TZ: "Asia/Singapore"
               DOMAIN: "https://passwords.khzaw.dev"
               SIGNUPS_ALLOWED: "true"
+              DATABASE_URL:
+                valueFrom:
+                  secretKeyRef:
+                    name: vaultwarden-db-secret
+                    key: DATABASE_URL
+              DATABASE_MAX_CONNS: "20"
+              DATABASE_TIMEOUT: "30"
             resources:
               requests:
-                cpu: "50m"
-                memory: "128Mi"
+                cpu: "100m"
+                memory: "256Mi"
               limits:
-                cpu: "300m"
-                memory: "512Mi"
+                cpu: "600m"
+                memory: "1Gi"
 
     service:
       main:
@@ -84,8 +92,6 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: truenas-nfs
-        size: 5Gi
-        accessMode: ReadWriteOnce
+        existingClaim: vaultwarden-data-local
         globalMounts:
           - path: /data

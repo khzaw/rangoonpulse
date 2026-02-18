@@ -3,11 +3,11 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: vaultwarden
+  name: vaultwarden-postgres
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./apps/vaultwarden
+  path: ./apps/vaultwarden-postgres
   prune: true
   sourceRef:
     kind: GitRepository
@@ -16,5 +16,3 @@ spec:
   timeout: 5m
   dependsOn:
     - name: local-path-provisioner
-    - name: vaultwarden-postgres
-    - name: ingress-nginx

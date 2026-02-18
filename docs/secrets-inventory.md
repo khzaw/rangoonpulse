@@ -74,6 +74,11 @@ Notes:
   - `default/immich-db-secret`
     - key: `POSTGRES_PASSWORD`
 
+### Password Manager
+- **vaultwarden + vaultwarden-postgres** (`apps/vaultwarden/helmrelease.yaml`, `apps/vaultwarden-postgres/helmrelease.yaml`)
+  - `default/vaultwarden-db-secret`
+    - keys: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DATABASE_URL`
+
 ### Ops / Notifications
 - **resource-advisor (apply PR)** (`infrastructure/resource-advisor/cronjob-apply-pr.yaml`)
   - `monitoring/resource-advisor-github`

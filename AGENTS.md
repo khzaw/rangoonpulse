@@ -136,7 +136,8 @@ Important external-dns behavior:
 - media-postgres (shared TimescaleDB):
   - Postgres/Timescale on `local-path` (node-local) for reliability; see `docs/media-postgres.md`
 - Vaultwarden:
-  - data on NFS (`truenas-nfs`, 5Gi, expandable)
+  - app data on `local-path` (`vaultwarden-data-local`, 2Gi)
+  - dedicated Postgres (`vaultwarden-postgres`) on `local-path` (5Gi)
 - Grafana:
   - persistent storage enabled on `local-path` (currently 1Gi PVC)
 - Uptime Kuma:
@@ -281,6 +282,7 @@ Examples:
 - `docs/router-dns-rebind-private-a-records.md`
 - `docs/adguard-dns-stack-overview.md`
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
+- `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/study-services-livesync-anki-booklore.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
