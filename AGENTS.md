@@ -147,7 +147,7 @@ Important external-dns behavior:
   - sync data on NFS (`truenas-nfs`, 5Gi, expandable)
 - BookLore:
   - app data and MariaDB config/state on NFS (`truenas-nfs`, expandable)
-  - mounts existing Calibre data read-only for evaluation (`calibre-books-nfs`, `app-configs-pvc-nfs` subPaths)
+  - mounts existing Calibre books data read-only for evaluation (`calibre-books-nfs`)
 - Tunarr:
   - config/state on NFS (`truenas-nfs`, mounted at `/root/.local/share/tunarr`)
 - ErsatzTV:

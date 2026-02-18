@@ -55,12 +55,11 @@ All new writable app state is on expandable NFS storage (`truenas-nfs`).
 - `booklore`
   - `/app/data` + `/bookdrop` -> dedicated PVC (`8Gi`, expandable)
   - `/books` -> existing claim `calibre-books-nfs` (mounted read-only)
-  - `/calibre-config` -> existing claim `app-configs-pvc-nfs`, subPath `calibre` (read-only)
-  - `/calibre-web-automated-config` -> existing claim `app-configs-pvc-nfs`, subPath `calibre-web-automated` (read-only)
 
 Notes:
 - `DISK_TYPE=NETWORK` is set for BookLore to reflect NFS usage and avoid local-disk assumptions.
-- Existing Calibre data is mounted read-only on BookLore to avoid accidental mutation during evaluation.
+- Existing Calibre books data is mounted read-only on BookLore to avoid accidental mutation during evaluation.
+- Calibre config PVC is intentionally not mounted in the initial stable rollout; add it later only if a specific integration requires it.
 
 ## Node Placement and Resource Policy
 

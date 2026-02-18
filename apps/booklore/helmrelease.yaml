@@ -110,25 +110,3 @@ spec:
         globalMounts:
           - path: /books
             readOnly: true
-
-      calibre-config:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: app-configs-pvc-nfs
-        advancedMounts:
-          main:
-            main:
-              - path: /calibre-config
-                subPath: calibre
-                readOnly: true
-
-      calibre-web-automated-config:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: app-configs-pvc-nfs
-        advancedMounts:
-          main:
-            main:
-              - path: /calibre-web-automated-config
-                subPath: calibre-web-automated
-                readOnly: true
