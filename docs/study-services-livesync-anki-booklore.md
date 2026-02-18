@@ -7,13 +7,12 @@ This document records the GitOps deployment and operational decisions for study-
 ### 1) Obsidian LiveSync backend (`obsidian-livesync`)
 - Path: `apps/obsidian-livesync/helmrelease.yaml`
 - Hostname: `https://livesync.khzaw.dev`
-- Backend: CouchDB (`couchdb:3.5.1`)
+- Backend: CouchDB (`couchdb:3.1.2`)
 - Purpose: self-hosted sync target for Obsidian LiveSync plugin.
 
-Key runtime settings:
-- single-node CouchDB mode
-- CORS enabled for Obsidian/mobile origins
-- larger request/document limits for attachment-heavy vaults
+Current rollout note:
+- uses baseline CouchDB config (no custom ini overlay) for startup stability
+- set plugin/server options from the LiveSync setup flow after first login
 
 ### 2) Anki sync server (`anki-server`)
 - Path: `apps/anki-server/helmrelease.yaml`
@@ -44,7 +43,7 @@ Operational decision:
 All new writable app state is on expandable NFS storage (`truenas-nfs`).
 
 - `obsidian-livesync`
-  - `/opt/couchdb/data` -> dedicated PVC (`10Gi`, expandable)
+  - `/opt/couchdb/data` -> dedicated PVC (`5Gi`, `local-path`, node-affined)
 
 - `anki-server`
   - `/anki_data` -> dedicated PVC (`5Gi`, expandable)

@@ -142,7 +142,7 @@ Important external-dns behavior:
 - Uptime Kuma:
   - data on NFS (`truenas-nfs`, 1Gi, expandable)
 - Obsidian LiveSync:
-  - CouchDB data on NFS (`truenas-nfs`, 10Gi, expandable)
+  - CouchDB data on `local-path` (`obsidian-livesync-local`, 5Gi, node-affined)
 - Anki server:
   - sync data on NFS (`truenas-nfs`, 5Gi, expandable)
 - BookLore:
