@@ -214,6 +214,9 @@ spec:
                               - title: Vaultwarden
                                 url: https://passwords.khzaw.dev
                                 icon: di:vaultwarden
+                              - title: AdGuard
+                                url: https://adguard.khzaw.dev
+                                icon: di:adguard-home
                           - title: Arr Stack
                             links:
                               - title: Sonarr
