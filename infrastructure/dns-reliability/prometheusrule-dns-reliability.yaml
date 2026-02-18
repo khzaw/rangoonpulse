@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dns-reliability
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: dns-reliability.rules
+      rules:
+        - alert: CoreDNSRequestLatencyP95High
+          expr: histogram_quantile(0.95, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le)) > 0.25
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CoreDNS p95 query latency is high"
+            description: "CoreDNS p95 request latency has been above 250ms for 10 minutes."
+
+        - alert: CoreDNSServfailRateHigh
+          expr: (sum(rate(coredns_dns_responses_total{rcode="SERVFAIL"}[5m])) / clamp_min(sum(rate(coredns_dns_responses_total[5m])), 1)) > 0.01
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CoreDNS SERVFAIL rate is elevated"
+            description: "SERVFAIL responses are above 1% for 10 minutes."
+
+        - alert: CoreDNSForwardHealthcheckFailures
+          expr: increase(coredns_proxy_healthcheck_failures_total[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CoreDNS upstream health checks are failing"
+            description: "CoreDNS detected upstream health check failures in the last 15 minutes."
+
+        - alert: FluxSourceGitRepositoryReconcileErrors
+          expr: increase(controller_runtime_reconcile_errors_total{namespace="flux-system", pod=~"source-controller-.*", controller="gitrepository"}[15m]) > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux source-controller has GitRepository reconcile errors"
+            description: "source-controller reported GitRepository reconcile errors in the last 15 minutes, often caused by DNS/network issues."
+
+        - alert: FluxSourceControllerUnavailable
+          expr: sum(up{namespace="flux-system", pod=~"source-controller-.*"}) < 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Flux source-controller metrics target is unavailable"
+            description: "No healthy source-controller scrape target is available for 5 minutes."

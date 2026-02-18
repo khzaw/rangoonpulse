@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/part-of: dns-reliability
+    app.kubernetes.io/managed-by: flux
+
+data:
+  Corefile: |-
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log . {
+            class error
+        }
+        prometheus :9153
+
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+
+        # Harden upstream behavior for external lookups used by controllers.
+        forward . 1.1.1.1 1.0.0.1 9.9.9.9 {
+            max_concurrent 1000
+            health_check 2s
+            max_fails 2
+            expire 10s
+            policy random
+            prefer_udp
+        }
+
+        cache 30 {
+            disable success cluster.local
+            disable denial cluster.local
+        }
+        loop
+        reload
+        loadbalance
+    }

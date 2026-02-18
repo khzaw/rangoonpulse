@@ -28,6 +28,7 @@ resources:
   - ./kustomizations/external-dns.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/monitoring.yaml
+  - ./kustomizations/dns-reliability.yaml
   - ./kustomizations/resource-advisor.yaml
 
   - ./kustomizations/infra-storage-calibre.yaml

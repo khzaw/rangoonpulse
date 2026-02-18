@@ -104,7 +104,18 @@ Important external-dns behavior:
 - Do not use Kubernetes `ClusterIP` addresses in router DNS settings.
 - AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
 - Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.
+- Runtime DNS tuning is enforced at container startup in `apps/adguard/helmrelease.yaml` (including `upstream_mode: fastest_addr`)
+  to avoid drift after UI/wizard changes.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`
+
+## Cluster DNS Reliability (Flux Path)
+- GitOps component: `infrastructure/dns-reliability/` via Flux Kustomization `dns-reliability`.
+- Purpose: harden CoreDNS external forward behavior and alert on DNS/Flux source-controller degradation.
+- Includes:
+  - `kube-system/ConfigMap coredns` hardening for external upstream forwarding
+  - `monitoring/PodMonitor flux-controllers`
+  - `monitoring/PrometheusRule dns-reliability`
+- Incident and implementation details: `docs/dns-reliability-flux-gitrepository-timeouts.md`
 
 ## App Deployment Conventions
 - Standard app layout:
@@ -261,6 +272,7 @@ Examples:
 - `docs/arm64-node-canal-flexvol-exec-format-error.md`
 - `docs/router-dns-rebind-private-a-records.md`
 - `docs/adguard-dns-stack-overview.md`
+- `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`

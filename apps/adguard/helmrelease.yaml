@@ -30,6 +30,30 @@ spec:
             image:
               repository: adguard/adguardhome
               tag: v0.107.56
+            command:
+              - sh
+              - -c
+            args:
+              - |
+                set -eu
+                CFG=/opt/adguardhome/conf/AdGuardHome.yaml
+
+                # Keep key DNS performance settings in GitOps so runtime changes do not drift.
+                if [ -f "$CFG" ]; then
+                  sed -i -E 's/^  address:.*/  address: 0.0.0.0:80/' "$CFG"
+                  sed -i -E 's/^  upstream_mode:.*/  upstream_mode: fastest_addr/' "$CFG"
+                  sed -i -E 's/^  fastest_timeout:.*/  fastest_timeout: 1s/' "$CFG"
+                  sed -i -E 's/^  cache_size:.*/  cache_size: 16777216/' "$CFG"
+                  sed -i -E 's/^  cache_ttl_min:.*/  cache_ttl_min: 60/' "$CFG"
+                  sed -i -E 's/^  cache_ttl_max:.*/  cache_ttl_max: 3600/' "$CFG"
+                  sed -i -E 's/^  cache_optimistic:.*/  cache_optimistic: true/' "$CFG"
+                  sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
+                fi
+
+                exec /opt/adguardhome/AdGuardHome \
+                  --no-check-update \
+                  -c "$CFG" \
+                  -w /opt/adguardhome/work
             env:
               TZ: "Asia/Singapore"
             resources:

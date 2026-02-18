@@ -68,7 +68,24 @@ If Kubernetes Service/Ingress still targets `3000`, `https://adguard.khzaw.dev` 
 Expected GitOps state:
 - `apps/adguard/helmrelease.yaml` -> `service.main.ports.http.port: 80`
 
-### 2) Router DNS Rebind Protection
+### 2) Runtime Config Drift vs GitOps
+AdGuard writes runtime config into `/opt/adguardhome/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
+drift away from intended GitOps behavior.
+
+To keep performance behavior stable, startup now enforces these keys in
+`apps/adguard/helmrelease.yaml` before launching AdGuard:
+- `dns.upstream_mode: fastest_addr`
+- `dns.fastest_timeout: 1s`
+- `dns.cache_size: 16777216`
+- `dns.cache_ttl_min: 60`
+- `dns.cache_ttl_max: 3600`
+- `dns.cache_optimistic: true`
+- `dns.upstream_timeout: 3s`
+- `http.address: 0.0.0.0:80`
+
+This keeps DNS latency optimization and web UI port alignment consistent after restarts.
+
+### 3) Router DNS Rebind Protection
 If DNS answers point public hostnames to private IPs (for example `10.0.0.231`), some routers block replies.
 
 See:
