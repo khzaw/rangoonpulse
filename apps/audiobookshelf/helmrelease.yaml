@@ -29,6 +29,11 @@ spec:
     keepHistory: false
 
   values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
+
     controllers:
       main:
         containers:

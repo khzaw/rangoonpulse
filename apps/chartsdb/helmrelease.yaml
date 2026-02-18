@@ -18,6 +18,11 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
+
     controllers:
       main:
         containers:
@@ -65,4 +70,3 @@ spec:
           - secretName: chartsdb-tls
             hosts:
               - chartsdb.khzaw.dev
-
