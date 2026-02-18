@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/service-v1.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seerr-entertainment-cname
+  namespace: default
+  annotations:
+    # Publish entertainment.khzaw.dev as a CNAME to seerr.khzaw.dev.
+    # external-dns must watch Services (`--source=service`) for this to work.
+    external-dns.alpha.kubernetes.io/hostname: entertainment.khzaw.dev
+spec:
+  type: ExternalName
+  externalName: seerr.khzaw.dev
