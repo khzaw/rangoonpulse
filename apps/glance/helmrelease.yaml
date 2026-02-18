@@ -946,59 +946,73 @@ spec:
                                 </div>
                               </div>`}}
 
-                      - type: custom-api
-                        title: TV Show Releases
-                        cache: 10m
-                        url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=10&sortKey=episodes.airDateUtc&sortDirection=ascending"
-                        headers:
-                          X-Api-Key: ${SONARR_API_KEY}
-                        template: |
-                          {{`{{ $items := .JSON.Array "records" }}
-                          {{ if eq (len $items) 0 }}
-                          <div class="size-h6">No missing episodes.</div>
-                          {{ else }}
-                          <div class="flex flex-col" style="gap: 10px;">
-                            {{ range $items }}
-                            {{ $series := .String "series.title" }}
-                            {{ $title := .String "title" }}
-                            {{ $season := .Int "seasonNumber" }}
-                            {{ $episode := .Int "episodeNumber" }}
-                            <div>
-                              <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📺 {{ $series }}</div>
-                              <div class="size-h6" style="opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                S{{ printf "%02d" $season }}E{{ printf "%02d" $episode }}{{ if ne $title "" }} • {{ $title }}{{ end }}
+                      - type: split-column
+                        title: Upcoming Releases
+                        max-columns: 2
+                        widgets:
+                          - type: custom-api
+                            title: TV Show Releases
+                            cache: 10m
+                            url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=12&sortKey=episodes.airDateUtc&sortDirection=ascending"
+                            headers:
+                              X-Api-Key: ${SONARR_API_KEY}
+                            template: |
+                              {{`{{ $items := .JSON.Array "records" }}
+                              {{ if eq (len $items) 0 }}
+                              <div class="size-h6">No missing episodes.</div>
+                              {{ else }}
+                              <div class="flex flex-wrap" style="gap: 10px;">
+                                {{ range $items }}
+                                {{ $series := .String "series.title" }}
+                                {{ $title := .String "title" }}
+                                {{ $season := .Int "seasonNumber" }}
+                                {{ $episode := .Int "episodeNumber" }}
+                                {{ $poster := .String "series.images.0.remoteUrl" }}
+                                {{ if eq $poster "" }}{{ $poster = .String "series.images.0.url" }}{{ end }}
+                                <div style="width: 110px;">
+                                  {{ if ne $poster "" }}
+                                  <img src="{{ $poster }}" style="width: 110px; height: 165px; object-fit: cover; border-radius: 10px; background: rgba(255,255,255,.06);" />
+                                  {{ else }}
+                                  <div style="width: 110px; height: 165px; border-radius: 10px; background: rgba(255,255,255,.06);"></div>
+                                  {{ end }}
+                                  <div class="size-h6" style="margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $series }}</div>
+                                  <div class="size-h6" style="opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    S{{ printf "%02d" $season }}E{{ printf "%02d" $episode }}{{ if ne $title "" }} • {{ $title }}{{ end }}
+                                  </div>
+                                </div>
+                                {{ end }}
                               </div>
-                            </div>
-                            {{ end }}
-                          </div>
-                          {{ end }}`}}
+                              {{ end }}`}}
 
-                      - type: custom-api
-                        title: Movie Releases
-                        cache: 10m
-                        url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=10&sortKey=movieMetadata.sortTitle&sortDirection=ascending"
-                        headers:
-                          X-Api-Key: ${RADARR_API_KEY}
-                        template: |
-                          {{`{{ $items := .JSON.Array "records" }}
-                          {{ if eq (len $items) 0 }}
-                          <div class="size-h6">No missing movies.</div>
-                          {{ else }}
-                          <div class="flex flex-col" style="gap: 10px;">
-                            {{ range $items }}
-                            {{ $title := .String "title" }}
-                            {{ $year := .Int "year" }}
-                            {{ $studio := .String "studio" }}
-                            <div>
-                              <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
-                              <div class="size-h6" style="opacity: .8;">
-                                {{ if gt $year 0 }}{{ $year }}{{ else }}Unknown Year{{ end }}
-                                {{ if ne $studio "" }} • {{ $studio }}{{ end }}
+                          - type: custom-api
+                            title: Movie Releases
+                            cache: 10m
+                            url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=12&sortKey=movieMetadata.sortTitle&sortDirection=ascending"
+                            headers:
+                              X-Api-Key: ${RADARR_API_KEY}
+                            template: |
+                              {{`{{ $items := .JSON.Array "records" }}
+                              {{ if eq (len $items) 0 }}
+                              <div class="size-h6">No missing movies.</div>
+                              {{ else }}
+                              <div class="flex flex-wrap" style="gap: 10px;">
+                                {{ range $items }}
+                                {{ $title := .String "title" }}
+                                {{ $year := .Int "year" }}
+                                {{ $poster := .String "images.0.remoteUrl" }}
+                                {{ if eq $poster "" }}{{ $poster = .String "images.0.url" }}{{ end }}
+                                <div style="width: 110px;">
+                                  {{ if ne $poster "" }}
+                                  <img src="{{ $poster }}" style="width: 110px; height: 165px; object-fit: cover; border-radius: 10px; background: rgba(255,255,255,.06);" />
+                                  {{ else }}
+                                  <div style="width: 110px; height: 165px; border-radius: 10px; background: rgba(255,255,255,.06);"></div>
+                                  {{ end }}
+                                  <div class="size-h6" style="margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                                  <div class="size-h6" style="opacity: .8;">{{ if gt $year 0 }}{{ $year }}{{ else }}Unknown Year{{ end }}</div>
+                                </div>
+                                {{ end }}
                               </div>
-                            </div>
-                            {{ end }}
-                          </div>
-                          {{ end }}`}}
+                              {{ end }}`}}
 
                       - type: custom-api
                         title: Jellyfin Now Playing
@@ -1079,9 +1093,6 @@ spec:
                           {{ else }}
                           {{ $latestURL := printf "https://jellyfin.khzaw.dev/Users/%s/Items/Latest" $userId }}
                           {{ $resp := newRequest $latestURL | withParameter "api_key" "${JELLYFIN_API_KEY}" | withParameter "Limit" "18" | withParameter "IncludeItemTypes" "Movie,Episode" | getResponse }}
-                          {{ if ne $resp.StatusCode 200 }}
-                          <div class="size-h6">Jellyfin latest API error: {{ $resp.StatusCode }}</div>
-                          {{ else }}
                           {{ $items := $resp.JSON.Array "" }}
                           {{ if eq (len $items) 0 }}
                           <div class="size-h6">No recent items.</div>
@@ -1108,13 +1119,12 @@ spec:
                               <div style="width: 108px; height: 162px; border-radius: 10px; background: rgba(255,255,255,.06);"></div>
                               {{ end }}
                               <div class="size-h6" style="margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                {{ if eq $type "Movie" }}🎬{{ else if eq $type "Episode" }}📺{{ else }}🎞️{{ end }} {{ $title }}
+                                {{ if eq $type "Movie" }}Movie{{ else if eq $type "Episode" }}Episode{{ else }}Item{{ end }} • {{ $title }}
                               </div>
                             </div>
                             {{ end }}
                             {{ end }}
                           </div>
-                          {{ end }}
                           {{ end }}
                           {{ end }}`}}
 
