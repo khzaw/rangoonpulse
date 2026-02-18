@@ -17,6 +17,9 @@ resources:
     cpu: 300m
     memory: 512Mi
 
+nodeSelector:
+  kubernetes.io/hostname: talos-7nf-osf
+
 ingress:
   enabled: true
   className: nginx

@@ -19,6 +19,11 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
+
     controllers:
       main:
         strategy: Recreate
@@ -82,4 +87,3 @@ spec:
         accessMode: ReadWriteOnce
         globalMounts:
           - path: /config
-

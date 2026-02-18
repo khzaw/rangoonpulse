@@ -17,6 +17,11 @@ spec:
         name: bjw-s-charts
         namespace: flux-system
   values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
+
     controllers:
       main:
         replicas: 1
@@ -51,10 +56,6 @@ spec:
         size: 1Gi
         globalMounts:
           - path: /app/data
-
-    pod:
-      nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
 
     ingress:
       main:
