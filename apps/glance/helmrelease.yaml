@@ -825,6 +825,33 @@ spec:
                               </div>`}}
 
                       - type: custom-api
+                        title: Movie Releases
+                        cache: 10m
+                        url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=10&sortKey=movieMetadata.sortTitle&sortDirection=ascending"
+                        headers:
+                          X-Api-Key: ${RADARR_API_KEY}
+                        template: |
+                          {{`{{ $items := .JSON.Array "records" }}
+                          {{ if eq (len $items) 0 }}
+                          <div class="size-h6">No missing movies.</div>
+                          {{ else }}
+                          <div class="flex flex-col" style="gap: 10px;">
+                            {{ range $items }}
+                            {{ $title := .String "title" }}
+                            {{ $year := .Int "year" }}
+                            {{ $studio := .String "studio" }}
+                            <div>
+                              <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                              <div class="size-h6" style="opacity: .8;">
+                                {{ if gt $year 0 }}{{ $year }}{{ else }}Unknown Year{{ end }}
+                                {{ if ne $studio "" }} • {{ $studio }}{{ end }}
+                              </div>
+                            </div>
+                            {{ end }}
+                          </div>
+                          {{ end }}`}}
+
+                      - type: custom-api
                         title: Jellyfin Now Playing
                         cache: 15s
                         url: "https://jellyfin.khzaw.dev/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
@@ -890,35 +917,50 @@ spec:
                       - type: custom-api
                         title: Jellyfin Recently Added
                         cache: 2m
-                        url: "https://jellyfin.khzaw.dev/Items/Latest?Limit=12&IncludeItemTypes=Movie,Episode&api_key=${JELLYFIN_API_KEY}"
+                        url: "https://jellyfin.khzaw.dev/Users/Me?api_key=${JELLYFIN_API_KEY}"
                         template: |
-                          {{`{{ $items := .JSON.Array "" }}
+                          {{`{{ $userId := .JSON.String "Id" }}
+                          {{ if eq $userId "" }}
+                          <div class="size-h6">Unable to resolve Jellyfin user from API key.</div>
+                          {{ else }}
+                          {{ $latestURL := printf "https://jellyfin.khzaw.dev/Users/%s/Items/Latest" $userId }}
+                          {{ $resp := newRequest $latestURL | withParameter "api_key" "${JELLYFIN_API_KEY}" | withParameter "Limit" "12" | withParameter "IncludeItemTypes" "Movie,Episode" | getResponse }}
+                          {{ if ne $resp.StatusCode 200 }}
+                          <div class="size-h6">Jellyfin latest API error: {{ $resp.StatusCode }}</div>
+                          {{ else }}
+                          {{ $items := $resp.JSON.Array "" }}
                           {{ if eq (len $items) 0 }}
                           <div class="size-h6">No recent items.</div>
                           {{ else }}
-                          <div class="grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
-                          {{ range $items }}
-                          {{ $id := .String "Id" }}
-                          {{ $name := .String "Name" }}
-                          {{ $series := .String "SeriesName" }}
-                          {{ $title := $name }}
-                          {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
-                          {{ $img := "" }}
-                          {{ if ne $id "" }}
-                          {{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=140&quality=90&api_key=%s" $id "${JELLYFIN_API_KEY}" }}
-                          {{ end }}
-                          <div class="flex" style="gap: 10px; align-items: center;">
-                            {{ if ne $img "" }}
-                            <img src="{{ $img }}" style="width: 48px; height: 72px; object-fit: cover; border-radius: 8px; background: rgba(255,255,255,.06);" />
-                            {{ else }}
-                            <div style="width: 48px; height: 72px; border-radius: 8px; background: rgba(255,255,255,.06);"></div>
+                          <div class="flex flex-col" style="gap: 10px;">
+                            {{ $shown := 0.0 }}
+                            {{ range $items }}
+                            {{ if lt $shown 8.0 }}
+                            {{ $shown = add $shown 1 }}
+                            {{ $id := .String "Id" }}
+                            {{ $name := .String "Name" }}
+                            {{ $series := .String "SeriesName" }}
+                            {{ $title := $name }}
+                            {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
+                            {{ $img := "" }}
+                            {{ if ne $id "" }}
+                            {{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=140&quality=90&api_key=%s" $id "${JELLYFIN_API_KEY}" }}
                             {{ end }}
-                            <div class="flex-1" style="min-width: 0;">
-                              <div class="size-h6" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                            <div class="flex" style="gap: 10px; align-items: center;">
+                              {{ if ne $img "" }}
+                              <img src="{{ $img }}" style="width: 48px; height: 72px; object-fit: cover; border-radius: 8px; background: rgba(255,255,255,.06);" />
+                              {{ else }}
+                              <div style="width: 48px; height: 72px; border-radius: 8px; background: rgba(255,255,255,.06);"></div>
+                              {{ end }}
+                              <div class="flex-1" style="min-width: 0;">
+                                <div class="size-h6" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
+                              </div>
                             </div>
+                            {{ end }}
+                            {{ end }}
                           </div>
                           {{ end }}
-                          </div>
+                          {{ end }}
                           {{ end }}`}}
 
                       - type: bookmarks
@@ -977,33 +1019,6 @@ spec:
 
                   - size: small
                     widgets:
-                      - type: custom-api
-                        title: Movie Releases
-                        cache: 10m
-                        url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=10&sortKey=movieMetadata.sortTitle&sortDirection=ascending"
-                        headers:
-                          X-Api-Key: ${RADARR_API_KEY}
-                        template: |
-                          {{`{{ $items := .JSON.Array "records" }}
-                          {{ if eq (len $items) 0 }}
-                          <div class="size-h6">No missing movies.</div>
-                          {{ else }}
-                          <div class="flex flex-col" style="gap: 10px;">
-                            {{ range $items }}
-                            {{ $title := .String "title" }}
-                            {{ $year := .Int "year" }}
-                            {{ $studio := .String "studio" }}
-                            <div>
-                              <div class="size-h5" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $title }}</div>
-                              <div class="size-h6" style="opacity: .8;">
-                                {{ if gt $year 0 }}{{ $year }}{{ else }}Unknown Year{{ end }}
-                                {{ if ne $studio "" }} • {{ $studio }}{{ end }}
-                              </div>
-                            </div>
-                            {{ end }}
-                          </div>
-                          {{ end }}`}}
-
                       - type: custom-api
                         title: TV Show Releases
                         cache: 10m
