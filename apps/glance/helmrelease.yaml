@@ -584,11 +584,58 @@ spec:
 
                   - size: small
                     widgets:
-                      - type: server-stats
-                        servers:
-                          - type: local
-                            name: Mini PC
-                            hide-mountpoints-by-default: true
+                      - type: custom-api
+                        title: Cluster Nodes
+                        cache: 1m
+                        url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=vector(1)"
+                        subrequests:
+                          p_cpu_alloc:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D"
+                          p_mem_alloc:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D"
+                          p_cpu_req:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D%29"
+                          p_mem_req:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D%29"
+                          p_pods:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_info%7Bnode%3D%22talos-7nf-osf%22%7D%29"
+                          u_cpu_alloc:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D"
+                          u_mem_alloc:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D"
+                          u_cpu_req:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D%29"
+                          u_mem_req:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D%29"
+                          u_pods:
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_info%7Bnode%3D%22talos-uua-g6r%22%7D%29"
+                        template: |
+                          {{`{{ $pCpuAlloc := (.Subrequest "p_cpu_alloc").JSON.Float "data.result.0.value.1" }}
+                          {{ $pMemAlloc := (.Subrequest "p_mem_alloc").JSON.Float "data.result.0.value.1" }}
+                          {{ $pCpuReq := (.Subrequest "p_cpu_req").JSON.Float "data.result.0.value.1" }}
+                          {{ $pMemReq := (.Subrequest "p_mem_req").JSON.Float "data.result.0.value.1" }}
+                          {{ $pPods := (.Subrequest "p_pods").JSON.Float "data.result.0.value.1" }}
+
+                          {{ $uCpuAlloc := (.Subrequest "u_cpu_alloc").JSON.Float "data.result.0.value.1" }}
+                          {{ $uMemAlloc := (.Subrequest "u_mem_alloc").JSON.Float "data.result.0.value.1" }}
+                          {{ $uCpuReq := (.Subrequest "u_cpu_req").JSON.Float "data.result.0.value.1" }}
+                          {{ $uMemReq := (.Subrequest "u_mem_req").JSON.Float "data.result.0.value.1" }}
+                          {{ $uPods := (.Subrequest "u_pods").JSON.Float "data.result.0.value.1" }}
+
+                          <div class="flex flex-col" style="gap: 12px;">
+                            <div>
+                              <div class="size-h5">talos-7nf-osf</div>
+                              <div class="size-h6">CPU {{ printf "%.2f" $pCpuReq }}/{{ printf "%.2f" $pCpuAlloc }} cores</div>
+                              <div class="size-h6">MEM {{ printf "%.1f" (div $pMemReq 1073741824) }}/{{ printf "%.1f" (div $pMemAlloc 1073741824) }} Gi</div>
+                              <div class="size-h6">Pods {{ $pPods | toInt }}</div>
+                            </div>
+                            <div>
+                              <div class="size-h5">talos-uua-g6r</div>
+                              <div class="size-h6">CPU {{ printf "%.2f" $uCpuReq }}/{{ printf "%.2f" $uCpuAlloc }} cores</div>
+                              <div class="size-h6">MEM {{ printf "%.1f" (div $uMemReq 1073741824) }}/{{ printf "%.1f" (div $uMemAlloc 1073741824) }} Gi</div>
+                              <div class="size-h6">Pods {{ $uPods | toInt }}</div>
+                            </div>
+                          </div>`}}
                       - type: hacker-news
                         title: Hacker News
                         sort-by: top
