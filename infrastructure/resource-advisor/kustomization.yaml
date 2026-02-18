@@ -11,9 +11,15 @@ resources:
   - clusterrolebinding.yaml
   - cronjob-report.yaml
   - cronjob-apply-pr.yaml
+  - deployment-exporter.yaml
+  - service-exporter.yaml
+  - ingress-exporter.yaml
+  - servicemonitor-exporter.yaml
+  - grafana-dashboard-resource-advisor.yaml
 configMapGenerator:
   - name: resource-advisor-script
     files:
       - advisor.py
+      - exporter.py
 generatorOptions:
   disableNameSuffixHash: true

@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/servicemonitor-monitoring.coreos.com-v1.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: resource-advisor-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: resource-advisor-exporter
+    app.kubernetes.io/part-of: resource-advisor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: resource-advisor-exporter
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 60s
+      scrapeTimeout: 10s
+

@@ -1,0 +1,233 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-resource-advisor
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: resource-advisor
+data:
+  resource-advisor.json: |
+    {
+      "uid": "resource-advisor",
+      "title": "Resource Advisor",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["tuning", "homelab"],
+      "time": { "from": "now-14d", "to": "now" },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": { "type": "datasource", "uid": "grafana" },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": { "text": "Prometheus", "value": "prometheus" },
+            "refresh": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Links",
+          "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+          "options": {
+            "mode": "markdown",
+            "content": "Latest report viewer: https://tuning.khzaw.dev\\n\\nThis dashboard tracks the resource-advisor CronJobs and exposes report summaries via the exporter metrics."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Report Age",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 5, "w": 4, "x": 0, "y": 4 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "time() - max(resource_advisor_last_run_timestamp_seconds)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s", "decimals": 0 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Coverage (days)",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 5, "w": 4, "x": 4, "y": 4 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "max(resource_advisor_metrics_coverage_days)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": { "defaults": { "decimals": 2 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Recommendations",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 5, "w": 4, "x": 8, "y": 4 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "max(resource_advisor_recommendations_total)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": { "defaults": { "decimals": 0 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "CPU Requests %",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 5, "w": 4, "x": 12, "y": 4 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "max(resource_advisor_current_requests_percent_cpu)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Memory Requests %",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 5, "w": 4, "x": 16, "y": 4 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "max(resource_advisor_current_requests_percent_memory)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Fetch Success",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 5, "w": 4, "x": 20, "y": 4 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "max(resource_advisor_report_fetch_success)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": { "defaults": { "decimals": 0 } },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "Recommendations by Action",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "resource_advisor_recommendations_by_action",
+              "legendFormat": "{{action}}",
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": { "defaults": { "decimals": 0 } }
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "CronJob Last Success Age",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "time() - kube_cronjob_status_last_successful_time{namespace=\"monitoring\",cronjob=~\"resource-advisor-(report|apply-pr)\"}",
+              "legendFormat": "{{cronjob}}",
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s", "decimals": 0 } }
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "Budget Percent (Current vs Recommended)",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "uid": "$datasource" },
+              "expr": "resource_advisor_current_requests_percent_cpu",
+              "legendFormat": "current cpu %",
+              "interval": "1m"
+            },
+            {
+              "refId": "B",
+              "datasource": { "uid": "$datasource" },
+              "expr": "resource_advisor_current_requests_percent_memory",
+              "legendFormat": "current mem %",
+              "interval": "1m"
+            },
+            {
+              "refId": "C",
+              "datasource": { "uid": "$datasource" },
+              "expr": "resource_advisor_recommended_requests_percent_cpu",
+              "legendFormat": "recommended cpu %",
+              "interval": "1m"
+            },
+            {
+              "refId": "D",
+              "datasource": { "uid": "$datasource" },
+              "expr": "resource_advisor_recommended_requests_percent_memory",
+              "legendFormat": "recommended mem %",
+              "interval": "1m"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1 } }
+        }
+      ]
+    }
+

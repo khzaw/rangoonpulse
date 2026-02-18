@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/ingress-networking-v1.json
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: resource-advisor
+  namespace: monitoring
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: tuning.khzaw.dev
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: tuning.khzaw.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: resource-advisor-exporter
+                port:
+                  name: http
+  tls:
+    - secretName: resource-advisor-tls
+      hosts:
+        - tuning.khzaw.dev
+
