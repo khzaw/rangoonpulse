@@ -62,12 +62,6 @@ Notes:
     - key: `POSTGRES_PASSWORD`
 
 ### Ops / Notifications
-- **notifiarr** (`apps/notifiarr/helmrelease.yaml`)
-  - `default/notifiarr-ui-password`
-    - key: `password`
-  - `default/notifiarr-api-key`
-    - key: `apikey`
-
 - **resource-advisor (apply PR)** (`infrastructure/resource-advisor/cronjob-apply-pr.yaml`)
   - `monitoring/resource-advisor-github`
     - key: `token` (GitHub token for PR creation)
@@ -87,4 +81,3 @@ These exist in-cluster but are not currently referenced by this repo's GitOps ma
 ## Local Repo Files To Treat As Sensitive
 These files contain credentials and should not be committed to Git (even if they are convenient locally):
 - `kubeconfig` (client cert/key material)
-
