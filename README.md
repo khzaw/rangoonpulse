@@ -38,51 +38,51 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 
 ### Core
 
-- AdGuard Home
-- Glance
-- Uptime Kuma
-- Grafana
-- Resource Advisor
+- 🛡️ AdGuard Home
+- 🧭 Glance
+- ⏱️ Uptime Kuma
+- 📈 Grafana
+- 🧪 Resource Advisor
 
 ### Media and Library
 
-- Jellyfin
-- Immich
-- Seerr
-- Audiobookshelf
-- Calibre (Web)
-- Calibre (VNC)
+- 🎬 Jellyfin
+- 📸 Immich
+- 🎟️ Seerr
+- 🎧 Audiobookshelf
+- 📚 Calibre (Web)
+- 🖥️ Calibre (VNC)
 
 ### Media Automation
 
-- autobrr
-- profilarr
-- prowlarr
-- sonarr
-- radarr
-- bazarr
-- sabnzbd
-- transmission
-- tracerr
+- 🧲 autobrr
+- 🧭 profilarr
+- 🧰 prowlarr
+- 📺 sonarr
+- 🎞️ radarr
+- 🧾 bazarr
+- 🧱 sabnzbd
+- 🧲 transmission
+- 🧪 tracerr
 
 ### Live TV and Playback Tools
 
-- nodecast-tv
-- Jellystat
-- iSponsorBlockTV
-- Tunarr
-- ErsatzTV
+- 📺 nodecast-tv
+- 🧠 Jellystat
+- 🧩 iSponsorBlockTV
+- 🎞️ Tunarr
+- 📼 ErsatzTV
 
 ### Productivity and Utilities
 
-- Actual Budget
-- Vaultwarden
-- ChartDB
+- 💸 Actual Budget
+- 🔐 Vaultwarden
+- 📊 ChartDB
 
 ### LAN Gateway
 
-- NAS
-- Router
+- 🗄️ NAS
+- 🌐 Router
 
 ## 🛠️ Ops Cheatsheet
 
