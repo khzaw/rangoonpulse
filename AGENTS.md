@@ -230,6 +230,7 @@ Examples:
 - `docs/lan-access-current-state-and-lean-plan.md`
 - `docs/secrets-management-current-state-options-and-plan.md`
 - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
+- `docs/arm64-node-canal-flexvol-exec-format-error.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
