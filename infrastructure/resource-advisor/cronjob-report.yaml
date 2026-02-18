@@ -18,6 +18,9 @@ spec:
       template:
         spec:
           serviceAccountName: resource-advisor
+          # The secondary node's CNI is currently unhealthy; pin to primary node for reliability.
+          nodeSelector:
+            kubernetes.io/hostname: talos-7nf-osf
           restartPolicy: OnFailure
           securityContext:
             runAsNonRoot: true

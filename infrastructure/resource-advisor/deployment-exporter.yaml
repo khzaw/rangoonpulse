@@ -20,6 +20,9 @@ spec:
         app.kubernetes.io/part-of: resource-advisor
     spec:
       serviceAccountName: resource-advisor
+      # The secondary node's CNI is currently unhealthy; pin to primary node for reliability.
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -80,4 +83,3 @@ spec:
           configMap:
             name: resource-advisor-script
             defaultMode: 0555
-
