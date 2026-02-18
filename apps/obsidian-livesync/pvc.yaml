@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/persistentvolumeclaim-v1.json
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: obsidian-livesync-local
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

@@ -88,8 +88,6 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: truenas-nfs
-        accessMode: ReadWriteOnce
-        size: 10Gi
+        existingClaim: obsidian-livesync-local
         globalMounts:
           - path: /opt/couchdb/data
