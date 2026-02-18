@@ -129,6 +129,7 @@ Important external-dns behavior:
 
 ## Storage Conventions and Current Decisions
 - Default StorageClass intent: `truenas-nfs` (NFS-backed default), not `local-path`.
+- `truenas-hdd-config` has been retired. Use `truenas-nfs` for app/config PVCs that need expansion support.
 - Immich:
   - photos/library on NFS PVC `immich-library` (`truenas-hdd-media`, RWX, 500Gi, expandable)
   - Postgres on `local-path` for low-latency/stability
@@ -278,5 +279,6 @@ Examples:
 - `docs/tracerr.md`
 - `docs/isponsorblocktv.md`
 - `docs/media-postgres.md`
+- `docs/calibre-storage-migration-to-truenas-nfs.md`
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`

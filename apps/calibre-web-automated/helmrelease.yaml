@@ -86,7 +86,7 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: app-configs-pvc
+        existingClaim: app-configs-pvc-nfs
         advancedMounts:
           main:
             main:
@@ -96,6 +96,6 @@ spec:
       books:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: calibre-books
+        existingClaim: calibre-books-nfs
         globalMounts:
           - path: /calibre-library

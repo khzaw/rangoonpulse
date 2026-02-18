@@ -56,16 +56,6 @@ spec:
           - noatime
           - nfsvers=4
 
-      - name: truenas-hdd-config
-        defaultClass: false
-        reclaimPolicy: Retain
-        volumeBindingMode: Immediate
-        parameters:
-          fsType: nfs
-        mountOptions:
-          - noatime
-          - nfsvers=4
-
     driver:
       config:
         driver: freenas-api-nfs
