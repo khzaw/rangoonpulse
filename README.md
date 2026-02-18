@@ -18,7 +18,7 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 | Node | Role | Arch | CPU | RAM | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `talos-7nf-osf` (`10.0.0.197`) | control-plane + primary workloads | `amd64` | i5-8400T (6c/6t) | 32 GiB | NVMe + Intel iGPU (`/dev/dri`) |
-| `talos-uua-g6r` (`10.0.0.38`) | utility workloads | `arm64` | 4 cores | 8 GiB | Runs Glance + AdGuard + Profilarr |
+| `talos-uua-g6r` (`10.0.0.38`) | utility workloads | `arm64` | 4 cores | 8 GiB | Runs Glance + AdGuard + Profilarr + ChartDB + Uptime Kuma |
 
 ## 🧱 Stack
 

@@ -77,6 +77,8 @@ Notes:
   - `apps/glance` (dashboard)
   - `apps/profilarr`
   - `apps/adguard`
+  - `apps/chartsdb`
+  - `apps/uptime-kuma`
 - Remember: `local-path` PVs are node-affined. Moving an app between nodes usually implies wiping/recreating the PVC
   (or migrating storage to NFS).
 
