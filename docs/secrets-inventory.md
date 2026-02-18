@@ -20,6 +20,19 @@ Notes:
     - consumed via `envFrom.secretRef`
     - keys: various `*_API_KEY` values used by Glance widgets
 
+### Study Services
+- **obsidian-livesync** (`apps/obsidian-livesync/helmrelease.yaml`)
+  - `default/obsidian-livesync-secret`
+    - keys: `COUCHDB_USER`, `COUCHDB_PASSWORD`
+
+- **anki-server** (`apps/anki-server/helmrelease.yaml`)
+  - `default/anki-server-secret`
+    - key: `SYNC_USER1` (format `username:password`)
+
+- **booklore + booklore-mariadb** (`apps/booklore/helmrelease.yaml`, `apps/booklore-mariadb/helmrelease.yaml`)
+  - `default/booklore-secret`
+    - keys: `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `MYSQL_ROOT_PASSWORD`
+
 ### DNS / TLS
 - **external-dns** (`infrastructure/external-dns/helmrelease.yaml`)
   - `flux-system/cloudflare-api-token`

@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: anki-server
+  namespace: default
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
+
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: jeankhawand/anki-sync-server
+              tag: "25.07"
+            env:
+              TZ: "Asia/Singapore"
+              SYNC_USER1:
+                valueFrom:
+                  secretKeyRef:
+                    name: anki-server-secret
+                    key: SYNC_USER1
+              MAX_SYNC_PAYLOAD_MEGS: "250"
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "128Mi"
+              limits:
+                cpu: "300m"
+                memory: "512Mi"
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: anki.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/proxy-body-size: "0"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - host: anki.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: anki-server-tls
+            hosts:
+              - anki.khzaw.dev
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: truenas-nfs
+        accessMode: ReadWriteOnce
+        size: 5Gi
+        globalMounts:
+          - path: /anki_data

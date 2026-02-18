@@ -141,6 +141,13 @@ Important external-dns behavior:
   - persistent storage enabled on `local-path` (currently 1Gi PVC)
 - Uptime Kuma:
   - data on NFS (`truenas-nfs`, 1Gi, expandable)
+- Obsidian LiveSync:
+  - CouchDB data on NFS (`truenas-nfs`, 10Gi, expandable)
+- Anki server:
+  - sync data on NFS (`truenas-nfs`, 5Gi, expandable)
+- BookLore:
+  - app data and MariaDB config/state on NFS (`truenas-nfs`, expandable)
+  - mounts existing Calibre data read-only for evaluation (`calibre-books-nfs`, `app-configs-pvc-nfs` subPaths)
 - Tunarr:
   - config/state on NFS (`truenas-nfs`, mounted at `/root/.local/share/tunarr`)
 - ErsatzTV:
@@ -275,6 +282,7 @@ Examples:
 - `docs/adguard-dns-stack-overview.md`
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/dashboards-homepage-glance.md`
+- `docs/study-services-livesync-anki-booklore.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
 - `docs/isponsorblocktv.md`

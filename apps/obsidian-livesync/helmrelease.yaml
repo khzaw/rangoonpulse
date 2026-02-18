@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: obsidian-livesync
+  namespace: default
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-7nf-osf
+
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: couchdb
+              tag: "3.5.1"
+            env:
+              TZ: "Asia/Singapore"
+              COUCHDB_USER:
+                valueFrom:
+                  secretKeyRef:
+                    name: obsidian-livesync-secret
+                    key: COUCHDB_USER
+              COUCHDB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: obsidian-livesync-secret
+                    key: COUCHDB_PASSWORD
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "1Gi"
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 5984
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: livesync.khzaw.dev
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/proxy-body-size: "0"
+          nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - host: livesync.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: livesync-tls
+            hosts:
+              - livesync.khzaw.dev
+
+    configMaps:
+      localini:
+        enabled: true
+        data:
+          10-livesync.ini: |
+            [couchdb]
+            single_node=true
+            max_document_size=50000000
+
+            [chttpd]
+            require_valid_user = true
+            max_http_request_size = 4294967296
+
+            [chttpd_auth]
+            require_valid_user = true
+            authentication_redirect = /_utils/session.html
+
+            [httpd]
+            WWW-Authenticate = Basic realm="couchdb"
+            enable_cors = true
+
+            [cors]
+            origins = app://obsidian.md,capacitor://localhost,http://localhost
+            credentials = true
+            headers = accept, authorization, content-type, origin, referer
+            methods = GET, PUT, POST, HEAD, DELETE
+            max_age = 3600
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: truenas-nfs
+        accessMode: ReadWriteOnce
+        size: 10Gi
+        globalMounts:
+          - path: /opt/couchdb/data
+
+      localini:
+        enabled: true
+        type: configMap
+        identifier: localini
+        globalMounts:
+          - path: /opt/couchdb/etc/local.d/10-livesync.ini
+            subPath: 10-livesync.ini
+            readOnly: true

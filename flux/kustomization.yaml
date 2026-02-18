@@ -40,6 +40,10 @@ resources:
   - ./kustomizations/calibre-web-automated.yaml
   - ./kustomizations/chartsdb.yaml
   - ./kustomizations/speedtest.yaml
+  - ./kustomizations/obsidian-livesync.yaml
+  - ./kustomizations/anki-server.yaml
+  - ./kustomizations/booklore-mariadb.yaml
+  - ./kustomizations/booklore.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml
