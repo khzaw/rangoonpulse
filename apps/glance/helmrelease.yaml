@@ -309,7 +309,7 @@ spec:
                             icon: di:jellyfin
                           - title: Seerr
                             url: https://seerr.khzaw.dev
-                            check-url: http://seerr.default.svc.cluster.local:5055
+                            check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
                           - title: Booklore
                             url: https://booklore.khzaw.dev
@@ -364,7 +364,7 @@ spec:
                             icon: di:bazarr
                           - title: Seerr
                             url: https://seerr.khzaw.dev
-                            check-url: http://seerr.default.svc.cluster.local:5055
+                            check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
                           - title: Transmission
                             url: https://torrent.khzaw.dev
@@ -1117,7 +1117,7 @@ spec:
                         sites:
                           - title: Seerr
                             url: https://seerr.khzaw.dev
-                            check-url: http://seerr.default.svc.cluster.local:5055
+                            check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
                           - title: Jellyfin
                             url: https://jellyfin.khzaw.dev
