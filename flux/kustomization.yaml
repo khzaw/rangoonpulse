@@ -54,6 +54,7 @@ resources:
   - ./kustomizations/seerr.yaml
   - ./kustomizations/jellystat.yaml
   - ./kustomizations/immich.yaml
+  - ./kustomizations/adguard.yaml
   - ./kustomizations/glance.yaml
   - ./kustomizations/tracerr.yaml
   - ./kustomizations/lan-access.yaml
