@@ -12,6 +12,9 @@ GitOps source of truth:
 
 Glance config is embedded as a ConfigMap (`glance.yml`) and mounted read-only into the container.
 
+### Node Placement
+Glance is pinned to the ARM64 Raspberry Pi utility node (`talos-uua-g6r`) to keep the primary node focused on heavier apps.
+
 ### Secrets / API Keys
 Glance reads API keys from:
 - `envFrom: secretRef: homepage-widget-secrets`

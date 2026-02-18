@@ -7,7 +7,7 @@ This file documents how this cluster is operated today so a new LLM session can
 continue work without re-discovery.
 
 ## Cluster Profile
-- Kubernetes: Talos Linux cluster (single primary worker profile, resource-constrained homelab)
+- Kubernetes: Talos Linux cluster (primary `amd64` node + smaller `arm64` utility node)
 - GitOps: Flux CD v2 (`Kustomization` + `HelmRelease`)
 - Primary ingress: ingress-nginx with MetalLB
 - DNS/TLS: Cloudflare + external-dns + cert-manager (Let's Encrypt)
@@ -60,9 +60,25 @@ Implemented via:
 Notes:
 - Old Tailscale ingress-proxy/DNS indirection was removed in favor of subnet routing.
 - `lan-access` Flux kustomization points to `./infrastructure/lan-gateway`.
-- If NFS-backed PVCs suddenly fail (democratic-csi probe timeout / pods stuck `ContainerCreating`), first check
-  the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing. See:
+  - If NFS-backed PVCs suddenly fail (democratic-csi probe timeout / pods stuck `ContainerCreating`), first check
+    the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing. See:
   - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
+
+## Nodes (Current)
+- Primary node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)
+- Utility node (Raspberry Pi): `talos-uua-g6r` (`arm64`, `10.0.0.38`)
+
+## Scheduling / Node Placement (Important)
+- Default policy: pin userland workloads to the primary node (`talos-7nf-osf`).
+  - For `bjw-s-charts/app-template` (common v4), use:
+    - `values.defaultPodOptionsStrategy: merge`
+    - `values.defaultPodOptions.nodeSelector.kubernetes.io/hostname: talos-7nf-osf`
+- Allowed on the Raspberry Pi (`talos-uua-g6r`) today:
+  - `apps/glance` (dashboard)
+  - `apps/profilarr`
+  - `apps/adguard`
+- Remember: `local-path` PVs are node-affined. Moving an app between nodes usually implies wiping/recreating the PVC
+  (or migrating storage to NFS).
 
 ## Ingress and DNS Pattern
 For public or tailnet-only app hostnames, use:
@@ -156,7 +172,7 @@ Important external-dns behavior:
 - Do not rename release/object names casually when PVC/state continuity matters.
 
 ## Resource Tuning Guidance
-- This is a single-node homelab with mixed workloads (media + photos + utilities).
+- This is a primary-node homelab with mixed workloads (media + photos + utilities) plus a smaller ARM utility node.
 - Keep requests realistic and limits bounded to reduce OOM/restart loops.
 - Jellyfin can have occasional higher transcode load (rare 3-4 streams); avoid over-allocation across the rest of the stack.
 - When tuning, prefer incremental adjustments and check restart counts/events after reconciliation.
@@ -231,6 +247,7 @@ Examples:
 - `docs/secrets-management-current-state-options-and-plan.md`
 - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
 - `docs/arm64-node-canal-flexvol-exec-format-error.md`
+- `docs/router-dns-rebind-private-a-records.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
