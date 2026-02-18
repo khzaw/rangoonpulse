@@ -38,6 +38,7 @@ resources:
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web-automated.yaml
   - ./kustomizations/chartsdb.yaml
+  - ./kustomizations/speedtest.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml

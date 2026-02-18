@@ -21,6 +21,14 @@ spec:
     defaultPodOptions:
       nodeSelector:
         kubernetes.io/hostname: talos-uua-g6r
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+          - name: timeout
+            value: "1"
+          - name: attempts
+            value: "2"
 
     controllers:
       main:

@@ -42,6 +42,7 @@ Infrastructure-as-code for my homelab Kubernetes cluster, managed with Flux CD G
 - 🧭 Glance
 - ⏱️ Uptime Kuma
 - 📈 Grafana
+- ⚡ Speedtest
 - 🧪 Resource Advisor
 
 ### Media and Library
