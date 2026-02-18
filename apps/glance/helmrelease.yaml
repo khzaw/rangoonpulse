@@ -20,6 +20,9 @@ spec:
   values:
     controllers:
       main:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: talos-uua-g6r
         containers:
           main:
             image:
