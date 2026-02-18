@@ -53,7 +53,6 @@ resources:
   - ./kustomizations/jellyfin.yaml
   - ./kustomizations/seerr.yaml
   - ./kustomizations/jellystat.yaml
-  - ./kustomizations/notifiarr.yaml
   - ./kustomizations/immich.yaml
   - ./kustomizations/glance.yaml
   - ./kustomizations/tracerr.yaml

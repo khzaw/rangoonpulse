@@ -225,9 +225,6 @@ spec:
                               - title: Bazarr
                                 url: https://bazarr.khzaw.dev
                                 icon: di:bazarr
-                              - title: Notifiarr
-                                url: https://notifiarr.khzaw.dev
-                                icon: di:notifiarr
                               - title: Tunarr
                                 url: https://tunarr.khzaw.dev
                                 icon: di:tunarr
@@ -295,9 +292,6 @@ spec:
                           - title: Seerr
                             url: https://entertainment.khzaw.dev
                             icon: di:jellyseerr
-                          - title: Notifiarr
-                            url: https://notifiarr.khzaw.dev
-                            icon: di:notifiarr
                           - title: Transmission
                             url: https://torrent.khzaw.dev
                             icon: di:transmission
@@ -576,7 +570,6 @@ spec:
                           - Radarr/Radarr
                           - Prowlarr/Prowlarr
                           - morpheus65535/bazarr
-                          - Notifiarr/notifiarr
                           - transmission/transmission
                           - sabnzbd/sabnzbd
                           - flaresolverr/flaresolverr
