@@ -104,6 +104,7 @@ Important external-dns behavior:
 ## LAN DNS (AdGuard)
 - Deployment: `apps/adguard/helmrelease.yaml`
 - DNS endpoint for router/clients: `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`)
+- `Service/adguard-dns` uses `externalTrafficPolicy: Local` to preserve client source IP in AdGuard query logs.
 - Do not use Kubernetes `ClusterIP` addresses in router DNS settings.
 - AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
 - Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.

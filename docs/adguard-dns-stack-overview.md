@@ -6,12 +6,13 @@ This document explains:
 - what DNS IP to configure on the router, and
 - how AdGuard changes the overall DNS stack without changing GitOps DNS ownership.
 
-## Current Deployment (As Of 2026-02-18)
+## Current Deployment (As Of 2026-02-19)
 - HelmRelease: `apps/adguard/helmrelease.yaml`
 - Namespace: `default`
 - DNS Service: `Service/adguard-dns`
   - type: `LoadBalancer`
   - IP: `10.0.0.233`
+  - `externalTrafficPolicy: Local` (preserve source IPs for AdGuard query logs)
   - ports: TCP/UDP `53`
 - Web UI Service: `Service/adguard-main`
   - type: `ClusterIP`
@@ -91,10 +92,21 @@ If DNS answers point public hostnames to private IPs (for example `10.0.0.231`),
 See:
 - `docs/router-dns-rebind-private-a-records.md`
 
+### 4) Seeing Real Client IPs In AdGuard Query Log
+If AdGuard query logs show only a Kubernetes node IP, source NAT is happening before traffic reaches the pod.
+
+Expected GitOps state:
+- `apps/adguard/helmrelease.yaml` -> `service.dns.externalTrafficPolicy: Local`
+
+Important:
+- If all queries still appear as one IP after this change, that IP is usually the router (DNS proxy/relay mode).
+- For per-device visibility, clients must query AdGuard directly (`10.0.0.233`) via DHCP or local DNS settings, not via router DNS forwarding.
+
 ## Validation Commands
 ```bash
 # Check AdGuard DNS service exposure
 kubectl get svc -n default adguard-dns -o wide
+kubectl get svc -n default adguard-dns -o jsonpath='{.spec.externalTrafficPolicy}{"\n"}'
 
 # Check web service and ingress backend port
 kubectl get svc -n default adguard-main -o wide
