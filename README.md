@@ -100,6 +100,9 @@ kubectl get pods -A
 kubectl get events -A --sort-by=.lastTimestamp | tail -n 50
 ```
 
+Full grouped runbooks/commands:
+- `docs/ops-command-cheatsheet.md`
+
 Gotcha:
 - If NFS PVCs suddenly fail, check the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing.
 

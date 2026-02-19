@@ -45,7 +45,7 @@ continue work without re-discovery.
 The cluster uses a simplified unified path:
 - LAN path: user -> `10.0.0.231` (MetalLB ingress IP)
 - Remote path: user on Tailscale -> routed to `10.0.0.231` via subnet router
-- Public internet pilot path: Cloudflare Tunnel via `infrastructure/public-edge/` (dedicated share hostnames only, suspended by default until token + DNS are set)
+- Public internet pilot path: Cloudflare Tunnel via `infrastructure/public-edge/` (dedicated share hostnames only)
 
 Implemented via:
 - `infrastructure/tailscale-subnet-router/connector.yaml`
@@ -306,3 +306,4 @@ Examples:
 - `docs/blog-static-site-gitops-deployment-plan.md`
 - `docs/public-exposure-control-panel-plan.md`
 - `docs/public-edge-phase1-bootstrap.md`
+- `docs/ops-command-cheatsheet.md`

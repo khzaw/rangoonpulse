@@ -7,7 +7,6 @@ Phase 1 goal:
 - deploy `cloudflared` on the Raspberry Pi node (`talos-uua-g6r`),
 - validate one low-risk public hostname route,
 - avoid changing existing LAN + Tailscale private access behavior.
-- keep reconciliation suspended by default until token + DNS prerequisites are ready.
 
 ## GitOps Objects Added
 - `infrastructure/namespaces/public-edge.yaml`
@@ -53,9 +52,6 @@ Note:
 
 ## Validation Checklist
 ```bash
-# Enable after prerequisites are ready
-flux resume kustomization public-edge -n flux-system
-
 # Flux reconciliation
 flux reconcile kustomization secrets --with-source
 flux reconcile kustomization public-edge --with-source
