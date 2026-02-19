@@ -302,3 +302,4 @@ Examples:
 - `docs/storage-sunset-cleanup.md`
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
+- `docs/public-exposure-control-panel-plan.md`
