@@ -1,0 +1,14 @@
+[
+  {
+    "id": "sponsorblocktv",
+    "name": "iSponsorBlockTV",
+    "target": "http://isponsorblock-tv.default.svc.cluster.local:8080",
+    "description": "Headless helper info page"
+  },
+  {
+    "id": "speedtest",
+    "name": "Speedtest",
+    "target": "http://speedtest.default.svc.cluster.local:80",
+    "description": "LibreSpeed UI"
+  }
+]

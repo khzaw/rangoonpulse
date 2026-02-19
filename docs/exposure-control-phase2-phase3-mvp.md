@@ -25,6 +25,10 @@ Default exposure expiry:
 
 3. Exposure backend + control panel:
 - `apps/exposure-control/helmrelease.yaml`
+- source files:
+  - `apps/exposure-control/server.js`
+  - `apps/exposure-control/services.json`
+- mounted via Kustomize-generated ConfigMap `exposure-control-app-files`
 - Service: `default/exposure-control`
 - Control panel host: `https://controlpanel.khzaw.dev`
 - Runtime state file: `/data/state.json` (PVC-backed, `local-path`)

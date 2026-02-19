@@ -5,3 +5,10 @@ kind: Kustomization
 namespace: default
 resources:
   - helmrelease.yaml
+configMapGenerator:
+  - name: exposure-control-app-files
+    files:
+      - server.js
+      - services.json
+generatorOptions:
+  disableNameSuffixHash: true
