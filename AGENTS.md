@@ -264,6 +264,9 @@ kubectl get events -n <ns> --sort-by=.lastTimestamp
 
 # Talos node checks
 talosctl -n 10.0.0.197 dashboard
+
+# Sunset storage cleanup (dry-run)
+scripts/storage-sunset-cleanup.sh
 ```
 
 ## Commit Message Convention
@@ -294,5 +297,6 @@ Examples:
 - `docs/isponsorblocktv.md`
 - `docs/media-postgres.md`
 - `docs/calibre-storage-migration-to-truenas-nfs.md`
+- `docs/storage-sunset-cleanup.md`
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
