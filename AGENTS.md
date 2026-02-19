@@ -65,6 +65,11 @@ Notes:
   - If NFS-backed PVCs suddenly fail (democratic-csi probe timeout / pods stuck `ContainerCreating`), first check
     the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing. See:
   - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
+- Temporary public exposure (lean MVP):
+  - backend + UI: `apps/exposure-control/`
+  - control panel host: `controlpanel.khzaw.dev`
+  - share hosts route through Cloudflare Tunnel -> `exposure-control` backend
+  - default temporary exposure expiry: `2h`
 
 ## Nodes (Current)
 - Primary node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)
@@ -77,6 +82,7 @@ Notes:
     - `values.defaultPodOptions.nodeSelector.kubernetes.io/hostname: talos-7nf-osf`
 - Allowed on the Raspberry Pi (`talos-uua-g6r`) today:
   - `infrastructure/public-edge` (`cloudflared`)
+  - `apps/exposure-control`
   - `apps/glance` (dashboard)
   - `apps/profilarr`
   - `apps/adguard`
@@ -307,3 +313,4 @@ Examples:
 - `docs/public-exposure-control-panel-plan.md`
 - `docs/public-edge-phase1-bootstrap.md`
 - `docs/ops-command-cheatsheet.md`
+- `docs/exposure-control-phase2-phase3-mvp.md`

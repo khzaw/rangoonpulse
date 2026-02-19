@@ -19,8 +19,9 @@ Phase 1 goal:
 - `infrastructure/secrets/public-edge/cloudflared-tunnel-token.yaml` (SOPS encrypted)
 - `infrastructure/secrets/public-edge/kustomization.yaml`
 
-Pilot route configured in cloudflared:
-- `share-sponsorblocktv.khzaw.dev` -> `http://isponsorblock-tv.default.svc.cluster.local:8080`
+Pilot route configured in cloudflared (current path after Phase 2/3):
+- `share-sponsorblocktv.khzaw.dev` -> `http://exposure-control.default.svc.cluster.local:8080`
+- `share-speedtest.khzaw.dev` -> `http://exposure-control.default.svc.cluster.local:8080`
 
 Rationale:
 - `isponsorblock-tv` is low risk in this cluster (informational page, no admin surface).

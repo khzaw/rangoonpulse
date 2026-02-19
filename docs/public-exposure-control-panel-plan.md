@@ -134,35 +134,29 @@ Operationally:
 ## Proposed Repo Layout
 
 ### Public edge foundation
-- `infrastructure/public-edge/namespace.yaml`
 - `infrastructure/public-edge/helmrelease.yaml` (cloudflared)
+- `infrastructure/public-edge/share-hosts-cname.yaml` (share host DNS aliases)
 - `infrastructure/public-edge/kustomization.yaml`
 - `flux/kustomizations/public-edge.yaml`
 
 ### Exposure control plane
-- `apps/exposure-control/namespace.yaml`
-- `apps/exposure-control/crd-publicexposures.yaml`
-- `apps/exposure-control/controller-deployment.yaml`
-- `apps/exposure-control/api-deployment.yaml`
-- `apps/exposure-control/ui-helmrelease.yaml`
-- `apps/exposure-control/rbac.yaml`
+- `apps/exposure-control/helmrelease.yaml` (lean combined backend + UI service)
 - `apps/exposure-control/kustomization.yaml`
 - `flux/kustomizations/exposure-control.yaml`
 
-### Runtime state namespace
-- `infrastructure/public-exposure-runtime/` (controller-owned objects only if needed)
-
 ### Secrets (SOPS encrypted)
-- `infrastructure/secrets/public-edge/cloudflare-tunnel-token.yaml`
-- `infrastructure/secrets/public-edge/cloudflare-api-token-exposure.yaml`
+- `infrastructure/secrets/public-edge/cloudflared-tunnel-token.yaml`
 - `infrastructure/secrets/public-edge/kustomization.yaml`
+
+Optional for future dynamic DNS API operations:
+- `infrastructure/secrets/public-edge/cloudflare-api-token-exposure.yaml`
 
 ## Rollout Plan
 
-### Phase Status (as of February 19, 2026)
+### Phase Status (as of February 20, 2026)
 - [x] Phase 1: Public edge foundation + low-risk pilot exposure
-- [ ] Phase 2: Dynamic exposure backend
-- [ ] Phase 3: Control panel UI + API
+- [x] Phase 2: Dynamic exposure backend (lean MVP)
+- [x] Phase 3: Control panel UI + API (lean MVP)
 - [ ] Phase 4: Security hardening and operations
 - [ ] Phase 5: Blog permanent-public onboarding
 
@@ -173,7 +167,7 @@ Operationally:
 - `share-sponsorblocktv.khzaw.dev` -> `isponsorblock-tv.default.svc.cluster.local:8080`
 4. Confirm existing LAN + Tailscale private access model remains unchanged.
 
-### Phase 2: Dynamic Exposure Backend (Next)
+### Phase 2: Dynamic Exposure Backend (Completed as Lean MVP)
 1. Introduce `PublicExposure` data model (CRD or equivalent API-backed object).
 2. Implement backend reconciliation for:
 - enable/disable exposure
@@ -182,7 +176,14 @@ Operationally:
 3. Manage runtime DNS/route updates from backend state (no manual DNS edits for shares).
 4. Produce audit events for exposure on/off and expiry actions.
 
-### Phase 3: Control Panel UI + API
+Lean MVP note:
+- Implemented with a single lightweight backend service (`apps/exposure-control`) using:
+  - allowlist config (`services.json`)
+  - PVC-backed state file (`/data/state.json`)
+  - reconciliation loop for expiry disable
+  - default expiry `2h`
+
+### Phase 3: Control Panel UI + API (Completed as Lean MVP)
 1. Deploy UI + API at `controlpanel.khzaw.dev`.
 2. Add admin authentication and scoped authorization.
 3. Implement operator UX:
@@ -190,6 +191,10 @@ Operationally:
 - toggle exposure on/off
 - set expiry windows
 - view audit history
+
+Lean MVP note:
+- UI and API are served by the same lightweight `exposure-control` process.
+- API access is restricted to requests on `controlpanel.khzaw.dev`.
 
 ### Phase 4: Security Hardening and Ops
 1. Default temporary shares to Cloudflare Access protection.

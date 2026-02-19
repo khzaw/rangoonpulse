@@ -16,4 +16,6 @@ spec:
   timeout: 5m
   dependsOn:
     - name: public-edge
+    - name: ingress-nginx
+    - name: cert-manager
     - name: external-dns
