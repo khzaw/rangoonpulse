@@ -694,13 +694,13 @@ spec:
 
                           <div class="flex flex-col" style="gap: 12px;">
                             <div>
-                              <div class="size-h5">talos-7nf-osf</div>
+                              <div class="size-h5">MiniPC</div>
                               <div class="size-h6">CPU {{ printf "%.2f" $pCpuReq }}/{{ printf "%.2f" $pCpuAlloc }} cores</div>
                               <div class="size-h6">MEM {{ printf "%.1f" (div $pMemReq 1073741824) }}/{{ printf "%.1f" (div $pMemAlloc 1073741824) }} Gi</div>
                               <div class="size-h6">Pods {{ $pPods | toInt }}</div>
                             </div>
                             <div>
-                              <div class="size-h5">talos-uua-g6r</div>
+                              <div class="size-h5">Raspberry Pi</div>
                               <div class="size-h6">CPU {{ printf "%.2f" $uCpuReq }}/{{ printf "%.2f" $uCpuAlloc }} cores</div>
                               <div class="size-h6">MEM {{ printf "%.1f" (div $uMemReq 1073741824) }}/{{ printf "%.1f" (div $uMemAlloc 1073741824) }} Gi</div>
                               <div class="size-h6">Pods {{ $uPods | toInt }}</div>
