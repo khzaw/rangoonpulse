@@ -2,6 +2,7 @@
 
 Status:
 - Completed on February 20, 2026.
+- Fully validated end-to-end on February 19, 2026.
 
 ## Scope
 This is a lean implementation of:
@@ -40,6 +41,22 @@ Default exposure expiry:
 3. Reconciliation loop disables exposures after expiry.
 4. Requests to share hostnames proxy to target app only when enabled.
 5. API is restricted to control panel host requests.
+
+## Validation Checklist (Passed)
+
+1. Control plane health:
+- `flux` kustomizations `public-edge` and `exposure-control` are `Ready=True`.
+- `public-edge/cloudflared` and `default/exposure-control` pods are `Running`.
+
+2. Toggle flow:
+- Baseline disabled response on `share-sponsorblocktv.khzaw.dev` returned `403`.
+- Enable call for `sponsorblocktv` returned `enabled=true` with future `expiresAt`.
+- Share URL returned `200` while enabled.
+- Disable call returned `enabled=false`; share URL returned `403` again.
+
+3. Expiry handling:
+- Expired exposure state was loaded and reconciliation disabled it automatically.
+- API snapshot showed `enabled=false` and `desiredEnabled=false` after reconcile.
 
 ## Operator Commands
 

@@ -196,6 +196,14 @@ Lean MVP note:
 - UI and API are served by the same lightweight `exposure-control` process.
 - API access is restricted to requests on `controlpanel.khzaw.dev`.
 
+Validation status:
+- Fully validated on February 19, 2026 with end-to-end checks:
+  - exposure disabled baseline returns `403` on share hostname,
+  - enable action returns active exposure state,
+  - public share hostname returns `200` while enabled,
+  - disable action returns disabled state and share hostname returns `403`,
+  - expiry reconciliation logic verified by loading expired runtime state and observing auto-disable.
+
 ### Phase 4: Security Hardening and Ops
 1. Default temporary shares to Cloudflare Access protection.
 2. Add rate-limit and WAF defaults for share hostnames.
