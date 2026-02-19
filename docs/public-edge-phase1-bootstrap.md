@@ -1,5 +1,8 @@
 # Public Edge Phase 1 Bootstrap
 
+Status:
+- Completed on February 19, 2026.
+
 ## Purpose
 Bootstrap a lean Cloudflare Tunnel foundation for future public exposure control.
 

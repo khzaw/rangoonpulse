@@ -159,25 +159,50 @@ Operationally:
 
 ## Rollout Plan
 
-### Phase 1: Foundation (No UI Yet)
-1. Deploy cloudflared tunnel + SOPS secrets.
-2. Validate one static route (`blog.khzaw.dev`) end-to-end.
-3. Enable cache/WAF for blog hostname.
+### Phase Status (as of February 19, 2026)
+- [x] Phase 1: Public edge foundation + low-risk pilot exposure
+- [ ] Phase 2: Dynamic exposure backend
+- [ ] Phase 3: Control panel UI + API
+- [ ] Phase 4: Security hardening and operations
+- [ ] Phase 5: Blog permanent-public onboarding
 
-### Phase 2: Dynamic Exposure Backend
-1. Introduce `PublicExposure` CRD and controller.
-2. Implement enable/disable reconciliation and expiry handling.
-3. Add allowlist policy.
+### Phase 1: Public Edge Foundation + Pilot (Completed)
+1. Deploy cloudflared tunnel + SOPS-managed tunnel token secret.
+2. Place cloudflared on Raspberry Pi utility node for lean resource usage.
+3. Validate one low-risk pilot route end-to-end:
+- `share-sponsorblocktv.khzaw.dev` -> `isponsorblock-tv.default.svc.cluster.local:8080`
+4. Confirm existing LAN + Tailscale private access model remains unchanged.
 
-### Phase 3: Control Panel
+### Phase 2: Dynamic Exposure Backend (Next)
+1. Introduce `PublicExposure` data model (CRD or equivalent API-backed object).
+2. Implement backend reconciliation for:
+- enable/disable exposure
+- `expiresAt` auto-disable
+- allowlist enforcement
+3. Manage runtime DNS/route updates from backend state (no manual DNS edits for shares).
+4. Produce audit events for exposure on/off and expiry actions.
+
+### Phase 3: Control Panel UI + API
 1. Deploy UI + API at `controlpanel.khzaw.dev`.
-2. Add login/authN for panel admins.
-3. Add toggle UX, expiry picker, and audit history.
+2. Add admin authentication and scoped authorization.
+3. Implement operator UX:
+- list expose-eligible services
+- toggle exposure on/off
+- set expiry windows
+- view audit history
 
-### Phase 4: Hardening
-1. Add Cloudflare Access defaults for temporary shares.
-2. Add alerting for stale/failed exposure reconciles.
-3. Add disaster fallback procedure (disable all temporary exposures quickly).
+### Phase 4: Security Hardening and Ops
+1. Default temporary shares to Cloudflare Access protection.
+2. Add rate-limit and WAF defaults for share hostnames.
+3. Add monitoring/alerting for failed exposure reconciliation.
+4. Add one-command emergency shutdown for all temporary exposures.
+
+### Phase 5: Blog Permanent-Public Onboarding
+1. Deploy blog service in-cluster (GitOps-managed app path).
+2. Create permanent public exposure policy for `blog.khzaw.dev`:
+- `enabled: true`, no expiry, locked in control panel
+3. Enable Cloudflare cache strategy tuned for burst traffic (HN-style spikes).
+4. Keep non-blog services private-by-default unless explicitly shared.
 
 ## Operational Guardrails
 - Keep exposure runtime state controller-owned; avoid manual `kubectl` drift.
