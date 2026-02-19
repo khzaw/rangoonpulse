@@ -105,11 +105,19 @@ Important external-dns behavior:
 - Deployment: `apps/adguard/helmrelease.yaml`
 - DNS endpoint for router/clients: `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`)
 - `Service/adguard-dns` uses `externalTrafficPolicy: Local` to preserve client source IP in AdGuard query logs.
-- Do not use Kubernetes `ClusterIP` addresses in router DNS settings.
+- AdGuard DHCP is enabled and runs in-cluster with `hostNetwork: true` (required for DHCP broadcast handling).
+- Router DHCP must stay disabled while AdGuard DHCP is enabled.
+- Do not use Kubernetes `ClusterIP` addresses in LAN DNS settings.
 - AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
 - Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.
 - Runtime DNS tuning is enforced at container startup in `apps/adguard/helmrelease.yaml` (including `upstream_mode: fastest_addr`)
   to avoid drift after UI/wizard changes.
+- Static DHCP leases are seeded at startup from GitOps-managed values:
+  - router: `10.0.0.1` (`94:18:65:f0:f0:ec`)
+  - talos-uua-g6r: `10.0.0.38` (`e4:5f:01:0b:b7:28`)
+  - talos-7nf-osf: `10.0.0.197` (`f8:75:a4:28:6f:f6`)
+  - truenas: `10.0.0.210` (`6c:bf:b5:03:a2:71`)
+- Keep MetalLB pool addresses (`10.0.0.230-10.0.0.254`) outside DHCP client lease range.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`
 
 ## Cluster DNS Reliability (Flux Path)

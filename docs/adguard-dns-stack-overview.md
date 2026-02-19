@@ -9,11 +9,19 @@ This document explains:
 ## Current Deployment (As Of 2026-02-19)
 - HelmRelease: `apps/adguard/helmrelease.yaml`
 - Namespace: `default`
+- Pod networking:
+  - `hostNetwork: true`
+  - `dnsPolicy: ClusterFirstWithHostNet`
 - DNS Service: `Service/adguard-dns`
   - type: `LoadBalancer`
   - IP: `10.0.0.233`
   - `externalTrafficPolicy: Local` (preserve source IPs for AdGuard query logs)
   - ports: TCP/UDP `53`
+- DHCP:
+  - server: enabled in AdGuard
+  - interface: `end0` (Talos LAN NIC on current node)
+  - pool: `10.0.0.100-10.0.0.189`
+  - DNS option: `10.0.0.233`
 - Web UI Service: `Service/adguard-main`
   - type: `ClusterIP`
   - web port: `80`
@@ -21,21 +29,38 @@ This document explains:
   - hostname: `adguard.khzaw.dev`
   - ingress VIP: `10.0.0.231`
 
-## Router Configuration (What To Enter)
-Use this LAN DNS server in router DHCP/DNS settings:
-- `10.0.0.233`
+## Router / DHCP Configuration
+Current model:
+- Router DHCP: disabled
+- AdGuard DHCP: enabled
+- Router still acts as gateway at `10.0.0.1`
+
+AdGuard DHCP serves:
+- DNS server: `10.0.0.233`
+- gateway: `10.0.0.1`
+- subnet mask: `255.255.255.0`
 
 Do not use:
 - Kubernetes `ClusterIP` addresses (for example `10.109.x.x`), since they are cluster-internal only.
 
-Recommended router DNS policy:
+Recommended DNS policy:
 - Primary DNS: `10.0.0.233`
 - Secondary DNS:
   - leave empty, or
-  - set to another AdGuard instance (if you have one).
+  - set to another AdGuard instance (if you have one)
 
 Avoid using public DNS as secondary (for example `1.1.1.1`, `8.8.8.8`) if you want consistent filtering, because many
 clients will bypass AdGuard when a secondary resolver is present.
+
+## GitOps-Managed Static DHCP Leases
+Static leases are seeded from startup logic in `apps/adguard/helmrelease.yaml`:
+- `10.0.0.1` -> router (`94:18:65:f0:f0:ec`)
+- `10.0.0.38` -> `talos-uua-g6r` (`e4:5f:01:0b:b7:28`)
+- `10.0.0.197` -> `talos-7nf-osf` (`f8:75:a4:28:6f:f6`)
+- `10.0.0.210` -> truenas (`6c:bf:b5:03:a2:71`)
+
+Reserved/non-DHCP range note:
+- MetalLB pool is `10.0.0.230-10.0.0.254`; keep this outside DHCP client ranges.
 
 ## How This Changes The DNS Stack
 AdGuard changes recursive resolution for LAN clients; it does not replace authoritative DNS automation.
@@ -48,6 +73,7 @@ What stays the same:
 What changes:
 - LAN clients query AdGuard (`10.0.0.233`) first.
 - AdGuard applies filtering/policies and forwards to upstream resolvers.
+- AdGuard is the DHCP authority for client DNS/gateway settings.
 
 ```mermaid
 flowchart LR
@@ -73,7 +99,7 @@ Expected GitOps state:
 AdGuard writes runtime config into `/opt/adguardhome/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
 drift away from intended GitOps behavior.
 
-To keep performance behavior stable, startup now enforces these keys in
+To keep behavior stable, startup now enforces DNS and DHCP keys in
 `apps/adguard/helmrelease.yaml` before launching AdGuard:
 - `dns.upstream_mode: fastest_addr`
 - `dns.fastest_timeout: 1s`
@@ -83,16 +109,26 @@ To keep performance behavior stable, startup now enforces these keys in
 - `dns.cache_optimistic: true`
 - `dns.upstream_timeout: 3s`
 - `http.address: 0.0.0.0:80`
+- `dhcp.enabled: true`
+- `dhcp.interface_name: end0`
+- `dhcp.dhcpv4.gateway_ip: 10.0.0.1`
+- `dhcp.dhcpv4.range_start: 10.0.0.100`
+- `dhcp.dhcpv4.range_end: 10.0.0.189`
+- `dhcp.dhcpv4.options: [\"6 ip 10.0.0.233\"]`
 
-This keeps DNS latency optimization and web UI port alignment consistent after restarts.
+Startup also rewrites `/opt/adguardhome/work/data/leases.json` with the GitOps-managed static leases list.
 
-### 3) Router DNS Rebind Protection
+### 3) DHCP In Kubernetes Requires Host Networking
+DHCP discovery uses broadcast traffic. In this setup, AdGuard handles DHCP with `hostNetwork: true` on the pinned node.
+Do not remove `hostNetwork` if AdGuard DHCP is enabled.
+
+### 4) Router DNS Rebind Protection
 If DNS answers point public hostnames to private IPs (for example `10.0.0.231`), some routers block replies.
 
 See:
 - `docs/router-dns-rebind-private-a-records.md`
 
-### 4) Seeing Real Client IPs In AdGuard Query Log
+### 5) Seeing Real Client IPs In AdGuard Query Log
 If AdGuard query logs show only a Kubernetes node IP, source NAT is happening before traffic reaches the pod.
 
 Expected GitOps state:
@@ -108,9 +144,16 @@ Important:
 kubectl get svc -n default adguard-dns -o wide
 kubectl get svc -n default adguard-dns -o jsonpath='{.spec.externalTrafficPolicy}{"\n"}'
 
+# Confirm host-network pod mode (required for DHCP in-k8s)
+kubectl get pod -n default -l app.kubernetes.io/instance=adguard -o jsonpath='{.items[0].spec.hostNetwork}{"\n"}'
+
 # Check web service and ingress backend port
 kubectl get svc -n default adguard-main -o wide
 kubectl describe ingress -n default adguard
+
+# Check DHCP/lease state managed by startup logic
+kubectl exec -n default deploy/adguard -- sh -c 'sed -n "/^dhcp:/,/^[^[:space:]]/p" /opt/adguardhome/conf/AdGuardHome.yaml'
+kubectl exec -n default deploy/adguard -- sh -c 'cat /opt/adguardhome/work/data/leases.json'
 
 # DNS resolution through AdGuard
 dig @10.0.0.233 hq.khzaw.dev +short

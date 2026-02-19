@@ -23,6 +23,8 @@ spec:
       main:
         strategy: Recreate
         pod:
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
           nodeSelector:
             kubernetes.io/hostname: talos-uua-g6r
         containers:
@@ -37,6 +39,7 @@ spec:
               - |
                 set -eu
                 CFG=/opt/adguardhome/conf/AdGuardHome.yaml
+                LEASES=/opt/adguardhome/work/data/leases.json
 
                 # Keep key DNS performance settings in GitOps so runtime changes do not drift.
                 if [ -f "$CFG" ]; then
@@ -49,6 +52,62 @@ spec:
                   sed -i -E 's/^  cache_optimistic:.*/  cache_optimistic: true/' "$CFG"
                   sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
                 fi
+
+                # Enforce DHCP server config via GitOps (AdGuard UI changes are overwritten at startup).
+                if [ -f "$CFG" ]; then
+                  TMP="$(mktemp)"
+                  awk '
+                    BEGIN { in_dhcp = 0; replaced = 0 }
+                    function print_dhcp_block() {
+                      print "dhcp:"
+                      print "  enabled: true"
+                      print "  interface_name: end0"
+                      print "  local_domain_name: lan"
+                      print "  dhcpv4:"
+                      print "    gateway_ip: 10.0.0.1"
+                      print "    subnet_mask: 255.255.255.0"
+                      print "    range_start: 10.0.0.100"
+                      print "    range_end: 10.0.0.189"
+                      print "    lease_duration: 86400"
+                      print "    icmp_timeout_msec: 1000"
+                      print "    options:"
+                      print "      - 6 ip 10.0.0.233"
+                      print "  dhcpv6:"
+                      print "    range_start: \"\""
+                      print "    lease_duration: 86400"
+                      print "    ra_slaac_only: false"
+                      print "    ra_allow_slaac: false"
+                    }
+                    /^dhcp:/ {
+                      print_dhcp_block()
+                      in_dhcp = 1
+                      replaced = 1
+                      next
+                    }
+                    in_dhcp == 1 && /^[^[:space:]]/ {
+                      in_dhcp = 0
+                    }
+                    in_dhcp == 0 { print }
+                    END {
+                      if (replaced == 0) {
+                        print_dhcp_block()
+                      }
+                    }
+                  ' "$CFG" > "$TMP"
+                  mv "$TMP" "$CFG"
+                fi
+
+                # Seed static DHCP leases from GitOps-managed values.
+                mkdir -p /opt/adguardhome/work/data
+                umask 077
+                cat > "$LEASES" <<'EOF'
+                {"version":1,"leases":[
+                {"expires":"","ip":"10.0.0.1","hostname":"router","mac":"94:18:65:f0:f0:ec","static":true},
+                {"expires":"","ip":"10.0.0.38","hostname":"talos-uua-g6r","mac":"e4:5f:01:0b:b7:28","static":true},
+                {"expires":"","ip":"10.0.0.197","hostname":"talos-7nf-osf","mac":"f8:75:a4:28:6f:f6","static":true},
+                {"expires":"","ip":"10.0.0.210","hostname":"truenas","mac":"6c:bf:b5:03:a2:71","static":true}
+                ]}
+                EOF
 
                 exec /opt/adguardhome/AdGuardHome \
                   --no-check-update \
