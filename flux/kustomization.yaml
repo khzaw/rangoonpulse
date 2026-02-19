@@ -41,6 +41,7 @@ resources:
   - ./kustomizations/calibre-web-automated.yaml
   - ./kustomizations/chartsdb.yaml
   - ./kustomizations/speedtest.yaml
+  - ./kustomizations/exposure-control.yaml
   - ./kustomizations/obsidian-livesync.yaml
   - ./kustomizations/anki-server.yaml
   - ./kustomizations/booklore-mariadb.yaml

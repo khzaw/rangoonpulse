@@ -1,0 +1,398 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: exposure-control
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-uua-g6r
+
+    controllers:
+      main:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: node
+              tag: 24-alpine
+            command:
+              - node
+              - /app/server.js
+            env:
+              TZ: "Asia/Singapore"
+              PORT: "8080"
+              DATA_DIR: /data
+              SERVICES_FILE: /app/services.json
+              PUBLIC_DOMAIN: khzaw.dev
+              SHARE_HOST_PREFIX: share-
+              DEFAULT_EXPIRY_HOURS: "2"
+              RECONCILE_INTERVAL_SECONDS: "30"
+            resources:
+              requests:
+                cpu: "20m"
+                memory: "64Mi"
+              limits:
+                cpu: "200m"
+                memory: "256Mi"
+
+    service:
+      main:
+        controller: main
+        type: ClusterIP
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        enabled: false
+
+    configMaps:
+      app:
+        enabled: true
+        data:
+          services.json: |
+            [
+              {
+                "id": "sponsorblocktv",
+                "name": "iSponsorBlockTV",
+                "target": "http://isponsorblock-tv.default.svc.cluster.local:8080",
+                "description": "Headless helper info page"
+              },
+              {
+                "id": "speedtest",
+                "name": "Speedtest",
+                "target": "http://speedtest.default.svc.cluster.local:80",
+                "description": "LibreSpeed UI"
+              }
+            ]
+          server.js: |
+            const http = require("node:http");
+            const https = require("node:https");
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const { URL } = require("node:url");
+
+            const PORT = Number(process.env.PORT || "8080");
+            const DATA_DIR = process.env.DATA_DIR || "/data";
+            const STATE_FILE = path.join(DATA_DIR, "state.json");
+            const SERVICES_FILE = process.env.SERVICES_FILE || "/app/services.json";
+            const PUBLIC_DOMAIN = (process.env.PUBLIC_DOMAIN || "khzaw.dev").toLowerCase();
+            const SHARE_HOST_PREFIX = (process.env.SHARE_HOST_PREFIX || "share-").toLowerCase();
+            const DEFAULT_EXPIRY_HOURS = Number(process.env.DEFAULT_EXPIRY_HOURS || "2");
+            const RECONCILE_INTERVAL_SECONDS = Number(process.env.RECONCILE_INTERVAL_SECONDS || "30");
+
+            function nowIso() {
+              return new Date().toISOString();
+            }
+
+            function ensureDataDir() {
+              fs.mkdirSync(DATA_DIR, { recursive: true });
+            }
+
+            function clampHours(value) {
+              if (!Number.isFinite(value)) return DEFAULT_EXPIRY_HOURS;
+              if (value < 1) return 1;
+              if (value > 24) return 24;
+              return value;
+            }
+
+            function loadServices() {
+              const raw = fs.readFileSync(SERVICES_FILE, "utf8");
+              const parsed = JSON.parse(raw);
+              if (!Array.isArray(parsed)) throw new Error("services.json must be an array");
+              for (const svc of parsed) {
+                if (!svc.id || !svc.target) throw new Error("each service requires id and target");
+              }
+              return parsed;
+            }
+
+            function defaultState(services) {
+              const exposures = {};
+              for (const svc of services) {
+                exposures[svc.id] = { enabled: false, expiresAt: null, updatedAt: nowIso() };
+              }
+              return { exposures };
+            }
+
+            function loadState(services) {
+              ensureDataDir();
+              if (!fs.existsSync(STATE_FILE)) {
+                const fresh = defaultState(services);
+                fs.writeFileSync(STATE_FILE, JSON.stringify(fresh, null, 2));
+                return fresh;
+              }
+              try {
+                const raw = fs.readFileSync(STATE_FILE, "utf8");
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== "object") throw new Error("state root must be object");
+                if (!parsed.exposures || typeof parsed.exposures !== "object") parsed.exposures = {};
+                for (const svc of services) {
+                  if (!parsed.exposures[svc.id]) {
+                    parsed.exposures[svc.id] = { enabled: false, expiresAt: null, updatedAt: nowIso() };
+                  }
+                }
+                return parsed;
+              } catch (err) {
+                console.error("failed to read state file, rebuilding:", err.message);
+                const fresh = defaultState(services);
+                fs.writeFileSync(STATE_FILE, JSON.stringify(fresh, null, 2));
+                return fresh;
+              }
+            }
+
+            function saveState(state) {
+              fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+            }
+
+            function isExpired(exposure) {
+              if (!exposure || !exposure.enabled) return false;
+              if (!exposure.expiresAt) return false;
+              const ts = Date.parse(exposure.expiresAt);
+              if (Number.isNaN(ts)) return true;
+              return ts <= Date.now();
+            }
+
+            function effectiveEnabled(exposure) {
+              return Boolean(exposure && exposure.enabled && !isExpired(exposure));
+            }
+
+            function servicePublicHost(service) {
+              return `${SHARE_HOST_PREFIX}${service.id}.${PUBLIC_DOMAIN}`;
+            }
+
+            function getHost(req) {
+              const raw = req.headers.host || "";
+              return String(raw).split(":")[0].toLowerCase();
+            }
+
+            function sendJson(res, statusCode, payload) {
+              res.writeHead(statusCode, {
+                "content-type": "application/json; charset=utf-8",
+                "cache-control": "no-store",
+              });
+              res.end(JSON.stringify(payload));
+            }
+
+            function sendText(res, statusCode, body) {
+              res.writeHead(statusCode, {
+                "content-type": "text/plain; charset=utf-8",
+                "cache-control": "no-store",
+              });
+              res.end(body);
+            }
+
+            function parseBody(req) {
+              return new Promise((resolve, reject) => {
+                const chunks = [];
+                let size = 0;
+                req.on("data", (chunk) => {
+                  size += chunk.length;
+                  if (size > 1024 * 1024) {
+                    reject(new Error("request body too large"));
+                    req.destroy();
+                    return;
+                  }
+                  chunks.push(chunk);
+                });
+                req.on("end", () => {
+                  if (chunks.length === 0) return resolve({});
+                  try {
+                    const raw = Buffer.concat(chunks).toString("utf8");
+                    resolve(JSON.parse(raw));
+                  } catch {
+                    reject(new Error("invalid json body"));
+                  }
+                });
+                req.on("error", reject);
+              });
+            }
+
+            const services = loadServices();
+            const serviceById = new Map(services.map((svc) => [svc.id, svc]));
+            const serviceByHost = new Map(services.map((svc) => [servicePublicHost(svc), svc]));
+            const state = loadState(services);
+
+            function snapshotServices() {
+              return services.map((svc) => {
+                const exposure = state.exposures[svc.id];
+                return {
+                  id: svc.id,
+                  name: svc.name,
+                  description: svc.description || "",
+                  target: svc.target,
+                  publicHost: servicePublicHost(svc),
+                  publicUrl: `https://${servicePublicHost(svc)}`,
+                  enabled: effectiveEnabled(exposure),
+                  desiredEnabled: Boolean(exposure && exposure.enabled),
+                  expiresAt: exposure ? exposure.expiresAt : null,
+                  updatedAt: exposure ? exposure.updatedAt : null,
+                  defaultExpiryHours: DEFAULT_EXPIRY_HOURS,
+                };
+              });
+            }
+
+            function disableExpiredExposures() {
+              let changed = false;
+              for (const svc of services) {
+                const exposure = state.exposures[svc.id];
+                if (isExpired(exposure)) {
+                  exposure.enabled = false;
+                  exposure.updatedAt = nowIso();
+                  changed = true;
+                }
+              }
+              if (changed) saveState(state);
+            }
+
+            setInterval(disableExpiredExposures, Math.max(RECONCILE_INTERVAL_SECONDS, 15) * 1000);
+
+            async function handleApi(req, res, pathname) {
+              if (req.method === "GET" && pathname === "/api/services") {
+                disableExpiredExposures();
+                return sendJson(res, 200, { services: snapshotServices() });
+              }
+
+              const enableMatch = pathname.match(/^\/api\/services\/([a-z0-9-]+)\/enable$/);
+              if (req.method === "POST" && enableMatch) {
+                const id = enableMatch[1];
+                const svc = serviceById.get(id);
+                if (!svc) return sendJson(res, 404, { error: "service not found" });
+
+                let body = {};
+                try {
+                  body = await parseBody(req);
+                } catch (err) {
+                  return sendJson(res, 400, { error: err.message });
+                }
+
+                const hours = clampHours(Number(body.hours ?? DEFAULT_EXPIRY_HOURS));
+                const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+                state.exposures[id] = { enabled: true, expiresAt, updatedAt: nowIso() };
+                saveState(state);
+                return sendJson(res, 200, { service: snapshotServices().find((item) => item.id === id) });
+              }
+
+              const disableMatch = pathname.match(/^\/api\/services\/([a-z0-9-]+)\/disable$/);
+              if (req.method === "POST" && disableMatch) {
+                const id = disableMatch[1];
+                const svc = serviceById.get(id);
+                if (!svc) return sendJson(res, 404, { error: "service not found" });
+
+                state.exposures[id] = { enabled: false, expiresAt: null, updatedAt: nowIso() };
+                saveState(state);
+                return sendJson(res, 200, { service: snapshotServices().find((item) => item.id === id) });
+              }
+
+              return sendJson(res, 404, { error: "not found" });
+            }
+
+            function proxyRequest(req, res, target) {
+              const host = getHost(req);
+              const targetUrl = new URL(req.url || "/", target);
+              const client = targetUrl.protocol === "https:" ? https : http;
+              const headers = { ...req.headers };
+              headers.host = targetUrl.host;
+              headers["x-forwarded-host"] = host;
+              headers["x-forwarded-proto"] = "https";
+              delete headers["content-length"];
+
+              const upstream = client.request(
+                targetUrl,
+                { method: req.method, headers },
+                (upstreamRes) => {
+                  const responseHeaders = { ...upstreamRes.headers };
+                  delete responseHeaders["content-security-policy-report-only"];
+                  res.writeHead(upstreamRes.statusCode || 502, responseHeaders);
+                  upstreamRes.pipe(res);
+                }
+              );
+
+              upstream.on("error", (err) => {
+                sendText(res, 502, `upstream error: ${err.message}`);
+              });
+
+              req.pipe(upstream);
+            }
+
+            const server = http.createServer(async (req, res) => {
+              try {
+                disableExpiredExposures();
+                const host = getHost(req);
+                const parsed = new URL(req.url || "/", `http://${host || "localhost"}`);
+
+                if (parsed.pathname === "/healthz") {
+                  return sendJson(res, 200, { ok: true, time: nowIso() });
+                }
+
+                if (parsed.pathname.startsWith("/api/")) {
+                  return handleApi(req, res, parsed.pathname);
+                }
+
+                if (parsed.pathname === "/") {
+                  return sendJson(res, 200, {
+                    app: "exposure-control",
+                    mode: "backend",
+                    defaultExpiryHours: DEFAULT_EXPIRY_HOURS,
+                    services: snapshotServices(),
+                  });
+                }
+
+                const svc = serviceByHost.get(host);
+                if (!svc) return sendText(res, 404, "host is not configured for sharing");
+
+                const exposure = state.exposures[svc.id];
+                if (!effectiveEnabled(exposure)) {
+                  return sendText(res, 403, "exposure is disabled or expired");
+                }
+
+                return proxyRequest(req, res, svc.target);
+              } catch (err) {
+                console.error("request handling error:", err);
+                return sendJson(res, 500, { error: "internal error" });
+              }
+            });
+
+            server.listen(PORT, "0.0.0.0", () => {
+              console.log(`exposure-control backend listening on :${PORT}`);
+            });
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: local-path
+        accessMode: ReadWriteOnce
+        size: 128Mi
+        globalMounts:
+          - path: /data
+      app:
+        enabled: true
+        type: configMap
+        identifier: app
+        advancedMounts:
+          main:
+            main:
+              - path: /app/server.js
+                subPath: server.js
+                readOnly: true
+              - path: /app/services.json
+                subPath: services.json
+                readOnly: true

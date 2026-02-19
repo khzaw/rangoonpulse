@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/service-v1.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-sponsorblocktv-cname
+  namespace: public-edge
+  annotations:
+    # Create DNS alias to Cloudflare Tunnel edge endpoint.
+    external-dns.alpha.kubernetes.io/hostname: share-sponsorblocktv.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-speedtest-cname
+  namespace: public-edge
+  annotations:
+    # Create DNS alias to Cloudflare Tunnel edge endpoint.
+    external-dns.alpha.kubernetes.io/hostname: share-speedtest.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com

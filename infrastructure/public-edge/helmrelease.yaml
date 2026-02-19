@@ -72,10 +72,12 @@ spec:
         enabled: true
         data:
           config.yaml: |
-            # Pilot route for low-risk validation service.
+            # Static share host routes point to the in-cluster exposure-control backend.
             ingress:
               - hostname: share-sponsorblocktv.khzaw.dev
-                service: http://isponsorblock-tv.default.svc.cluster.local:8080
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-speedtest.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
               - service: http_status:404
 
     persistence:
