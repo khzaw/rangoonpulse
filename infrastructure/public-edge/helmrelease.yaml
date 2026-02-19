@@ -1,0 +1,91 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudflared
+  namespace: public-edge
+spec:
+  interval: 15m
+  timeout: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: talos-uua-g6r
+
+    controllers:
+      main:
+        replicas: 1
+        containers:
+          main:
+            image:
+              repository: cloudflare/cloudflared
+              # Keep latest for pilot bootstrap; pin exact version before broad rollout.
+              tag: latest
+            args:
+              - tunnel
+              - --no-autoupdate
+              - --config
+              - /etc/cloudflared/config/config.yaml
+              - run
+              - --token
+              - $(TUNNEL_TOKEN)
+            env:
+              - name: TUNNEL_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: cloudflared-tunnel-token
+                    key: token
+            resources:
+              requests:
+                cpu: 10m
+                memory: 48Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+
+    service:
+      main:
+        enabled: false
+
+    ingress:
+      main:
+        enabled: false
+
+    configMaps:
+      config:
+        enabled: true
+        data:
+          config.yaml: |
+            # Pilot route for low-risk validation service.
+            ingress:
+              - hostname: share-sponsorblocktv.khzaw.dev
+                service: http://isponsorblock-tv.default.svc.cluster.local:8080
+              - service: http_status:404
+
+    persistence:
+      config:
+        enabled: true
+        type: configMap
+        identifier: config
+        advancedMounts:
+          main:
+            main:
+              - path: /etc/cloudflared/config/config.yaml
+                subPath: config.yaml
+                readOnly: true

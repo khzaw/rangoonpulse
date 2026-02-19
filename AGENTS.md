@@ -45,6 +45,7 @@ continue work without re-discovery.
 The cluster uses a simplified unified path:
 - LAN path: user -> `10.0.0.231` (MetalLB ingress IP)
 - Remote path: user on Tailscale -> routed to `10.0.0.231` via subnet router
+- Public internet pilot path: Cloudflare Tunnel via `infrastructure/public-edge/` (dedicated share hostnames only, suspended by default until token + DNS are set)
 
 Implemented via:
 - `infrastructure/tailscale-subnet-router/connector.yaml`
@@ -75,6 +76,7 @@ Notes:
     - `values.defaultPodOptionsStrategy: merge`
     - `values.defaultPodOptions.nodeSelector.kubernetes.io/hostname: talos-7nf-osf`
 - Allowed on the Raspberry Pi (`talos-uua-g6r`) today:
+  - `infrastructure/public-edge` (`cloudflared`)
   - `apps/glance` (dashboard)
   - `apps/profilarr`
   - `apps/adguard`
@@ -303,3 +305,4 @@ Examples:
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
 - `docs/public-exposure-control-panel-plan.md`
+- `docs/public-edge-phase1-bootstrap.md`

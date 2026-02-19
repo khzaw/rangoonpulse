@@ -26,6 +26,7 @@ resources:
   - ./kustomizations/cert-manager.yaml
   - ./kustomizations/cert-manager-config.yaml
   - ./kustomizations/external-dns.yaml
+  - ./kustomizations/public-edge.yaml
   - ./kustomizations/ingress-nginx.yaml
   - ./kustomizations/monitoring.yaml
   - ./kustomizations/dns-reliability.yaml
