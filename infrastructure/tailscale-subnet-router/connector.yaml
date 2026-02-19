@@ -8,7 +8,8 @@ spec:
   hostname: homelab-subnet-router
   subnetRouter:
     advertiseRoutes:
-      - 10.0.0.197/32
-      - 10.0.0.231/32
-      - 10.0.0.210/32
       - 10.0.0.1/32
+      - 10.0.0.38/32
+      - 10.0.0.197/32
+      - 10.0.0.210/32
+      - 10.0.0.231/32
