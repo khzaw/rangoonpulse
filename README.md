@@ -242,16 +242,16 @@ talosctl -n 10.0.0.197 dashboard
 
 ### Sonarr & Radarr
 
-<img src=".github/screenshots/sonarr.jpeg" width="80%" />
+<img src=".github/screenshots/sonarr.jpeg" />
 
-<img src=".github/screenshots/radarr.jpeg" width="80%" />
+<img src=".github/screenshots/radarr.jpeg" />
 
 ---
 
 ### Calibre
 
 
-<img src=".github/screenshots/calibre.jpeg" width="80%" />
+<img src=".github/screenshots/calibre.jpeg" />
 
 ---
 
@@ -259,17 +259,17 @@ talosctl -n 10.0.0.197 dashboard
 
 **Grafana**
 
-<img src=".github/screenshots/grafana.jpeg" width="80%" />
+<img src=".github/screenshots/grafana.jpeg" />
 
 **Uptime Kuma**
 
-<img src=".github/screenshots/uptime.jpeg" width="80%" />
+<img src=".github/screenshots/uptime.jpeg" />
 
 ---
 
 ### 🗄️ TrueNAS Storage
 
-<img src=".github/screenshots/truenas.jpeg" width="80%" />
+<img src=".github/screenshots/truenas.jpeg" />
 
 ---
 
