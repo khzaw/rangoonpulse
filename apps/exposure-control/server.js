@@ -518,113 +518,249 @@ function renderControlPanelHtml() {
     <title>Exposure Control</title>
     <style>
       :root {
-        --bg: #0a0f1f;
-        --panel: #11192f;
-        --text: #f1f5ff;
-        --muted: #93a1bf;
-        --line: #24314f;
-        --ok: #0ea45e;
-        --off: #dc3545;
-        --btn: #2f4aa7;
+        --bg: #0a0a0a;
+        --surface: #111;
+        --surface-hover: #191919;
+        --border: #1e1e1e;
+        --border-subtle: #161616;
+        --text-1: #ececec;
+        --text-2: #888;
+        --text-3: #555;
+        --green: #3fb950;
+        --red: #f85149;
+        --yellow: #d29922;
+        --accent: #e8e8e8;
       }
-      * { box-sizing: border-box; }
+      * { box-sizing: border-box; margin: 0; }
       body {
-        margin: 0;
-        font-family: "Iosevka", "JetBrains Mono", "Menlo", monospace;
-        background: radial-gradient(circle at 20% 0%, #1f305d 0%, var(--bg) 52%);
-        color: var(--text);
+        background: var(--bg);
+        color: var(--text-1);
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
       }
       main {
-        max-width: 980px;
-        margin: 2rem auto;
-        padding: 1rem;
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 32px 24px;
       }
+
+      /* ── Header ── */
       .header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
       }
       h1 {
-        margin: 0;
-        font-size: 1.3rem;
-        letter-spacing: 0.04em;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-1);
+        letter-spacing: -0.01em;
       }
-      .muted { color: var(--muted); font-size: 0.9rem; }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: rgba(17, 25, 47, 0.9);
-        border: 1px solid var(--line);
+      .subtitle {
+        color: var(--text-3);
+        font-size: 12px;
+        margin-top: 4px;
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
       }
-      th, td {
-        border-bottom: 1px solid var(--line);
-        padding: 0.7rem;
-        text-align: left;
-        vertical-align: middle;
-      }
-      th { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-      .badge {
-        display: inline-block;
-        padding: 0.2rem 0.55rem;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-      }
-      .on { background: color-mix(in srgb, var(--ok), transparent 82%); color: #7cf0b0; border: 1px solid #1d7f4f; }
-      .off { background: color-mix(in srgb, var(--off), transparent 82%); color: #f5a8b1; border: 1px solid #8b2d3c; }
-      .controls { display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; }
+      .header-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+      /* ── Shared form controls ── */
       button {
-        border: 1px solid #4967d6;
-        background: var(--btn);
-        color: #fff;
-        padding: 0.36rem 0.58rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        font-family: inherit;
+        line-height: 1.4;
+        color: var(--text-1);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
         cursor: pointer;
-        font: inherit;
-        font-size: 0.8rem;
+        transition: background 120ms, border-color 120ms;
+        white-space: nowrap;
       }
+      button:hover { background: var(--surface-hover); border-color: #2a2a2a; }
+      button:active { background: #222; }
+      button:disabled { opacity: 0.4; cursor: not-allowed; }
       button.danger {
-        background: #7e2231;
-        border-color: #a13a4d;
+        color: var(--red);
+        border-color: rgba(248,81,73,0.2);
       }
-      .header-actions {
-        display: flex;
-        gap: 0.45rem;
-        flex-wrap: wrap;
+      button.danger:hover {
+        background: rgba(248,81,73,0.08);
+        border-color: rgba(248,81,73,0.35);
       }
       select {
-        background: #0c1326;
-        color: var(--text);
-        border: 1px solid var(--line);
-        padding: 0.35rem 0.45rem;
-        font: inherit;
-        font-size: 0.8rem;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-family: inherit;
+        color: var(--text-2);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        outline: none;
+        transition: border-color 120ms;
       }
-      button:disabled { opacity: 0.55; cursor: wait; }
-      a { color: #8db0ff; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      .msg { margin-top: 0.75rem; min-height: 1.2rem; font-size: 0.9rem; }
-      .audit-section { margin-top: 2rem; }
-      .audit-section h2 { font-size: 1.1rem; margin: 0 0 0.6rem 0; }
-      .audit-section table { font-size: 0.85rem; }
-      .action-enable { color: #7cf0b0; }
-      .action-disable, .action-emergency { color: #f5a8b1; }
-      .action-expire { color: #f0c97c; }
+      select:hover { border-color: #2a2a2a; }
+      select:focus { border-color: #333; }
+
+      /* ── Tables ── */
+      table { width: 100%; border-collapse: collapse; }
+      thead th {
+        padding: 8px 12px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      tbody td {
+        padding: 10px 12px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      tbody tr { transition: background 80ms; }
+      tbody tr:hover { background: var(--surface); }
+      tbody tr:last-child td { border-bottom: none; }
+
+      /* ── Service name cell ── */
+      .svc-name {
+        font-weight: 500;
+        color: var(--text-1);
+        font-size: 13px;
+      }
+      .svc-id {
+        font-size: 11px;
+        color: var(--text-3);
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        margin-top: 1px;
+      }
+
+      /* ── Badges ── */
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+      .on {
+        background: rgba(63,185,80,0.1);
+        color: var(--green);
+        border: 1px solid rgba(63,185,80,0.18);
+      }
+      .off {
+        background: rgba(255,255,255,0.04);
+        color: var(--text-3);
+        border: 1px solid var(--border);
+      }
+
+      /* ── Controls cell ── */
+      .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+      /* ── Links ── */
+      a {
+        color: var(--text-2);
+        text-decoration: none;
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-size: 12px;
+        transition: color 100ms;
+      }
+      a:hover { color: var(--text-1); }
+
+      /* ── Expiry text ── */
+      .expiry { font-size: 12px; color: var(--text-2); }
+
+      /* ── Auth text ── */
+      .auth-mode {
+        font-size: 12px;
+        color: var(--text-3);
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+      }
+
+      /* ── Status message ── */
+      .msg {
+        margin-top: 12px;
+        min-height: 1.2rem;
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      /* ── Section dividers ── */
+      .section {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+      }
+      .section-header {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-2);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 12px;
+      }
+
+      /* ── Audit log ── */
+      .audit-table td { font-size: 12px; padding: 7px 12px; }
+      .audit-time {
+        color: var(--text-3);
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .audit-svc {
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-size: 12px;
+        color: var(--text-2);
+      }
+      .audit-detail {
+        color: var(--text-3);
+        font-size: 11px;
+      }
+      .action-enable { color: var(--green); }
+      .action-disable { color: var(--red); }
+      .action-emergency { color: var(--red); font-weight: 500; }
+      .action-expire { color: var(--yellow); }
+
+      /* ── Empty state ── */
+      .empty-row td {
+        text-align: center;
+        color: var(--text-3);
+        padding: 24px 12px;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
     <main>
       <div class="header">
         <div>
-          <h1>Exposure Control Panel</h1>
-          <div class="muted">Default expiry: ${DEFAULT_EXPIRY_HOURS}h | Default auth: ${DEFAULT_AUTH_MODE} | Host pattern: ${SHARE_HOST_PREFIX}&lt;service&gt;.${PUBLIC_DOMAIN}</div>
+          <h1>Exposure Control</h1>
+          <div class="subtitle">${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} &middot; ${DEFAULT_EXPIRY_HOURS}h default &middot; ${DEFAULT_AUTH_MODE}</div>
         </div>
         <div class="header-actions">
           <button id="refreshBtn">Refresh</button>
-          <button id="emergencyBtn" class="danger">Emergency Disable All</button>
+          <button id="emergencyBtn" class="danger">Disable All</button>
         </div>
       </div>
+
       <table>
         <thead>
           <tr>
@@ -638,10 +774,11 @@ function renderControlPanelHtml() {
         </thead>
         <tbody id="rows"></tbody>
       </table>
-      <div id="msg" class="msg muted"></div>
-      <div class="audit-section">
-        <h2>Audit Log</h2>
-        <table>
+      <div id="msg" class="msg"></div>
+
+      <div class="section">
+        <div class="section-header">Audit Log</div>
+        <table class="audit-table">
           <thead>
             <tr>
               <th>Time</th>
@@ -662,16 +799,23 @@ function renderControlPanelHtml() {
       const emergencyBtn = document.getElementById("emergencyBtn");
       let busy = false;
 
-      function setMsg(text, isError = false) {
+      function setMsg(text, isError) {
         msgEl.textContent = text;
-        msgEl.style.color = isError ? "#f5a8b1" : "#93a1bf";
+        msgEl.style.color = isError ? "var(--red)" : "var(--text-3)";
       }
 
       function fmtExpiry(value) {
-        if (!value) return "n/a";
+        if (!value) return "\\u2014";
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return "invalid";
-        return d.toLocaleString();
+        const now = Date.now();
+        const diff = d.getTime() - now;
+        if (diff <= 0) return "expired";
+        const mins = Math.round(diff / 60000);
+        if (mins < 60) return mins + "m remaining";
+        const hrs = Math.floor(mins / 60);
+        const rm = mins % 60;
+        return hrs + "h " + rm + "m remaining";
       }
 
       async function request(path, method, body) {
@@ -687,26 +831,53 @@ function renderControlPanelHtml() {
 
       function renderRows(services) {
         rowsEl.innerHTML = "";
+        if (services.length === 0) {
+          const tr = document.createElement("tr");
+          tr.className = "empty-row";
+          const td = document.createElement("td");
+          td.colSpan = 6;
+          td.textContent = "No services configured.";
+          tr.appendChild(td);
+          rowsEl.appendChild(tr);
+          return;
+        }
         for (const svc of services) {
           const tr = document.createElement("tr");
 
           const serviceTd = document.createElement("td");
-          serviceTd.innerHTML = "<strong>" + svc.name + "</strong><div class=\\"muted\\">" + svc.id + "</div>";
+          const nameEl = document.createElement("div");
+          nameEl.className = "svc-name";
+          nameEl.textContent = svc.name;
+          const idEl = document.createElement("div");
+          idEl.className = "svc-id";
+          idEl.textContent = svc.id;
+          serviceTd.append(nameEl, idEl);
 
           const statusTd = document.createElement("td");
           const badge = document.createElement("span");
           badge.className = "badge " + (svc.enabled ? "on" : "off");
-          badge.textContent = svc.enabled ? "ENABLED" : "DISABLED";
+          badge.textContent = svc.enabled ? "Enabled" : "Disabled";
           statusTd.appendChild(badge);
 
           const authTd = document.createElement("td");
-          authTd.textContent = svc.authMode;
+          const authSpan = document.createElement("span");
+          authSpan.className = "auth-mode";
+          authSpan.textContent = svc.authMode === "cloudflare-access" ? "cf-access" : svc.authMode;
+          authTd.appendChild(authSpan);
 
           const urlTd = document.createElement("td");
-          urlTd.innerHTML = "<a href=\\"" + svc.publicUrl + "\\" target=\\"_blank\\" rel=\\"noreferrer\\">" + svc.publicHost + "</a>";
+          const link = document.createElement("a");
+          link.href = svc.publicUrl;
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          link.textContent = svc.publicHost;
+          urlTd.appendChild(link);
 
           const expiryTd = document.createElement("td");
-          expiryTd.textContent = fmtExpiry(svc.expiresAt);
+          const expirySpan = document.createElement("span");
+          expirySpan.className = "expiry";
+          expirySpan.textContent = fmtExpiry(svc.expiresAt);
+          expiryTd.appendChild(expirySpan);
 
           const controlsTd = document.createElement("td");
           const controls = document.createElement("div");
@@ -776,13 +947,30 @@ function renderControlPanelHtml() {
         }
       }
 
+      function fmtAuditTime(ts) {
+        if (!ts) return "";
+        const d = new Date(ts);
+        const pad = function(n) { return n < 10 ? "0" + n : n; };
+        return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+      }
+
       function renderAudit(entries) {
         auditRowsEl.innerHTML = "";
+        if (entries.length === 0) {
+          const tr = document.createElement("tr");
+          tr.className = "empty-row";
+          const td = document.createElement("td");
+          td.colSpan = 4;
+          td.textContent = "No audit entries yet.";
+          tr.appendChild(td);
+          auditRowsEl.appendChild(tr);
+          return;
+        }
         for (const e of entries) {
           const tr = document.createElement("tr");
           const timeTd = document.createElement("td");
-          timeTd.className = "muted";
-          timeTd.textContent = e.ts ? new Date(e.ts).toLocaleString() : "";
+          timeTd.className = "audit-time";
+          timeTd.textContent = fmtAuditTime(e.ts);
           const actionTd = document.createElement("td");
           actionTd.textContent = e.action || "";
           if (e.action === "enable") actionTd.className = "action-enable";
@@ -790,14 +978,15 @@ function renderControlPanelHtml() {
           else if (e.action === "emergency-disable-all") actionTd.className = "action-emergency";
           else if (e.action === "auto-expire") actionTd.className = "action-expire";
           const svcTd = document.createElement("td");
+          svcTd.className = "audit-svc";
           svcTd.textContent = e.serviceId || "";
           const detailsTd = document.createElement("td");
-          detailsTd.className = "muted";
+          detailsTd.className = "audit-detail";
           const parts = [];
           if (e.hours) parts.push(e.hours + "h");
           if (e.authMode) parts.push(e.authMode);
           if (e.disabled != null) parts.push("disabled: " + e.disabled);
-          detailsTd.textContent = parts.join(", ");
+          detailsTd.textContent = parts.join(" \\u00B7 ");
           tr.append(timeTd, actionTd, svcTd, detailsTd);
           auditRowsEl.appendChild(tr);
         }
