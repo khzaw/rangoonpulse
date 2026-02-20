@@ -25,4 +25,9 @@ spec:
     remediation:
       retries: 3
   values:
-   installCRDs: true
+    installCRDs: true
+    replicaCount: 1
+    cainjector:
+      replicaCount: 1
+    webhook:
+      replicaCount: 1
