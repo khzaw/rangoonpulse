@@ -224,11 +224,8 @@ talosctl -n 10.0.0.197 dashboard
 
 ## 📸 Screenshots
 
-A visual tour of the homelab services and dashboards.
-
 ### 🧭 Dashboard
 
-Central hub for accessing all services and monitoring status at a glance.
 <img src=".github/screenshots/homepage.png" />
 
 <img src=".github/screenshots/homepage-2.jpeg" />
@@ -237,32 +234,22 @@ Central hub for accessing all services and monitoring status at a glance.
 
 ### 🎬 Jellyfin
 
-Intel iGPU-accelerated transcoding for smooth streaming across all devices.
+<img src=".github/screenshots/jellyfin.jpeg" />
 
-<table>
-  <tr>
-    <td><img src=".github/screenshots/jellyfin.jpeg" /></td>
-    <td><img src=".github/screenshots/jellyfin-2.jpeg" /></td>
-  </tr>
-</table>
+<img src=".github/screenshots/jellyfin-2.jpeg" />
 
 ---
 
-### 📺 Media Automation Stack
-
-**Sonarr** — TV show management and auto-downloading
+### Sonarr & Radarr
 
 <img src=".github/screenshots/sonarr.jpeg" width="80%" />
-
-**Radarr** — Movie collection management
 
 <img src=".github/screenshots/radarr.jpeg" width="80%" />
 
 ---
 
-### 📚 Library Management
+### Calibre
 
-**Calibre Web** — E-book library with web reader
 
 <img src=".github/screenshots/calibre.jpeg" width="80%" />
 
@@ -270,19 +257,17 @@ Intel iGPU-accelerated transcoding for smooth streaming across all devices.
 
 ### 📊 Monitoring Stack
 
-**Grafana** — Metrics visualization and dashboards
+**Grafana**
 
 <img src=".github/screenshots/grafana.jpeg" width="80%" />
 
-**Uptime Kuma** — Service health monitoring and status pages
+**Uptime Kuma**
 
 <img src=".github/screenshots/uptime.jpeg" width="80%" />
 
 ---
 
 ### 🗄️ TrueNAS Storage
-
-NAS dashboard showing the NFS storage backend for the cluster.
 
 <img src=".github/screenshots/truenas.jpeg" width="80%" />
 
