@@ -94,6 +94,8 @@ Notes:
   - `apps/speedtest`
   - `apps/actualbudget`
   - `apps/anki-server`
+  - `apps/autobrr`
+  - `apps/prowlarr`
   - `apps/flaresolverr`
 - Remember: `local-path` PVs are node-affined. Moving an app between nodes usually implies wiping/recreating the PVC
   (or migrating storage to NFS).

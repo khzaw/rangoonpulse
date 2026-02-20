@@ -76,4 +76,6 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: prowlarr-config-nfs
+        storageClass: truenas-nfs
+        size: 1Gi
+        accessMode: ReadWriteMany
