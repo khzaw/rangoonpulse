@@ -4,6 +4,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/baremetal/deploy.yaml
+  - custom-headers.yaml
 
 patches:
   # Patch 1: Change Service type
@@ -25,5 +26,19 @@ patches:
         value: --publish-service=$(POD_NAMESPACE)/ingress-nginx-controller
     target:
       kind: Deployment
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+
+  # Patch 3: Set security defaults and reference custom response headers
+  - patch: |-
+      - op: remove
+        path: /data
+      - op: add
+        path: /data
+        value:
+          add-headers: "ingress-nginx/ingress-nginx-custom-headers"
+          hide-headers: "X-Powered-By,Server"
+    target:
+      kind: ConfigMap
       name: ingress-nginx-controller
       namespace: ingress-nginx
