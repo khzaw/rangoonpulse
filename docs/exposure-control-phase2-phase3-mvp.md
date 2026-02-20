@@ -1,7 +1,8 @@
 # Exposure Control Phase 2 + 3 (Lean MVP)
 
 Status:
-- Completed on February 20, 2026.
+- Phase 2 + 3 completed on February 20, 2026.
+- Phase 4 (security hardening) completed on February 20, 2026.
 - Fully validated end-to-end on February 19, 2026.
 
 ## Scope

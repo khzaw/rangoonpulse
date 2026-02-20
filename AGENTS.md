@@ -65,11 +65,14 @@ Notes:
   - If NFS-backed PVCs suddenly fail (democratic-csi probe timeout / pods stuck `ContainerCreating`), first check
     the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing. See:
   - `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
-- Temporary public exposure (lean MVP):
+- Temporary public exposure (lean MVP + security hardening):
   - backend + UI: `apps/exposure-control/`
   - control panel host: `controlpanel.khzaw.dev`
   - share hosts route through Cloudflare Tunnel -> `exposure-control` backend
   - default temporary exposure expiry: `2h`
+  - default auth mode: `cloudflare-access` (configurable per enable action)
+  - rate limiting, Prometheus metrics at `/metrics`, emergency disable-all
+- Permanent public: `blog.khzaw.dev` routes directly through Cloudflare Tunnel to `blog.default.svc.cluster.local:8080` (bypasses exposure-control)
 
 ## Nodes (Current)
 - Primary node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)

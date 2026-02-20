@@ -157,8 +157,8 @@ Optional for future dynamic DNS API operations:
 - [x] Phase 1: Public edge foundation + low-risk pilot exposure
 - [x] Phase 2: Dynamic exposure backend (lean MVP)
 - [x] Phase 3: Control panel UI + API (lean MVP)
-- [ ] Phase 4: Security hardening and operations
-- [ ] Phase 5: Blog permanent-public onboarding
+- [x] Phase 4: Security hardening and operations
+- [x] Phase 5: Blog permanent-public onboarding
 
 ### Phase 1: Public Edge Foundation + Pilot (Completed)
 1. Deploy cloudflared tunnel + SOPS-managed tunnel token secret.
