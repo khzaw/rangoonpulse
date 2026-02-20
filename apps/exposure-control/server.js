@@ -110,9 +110,11 @@ function defaultState(services) {
 
 function loadState(services) {
   ensureDataDir();
+  const knownIds = new Set(services.map((svc) => svc.id));
   if (!fs.existsSync(STATE_FILE)) {
     const fresh = defaultState(services);
     fs.writeFileSync(STATE_FILE, JSON.stringify(fresh, null, 2));
+    console.log("state: created fresh (no prior state file)");
     return fresh;
   }
   try {
@@ -122,6 +124,7 @@ function loadState(services) {
       throw new Error("state root must be object");
     if (!parsed.exposures || typeof parsed.exposures !== "object")
       parsed.exposures = {};
+    // Add missing services
     for (const svc of services) {
       if (!parsed.exposures[svc.id]) {
         parsed.exposures[svc.id] = {
@@ -129,6 +132,13 @@ function loadState(services) {
           expiresAt: null,
           updatedAt: nowIso(),
         };
+      }
+    }
+    // Remove stale services no longer in services.json
+    for (const id of Object.keys(parsed.exposures)) {
+      if (!knownIds.has(id)) {
+        console.log(`state: pruning stale service entry "${id}"`);
+        delete parsed.exposures[id];
       }
     }
     return parsed;
@@ -284,6 +294,34 @@ const serviceByHost = new Map(
   services.map((svc) => [servicePublicHost(svc), svc]),
 );
 const state = loadState(services);
+
+// Startup reconciliation: expire stale exposures and log recovered state
+(function startupReconcile() {
+  let activeCount = 0;
+  let expiredCount = 0;
+  for (const svc of services) {
+    const exposure = state.exposures[svc.id];
+    if (exposure && exposure.enabled) {
+      if (isExpired(exposure)) {
+        exposure.enabled = false;
+        exposure.expiresAt = null;
+        exposure.updatedAt = nowIso();
+        appendAuditEntry({
+          action: "auto-expire",
+          serviceId: svc.id,
+          trigger: "startup",
+        });
+        expiredCount++;
+      } else {
+        activeCount++;
+      }
+    }
+  }
+  if (expiredCount > 0) saveState(state);
+  console.log(
+    `state: recovered ${services.length} services, ${activeCount} active, ${expiredCount} expired on startup`,
+  );
+})();
 
 function snapshotServices() {
   return services.map((svc) => {
