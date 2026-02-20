@@ -72,5 +72,6 @@ resources:
   - ./kustomizations/nodecast-tv.yaml
   - ./kustomizations/isponsorblock-tv.yaml
   - ./kustomizations/ersatztv.yaml
+  - ./kustomizations/blog.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
