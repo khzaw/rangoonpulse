@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/service-v1.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ersatztv-iptv-cname
+  namespace: default
+  annotations:
+    # Publish iptv.khzaw.dev as a CNAME to ersatztv.khzaw.dev.
+    # external-dns must watch Services (`--source=service`) for this to work.
+    external-dns.alpha.kubernetes.io/hostname: iptv.khzaw.dev
+spec:
+  type: ExternalName
+  externalName: ersatztv.khzaw.dev
