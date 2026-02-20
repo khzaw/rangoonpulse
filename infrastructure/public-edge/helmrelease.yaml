@@ -74,6 +74,8 @@ spec:
           config.yaml: |
             # Static share host routes point to the in-cluster exposure-control backend.
             ingress:
+              - hostname: blog.khzaw.dev
+                service: http://blog.default.svc.cluster.local:8080
               - hostname: share-sponsorblocktv.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-speedtest.khzaw.dev
