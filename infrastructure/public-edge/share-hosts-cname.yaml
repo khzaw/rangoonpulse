@@ -37,3 +37,147 @@ metadata:
 spec:
   type: ExternalName
   externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-jellyfin-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-jellyfin.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-seerr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-seerr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-audiobookshelf-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-audiobookshelf.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-uptime-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-uptime.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-sonarr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-sonarr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-radarr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-radarr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-tracerr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-tracerr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-prowlarr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-prowlarr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-bazarr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-bazarr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-tunarr-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-tunarr.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-vaultwarden-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-vaultwarden.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-immich-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-immich.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com

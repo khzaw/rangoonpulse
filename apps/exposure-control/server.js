@@ -7,6 +7,7 @@ const { URL } = require("node:url");
 const PORT = Number(process.env.PORT || "8080");
 const DATA_DIR = process.env.DATA_DIR || "/data";
 const STATE_FILE = path.join(DATA_DIR, "state.json");
+const AUDIT_FILE = path.join(DATA_DIR, "audit.json");
 const SERVICES_FILE = process.env.SERVICES_FILE || "/app/services.json";
 const PUBLIC_DOMAIN = (process.env.PUBLIC_DOMAIN || "khzaw.dev").toLowerCase();
 const SHARE_HOST_PREFIX = (
@@ -141,6 +142,29 @@ function loadState(services) {
 
 function saveState(state) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+function appendAuditEntry(entry) {
+  fs.appendFileSync(
+    AUDIT_FILE,
+    JSON.stringify({ ...entry, ts: nowIso() }) + "\n",
+  );
+}
+
+function loadAuditEntries(limit) {
+  if (!fs.existsSync(AUDIT_FILE)) return [];
+  const lines = fs
+    .readFileSync(AUDIT_FILE, "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+  const entries = [];
+  for (let i = lines.length - 1; i >= 0 && entries.length < limit; i--) {
+    try {
+      entries.push(JSON.parse(lines[i]));
+    } catch {}
+  }
+  return entries;
 }
 
 function isExpired(exposure) {
@@ -294,6 +318,7 @@ function disableExpiredExposures() {
         exposure.updatedAt = nowIso();
         exposure.authMode = exposureAuthMode(svc, exposure);
         metrics.expiredDisableTotal += 1;
+        appendAuditEntry({ action: "auto-expire", serviceId: svc.id });
         changed = true;
       }
     }
@@ -400,6 +425,7 @@ async function handleApi(req, res, pathname) {
     };
     saveState(state);
     metrics.enableTotal += 1;
+    appendAuditEntry({ action: "enable", serviceId: id, hours, authMode });
     return sendJson(res, 200, {
       service: snapshotServices().find((item) => item.id === id),
     });
@@ -421,6 +447,7 @@ async function handleApi(req, res, pathname) {
     };
     saveState(state);
     metrics.disableTotal += 1;
+    appendAuditEntry({ action: "disable", serviceId: id });
     return sendJson(res, 200, {
       service: snapshotServices().find((item) => item.id === id),
     });
@@ -442,7 +469,13 @@ async function handleApi(req, res, pathname) {
     }
     saveState(state);
     metrics.emergencyDisableTotal += disabled;
+    appendAuditEntry({ action: "emergency-disable-all", disabled });
     return sendJson(res, 200, { disabled, services: snapshotServices() });
+  }
+
+  if (req.method === "GET" && pathname === "/api/audit") {
+    const entries = loadAuditEntries(100);
+    return sendJson(res, 200, { entries });
   }
 
   return sendJson(res, 404, { error: "not found" });
@@ -542,13 +575,6 @@ function renderControlPanelHtml() {
       .on { background: color-mix(in srgb, var(--ok), transparent 82%); color: #7cf0b0; border: 1px solid #1d7f4f; }
       .off { background: color-mix(in srgb, var(--off), transparent 82%); color: #f5a8b1; border: 1px solid #8b2d3c; }
       .controls { display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; }
-      input[type="number"] {
-        width: 5.2rem;
-        background: #0c1326;
-        color: var(--text);
-        border: 1px solid var(--line);
-        padding: 0.35rem 0.45rem;
-      }
       button {
         border: 1px solid #4967d6;
         background: var(--btn);
@@ -579,6 +605,12 @@ function renderControlPanelHtml() {
       a { color: #8db0ff; text-decoration: none; }
       a:hover { text-decoration: underline; }
       .msg { margin-top: 0.75rem; min-height: 1.2rem; font-size: 0.9rem; }
+      .audit-section { margin-top: 2rem; }
+      .audit-section h2 { font-size: 1.1rem; margin: 0 0 0.6rem 0; }
+      .audit-section table { font-size: 0.85rem; }
+      .action-enable { color: #7cf0b0; }
+      .action-disable, .action-emergency { color: #f5a8b1; }
+      .action-expire { color: #f0c97c; }
     </style>
   </head>
   <body>
@@ -607,9 +639,24 @@ function renderControlPanelHtml() {
         <tbody id="rows"></tbody>
       </table>
       <div id="msg" class="msg muted"></div>
+      <div class="audit-section">
+        <h2>Audit Log</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Action</th>
+              <th>Service</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditRows"></tbody>
+        </table>
+      </div>
     </main>
     <script>
       const rowsEl = document.getElementById("rows");
+      const auditRowsEl = document.getElementById("auditRows");
       const msgEl = document.getElementById("msg");
       const refreshBtn = document.getElementById("refreshBtn");
       const emergencyBtn = document.getElementById("emergencyBtn");
@@ -664,11 +711,14 @@ function renderControlPanelHtml() {
           const controlsTd = document.createElement("td");
           const controls = document.createElement("div");
           controls.className = "controls";
-          const hoursInput = document.createElement("input");
-          hoursInput.type = "number";
-          hoursInput.min = "1";
-          hoursInput.max = "24";
-          hoursInput.value = String(svc.defaultExpiryHours || ${DEFAULT_EXPIRY_HOURS});
+          const expirySelect = document.createElement("select");
+          [1, 2, 6, 12, 24].forEach(function(h) {
+            const opt = document.createElement("option");
+            opt.value = String(h);
+            opt.textContent = h + "h";
+            if (h === (svc.defaultExpiryHours || ${DEFAULT_EXPIRY_HOURS})) opt.selected = true;
+            expirySelect.appendChild(opt);
+          });
 
           const authSelect = document.createElement("select");
           const optNone = document.createElement("option");
@@ -688,7 +738,7 @@ function renderControlPanelHtml() {
               busy = true;
               enableBtn.disabled = true;
               await request("/api/services/" + svc.id + "/enable", "POST", {
-                hours: Number(hoursInput.value || ${DEFAULT_EXPIRY_HOURS}),
+                hours: Number(expirySelect.value),
                 authMode: authSelect.value,
               });
               setMsg("Enabled " + svc.id);
@@ -718,7 +768,7 @@ function renderControlPanelHtml() {
             }
           };
 
-          controls.append(hoursInput, authSelect, enableBtn, disableBtn);
+          controls.append(expirySelect, authSelect, enableBtn, disableBtn);
           controlsTd.appendChild(controls);
 
           tr.append(serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd);
@@ -726,11 +776,42 @@ function renderControlPanelHtml() {
         }
       }
 
+      function renderAudit(entries) {
+        auditRowsEl.innerHTML = "";
+        for (const e of entries) {
+          const tr = document.createElement("tr");
+          const timeTd = document.createElement("td");
+          timeTd.className = "muted";
+          timeTd.textContent = e.ts ? new Date(e.ts).toLocaleString() : "";
+          const actionTd = document.createElement("td");
+          actionTd.textContent = e.action || "";
+          if (e.action === "enable") actionTd.className = "action-enable";
+          else if (e.action === "disable") actionTd.className = "action-disable";
+          else if (e.action === "emergency-disable-all") actionTd.className = "action-emergency";
+          else if (e.action === "auto-expire") actionTd.className = "action-expire";
+          const svcTd = document.createElement("td");
+          svcTd.textContent = e.serviceId || "";
+          const detailsTd = document.createElement("td");
+          detailsTd.className = "muted";
+          const parts = [];
+          if (e.hours) parts.push(e.hours + "h");
+          if (e.authMode) parts.push(e.authMode);
+          if (e.disabled != null) parts.push("disabled: " + e.disabled);
+          detailsTd.textContent = parts.join(", ");
+          tr.append(timeTd, actionTd, svcTd, detailsTd);
+          auditRowsEl.appendChild(tr);
+        }
+      }
+
       async function load() {
         setMsg("Refreshing...");
         try {
-          const data = await request("/api/services", "GET");
-          renderRows(data.services || []);
+          const [svcData, auditData] = await Promise.all([
+            request("/api/services", "GET"),
+            request("/api/audit", "GET"),
+          ]);
+          renderRows(svcData.services || []);
+          renderAudit(auditData.entries || []);
           setMsg("Updated " + new Date().toLocaleTimeString());
         } catch (err) {
           setMsg(err.message, true);

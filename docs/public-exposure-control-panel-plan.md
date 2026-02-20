@@ -156,7 +156,7 @@ Optional for future dynamic DNS API operations:
 ### Phase Status (as of February 20, 2026)
 - [x] Phase 1: Public edge foundation + low-risk pilot exposure
 - [x] Phase 2: Dynamic exposure backend (lean MVP)
-- [x] Phase 3: Control panel UI + API (lean MVP)
+- [x] Phase 3: Control panel UI + API
 - [x] Phase 4: Security hardening and operations
 - [x] Phase 5: Blog permanent-public onboarding
 
@@ -167,7 +167,7 @@ Optional for future dynamic DNS API operations:
 - `share-sponsorblocktv.khzaw.dev` -> `isponsorblock-tv.default.svc.cluster.local:8080`
 4. Confirm existing LAN + Tailscale private access model remains unchanged.
 
-### Phase 2: Dynamic Exposure Backend (Completed as Lean MVP)
+### Phase 2: Dynamic Exposure Backend (Completed)
 1. Introduce `PublicExposure` data model (CRD or equivalent API-backed object).
 2. Implement backend reconciliation for:
 - enable/disable exposure
@@ -183,16 +183,16 @@ Lean MVP note:
   - reconciliation loop for expiry disable
   - default expiry `2h`
 
-### Phase 3: Control Panel UI + API (Completed as Lean MVP)
+### Phase 3: Control Panel UI + API (Completed)
 1. Deploy UI + API at `controlpanel.khzaw.dev`.
-2. Add admin authentication and scoped authorization.
+2. Admin authentication skipped (control panel behind private ingress — LAN/Tailscale only).
 3. Implement operator UX:
 - list expose-eligible services
 - toggle exposure on/off
-- set expiry windows
-- view audit history
+- set expiry windows (preset dropdown: 1h, 2h, 6h, 12h, 24h)
+- view audit history (append-only JSON Lines log at `/data/audit.json`, API at `GET /api/audit`)
 
-Lean MVP note:
+Implementation:
 - UI and API are served by the same lightweight `exposure-control` process.
 - API access is restricted to requests on `controlpanel.khzaw.dev`.
 

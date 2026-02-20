@@ -10,5 +10,77 @@
     "name": "Speedtest",
     "target": "http://speedtest.default.svc.cluster.local:80",
     "description": "LibreSpeed UI"
+  },
+  {
+    "id": "jellyfin",
+    "name": "Jellyfin",
+    "target": "http://jellyfin.default.svc.cluster.local:8096",
+    "description": "Jellyfin"
+  },
+  {
+    "id": "seerr",
+    "name": "Jellyseerr",
+    "target": "http://jellyseerr.default.svc.cluster.local:5055",
+    "description": "Seerr"
+  },
+  {
+    "id": "audiobookshelf",
+    "name": "Audiobookshelf",
+    "target": "http://audiobookshelf.default.svc.cluster.local:80",
+    "description": "Audiobookshelf"
+  },
+  {
+    "id": "uptime",
+    "name": "Uptime Kuma",
+    "target": "http://uptime-kuma.default.svc.cluster.local:3001",
+    "description": "Uptime-kuma"
+  },
+  {
+    "id": "sonarr",
+    "name": "Sonarr",
+    "target": "http://sonarr.default.svc.cluster.local:8989",
+    "description": "Sonarr"
+  },
+  {
+    "id": "radarr",
+    "name": "Radarr",
+    "target": "http://radarr.default.svc.cluster.local:7878",
+    "description": "Radarr"
+  },
+  {
+    "id": "tracerr",
+    "name": "Tracerr",
+    "target": "http://tracerr.default.svc.cluster.local:3000",
+    "description": "Tracerr"
+  },
+  {
+    "id": "prowlarr",
+    "name": "Prowlarr",
+    "target": "http://prowlarr.default.svc.cluster.local:9696",
+    "description": "Prowlarr"
+  },
+  {
+    "id": "bazarr",
+    "name": "Bazarr",
+    "target": "http://bazarr.default.svc.cluster.local:6767",
+    "description": "Bazarr"
+  },
+  {
+    "id": "tunarr",
+    "name": "Tunarr",
+    "target": "http://tunarr.default.svc.cluster.local:8000",
+    "description": "Tunarr"
+  },
+  {
+    "id": "vaultwarden",
+    "name": "Vaultwarden",
+    "target": "http://vaultwarden.default.svc.cluster.local:80",
+    "description": "Vaultwarden"
+  },
+  {
+    "id": "immich",
+    "name": "Immich",
+    "target": "http://immich-server.default.svc.cluster.local:2283",
+    "description": "Immich"
   }
 ]

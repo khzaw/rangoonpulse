@@ -80,6 +80,30 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-speedtest.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-jellyfin.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-seerr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-audiobookshelf.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-uptime.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-sonarr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-radarr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-tracerr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-prowlarr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-bazarr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-tunarr.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-vaultwarden.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-immich.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
               - service: http_status:404
 
     persistence:

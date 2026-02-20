@@ -1,7 +1,8 @@
-# Exposure Control Phase 2 + 3 (Lean MVP)
+# Exposure Control Phase 2 + 3
 
 Status:
 - Phase 2 + 3 completed on February 20, 2026.
+- Phase 3 audit log + expiry presets completed on February 20, 2026.
 - Phase 4 (security hardening) completed on February 20, 2026.
 - Fully validated end-to-end on February 19, 2026.
 
@@ -24,6 +25,18 @@ Default exposure expiry:
 - Current hosts:
   - `share-sponsorblocktv.khzaw.dev`
   - `share-speedtest.khzaw.dev`
+  - `share-jellyfin.khzaw.dev`
+  - `share-seerr.khzaw.dev`
+  - `share-audiobookshelf.khzaw.dev`
+  - `share-uptime.khzaw.dev`
+  - `share-sonarr.khzaw.dev`
+  - `share-radarr.khzaw.dev`
+  - `share-tracerr.khzaw.dev`
+  - `share-prowlarr.khzaw.dev`
+  - `share-bazarr.khzaw.dev`
+  - `share-tunarr.khzaw.dev`
+  - `share-vaultwarden.khzaw.dev`
+  - `share-immich.khzaw.dev`
 
 3. Exposure backend + control panel:
 - `apps/exposure-control/helmrelease.yaml`
@@ -34,6 +47,8 @@ Default exposure expiry:
 - Service: `default/exposure-control`
 - Control panel host: `https://controlpanel.khzaw.dev`
 - Runtime state file: `/data/state.json` (PVC-backed, `local-path`)
+- Audit log file: `/data/audit.json` (JSON Lines, append-only)
+- Audit API: `GET /api/audit` — returns last 100 entries in reverse chronological order
 
 ## Behavior
 
