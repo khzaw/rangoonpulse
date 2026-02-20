@@ -518,24 +518,22 @@ function renderControlPanelHtml() {
     <title>Exposure Control</title>
     <style>
       :root {
-        --bg: #0a0a0a;
-        --surface: #111;
-        --surface-hover: #191919;
-        --border: #1e1e1e;
-        --border-subtle: #161616;
-        --text-1: #ececec;
+        --bg: #0c0c0c;
+        --bg-subtle: #141414;
+        --border: rgba(255, 255, 255, 0.07);
+        --text-1: #e8e8e8;
         --text-2: #888;
         --text-3: #555;
         --green: #3fb950;
         --red: #f85149;
         --yellow: #d29922;
-        --accent: #e8e8e8;
+        --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
       }
       * { box-sizing: border-box; margin: 0; }
       body {
         background: var(--bg);
         color: var(--text-1);
-        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+        font-family: system-ui, -apple-system, sans-serif;
         font-size: 13px;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
@@ -566,7 +564,7 @@ function renderControlPanelHtml() {
         color: var(--text-3);
         font-size: 12px;
         margin-top: 4px;
-        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-family: var(--font-mono);
       }
       .header-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
@@ -580,38 +578,30 @@ function renderControlPanelHtml() {
         font-weight: 500;
         font-family: inherit;
         line-height: 1.4;
-        color: var(--text-1);
-        background: var(--surface);
+        color: var(--text-2);
+        background: transparent;
         border: 1px solid var(--border);
-        border-radius: 6px;
+        border-radius: 3px;
         cursor: pointer;
-        transition: background 120ms, border-color 120ms;
+        transition: color 0.1s linear, border-color 0.1s linear;
         white-space: nowrap;
       }
-      button:hover { background: var(--surface-hover); border-color: #2a2a2a; }
-      button:active { background: #222; }
+      button:hover { color: var(--text-1); border-color: var(--text-3); }
       button:disabled { opacity: 0.4; cursor: not-allowed; }
-      button.danger {
-        color: var(--red);
-        border-color: rgba(248,81,73,0.2);
-      }
-      button.danger:hover {
-        background: rgba(248,81,73,0.08);
-        border-color: rgba(248,81,73,0.35);
-      }
+      button.danger { color: var(--red); }
+      button.danger:hover { color: var(--red); border-color: var(--red); }
       select {
         padding: 4px 8px;
         font-size: 12px;
         font-family: inherit;
         color: var(--text-2);
-        background: var(--bg);
+        background: transparent;
         border: 1px solid var(--border);
-        border-radius: 6px;
+        border-radius: 3px;
         outline: none;
-        transition: border-color 120ms;
+        transition: border-color 0.1s linear;
       }
-      select:hover { border-color: #2a2a2a; }
-      select:focus { border-color: #333; }
+      select:hover, select:focus { border-color: var(--text-3); }
 
       /* ── Tables ── */
       table { width: 100%; border-collapse: collapse; }
@@ -632,10 +622,8 @@ function renderControlPanelHtml() {
       tbody td {
         padding: 10px 12px;
         vertical-align: middle;
-        border-bottom: 1px solid var(--border-subtle);
+        border-bottom: 1px solid var(--border);
       }
-      tbody tr { transition: background 80ms; }
-      tbody tr:hover { background: var(--surface); }
       tbody tr:last-child td { border-bottom: none; }
 
       /* ── Service name cell ── */
@@ -647,29 +635,18 @@ function renderControlPanelHtml() {
       .svc-id {
         font-size: 11px;
         color: var(--text-3);
-        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-family: var(--font-mono);
         margin-top: 1px;
       }
 
       /* ── Badges ── */
       .badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 999px;
         font-size: 11px;
         font-weight: 500;
-        letter-spacing: 0.01em;
+        letter-spacing: 0.02em;
       }
-      .on {
-        background: rgba(63,185,80,0.1);
-        color: var(--green);
-        border: 1px solid rgba(63,185,80,0.18);
-      }
-      .off {
-        background: rgba(255,255,255,0.04);
-        color: var(--text-3);
-        border: 1px solid var(--border);
-      }
+      .on { color: var(--green); }
+      .off { color: var(--text-3); }
 
       /* ── Controls cell ── */
       .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -677,10 +654,12 @@ function renderControlPanelHtml() {
       /* ── Links ── */
       a {
         color: var(--text-2);
-        text-decoration: none;
-        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        text-decoration: underline;
+        text-decoration-color: var(--border);
+        text-underline-offset: 3px;
+        font-family: var(--font-mono);
         font-size: 12px;
-        transition: color 100ms;
+        transition: color 0.1s linear;
       }
       a:hover { color: var(--text-1); }
 
@@ -691,7 +670,7 @@ function renderControlPanelHtml() {
       .auth-mode {
         font-size: 12px;
         color: var(--text-3);
-        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-family: var(--font-mono);
       }
 
       /* ── Status message ── */
@@ -721,12 +700,12 @@ function renderControlPanelHtml() {
       .audit-table td { font-size: 12px; padding: 7px 12px; }
       .audit-time {
         color: var(--text-3);
-        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-family: var(--font-mono);
         font-size: 11px;
         white-space: nowrap;
       }
       .audit-svc {
-        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+        font-family: var(--font-mono);
         font-size: 12px;
         color: var(--text-2);
       }
