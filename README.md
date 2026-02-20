@@ -95,14 +95,14 @@
 
 ### 🛡️ Core Infrastructure
 
-| Service | Description | URL |
-|---------|-------------|-----|
-| 🛡️ **AdGuard Home** | DNS filtering & ad blocking | `https://adguard.khzaw.dev` |
-| 🧭 **Glance** | Dashboard & service hub | `https://glance.khzaw.dev` |
-| ⏱️ **Uptime Kuma** | Uptime monitoring | `https://uptime.khzaw.dev` |
-| 📈 **Grafana** | Metrics & dashboards | `https://grafana.khzaw.dev` |
-| ⚡ **Speedtest** | Network speed testing | `https://speedtest.khzaw.dev` |
-| 🧮 **Resource Advisor** | Automated resource tuning | In-cluster |
+| Service | Description |
+|---------|-------------|
+| 🛡️ **AdGuard Home** | DNS filtering & ad blocking |
+| 🧭 **Glance** | Dashboard & service hub |
+| ⏱️ **Uptime Kuma** | Uptime monitoring |
+| 📈 **Grafana** | Metrics & dashboards |
+| ⚡ **Speedtest** | Network speed testing |
+| 🧮 **Resource Advisor** | Automated resource tuning |
 
 ### 🎬 Media & Library
 
@@ -229,13 +229,9 @@ A visual tour of the homelab services and dashboards.
 ### 🧭 Dashboard
 
 Central hub for accessing all services and monitoring status at a glance.
+<img src=".github/screenshots/homepage.png" />
 
-<table>
-  <tr>
-    <td width="50%"><img src=".github/screenshots/homepage.png" /></td>
-    <td width="50%"><img src=".github/screenshots/homepage-2.jpeg" /></td>
-  </tr>
-</table>
+<img src=".github/screenshots/homepage-2.jpeg" />
 
 ---
 
