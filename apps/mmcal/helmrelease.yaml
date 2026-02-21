@@ -48,11 +48,11 @@ spec:
                   periodSeconds: 30
             resources:
               requests:
-                cpu: "1m"
-                memory: "4Mi"
+                cpu: "5m"
+                memory: "16Mi"
               limits:
-                cpu: "20m"
-                memory: "12Mi"
+                cpu: "50m"
+                memory: "32Mi"
 
     service:
       main:
