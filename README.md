@@ -226,32 +226,32 @@ talosctl -n 10.0.0.197 dashboard
 
 ### 🧭 Dashboard
 
-<img src=".github/screenshots/homepage.png" />
+<img src=".github/screenshots/homepage.webp" />
 
-<img src=".github/screenshots/homepage-2.jpeg" />
+<img src=".github/screenshots/homepage-2.webp" />
 
 ---
 
 ### 🎬 Jellyfin
 
-<img src=".github/screenshots/jellyfin.jpeg" />
+<img src=".github/screenshots/jellyfin.webp" />
 
-<img src=".github/screenshots/jellyfin-2.jpeg" />
+<img src=".github/screenshots/jellyfin-2.webp" />
 
 ---
 
 ### Sonarr & Radarr
 
-<img src=".github/screenshots/sonarr.jpeg" />
+<img src=".github/screenshots/sonarr.webp" />
 
-<img src=".github/screenshots/radarr.jpeg" />
+<img src=".github/screenshots/radarr.webp" />
 
 ---
 
 ### Calibre
 
 
-<img src=".github/screenshots/calibre.jpeg" />
+<img src=".github/screenshots/calibre.webp" />
 
 ---
 
@@ -259,17 +259,17 @@ talosctl -n 10.0.0.197 dashboard
 
 **Grafana**
 
-<img src=".github/screenshots/grafana.jpeg" />
+<img src=".github/screenshots/grafana.webp" />
 
 **Uptime Kuma**
 
-<img src=".github/screenshots/uptime.jpeg" />
+<img src=".github/screenshots/uptime.webp" />
 
 ---
 
 ### 🗄️ TrueNAS Storage
 
-<img src=".github/screenshots/truenas.jpeg" />
+<img src=".github/screenshots/truenas.webp" />
 
 ---
 
