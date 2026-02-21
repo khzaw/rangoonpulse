@@ -73,5 +73,6 @@ resources:
   - ./kustomizations/isponsorblock-tv.yaml
   - ./kustomizations/ersatztv.yaml
   - ./kustomizations/blog.yaml
+  - ./kustomizations/mmcal.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml
