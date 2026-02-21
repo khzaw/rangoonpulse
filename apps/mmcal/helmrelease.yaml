@@ -28,7 +28,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/mmcal
-              tag: latest
+              tag: latest # {"$imagepolicy": "flux-system:mmcal:tag"}
             probes:
               liveness:
                 enabled: true
