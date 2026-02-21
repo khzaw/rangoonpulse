@@ -66,10 +66,18 @@ spec:
                 service:
                   identifier: main
                   port: http
+          - host: iptv.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
         tls:
           - secretName: ersatztv-tls
             hosts:
               - ersatztv.khzaw.dev
+              - iptv.khzaw.dev
 
     persistence:
       config:
