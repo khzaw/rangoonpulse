@@ -1,0 +1,9 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: mmcal
+  namespace: flux-system
+spec:
+  image: ghcr.io/khzaw/mmcal
+  interval: 6h

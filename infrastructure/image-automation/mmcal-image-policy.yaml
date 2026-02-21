@@ -1,0 +1,14 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: mmcal
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: mmcal
+  filterTags:
+    pattern: '^[a-f0-9]{7}$'
+  policy:
+    alphabetical:
+      order: asc
