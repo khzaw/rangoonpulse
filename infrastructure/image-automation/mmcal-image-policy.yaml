@@ -8,7 +8,8 @@ spec:
   imageRepositoryRef:
     name: mmcal
   filterTags:
-    pattern: '^[a-f0-9]{7}$'
+    pattern: '^(?P<ts>\d+)-[a-f0-9]{40}$'
+    extract: '$ts'
   policy:
-    alphabetical:
+    numerical:
       order: asc
