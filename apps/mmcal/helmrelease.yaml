@@ -73,8 +73,6 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: mmcal.khzaw.dev
-          external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
           nginx.ingress.kubernetes.io/limit-rps: "10"

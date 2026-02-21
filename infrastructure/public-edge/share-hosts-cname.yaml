@@ -15,6 +15,18 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: mmcal-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: mmcal.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: share-sponsorblocktv-cname
   namespace: public-edge
   annotations:
