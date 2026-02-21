@@ -1,4 +1,4 @@
-# ⛵ Rangoon Pulse
+# ⛵ rangoonpulse
 
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.30+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![Talos](https://img.shields.io/badge/Talos%20Linux-6952f2?logo=linux&logoColor=white)](https://talos.dev/)
