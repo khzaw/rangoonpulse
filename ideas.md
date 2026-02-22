@@ -51,6 +51,11 @@ This file tracks ideas explicitly rated `good` or better.
 - Deploy a lightweight push notification receiver (ntfy or Gotify) and configure Alertmanager webhook receiver.
 - Current PrometheusRules fire but have no delivery channel — alerts are effectively write-only.
 
+13. `good` - Exposure Control + Blog Public Edge Polish (Post-Phase)
+- Move Cloudflare Access/WAF/cache policy configuration to full IaC so edge policy changes are versioned and reproducible.
+- Add automated smoke checks (scheduled or CI) for temporary share toggle flow and blog public DNS/HTTP reachability.
+- Add Grafana dashboard panels/alerts for `exposure_control_*` metrics to improve day-2 visibility.
+
 ## Deferred / Not Included
 
 - Items marked as not needed or not for now are intentionally excluded from this list.
