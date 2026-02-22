@@ -6,3 +6,5 @@ resources:
   - namespace.yaml
   - helmrelease.yaml
   - monitoring-cname.yaml
+  - servicemonitor-exposure-control.yaml
+  - prometheusrule-exposure-control.yaml

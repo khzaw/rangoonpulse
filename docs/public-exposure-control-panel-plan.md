@@ -210,12 +210,30 @@ Validation status:
 3. Add monitoring/alerting for failed exposure reconciliation.
 4. Add one-command emergency shutdown for all temporary exposures.
 
+Implementation status (lean GitOps path):
+- `apps/exposure-control/server.js` enforces default `authMode=cloudflare-access` and supports explicit `authMode:none`.
+- In-process per-service/IP rate limiting is enabled.
+- Emergency shutdown endpoint is implemented at `POST /api/admin/disable-all` (UI button wired).
+- Metrics are exposed at `GET /metrics`.
+- Monitoring objects:
+  - `infrastructure/monitoring/servicemonitor-exposure-control.yaml`
+  - `infrastructure/monitoring/prometheusrule-exposure-control.yaml`
+
 ### Phase 5: Blog Permanent-Public Onboarding
 1. Deploy blog service in-cluster (GitOps-managed app path).
 2. Create permanent public exposure policy for `blog.khzaw.dev`:
 - `enabled: true`, no expiry, locked in control panel
 3. Enable Cloudflare cache strategy tuned for burst traffic (HN-style spikes).
 4. Keep non-blog services private-by-default unless explicitly shared.
+
+Implementation status (GitOps DNS ownership):
+- Cloudflare Tunnel route:
+  - `infrastructure/public-edge/helmrelease.yaml` (`hostname: blog.khzaw.dev` -> `blog.default.svc.cluster.local:8080`)
+- DNS alias ownership:
+  - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`)
+- Important:
+  - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev`.
+  - public DNS should resolve to Cloudflare edge for `blog.khzaw.dev`, not private `10.0.0.231`.
 
 ## Operational Guardrails
 - Keep exposure runtime state controller-owned; avoid manual `kubectl` drift.

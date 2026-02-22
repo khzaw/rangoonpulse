@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: exposure-control
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: exposure-control.rules
+      rules:
+        - alert: ExposureControlMetricsTargetDown
+          expr: sum(up{namespace="default",service="exposure-control"}) < 1
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Exposure control metrics target is unavailable"
+            description: "Prometheus cannot scrape exposure-control metrics for 10 minutes."
+
+        - alert: ExposureControlReconcileErrors
+          expr: increase(exposure_control_reconcile_errors_total[15m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Exposure control reconcile loop is reporting errors"
+            description: "Expiry reconciliation errors were observed in the last 15 minutes."

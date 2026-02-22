@@ -45,6 +45,9 @@ spec:
               CONTROL_PANEL_HOST: controlpanel.khzaw.dev
               DEFAULT_EXPIRY_HOURS: "2"
               RECONCILE_INTERVAL_SECONDS: "30"
+              DEFAULT_AUTH_MODE: cloudflare-access
+              SHARE_RATE_LIMIT_REQUESTS: "120"
+              SHARE_RATE_LIMIT_WINDOW_SECONDS: "60"
             resources:
               requests:
                 cpu: "20m"

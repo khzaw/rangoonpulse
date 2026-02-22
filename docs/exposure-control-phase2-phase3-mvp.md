@@ -4,6 +4,7 @@ Status:
 - Phase 2 + 3 completed on February 20, 2026.
 - Phase 3 audit log + expiry presets completed on February 20, 2026.
 - Phase 4 (security hardening) completed on February 20, 2026.
+- Phase 4 monitoring and alerting wired on February 22, 2026.
 - Fully validated end-to-end on February 19, 2026.
 
 ## Scope
@@ -57,6 +58,12 @@ Default exposure expiry:
 3. Reconciliation loop disables exposures after expiry.
 4. Requests to share hostnames proxy to target app only when enabled.
 5. API is restricted to control panel host requests.
+6. Security hardening (phase 4):
+- default auth mode is `cloudflare-access`
+- per-request rate limiting is active
+- emergency disable-all endpoint is available
+- Prometheus metrics are available at `/metrics`
+- monitoring alerts are defined in `infrastructure/monitoring/`
 
 ## Validation Checklist (Passed)
 

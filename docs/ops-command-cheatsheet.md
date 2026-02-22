@@ -126,9 +126,37 @@ curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/enable \
 
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/disable \
   -H 'content-type: application/json' -d '{}' | jq
+
+# Phase 4 controls
+curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enable \
+  -H 'content-type: application/json' -d '{"hours":2,"authMode":"cloudflare-access"}' | jq
+
+curl -s -X POST https://controlpanel.khzaw.dev/api/admin/disable-all \
+  -H 'content-type: application/json' -d '{}' | jq
+
+curl -s https://controlpanel.khzaw.dev/metrics | rg '^exposure_control_'
 ```
 
-## 7) Resource Advisor Operations
+```bash
+# Exposure-control monitoring objects
+kubectl get servicemonitor -n monitoring exposure-control
+kubectl get prometheusrule -n monitoring exposure-control -o yaml
+```
+
+## 7) Blog Public DNS (Tunnel-Owned)
+
+```bash
+# Blog should resolve to Cloudflare edge IPs (not private 10.0.0.231)
+dig @1.1.1.1 +short blog.khzaw.dev
+
+# DNS ownership object
+kubectl get svc -n public-edge blog-cname -o yaml
+
+# Verify blog ingress does not publish external-dns hostname
+kubectl get ingress -n default blog -o yaml | rg 'external-dns.alpha.kubernetes.io/hostname' -n || true
+```
+
+## 8) Resource Advisor Operations
 
 ```bash
 # Runtime components
@@ -151,7 +179,7 @@ kubectl create job -n monitoring \
   resource-advisor-apply-pr-manual-$(date +%s)
 ```
 
-## 8) NFS / democratic-csi Incident Path
+## 9) NFS / democratic-csi Incident Path
 
 ```bash
 # Immediate checks
@@ -171,7 +199,7 @@ kubectl -n democratic-csi delete pod \
 
 Reference: `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
 
-## 9) DNS Reliability Path (CoreDNS + Flux Source)
+## 10) DNS Reliability Path (CoreDNS + Flux Source)
 
 ```bash
 kubectl describe gitrepository -n flux-system flux-system
@@ -183,13 +211,13 @@ kubectl get podmonitor -n monitoring flux-controllers
 kubectl get prometheusrule -n monitoring dns-reliability
 ```
 
-## 10) Talos Node Quick Check
+## 11) Talos Node Quick Check
 
 ```bash
 talosctl -n 10.0.0.197 dashboard
 ```
 
-## 11) Storage Sunset Cleanup Script
+## 12) Storage Sunset Cleanup Script
 
 ```bash
 # Dry run

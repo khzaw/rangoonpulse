@@ -73,6 +73,8 @@ Notes:
   - default auth mode: `cloudflare-access` (configurable per enable action)
   - rate limiting, Prometheus metrics at `/metrics`, emergency disable-all
 - Permanent public: `blog.khzaw.dev` routes directly through Cloudflare Tunnel to `blog.default.svc.cluster.local:8080` (bypasses exposure-control)
+  - DNS ownership for `blog.khzaw.dev` is `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`).
+  - Do not add `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev` on the blog Ingress, or it will publish a private `A` record (`10.0.0.231`).
 
 ## Nodes (Current)
 - Primary node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)
