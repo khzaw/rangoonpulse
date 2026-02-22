@@ -81,6 +81,12 @@ Default exposure expiry:
 - Expired exposure state was loaded and reconciliation disabled it automatically.
 - API snapshot showed `enabled=false` and `desiredEnabled=false` after reconcile.
 
+4. Phase 4 operations:
+- `ServiceMonitor/monitoring/exposure-control` is present.
+- `PrometheusRule/monitoring/exposure-control` is present and validated.
+- `/metrics` endpoint returns `exposure_control_*` metrics.
+- `POST /api/admin/disable-all` disables active temporary shares.
+
 ## Operator Commands
 
 ```bash

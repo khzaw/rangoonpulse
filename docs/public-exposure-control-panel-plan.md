@@ -219,6 +219,13 @@ Implementation status (lean GitOps path):
   - `infrastructure/monitoring/servicemonitor-exposure-control.yaml`
   - `infrastructure/monitoring/prometheusrule-exposure-control.yaml`
 
+Validation status:
+- Verified on February 22, 2026:
+  - `ServiceMonitor/monitoring/exposure-control` exists and is reconciled by Flux,
+  - `PrometheusRule/monitoring/exposure-control` exists and is validated,
+  - `/metrics` endpoint serves `exposure_control_*` metrics,
+  - emergency disable-all endpoint is reachable from control panel host.
+
 ### Phase 5: Blog Permanent-Public Onboarding
 1. Deploy blog service in-cluster (GitOps-managed app path).
 2. Create permanent public exposure policy for `blog.khzaw.dev`:
@@ -234,6 +241,12 @@ Implementation status (GitOps DNS ownership):
 - Important:
   - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev`.
   - public DNS should resolve to Cloudflare edge for `blog.khzaw.dev`, not private `10.0.0.231`.
+
+Validation status:
+- Verified on February 22, 2026:
+  - Cloudflare DNS for `blog.khzaw.dev` is `CNAME` to tunnel endpoint with external-dns TXT ownership,
+  - `dig @1.1.1.1 blog.khzaw.dev` resolves to Cloudflare edge IPs,
+  - `https://blog.khzaw.dev` returns `200`.
 
 ## Operational Guardrails
 - Keep exposure runtime state controller-owned; avoid manual `kubectl` drift.
