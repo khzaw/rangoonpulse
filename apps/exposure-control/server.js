@@ -894,7 +894,7 @@ function renderControlPanelHtml() {
       const msgEl = document.getElementById("msg");
       const refreshBtn = document.getElementById("refreshBtn");
       const emergencyBtn = document.getElementById("emergencyBtn");
-      let busy = false;
+      let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
 
       function setMsg(text, isError) {
@@ -944,7 +944,7 @@ function renderControlPanelHtml() {
             shouldRefresh = true;
           }
         }
-        if (shouldRefresh && !busy && !pendingExpiryRefresh) {
+        if (shouldRefresh && mutationInFlight === 0 && !pendingExpiryRefresh) {
           pendingExpiryRefresh = true;
           setTimeout(async () => {
             try {
@@ -1059,11 +1059,13 @@ function renderControlPanelHtml() {
 
           const enableBtn = document.createElement("button");
           enableBtn.textContent = "Enable";
-          enableBtn.disabled = busy;
           enableBtn.onclick = async () => {
             try {
-              busy = true;
+              mutationInFlight += 1;
               enableBtn.disabled = true;
+              disableBtn.disabled = true;
+              expirySelect.disabled = true;
+              authSelect.disabled = true;
               await request("/api/services/" + svc.id + "/enable", "POST", {
                 hours: Number(expirySelect.value),
                 authMode: authSelect.value,
@@ -1073,25 +1075,27 @@ function renderControlPanelHtml() {
             } catch (err) {
               setMsg(err.message, true);
             } finally {
-              busy = false;
+              mutationInFlight = Math.max(0, mutationInFlight - 1);
             }
           };
 
           const disableBtn = document.createElement("button");
           disableBtn.textContent = "Disable";
           disableBtn.className = "danger";
-          disableBtn.disabled = busy;
           disableBtn.onclick = async () => {
             try {
-              busy = true;
+              mutationInFlight += 1;
               disableBtn.disabled = true;
+              enableBtn.disabled = true;
+              expirySelect.disabled = true;
+              authSelect.disabled = true;
               await request("/api/services/" + svc.id + "/disable", "POST");
               setMsg("Disabled " + svc.id);
               await load({ silent: true });
             } catch (err) {
               setMsg(err.message, true);
             } finally {
-              busy = false;
+              mutationInFlight = Math.max(0, mutationInFlight - 1);
             }
           };
 
@@ -1171,7 +1175,7 @@ function renderControlPanelHtml() {
       emergencyBtn.onclick = async () => {
         if (!confirm("Disable ALL temporary exposures?")) return;
         try {
-          busy = true;
+          mutationInFlight += 1;
           emergencyBtn.disabled = true;
           await request("/api/admin/disable-all", "POST");
           setMsg("All exposures disabled");
@@ -1179,7 +1183,7 @@ function renderControlPanelHtml() {
         } catch (err) {
           setMsg(err.message, true);
         } finally {
-          busy = false;
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
           emergencyBtn.disabled = false;
         }
       };
