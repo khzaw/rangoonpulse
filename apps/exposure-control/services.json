@@ -1,15 +1,15 @@
 [
   {
-    "id": "sponsorblocktv",
-    "name": "iSponsorBlockTV",
-    "target": "http://isponsorblock-tv.default.svc.cluster.local:8080",
-    "description": "Headless helper info page"
-  },
-  {
     "id": "speedtest",
     "name": "Speedtest",
     "target": "http://speedtest.default.svc.cluster.local:80",
     "description": "LibreSpeed UI"
+  },
+  {
+    "id": "chartsdb",
+    "name": "ChartDB",
+    "target": "http://chartsdb.default.svc.cluster.local:80",
+    "description": "ChartDB"
   },
   {
     "id": "jellyfin",
@@ -52,18 +52,6 @@
     "name": "Tracerr",
     "target": "http://tracerr.default.svc.cluster.local:3000",
     "description": "Tracerr"
-  },
-  {
-    "id": "prowlarr",
-    "name": "Prowlarr",
-    "target": "http://prowlarr.default.svc.cluster.local:9696",
-    "description": "Prowlarr"
-  },
-  {
-    "id": "bazarr",
-    "name": "Bazarr",
-    "target": "http://bazarr.default.svc.cluster.local:6767",
-    "description": "Bazarr"
   },
   {
     "id": "tunarr",
