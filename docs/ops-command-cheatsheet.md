@@ -156,7 +156,30 @@ kubectl get svc -n public-edge blog-cname -o yaml
 kubectl get ingress -n default blog -o yaml | rg 'external-dns.alpha.kubernetes.io/hostname' -n || true
 ```
 
-## 8) Resource Advisor Operations
+## 8) Static Site Deploy (Blog + mmcal)
+
+```bash
+# Fast rollout now (bypasses 6h image automation wait)
+make deploy-blog
+make deploy-mmcal
+
+# Check selected policy tags
+flux get image policy -n flux-system blog mmcal
+
+# Check deployed images
+kubectl get deploy -n default blog mmcal \
+  -o jsonpath='{range .items[*]}{.metadata.name}{" image="}{.spec.template.spec.containers[0].image}{"\n"}{end}'
+```
+
+```bash
+# Public cache/header checks
+curl -I https://blog.khzaw.dev/
+curl -I https://mmcal.khzaw.dev/
+curl -I https://mmcal.khzaw.dev/sw.js
+curl -I https://mmcal.khzaw.dev/manifest.webmanifest
+```
+
+## 9) Resource Advisor Operations
 
 ```bash
 # Runtime components
@@ -179,7 +202,7 @@ kubectl create job -n monitoring \
   resource-advisor-apply-pr-manual-$(date +%s)
 ```
 
-## 9) NFS / democratic-csi Incident Path
+## 10) NFS / democratic-csi Incident Path
 
 ```bash
 # Immediate checks
@@ -199,7 +222,7 @@ kubectl -n democratic-csi delete pod \
 
 Reference: `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
 
-## 10) DNS Reliability Path (CoreDNS + Flux Source)
+## 11) DNS Reliability Path (CoreDNS + Flux Source)
 
 ```bash
 kubectl describe gitrepository -n flux-system flux-system
@@ -211,13 +234,13 @@ kubectl get podmonitor -n monitoring flux-controllers
 kubectl get prometheusrule -n monitoring dns-reliability
 ```
 
-## 11) Talos Node Quick Check
+## 12) Talos Node Quick Check
 
 ```bash
 talosctl -n 10.0.0.197 dashboard
 ```
 
-## 12) Storage Sunset Cleanup Script
+## 13) Storage Sunset Cleanup Script
 
 ```bash
 # Dry run

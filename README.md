@@ -209,6 +209,22 @@ kubectl get events -A --sort-by=.lastTimestamp | tail -n 50
 talosctl -n 10.0.0.197 dashboard
 ```
 
+### Static Sites (`blog`, `mmcal`)
+
+```bash
+# Normal mode:
+# 1) push in source repo (blog/mmcal)
+# 2) image gets published
+# 3) Flux image automation updates this repo on interval (6h)
+
+# Fast path (deploy now)
+make deploy-blog
+make deploy-mmcal
+```
+
+- `make deploy-*` forces image repository scan, image policy resolution, image update automation, source reconcile, and app kustomization reconcile.
+- Cloudflare cache policy should bypass HTML/update-critical routes (`/`, `index.html`, service worker/manifest/feed paths) and cache static assets aggressively.
+
 > 📚 [Full ops cheatsheet →](docs/ops-command-cheatsheet.md)
 
 ---

@@ -29,19 +29,20 @@ This document defines a practical deployment architecture for a static blog (Hug
 ### End-to-End Publish Flow
 1. Author pushes to `blog` repo.
 2. GitHub Actions in `blog` repo builds site (`hugo --minify`).
-3. Action packages static output in a small web image (`nginx` or `caddy`).
+3. Action packages static output in a small web image (`static-web-server`).
 4. Action pushes image to GHCR with immutable metadata.
-5. Flux image automation in cluster detects new image.
+5. Flux image automation in cluster detects new image on interval (`6h`).
 6. Flux updates image reference in `rangoonpulse` manifest (Git commit).
 7. Flux reconciles and rolls out updated pod.
 8. `blog.khzaw.dev` serves the new version.
+9. Workflow optionally purges Cloudflare update-critical URLs if cache purge secrets are configured.
 
 ### Request Path (Runtime)
 ```mermaid
 flowchart LR
   A["Reader Browser"] --> B["Cloudflare (DNS + Cache)"]
-  B --> C["ingress-nginx @ 10.0.0.231"]
-  C --> D["blog static server pod"]
+  B --> C["Cloudflare Tunnel (cloudflared)"]
+  C --> D["blog.default.svc.cluster.local:8080"]
 ```
 
 ## Public vs Private Routing Policy
@@ -67,7 +68,7 @@ flowchart LR
 ### Baseline Controls (Recommended)
 1. Cloudflare proxied DNS for `blog.khzaw.dev`.
 2. Cache rules:
-- Cache Everything for HTML (with conservative TTL if frequent edits).
+- Bypass cache for update-critical HTML/routes (`/`, `index.html`, feed/sitemap paths, other `.html` pages).
 - Long TTL for hashed CSS/JS/image assets.
 3. Enable Tiered Cache.
 
@@ -126,7 +127,7 @@ Pros:
 ## CI Workflow in Blog Repository
 
 ### Trigger
-- Push to `main` (and optional manual dispatch).
+- Push to `master` (and optional manual dispatch).
 
 ### Steps
 1. Checkout repository.

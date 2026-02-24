@@ -148,6 +148,27 @@ Important external-dns behavior:
 - Keep resources explicit (requests and limits) for homelab capacity control.
 - Validate manifests before pushing.
 
+## Static Sites (`blog` and `mmcal`)
+- Source-of-truth repos:
+  - `github.com/khzaw/blog`
+  - `github.com/khzaw/mmcal`
+- Cluster deployment manifests:
+  - `apps/blog/helmrelease.yaml`
+  - `apps/mmcal/helmrelease.yaml`
+- Flux image automation cadence for these sites:
+  - `infrastructure/image-automation/blog-image-repository.yaml`: `interval: 6h`
+  - `infrastructure/image-automation/mmcal-image-repository.yaml`: `interval: 6h`
+  - `infrastructure/image-automation/image-update-automation.yaml`: `interval: 6h`
+- Manual immediate rollout commands from this repo:
+  - `make deploy-blog`
+  - `make deploy-mmcal`
+- Deployment strategy:
+  - both `blog` and `mmcal` use `strategy: Recreate` to avoid mixed-version static asset sets during rollout.
+- Cache behavior expectation:
+  - Cloudflare should bypass cache on update-critical HTML/routes.
+  - Cloudflare should cache hashed/static assets (css/js/fonts/images) aggressively.
+- Publish workflows in source repos can purge Cloudflare update-critical URLs when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID` secrets are set.
+
 ## Storage Conventions and Current Decisions
 - Default StorageClass intent: `truenas-nfs` (NFS-backed default), not `local-path`.
 - `truenas-hdd-config` has been retired. Use `truenas-nfs` for app/config PVCs that need expansion support.
