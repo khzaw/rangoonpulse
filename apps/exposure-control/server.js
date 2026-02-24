@@ -583,7 +583,7 @@ function renderControlPanelHtml() {
         -webkit-font-smoothing: antialiased;
       }
       main {
-        max-width: 1040px;
+        max-width: 1240px;
         margin: 0 auto;
         padding: 32px 24px;
         animation: fade-up 340ms ease-out both;
@@ -692,6 +692,12 @@ function renderControlPanelHtml() {
         top: 0;
         z-index: 1;
       }
+      thead th:nth-child(2),
+      tbody td:nth-child(2),
+      thead th:nth-child(6),
+      tbody td:nth-child(6) {
+        white-space: nowrap;
+      }
       tbody td {
         padding: 10px 12px;
         vertical-align: middle;
@@ -722,9 +728,12 @@ function renderControlPanelHtml() {
 
       /* ── Badges ── */
       .badge {
+        display: inline-flex;
+        align-items: center;
         font-size: 11px;
         font-weight: 500;
         letter-spacing: 0.02em;
+        white-space: nowrap;
       }
       .on { color: var(--green); }
       .off { color: var(--text-3); }
@@ -741,7 +750,8 @@ function renderControlPanelHtml() {
       }
 
       /* ── Controls cell ── */
-      .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      .controls { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+      .controls > * { flex: 0 0 auto; }
 
       /* ── Links ── */
       a {
