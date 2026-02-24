@@ -218,6 +218,14 @@ def build_index_html() -> str:
     window = str(report.get("metrics_window") or "")
     recs = report.get("recommendations") or []
     rec_count = len(recs) if isinstance(recs, list) else 0
+    last_run_escaped = html.escape(last_run) if last_run else ""
+    if last_run_escaped:
+        last_run_pill = (
+            '<div class="pill">last run: <b id="last-run-local" '
+            f'data-utc="{last_run_escaped}">{last_run_escaped}</b></div>'
+        )
+    else:
+        last_run_pill = '<div class="pill">last run: <b id="last-run-local">n/a</b></div>'
 
     md = snap.get("latest_md") or ""
     if len(md) > 200_000:
@@ -239,7 +247,8 @@ def build_index_html() -> str:
         "</style></head><body><div class=\"wrap\">",
         "<h1 style=\"margin:0 0 8px 0; font-size:22px;\">Resource Advisor</h1>",
         "<div class=\"meta\">",
-        f"<div class=\"pill\">last run: <b>{html.escape(last_run) if last_run else 'n/a'}</b></div>",
+        last_run_pill,
+        "<div class=\"pill\">time zone: <b id=\"browser-tz\">browser local</b></div>",
         f"<div class=\"pill\">mode: <b>{html.escape(mode) if mode else 'n/a'}</b></div>",
         f"<div class=\"pill\">window: <b>{html.escape(window) if window else 'n/a'}</b></div>",
         f"<div class=\"pill\">coverage: <b>{html.escape(str(cov)) if cov is not None else 'n/a'}</b> days</div>",
@@ -256,6 +265,32 @@ def build_index_html() -> str:
         "<pre>",
         html.escape(md) if md else "No report markdown found in ConfigMap.",
         "</pre>",
+        "<script>",
+        "(function () {",
+        "  var tsNode = document.getElementById('last-run-local');",
+        "  var tzNode = document.getElementById('browser-tz');",
+        "  try {",
+        "    if (tzNode && window.Intl && Intl.DateTimeFormat) {",
+        "      tzNode.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'browser local';",
+        "    }",
+        "  } catch (e) {}",
+        "  if (!tsNode) return;",
+        "  var raw = tsNode.getAttribute('data-utc');",
+        "  if (!raw) return;",
+        "  var d = new Date(raw);",
+        "  if (isNaN(d.getTime())) return;",
+        "  tsNode.textContent = d.toLocaleString(undefined, {",
+        "    year: 'numeric',",
+        "    month: 'short',",
+        "    day: '2-digit',",
+        "    hour: '2-digit',",
+        "    minute: '2-digit',",
+        "    second: '2-digit',",
+        "    timeZoneName: 'short'",
+        "  });",
+        "  tsNode.title = 'UTC: ' + raw;",
+        "})();",
+        "</script>",
         "</div></body></html>",
     ]
     return "\n".join(parts)
@@ -320,4 +355,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
