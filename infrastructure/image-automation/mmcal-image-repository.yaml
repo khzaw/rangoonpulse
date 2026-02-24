@@ -6,4 +6,4 @@ metadata:
   namespace: flux-system
 spec:
   image: ghcr.io/khzaw/mmcal
-  interval: 1m
+  interval: 10m
