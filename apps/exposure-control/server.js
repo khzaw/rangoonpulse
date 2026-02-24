@@ -559,17 +559,23 @@ function renderControlPanelHtml() {
         --bg: #0c0c0c;
         --bg-subtle: #141414;
         --border: rgba(255, 255, 255, 0.07);
+        --border-strong: rgba(255, 255, 255, 0.14);
         --text-1: #e8e8e8;
         --text-2: #888;
         --text-3: #555;
+        --text-dim: #6b6b6b;
         --green: #3fb950;
         --red: #f85149;
         --yellow: #d29922;
+        --accent: #79b8ff;
         --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
       }
       * { box-sizing: border-box; margin: 0; }
       body {
-        background: var(--bg);
+        background:
+          radial-gradient(1200px 600px at 8% -20%, rgba(121, 184, 255, 0.08), transparent 56%),
+          radial-gradient(1000px 520px at 92% -30%, rgba(63, 185, 80, 0.07), transparent 62%),
+          linear-gradient(180deg, #0b0b0b 0%, var(--bg) 46%, #0b0b0b 100%);
         color: var(--text-1);
         font-family: system-ui, -apple-system, sans-serif;
         font-size: 13px;
@@ -580,6 +586,7 @@ function renderControlPanelHtml() {
         max-width: 1040px;
         margin: 0 auto;
         padding: 32px 24px;
+        animation: fade-up 340ms ease-out both;
       }
 
       /* ── Header ── */
@@ -591,6 +598,7 @@ function renderControlPanelHtml() {
         margin-bottom: 24px;
         padding-bottom: 20px;
         border-bottom: 1px solid var(--border);
+        animation: fade-up 420ms ease-out both;
       }
       h1 {
         font-size: 14px;
@@ -621,13 +629,27 @@ function renderControlPanelHtml() {
         border: 1px solid var(--border);
         border-radius: 3px;
         cursor: pointer;
-        transition: color 0.1s linear, border-color 0.1s linear;
+        transition:
+          color 0.15s linear,
+          border-color 0.15s linear,
+          transform 0.18s ease,
+          background-color 0.18s ease,
+          box-shadow 0.18s ease;
         white-space: nowrap;
+        position: relative;
+        overflow: hidden;
       }
-      button:hover { color: var(--text-1); border-color: var(--text-3); }
+      button:hover {
+        color: var(--text-1);
+        border-color: var(--border-strong);
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+      }
+      button:active { transform: translateY(0); }
       button:disabled { opacity: 0.4; cursor: not-allowed; }
       button.danger { color: var(--red); }
-      button.danger:hover { color: var(--red); border-color: var(--red); }
+      button.danger:hover { color: var(--red); border-color: var(--red); background: rgba(248, 81, 73, 0.08); }
       select {
         padding: 4px 8px;
         font-size: 12px;
@@ -637,12 +659,24 @@ function renderControlPanelHtml() {
         border: 1px solid var(--border);
         border-radius: 3px;
         outline: none;
-        transition: border-color 0.1s linear;
+        transition: border-color 0.15s linear, background-color 0.15s linear;
       }
-      select:hover, select:focus { border-color: var(--text-3); }
+      select:hover, select:focus {
+        border-color: var(--border-strong);
+        background: rgba(255, 255, 255, 0.02);
+      }
 
       /* ── Tables ── */
-      table { width: 100%; border-collapse: collapse; }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.005));
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+      }
       thead th {
         padding: 8px 12px;
         font-size: 11px;
@@ -652,7 +686,8 @@ function renderControlPanelHtml() {
         letter-spacing: 0.04em;
         text-align: left;
         border-bottom: 1px solid var(--border);
-        background: var(--bg);
+        background: rgba(12, 12, 12, 0.88);
+        backdrop-filter: blur(4px);
         position: sticky;
         top: 0;
         z-index: 1;
@@ -661,7 +696,15 @@ function renderControlPanelHtml() {
         padding: 10px 12px;
         vertical-align: middle;
         border-bottom: 1px solid var(--border);
+        transition: background-color 0.16s ease;
       }
+      tbody tr {
+        opacity: 0;
+        transform: translateY(8px);
+        animation: row-in 360ms cubic-bezier(0.2, 0.75, 0.3, 1) both;
+        animation-delay: calc(var(--row-index, 0) * 24ms);
+      }
+      tbody tr:hover td { background: rgba(255, 255, 255, 0.028); }
       tbody tr:last-child td { border-bottom: none; }
 
       /* ── Service name cell ── */
@@ -685,6 +728,17 @@ function renderControlPanelHtml() {
       }
       .on { color: var(--green); }
       .off { color: var(--text-3); }
+      .badge.on::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 6px;
+        border-radius: 999px;
+        background: currentColor;
+        box-shadow: 0 0 0 rgba(63, 185, 80, 0.45);
+        animation: pulse-dot 1.8s ease-out infinite;
+      }
 
       /* ── Controls cell ── */
       .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -702,7 +756,9 @@ function renderControlPanelHtml() {
       a:hover { color: var(--text-1); }
 
       /* ── Expiry text ── */
-      .expiry { font-size: 12px; color: var(--text-2); }
+      .expiry { font-size: 12px; color: var(--text-2); font-family: var(--font-mono); }
+      .expiry.urgent { color: var(--yellow); }
+      .expiry.expired { color: var(--red); }
 
       /* ── Auth text ── */
       .auth-mode {
@@ -716,7 +772,8 @@ function renderControlPanelHtml() {
         margin-top: 12px;
         min-height: 1.2rem;
         font-size: 12px;
-        color: var(--text-3);
+        color: var(--text-dim);
+        transition: color 0.2s ease;
       }
 
       /* ── Section dividers ── */
@@ -724,6 +781,7 @@ function renderControlPanelHtml() {
         margin-top: 32px;
         padding-top: 24px;
         border-top: 1px solid var(--border);
+        animation: fade-up 500ms ease-out both;
       }
       .section-header {
         font-size: 12px;
@@ -762,6 +820,28 @@ function renderControlPanelHtml() {
         color: var(--text-3);
         padding: 24px 12px;
         font-size: 12px;
+      }
+      .empty-row { animation: none; opacity: 1; transform: none; }
+
+      @keyframes row-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fade-up {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse-dot {
+        0% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.5); }
+        75% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+        }
       }
     </style>
   </head>
@@ -815,6 +895,7 @@ function renderControlPanelHtml() {
       const refreshBtn = document.getElementById("refreshBtn");
       const emergencyBtn = document.getElementById("emergencyBtn");
       let busy = false;
+      let pendingExpiryRefresh = false;
 
       function setMsg(text, isError) {
         msgEl.textContent = text;
@@ -822,17 +903,57 @@ function renderControlPanelHtml() {
       }
 
       function fmtExpiry(value) {
-        if (!value) return "\\u2014";
+        if (!value) return { text: "\\u2014", state: "none" };
         const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "invalid";
+        if (Number.isNaN(d.getTime())) return { text: "invalid", state: "invalid" };
         const now = Date.now();
         const diff = d.getTime() - now;
-        if (diff <= 0) return "expired";
-        const mins = Math.round(diff / 60000);
-        if (mins < 60) return mins + "m remaining";
+        if (diff <= 0) return { text: "expired", state: "expired" };
+        const totalSeconds = Math.ceil(diff / 1000);
+        if (totalSeconds < 60) {
+          return { text: totalSeconds + "s remaining", state: "urgent" };
+        }
+        const mins = Math.ceil(totalSeconds / 60);
+        if (mins < 60) {
+          return { text: mins + "m remaining", state: mins <= 10 ? "urgent" : "active" };
+        }
         const hrs = Math.floor(mins / 60);
         const rm = mins % 60;
-        return hrs + "h " + rm + "m remaining";
+        if (rm === 0) return { text: hrs + "h remaining", state: mins <= 120 ? "urgent" : "active" };
+        return {
+          text: hrs + "h " + rm + "m remaining",
+          state: mins <= 120 ? "urgent" : "active",
+        };
+      }
+
+      function updateExpiryNode(node) {
+        const next = fmtExpiry(node.dataset.expiresAt || "");
+        node.textContent = next.text;
+        node.classList.toggle("urgent", next.state === "urgent");
+        node.classList.toggle("expired", next.state === "expired");
+        return next.state;
+      }
+
+      function tickExpiryCountdowns() {
+        const expiryNodes = rowsEl.querySelectorAll(".expiry[data-expires-at]");
+        let shouldRefresh = false;
+        for (const node of expiryNodes) {
+          const state = updateExpiryNode(node);
+          const enabled = node.dataset.enabled === "1";
+          if (enabled && state === "expired") {
+            shouldRefresh = true;
+          }
+        }
+        if (shouldRefresh && !busy && !pendingExpiryRefresh) {
+          pendingExpiryRefresh = true;
+          setTimeout(async () => {
+            try {
+              await load({ silent: true });
+            } finally {
+              pendingExpiryRefresh = false;
+            }
+          }, 300);
+        }
       }
 
       async function request(path, method, body) {
@@ -858,8 +979,10 @@ function renderControlPanelHtml() {
           rowsEl.appendChild(tr);
           return;
         }
-        for (const svc of services) {
+        for (const [index, svc] of services.entries()) {
           const tr = document.createElement("tr");
+          tr.style.setProperty("--row-index", String(index));
+          if (svc.enabled) tr.classList.add("is-enabled");
 
           const serviceTd = document.createElement("td");
           const nameEl = document.createElement("div");
@@ -893,7 +1016,15 @@ function renderControlPanelHtml() {
           const expiryTd = document.createElement("td");
           const expirySpan = document.createElement("span");
           expirySpan.className = "expiry";
-          expirySpan.textContent = fmtExpiry(svc.expiresAt);
+          expirySpan.dataset.expiresAt = svc.expiresAt || "";
+          expirySpan.dataset.enabled = svc.enabled ? "1" : "0";
+          updateExpiryNode(expirySpan);
+          if (svc.expiresAt) {
+            const expiresAtDate = new Date(svc.expiresAt);
+            if (!Number.isNaN(expiresAtDate.getTime())) {
+              expirySpan.title = "at " + expiresAtDate.toLocaleString();
+            }
+          }
           expiryTd.appendChild(expirySpan);
 
           const controlsTd = document.createElement("td");
@@ -938,7 +1069,7 @@ function renderControlPanelHtml() {
                 authMode: authSelect.value,
               });
               setMsg("Enabled " + svc.id);
-              await load();
+              await load({ silent: true });
             } catch (err) {
               setMsg(err.message, true);
             } finally {
@@ -956,7 +1087,7 @@ function renderControlPanelHtml() {
               disableBtn.disabled = true;
               await request("/api/services/" + svc.id + "/disable", "POST");
               setMsg("Disabled " + svc.id);
-              await load();
+              await load({ silent: true });
             } catch (err) {
               setMsg(err.message, true);
             } finally {
@@ -970,6 +1101,7 @@ function renderControlPanelHtml() {
           tr.append(serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd);
           rowsEl.appendChild(tr);
         }
+        tickExpiryCountdowns();
       }
 
       function fmtAuditTime(ts) {
@@ -991,8 +1123,9 @@ function renderControlPanelHtml() {
           auditRowsEl.appendChild(tr);
           return;
         }
-        for (const e of entries) {
+        for (const [index, e] of entries.entries()) {
           const tr = document.createElement("tr");
+          tr.style.setProperty("--row-index", String(index));
           const timeTd = document.createElement("td");
           timeTd.className = "audit-time";
           timeTd.textContent = fmtAuditTime(e.ts);
@@ -1017,8 +1150,9 @@ function renderControlPanelHtml() {
         }
       }
 
-      async function load() {
-        setMsg("Refreshing...");
+      async function load(options) {
+        const silent = Boolean(options && options.silent);
+        if (!silent) setMsg("Refreshing...");
         try {
           const [svcData, auditData] = await Promise.all([
             request("/api/services", "GET"),
@@ -1026,13 +1160,13 @@ function renderControlPanelHtml() {
           ]);
           renderRows(svcData.services || []);
           renderAudit(auditData.entries || []);
-          setMsg("Updated " + new Date().toLocaleTimeString());
+          if (!silent) setMsg("Updated " + new Date().toLocaleTimeString());
         } catch (err) {
           setMsg(err.message, true);
         }
       }
 
-      refreshBtn.onclick = load;
+      refreshBtn.onclick = () => load();
 
       emergencyBtn.onclick = async () => {
         if (!confirm("Disable ALL temporary exposures?")) return;
@@ -1041,7 +1175,7 @@ function renderControlPanelHtml() {
           emergencyBtn.disabled = true;
           await request("/api/admin/disable-all", "POST");
           setMsg("All exposures disabled");
-          await load();
+          await load({ silent: true });
         } catch (err) {
           setMsg(err.message, true);
         } finally {
@@ -1050,6 +1184,7 @@ function renderControlPanelHtml() {
         }
       };
 
+      setInterval(tickExpiryCountdowns, 1000);
       load();
     </script>
   </body>
