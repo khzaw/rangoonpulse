@@ -46,11 +46,11 @@ spec:
                   periodSeconds: 10
             resources:
               requests:
-                cpu: "10m"
-                memory: "16Mi"
+                cpu: "12m"
+                memory: "20Mi"
               limits:
                 cpu: "100m"
-                memory: "32Mi"
+                memory: "40Mi"
     service:
       main:
         ports:

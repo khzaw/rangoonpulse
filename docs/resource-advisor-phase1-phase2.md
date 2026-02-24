@@ -78,6 +78,17 @@ Downsizes are blocked until the 14-day window is sufficiently populated.
 - High-variance workloads can be excluded from automatic downscaling.
 - Apply mode is allowlisted to app-template-backed releases only.
 
+## Current Apply Scope Policy
+Auto-apply (Phase 3 PR commits) is currently enabled for:
+- `actualbudget`, `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`
+- `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`
+- `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `jellystat`, `nodecast-tv`
+- `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
+- `uptime-kuma`, `vaultwarden`
+
+Analyzed but intentionally excluded from auto-apply (manual-only adjustments):
+- `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`, `blog`, `mmcal`
+
 ## Outputs
 The latest report is written to ConfigMap:
 - Namespace: `monitoring`
