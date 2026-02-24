@@ -115,21 +115,21 @@ curl -I --max-time 20 https://controlpanel.khzaw.dev
 ```
 
 ```bash
-# API actions (default expiry is 2h)
+# API actions (default expiry is 1h)
 curl -s https://controlpanel.khzaw.dev/api/services | jq
 
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enable \
   -H 'content-type: application/json' -d '{}' | jq
 
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/enable \
-  -H 'content-type: application/json' -d '{"hours":2}' | jq
+  -H 'content-type: application/json' -d '{"hours":0.5}' | jq
 
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/disable \
   -H 'content-type: application/json' -d '{}' | jq
 
 # Phase 4 controls
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enable \
-  -H 'content-type: application/json' -d '{"hours":2,"authMode":"cloudflare-access"}' | jq
+  -H 'content-type: application/json' -d '{"hours":1,"authMode":"cloudflare-access"}' | jq
 
 curl -s -X POST https://controlpanel.khzaw.dev/api/admin/disable-all \
   -H 'content-type: application/json' -d '{}' | jq

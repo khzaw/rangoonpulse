@@ -181,7 +181,7 @@ Lean MVP note:
   - allowlist config (`services.json`)
   - PVC-backed state file (`/data/state.json`)
   - reconciliation loop for expiry disable
-  - default expiry `2h`
+  - default expiry `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
 
 ### Phase 3: Control Panel UI + API (Completed)
 1. Deploy UI + API at `controlpanel.khzaw.dev`.
@@ -189,7 +189,7 @@ Lean MVP note:
 3. Implement operator UX:
 - list expose-eligible services
 - toggle exposure on/off
-- set expiry windows (preset dropdown: 1h, 2h, 6h, 12h, 24h)
+- set expiry windows (preset dropdown: 15m, 30m, 1h, 2h, 6h, 12h, 24h)
 - view audit history (append-only JSON Lines log at `/data/audit.json`, API at `GET /api/audit`)
 
 Implementation:
@@ -218,6 +218,8 @@ Implementation status (lean GitOps path):
 - Monitoring objects:
   - `infrastructure/monitoring/servicemonitor-exposure-control.yaml`
   - `infrastructure/monitoring/prometheusrule-exposure-control.yaml`
+- Access setup runbook:
+  - `docs/cloudflare-access-share-hosts-email-otp-plan.md`
 
 Validation status:
 - Verified on February 22, 2026:

@@ -13,7 +13,8 @@ This is a lean implementation of:
 - Phase 3: control panel UI/API.
 
 Default exposure expiry:
-- `2 hours` (can be changed per enable action in the UI/API).
+- `1 hour` (can be changed per enable action in the UI/API).
+- UI expiry presets: `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`.
 
 ## Components
 
@@ -60,7 +61,10 @@ Default exposure expiry:
 3. Reconciliation loop disables exposures after expiry.
 4. Requests to share hostnames proxy to target app only when enabled.
 5. API is restricted to control panel host requests.
-6. Security hardening (phase 4):
+6. UI defaults:
+- auth selector defaults to `none`
+- expiry selector default is `1h` with quick presets (`15m` .. `24h`)
+7. Security hardening (phase 4):
 - default auth mode is `cloudflare-access`
 - per-request rate limiting is active
 - emergency disable-all endpoint is available
@@ -121,15 +125,15 @@ curl -s https://controlpanel.khzaw.dev/api/services | jq
 ```
 
 ```bash
-# Enable one service for default 2h
+# Enable one service for default 1h
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enable \
   -H 'content-type: application/json' -d '{}' | jq
 ```
 
 ```bash
-# Enable with explicit expiry hours (1-24)
+# Enable with explicit expiry hours (0.25-24)
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/enable \
-  -H 'content-type: application/json' -d '{"hours":2}' | jq
+  -H 'content-type: application/json' -d '{"hours":0.5}' | jq
 ```
 
 ```bash

@@ -16,7 +16,7 @@ const SHARE_HOST_PREFIX = (
 const CONTROL_PANEL_HOST = (
   process.env.CONTROL_PANEL_HOST || "controlpanel.khzaw.dev"
 ).toLowerCase();
-const DEFAULT_EXPIRY_HOURS = Number(process.env.DEFAULT_EXPIRY_HOURS || "2");
+const DEFAULT_EXPIRY_HOURS = Number(process.env.DEFAULT_EXPIRY_HOURS || "1");
 const RECONCILE_INTERVAL_SECONDS = Number(
   process.env.RECONCILE_INTERVAL_SECONDS || "30",
 );
@@ -74,9 +74,9 @@ function ensureDataDir() {
 
 function clampHours(value) {
   if (!Number.isFinite(value)) return DEFAULT_EXPIRY_HOURS;
-  if (value < 1) return 1;
+  if (value < 0.25) return 0.25;
   if (value > 24) return 24;
-  return value;
+  return Math.round(value * 4) / 4;
 }
 
 function loadServices() {
@@ -770,7 +770,7 @@ function renderControlPanelHtml() {
       <div class="header">
         <div>
           <h1>Exposure Control</h1>
-          <div class="subtitle">${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} &middot; ${DEFAULT_EXPIRY_HOURS}h default &middot; ${DEFAULT_AUTH_MODE}</div>
+          <div class="subtitle">${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} &middot; ${DEFAULT_EXPIRY_HOURS}h default &middot; UI auth default: none</div>
         </div>
         <div class="header-actions">
           <button id="refreshBtn">Refresh</button>
@@ -900,11 +900,19 @@ function renderControlPanelHtml() {
           const controls = document.createElement("div");
           controls.className = "controls";
           const expirySelect = document.createElement("select");
-          [1, 2, 6, 12, 24].forEach(function(h) {
+          [
+            { value: 0.25, label: "15m" },
+            { value: 0.5, label: "30m" },
+            { value: 1, label: "1h" },
+            { value: 2, label: "2h" },
+            { value: 6, label: "6h" },
+            { value: 12, label: "12h" },
+            { value: 24, label: "24h" },
+          ].forEach(function(item) {
             const opt = document.createElement("option");
-            opt.value = String(h);
-            opt.textContent = h + "h";
-            if (h === (svc.defaultExpiryHours || ${DEFAULT_EXPIRY_HOURS})) opt.selected = true;
+            opt.value = String(item.value);
+            opt.textContent = item.label;
+            if (item.value === (svc.defaultExpiryHours || ${DEFAULT_EXPIRY_HOURS})) opt.selected = true;
             expirySelect.appendChild(opt);
           });
 
@@ -916,7 +924,7 @@ function renderControlPanelHtml() {
           optCfAccess.value = "cloudflare-access";
           optCfAccess.textContent = "cf-access";
           authSelect.append(optNone, optCfAccess);
-          authSelect.value = svc.defaultAuthMode || "cloudflare-access";
+          authSelect.value = "none";
 
           const enableBtn = document.createElement("button");
           enableBtn.textContent = "Enable";

@@ -69,8 +69,8 @@ Notes:
   - backend + UI: `apps/exposure-control/`
   - control panel host: `controlpanel.khzaw.dev`
   - share hosts route through Cloudflare Tunnel -> `exposure-control` backend
-  - default temporary exposure expiry: `2h`
-  - default auth mode: `cloudflare-access` (configurable per enable action)
+  - default temporary exposure expiry: `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
+  - UI auth default: `none`; backend/API default auth mode: `cloudflare-access` (configurable per enable action)
   - rate limiting, Prometheus metrics at `/metrics`, emergency disable-all
 - Permanent public: `blog.khzaw.dev` routes directly through Cloudflare Tunnel to `blog.default.svc.cluster.local:8080` (bypasses exposure-control)
   - DNS ownership for `blog.khzaw.dev` is `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`).
@@ -321,3 +321,4 @@ Examples:
 - `docs/public-edge-phase1-bootstrap.md`
 - `docs/ops-command-cheatsheet.md`
 - `docs/exposure-control-phase2-phase3-mvp.md`
+- `docs/cloudflare-access-share-hosts-email-otp-plan.md`

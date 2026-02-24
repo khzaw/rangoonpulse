@@ -43,7 +43,7 @@ spec:
               PUBLIC_DOMAIN: khzaw.dev
               SHARE_HOST_PREFIX: share-
               CONTROL_PANEL_HOST: controlpanel.khzaw.dev
-              DEFAULT_EXPIRY_HOURS: "2"
+              DEFAULT_EXPIRY_HOURS: "1"
               RECONCILE_INTERVAL_SECONDS: "30"
               DEFAULT_AUTH_MODE: cloudflare-access
               SHARE_RATE_LIMIT_REQUESTS: "120"
