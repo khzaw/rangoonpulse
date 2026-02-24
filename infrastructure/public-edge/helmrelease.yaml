@@ -106,6 +106,10 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-immich.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-calibre.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-calibre-manage.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
               - service: http_status:404
 
     persistence:

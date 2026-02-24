@@ -82,5 +82,17 @@
     "name": "Immich",
     "target": "http://immich-server.default.svc.cluster.local:2283",
     "description": "Immich"
+  },
+  {
+    "id": "calibre",
+    "name": "Calibre Web Automated",
+    "target": "https://calibre.khzaw.dev",
+    "description": "OPDS and web library"
+  },
+  {
+    "id": "calibre-manage",
+    "name": "Calibre Manage",
+    "target": "https://calibre-manage.khzaw.dev",
+    "description": "Calibre GUI and content server paths"
   }
 ]
