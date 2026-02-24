@@ -56,6 +56,15 @@ This file tracks ideas explicitly rated `good` or better.
 - Add automated smoke checks (scheduled or CI) for temporary share toggle flow and blog public DNS/HTTP reachability.
 - Add Grafana dashboard panels/alerts for `exposure_control_*` metrics to improve day-2 visibility.
 
+14. `really good` - Unified Static Sites Origin (Multi-Host, One Runtime)
+- Consolidate `blog` + `mmcal` (and future static sites) onto a single lightweight `static-sites` app behind the existing Cloudflare Tunnel route model.
+- Serve multiple hostnames from one runtime using host-based vhosts/docroots (`/srv/sites/<hostname>`), while keeping existing `public-edge` CNAME + tunnel patterns.
+- Avoid "all sites roll together" risk by adding per-site release tooling:
+  - each site builds/publishes its own static artifact (OCI/image),
+  - GitOps stores one pinned version per site,
+  - a fetch/reload component updates only the changed site content and hot-reloads the static server.
+- Result: lower baseline resource usage and faster onboarding of new static sites, without sacrificing independent site rollback/deploy control.
+
 ## Deferred / Not Included
 
 - Items marked as not needed or not for now are intentionally excluded from this list.
