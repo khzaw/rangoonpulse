@@ -77,6 +77,7 @@ Current monitoring guardrails:
 - `walCompression: true` reduces WAL footprint and helps maintain retention coverage under bounded storage.
 
 Operational expectation:
+- One-time cutover behavior: migrating from `emptyDir` to PVC resets Prometheus history once at rollout time (ephemeral blocks cannot be preserved in-place).
 - Prometheus pod restarts should not reset advisor data maturity.
 - If metric volume increases enough to hit `retentionSize`, older samples are dropped automatically; advisor keeps running but may report `<14` coverage until utilization stabilizes or limits are adjusted.
 

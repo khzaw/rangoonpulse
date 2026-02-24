@@ -240,6 +240,7 @@ Important external-dns behavior:
     - `retentionSize: 8GB`
     - `walCompression: true`
     - `storageSpec.volumeClaimTemplate` on `truenas-nfs` (`12Gi`)
+  - one-time migration note: moving from `emptyDir` to PVC resets historical TSDB data on first rollout
   - Grafana persistence enabled
   - Grafana `defaultDashboardsTimezone: browser`
 - If Grafana auth/state seems wrong, first verify PVC mount and user records before assuming full data loss.
