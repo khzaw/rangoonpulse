@@ -52,14 +52,20 @@ image-updates: ## Show image update automation status
 	flux get image update -A
 
 deploy-blog: ## Force deploy latest blog image now
-	flux reconcile image repository blog
+	flux reconcile image repository blog -n flux-system
 	@sleep 2
-	flux reconcile image update flux-system
+	flux reconcile image policy blog -n flux-system
+	flux reconcile image update flux-system -n flux-system
+	flux reconcile source git flux-system -n flux-system
+	flux reconcile kustomization blog -n flux-system --with-source
 
 deploy-mmcal: ## Force deploy latest mmcal image now
-	flux reconcile image repository mmcal
+	flux reconcile image repository mmcal -n flux-system
 	@sleep 2
-	flux reconcile image update flux-system
+	flux reconcile image policy mmcal -n flux-system
+	flux reconcile image update flux-system -n flux-system
+	flux reconcile source git flux-system -n flux-system
+	flux reconcile kustomization mmcal -n flux-system --with-source
 
 # --- Logs ---
 
