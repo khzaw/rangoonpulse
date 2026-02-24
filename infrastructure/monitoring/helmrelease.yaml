@@ -32,7 +32,8 @@ spec:
 
       prometheusSpec:
         retention: 14d
-        retentionSize: "6GB"
+        retentionSize: "8GB"
+        walCompression: true
         scrapeInterval: 60s
         resources:
           requests:
@@ -47,10 +48,16 @@ spec:
           runAsNonRoot: true
           runAsUser: 1000
 
-        # Ephemeral TSDB keeps this lightweight and avoids local-path PVC/subPath issues.
+        # Persist TSDB for advisor maturity + incident forensics, while keeping bounded retention.
         storageSpec:
-          emptyDir:
-            sizeLimit: 8Gi
+          volumeClaimTemplate:
+            spec:
+              storageClassName: truenas-nfs
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 12Gi
 
         serviceMonitorSelectorNilUsesHelmValues: false
     grafana:

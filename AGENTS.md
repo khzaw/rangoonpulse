@@ -182,6 +182,9 @@ Important external-dns behavior:
   - dedicated Postgres (`vaultwarden-postgres`) on `local-path` (5Gi)
 - Grafana:
   - persistent storage enabled on `local-path` (currently 1Gi PVC)
+- Prometheus:
+  - TSDB on NFS PVC (`truenas-nfs`, `12Gi`, via `prometheus.prometheusSpec.storageSpec.volumeClaimTemplate`)
+  - guardrails: `retention: 14d`, `retentionSize: 8GB`, `walCompression: true`
 - Uptime Kuma:
   - data on NFS (`truenas-nfs`, 1Gi, expandable)
 - Obsidian LiveSync:
@@ -234,8 +237,9 @@ Important external-dns behavior:
   - `nodeExporter.enabled: false` (correct key for chart line in use)
   - Prometheus retention policy tuned for advisor window:
     - `retention: 14d`
-    - `retentionSize: 6GB`
-    - `storageSpec.emptyDir.sizeLimit: 8Gi`
+    - `retentionSize: 8GB`
+    - `walCompression: true`
+    - `storageSpec.volumeClaimTemplate` on `truenas-nfs` (`12Gi`)
   - Grafana persistence enabled
   - Grafana `defaultDashboardsTimezone: browser`
 - If Grafana auth/state seems wrong, first verify PVC mount and user records before assuming full data loss.

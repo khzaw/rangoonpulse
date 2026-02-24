@@ -67,6 +67,19 @@ Phase 3 applies gates:
 Before maturity, only restart-guarded upsizes can pass.
 Downsizes are blocked until the 14-day window is sufficiently populated.
 
+## Prometheus Durability Dependency
+Resource Advisor quality depends on Prometheus keeping enough history to satisfy `METRICS_WINDOW=14d`.
+
+Current monitoring guardrails:
+- Prometheus TSDB is persisted on PVC (`truenas-nfs`, `12Gi`) via `infrastructure/monitoring/helmrelease.yaml`.
+- `retention: 14d` keeps the advisor window aligned.
+- `retentionSize: 8GB` bounds disk usage and auto-prunes old blocks before the PVC fills.
+- `walCompression: true` reduces WAL footprint and helps maintain retention coverage under bounded storage.
+
+Operational expectation:
+- Prometheus pod restarts should not reset advisor data maturity.
+- If metric volume increases enough to hit `retentionSize`, older samples are dropped automatically; advisor keeps running but may report `<14` coverage until utilization stabilizes or limits are adjusted.
+
 ## Guardrails
 - Max per-run adjustment step is capped (`MAX_STEP_PERCENT`, default 25%).
 - Request/limit buffer percentages are configurable.
@@ -136,6 +149,10 @@ kubectl create job -n monitoring --from=cronjob/resource-advisor-apply-pr resour
 ```bash
 # Confirm CronJobs exist
 kubectl get cronjobs -n monitoring | rg resource-advisor
+
+# Confirm Prometheus persistence + retention guardrails
+kubectl get pvc -n monitoring | rg kube-prometheus-stack-prometheus
+kubectl get prometheus -n monitoring kube-prometheus-stack-prometheus -o yaml | rg 'retention|retentionSize|walCompression'
 
 # Inspect latest report in-cluster
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
