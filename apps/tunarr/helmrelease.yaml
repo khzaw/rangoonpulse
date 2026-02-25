@@ -37,7 +37,7 @@ spec:
               privileged: true
             image:
               repository: ghcr.io/chrisbenincasa/tunarr
-              tag: latest
+              tag: "1.1.16"
             env:
               TZ: "Asia/Singapore"
               # Force the modern Intel driver
