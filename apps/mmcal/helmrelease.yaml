@@ -27,7 +27,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/mmcal
-              tag: 1771977802-0d4c9375938ef49127ca6ea7bf129780e4522a9e # {"$imagepolicy": "flux-system:mmcal:tag"}
+              tag: 1772041439-e5b1f5c510e3131de0965d564fba444e5b68c126 # {"$imagepolicy": "flux-system:mmcal:tag"}
             probes:
               liveness:
                 enabled: true
