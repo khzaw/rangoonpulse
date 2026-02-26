@@ -803,6 +803,11 @@ function renderControlPanelHtml() {
       }
 
       /* ── Audit log ── */
+      .audit-scroll {
+        max-height: min(52vh, 480px);
+        overflow-y: auto;
+        border-radius: 10px;
+      }
       .audit-table td { font-size: 12px; padding: 7px 12px; }
       .audit-time {
         color: var(--text-3);
@@ -885,17 +890,19 @@ function renderControlPanelHtml() {
 
       <div class="section">
         <div class="section-header">Audit Log</div>
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Action</th>
-              <th>Service</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody id="auditRows"></tbody>
-        </table>
+        <div class="audit-scroll">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Action</th>
+                <th>Service</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="auditRows"></tbody>
+          </table>
+        </div>
       </div>
     </main>
     <script>
