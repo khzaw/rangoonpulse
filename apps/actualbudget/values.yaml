@@ -3,7 +3,7 @@
 image:
   repository: actualbudget/actual-server
   pullPolicy: Always
-  tag: latest
+  tag: "26.2.1"
 
 service:
   type: ClusterIP
