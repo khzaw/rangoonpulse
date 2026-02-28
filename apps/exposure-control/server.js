@@ -48,7 +48,8 @@ const IMAGE_UPDATE_HTTP_TIMEOUT_MS = clampInt(
   15000,
 );
 const IMAGE_UPDATE_NAMESPACES = String(
-  process.env.IMAGE_UPDATE_NAMESPACES || "default",
+  process.env.IMAGE_UPDATE_NAMESPACES ||
+    "default,monitoring,tailscale,public-edge",
 )
   .split(",")
   .map((v) => v.trim())
@@ -64,6 +65,12 @@ const IMAGE_UPDATE_MAX_WORKLOADS = clampInt(
   120,
   10,
   500,
+);
+const IMAGE_UPDATE_EXCLUDED_WORKLOADS = new Set(
+  String(process.env.IMAGE_UPDATE_EXCLUDED_WORKLOADS || "blog,mmcal")
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean),
 );
 const KUBE_SERVICE_HOST = process.env.KUBERNETES_SERVICE_HOST || "";
 const KUBE_SERVICE_PORT = process.env.KUBERNETES_SERVICE_PORT_HTTPS || "443";
@@ -339,20 +346,6 @@ function readJsonFile(filePath) {
 function writeJsonFile(filePath, value) {
   ensureDataDir();
   fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
-}
-
-function parseClusterServiceTarget(target) {
-  try {
-    const u = new URL(target);
-    const host = String(u.hostname || "").toLowerCase();
-    const m = host.match(
-      /^([a-z0-9-]+)\.([a-z0-9-]+)\.svc(?:\.cluster\.local)?$/,
-    );
-    if (!m) return null;
-    return { service: m[1], namespace: m[2] };
-  } catch {
-    return null;
-  }
 }
 
 function parseImageReference(image) {
@@ -633,32 +626,10 @@ function inferWorkloadId(pod) {
   return name.replace(/-[a-z0-9]{5}$/i, "");
 }
 
-function titleCaseWorkload(value) {
-  const src = String(value || "").trim();
-  if (!src) return "";
-  return src
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function pickPrimaryContainer(pod) {
   const containers = (pod && pod.spec && pod.spec.containers) || [];
   if (containers.length === 0) return null;
   return containers[0];
-}
-
-function buildServiceNameHints() {
-  const hints = new Map();
-  for (const svc of services) {
-    if (svc.id) hints.set(svc.id, svc.name || svc.id);
-    const target = parseClusterServiceTarget(svc.target);
-    if (target && target.service) {
-      hints.set(target.service, svc.name || target.service);
-    }
-  }
-  return hints;
 }
 
 async function mapWithConcurrency(items, limit, worker) {
@@ -716,7 +687,6 @@ function isImageUpdateCacheFresh(cached) {
 
 async function buildImageUpdateSnapshot() {
   kubePodsCache.clear();
-  const serviceNameHints = buildServiceNameHints();
   const selectedPods = new Map();
 
   for (const namespace of IMAGE_UPDATE_NAMESPACES) {
@@ -724,6 +694,8 @@ async function buildImageUpdateSnapshot() {
     for (const pod of pods) {
       const workloadId = inferWorkloadId(pod);
       if (!workloadId) continue;
+      const workloadKey = workloadId.toLowerCase();
+      if (IMAGE_UPDATE_EXCLUDED_WORKLOADS.has(workloadKey)) continue;
       const key = `${namespace}/${workloadId}`;
       const existing = selectedPods.get(key);
       if (isBetterPod(pod, existing)) {
@@ -732,12 +704,14 @@ async function buildImageUpdateSnapshot() {
     }
   }
 
-  const selectedKeys = Array.from(selectedPods.keys())
-    .sort((a, b) => a.localeCompare(b))
-    .slice(0, IMAGE_UPDATE_MAX_WORKLOADS);
+  const selectedKeys = Array.from(selectedPods.keys()).slice(
+    0,
+    IMAGE_UPDATE_MAX_WORKLOADS,
+  );
 
   const items = [];
   const lookupTasks = [];
+  let orderIndex = 0;
 
   for (const key of selectedKeys) {
     const pod = selectedPods.get(key);
@@ -746,13 +720,11 @@ async function buildImageUpdateSnapshot() {
     const workloadId = slash >= 0 ? key.slice(slash + 1) : key;
     const podName = String((pod && pod.metadata && pod.metadata.name) || "");
     const container = pickPrimaryContainer(pod);
-    const displayName =
-      serviceNameHints.get(workloadId) || titleCaseWorkload(workloadId) || workloadId;
 
     const base = {
       id: workloadId,
       namespace,
-      name: displayName,
+      name: workloadId,
       pod: podName,
       currentVersion: null,
       latestVersion: null,
@@ -761,7 +733,8 @@ async function buildImageUpdateSnapshot() {
       updateAvailable: false,
       status: "unknown",
       statusText: "Unknown",
-      detail: podName ? `pod/${podName}` : "",
+      detail: "",
+      order: orderIndex++,
     };
 
     if (!container || !container.image) {
@@ -832,6 +805,14 @@ async function buildImageUpdateSnapshot() {
       }
     },
   );
+
+  items.sort(function(a, b) {
+    const aPriority = a.status === "update" ? 0 : 1;
+    const bPriority = b.status === "update" ? 0 : 1;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return (a.order || 0) - (b.order || 0);
+  });
+  for (const item of items) delete item.order;
 
   return {
     checkedAt: nowIso(),
@@ -1176,7 +1157,7 @@ function renderControlPanelHtml() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Exposure Control</title>
+    <title>rangoonpulse control panel</title>
     <style>
       :root {
         --bg: #0c0c0c;
@@ -1574,8 +1555,8 @@ function renderControlPanelHtml() {
     <main>
       <div class="header">
         <div>
-          <h1>Exposure Control</h1>
-          <div class="subtitle">${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} - ${DEFAULT_EXPIRY_HOURS}h default - weekly image update checks</div>
+          <h1>rangoonpulse control panel</h1>
+          <div class="subtitle">exposure controls + image update tracker · ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} · ${DEFAULT_EXPIRY_HOURS}h default · weekly checks</div>
         </div>
       </div>
 
