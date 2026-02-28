@@ -289,6 +289,12 @@ spec:
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
+                              - title: Control Panel
+                                url: https://controlpanel.khzaw.dev
+                                icon: mdi:cloud-lock-outline
+                              - title: Resource Advisor
+                                url: https://tuning.khzaw.dev
+                                icon: mdi:tune
                               - title: Speedtest
                                 url: https://speedtest.khzaw.dev
                                 icon: mdi:speedometer
@@ -329,6 +335,14 @@ spec:
                             url: https://actual.khzaw.dev
                             check-url: http://actualbudget.default.svc.cluster.local:5006
                             icon: di:actual-budget
+                          - title: Control Panel
+                            url: https://controlpanel.khzaw.dev
+                            check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
+                            icon: mdi:cloud-lock-outline
+                          - title: Resource Advisor
+                            url: https://tuning.khzaw.dev
+                            check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
+                            icon: mdi:tune
                           - title: Transmission
                             url: https://torrent.khzaw.dev
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
@@ -639,7 +653,6 @@ spec:
                           - actualbudget/actual
                           - dani-garcia/vaultwarden
                           - louislam/uptime-kuma
-                          - gethomepage/homepage
                           - glanceapp/glance
                           # Arr and download stack
                           - Sonarr/Sonarr
@@ -721,6 +734,14 @@ spec:
                             url: https://glance.khzaw.dev
                             check-url: http://glance.default.svc.cluster.local:8080
                             icon: di:glance
+                          - title: Control Panel
+                            url: https://controlpanel.khzaw.dev
+                            check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
+                            icon: mdi:cloud-lock-outline
+                          - title: Resource Advisor
+                            url: https://tuning.khzaw.dev
+                            check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
+                            icon: mdi:tune
                           - title: Tracerr
                             url: https://tracerr.khzaw.dev
                             check-url: http://tracerr.default.svc.cluster.local:3000
