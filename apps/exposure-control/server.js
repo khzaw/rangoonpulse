@@ -47,6 +47,24 @@ const IMAGE_UPDATE_HTTP_TIMEOUT_MS = clampInt(
   2000,
   15000,
 );
+const IMAGE_UPDATE_NAMESPACES = String(
+  process.env.IMAGE_UPDATE_NAMESPACES || "default",
+)
+  .split(",")
+  .map((v) => v.trim())
+  .filter(Boolean);
+const IMAGE_UPDATE_CONCURRENCY = clampInt(
+  process.env.IMAGE_UPDATE_CONCURRENCY,
+  6,
+  1,
+  20,
+);
+const IMAGE_UPDATE_MAX_WORKLOADS = clampInt(
+  process.env.IMAGE_UPDATE_MAX_WORKLOADS,
+  120,
+  10,
+  500,
+);
 const KUBE_SERVICE_HOST = process.env.KUBERNETES_SERVICE_HOST || "";
 const KUBE_SERVICE_PORT = process.env.KUBERNETES_SERVICE_PORT_HTTPS || "443";
 const KUBE_TOKEN_FILE =
@@ -67,7 +85,6 @@ const metrics = {
 };
 
 const rateLimits = new Map();
-const kubeServicesCache = new Map();
 const kubePodsCache = new Map();
 const registryTagCache = new Map();
 let imageUpdateRefreshPromise = null;
@@ -568,26 +585,10 @@ async function kubeGetJson(pathname) {
   return JSON.parse(res.body || "{}");
 }
 
-function buildLabelSelector(selectorObj) {
-  const keys = Object.keys(selectorObj || {}).sort();
-  if (keys.length === 0) return "";
-  return keys.map((k) => `${k}=${selectorObj[k]}`).join(",");
-}
-
-async function getKubeService(namespace, name) {
-  const key = `${namespace}/${name}`;
-  if (kubeServicesCache.has(key)) return kubeServicesCache.get(key);
-  const value = await kubeGetJson(
-    `/api/v1/namespaces/${namespace}/services/${name}`,
-  );
-  kubeServicesCache.set(key, value);
-  return value;
-}
-
-async function listKubePods(namespace, selector) {
-  const key = `${namespace}|${selector}`;
+async function listNamespacePods(namespace) {
+  const key = `${namespace}|running`;
   if (kubePodsCache.has(key)) return kubePodsCache.get(key);
-  const qs = selector ? `?labelSelector=${encodeURIComponent(selector)}` : "";
+  const qs = `?fieldSelector=${encodeURIComponent("status.phase=Running")}`;
   const list = await kubeGetJson(`/api/v1/namespaces/${namespace}/pods${qs}`);
   const items = Array.isArray(list && list.items) ? list.items : [];
   kubePodsCache.set(key, items);
@@ -601,20 +602,80 @@ function podRank(pod) {
   return 0;
 }
 
-function newestPod(a, b) {
-  const aTs = Date.parse(
-    (a && a.metadata && a.metadata.creationTimestamp) || "",
-  );
-  const bTs = Date.parse(
-    (b && b.metadata && b.metadata.creationTimestamp) || "",
-  );
-  return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
+function podTimestampMs(pod) {
+  const ts = Date.parse((pod && pod.metadata && pod.metadata.creationTimestamp) || "");
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+function isBetterPod(candidate, current) {
+  if (!current) return true;
+  const rankDiff = podRank(candidate) - podRank(current);
+  if (rankDiff !== 0) return rankDiff > 0;
+  return podTimestampMs(candidate) > podTimestampMs(current);
+}
+
+function inferWorkloadId(pod) {
+  const labels = (pod && pod.metadata && pod.metadata.labels) || {};
+  const instance = labels["app.kubernetes.io/instance"];
+  if (instance) return instance;
+  const appName = labels["app.kubernetes.io/name"];
+  if (appName) return appName;
+
+  const owner = (pod && pod.metadata && pod.metadata.ownerReferences && pod.metadata.ownerReferences[0]) || null;
+  if (owner && owner.kind === "StatefulSet" && owner.name) return owner.name;
+  if (owner && owner.kind === "ReplicaSet" && owner.name) {
+    return owner.name.replace(/-[a-f0-9]{9,10}$/i, "");
+  }
+  if (owner && owner.name) return owner.name;
+
+  const name = (pod && pod.metadata && pod.metadata.name) || "";
+  if (!name) return "";
+  return name.replace(/-[a-z0-9]{5}$/i, "");
+}
+
+function titleCaseWorkload(value) {
+  const src = String(value || "").trim();
+  if (!src) return "";
+  return src
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function pickPrimaryContainer(pod) {
   const containers = (pod && pod.spec && pod.spec.containers) || [];
   if (containers.length === 0) return null;
   return containers[0];
+}
+
+function buildServiceNameHints() {
+  const hints = new Map();
+  for (const svc of services) {
+    if (svc.id) hints.set(svc.id, svc.name || svc.id);
+    const target = parseClusterServiceTarget(svc.target);
+    if (target && target.service) {
+      hints.set(target.service, svc.name || target.service);
+    }
+  }
+  return hints;
+}
+
+async function mapWithConcurrency(items, limit, worker) {
+  const maxWorkers = Math.max(1, Math.min(limit, items.length || 1));
+  let cursor = 0;
+  const runners = [];
+  for (let i = 0; i < maxWorkers; i++) {
+    runners.push((async () => {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= items.length) return;
+        await worker(items[index], index);
+      }
+    })());
+  }
+  await Promise.all(runners);
 }
 
 function resolveLatestSemver(currentTag, tags) {
@@ -654,14 +715,45 @@ function isImageUpdateCacheFresh(cached) {
 }
 
 async function buildImageUpdateSnapshot() {
-  kubeServicesCache.clear();
   kubePodsCache.clear();
+  const serviceNameHints = buildServiceNameHints();
+  const selectedPods = new Map();
+
+  for (const namespace of IMAGE_UPDATE_NAMESPACES) {
+    const pods = await listNamespacePods(namespace);
+    for (const pod of pods) {
+      const workloadId = inferWorkloadId(pod);
+      if (!workloadId) continue;
+      const key = `${namespace}/${workloadId}`;
+      const existing = selectedPods.get(key);
+      if (isBetterPod(pod, existing)) {
+        selectedPods.set(key, pod);
+      }
+    }
+  }
+
+  const selectedKeys = Array.from(selectedPods.keys())
+    .sort((a, b) => a.localeCompare(b))
+    .slice(0, IMAGE_UPDATE_MAX_WORKLOADS);
 
   const items = [];
-  for (const svc of services) {
+  const lookupTasks = [];
+
+  for (const key of selectedKeys) {
+    const pod = selectedPods.get(key);
+    const slash = key.indexOf("/");
+    const namespace = slash >= 0 ? key.slice(0, slash) : "default";
+    const workloadId = slash >= 0 ? key.slice(slash + 1) : key;
+    const podName = String((pod && pod.metadata && pod.metadata.name) || "");
+    const container = pickPrimaryContainer(pod);
+    const displayName =
+      serviceNameHints.get(workloadId) || titleCaseWorkload(workloadId) || workloadId;
+
     const base = {
-      id: svc.id,
-      name: svc.name,
+      id: workloadId,
+      namespace,
+      name: displayName,
+      pod: podName,
       currentVersion: null,
       latestVersion: null,
       image: null,
@@ -669,134 +761,77 @@ async function buildImageUpdateSnapshot() {
       updateAvailable: false,
       status: "unknown",
       statusText: "Unknown",
-      detail: "",
+      detail: podName ? `pod/${podName}` : "",
     };
-    const target = parseClusterServiceTarget(svc.target);
-    if (!target) {
+
+    if (!container || !container.image) {
       items.push({
         ...base,
-        status: "external",
-        statusText: "External target",
-        detail: "Not a cluster service target.",
+        statusText: "No image",
+        detail: "Pod has no primary container image.",
       });
       continue;
     }
-    try {
-      const k8sService = await getKubeService(target.namespace, target.service);
-      if (!k8sService) {
-        items.push({
-          ...base,
-          status: "not-installed",
-          statusText: "Not installed",
-          detail: "Service object not found.",
-        });
-        continue;
-      }
-      const selector = buildLabelSelector(k8sService.spec && k8sService.spec.selector);
-      if (!selector) {
-        items.push({
-          ...base,
-          status: "unknown",
-          statusText: "No selector",
-          detail: "Service does not define pod selector labels.",
-        });
-        continue;
-      }
-      const pods = await listKubePods(target.namespace, selector);
-      if (!pods.length) {
-        items.push({
-          ...base,
-          status: "not-installed",
-          statusText: "No pods",
-          detail: "No matching pods currently exist.",
-        });
-        continue;
-      }
-      const rankedPods = pods.slice().sort((a, b) => {
-        const rankDiff = podRank(b) - podRank(a);
-        if (rankDiff !== 0) return rankDiff;
-        return newestPod(a, b);
-      });
-      const pod = rankedPods[0];
-      const container = pickPrimaryContainer(pod);
-      if (!container || !container.image) {
-        items.push({
-          ...base,
-          status: "unknown",
-          statusText: "No image",
-          detail: "Pod has no primary container image.",
-        });
-        continue;
-      }
-      const imageRef = parseImageReference(container.image);
-      if (!imageRef) {
-        items.push({
-          ...base,
-          image: container.image,
-          status: "unknown",
-          statusText: "Invalid image",
-          detail: "Could not parse image reference.",
-        });
-        continue;
-      }
 
-      const row = {
-        ...base,
-        image: container.image,
-        imageRepo: `${imageRef.registry}/${imageRef.repository}`,
-        currentVersion: imageRef.tag || null,
-      };
-
-      const semverCurrent = parseSemverTag(imageRef.tag);
-      if (!semverCurrent || semverCurrent.prerelease) {
-        items.push({
-          ...row,
-          status: "unknown",
-          statusText: "Unknown",
-          detail: "Current tag is not stable semver.",
-        });
-        continue;
-      }
-
-      try {
-        const tags = await listRegistryTags(imageRef);
-        const latest = resolveLatestSemver(imageRef.tag, tags);
-        if (!latest) {
-          items.push({
-            ...row,
-            status: "unknown",
-            statusText: "Unknown",
-            detail: "No stable semver tags found in registry.",
-          });
-          continue;
-        }
-        items.push({
-          ...row,
-          latestVersion: latest.latestTag,
-          updateAvailable: latest.updateAvailable,
-          status: latest.updateAvailable ? "update" : "current",
-          statusText: latest.updateAvailable ? "Update available" : "Up to date",
-          detail: latest.updateAvailable
-            ? `New version ${latest.latestTag} available.`
-            : "Running latest known stable version.",
-        });
-      } catch (err) {
-        items.push({
-          ...row,
-          status: "unknown",
-          statusText: "Registry error",
-          detail: err.message,
-        });
-      }
-    } catch (err) {
+    const imageRef = parseImageReference(container.image);
+    if (!imageRef) {
       items.push({
         ...base,
-        status: "unknown",
-        statusText: "Cluster error",
-        detail: err.message,
+        image: container.image,
+        statusText: "Invalid image",
+        detail: "Could not parse image reference.",
       });
+      continue;
     }
+
+    const row = {
+      ...base,
+      image: container.image,
+      imageRepo: `${imageRef.registry}/${imageRef.repository}`,
+      currentVersion: imageRef.tag || null,
+    };
+    items.push(row);
+
+    const semverCurrent = parseSemverTag(imageRef.tag);
+    if (!semverCurrent || semverCurrent.prerelease) {
+      row.status = "unknown";
+      row.statusText = "Unknown";
+      row.detail = `Current tag '${imageRef.tag}' is not stable semver.`;
+      continue;
+    }
+
+    lookupTasks.push({ row, imageRef });
   }
+
+  await mapWithConcurrency(
+    lookupTasks,
+    IMAGE_UPDATE_CONCURRENCY,
+    async function(task) {
+      try {
+        const tags = await listRegistryTags(task.imageRef);
+        const latest = resolveLatestSemver(task.imageRef.tag, tags);
+        if (!latest) {
+          task.row.status = "unknown";
+          task.row.statusText = "Unknown";
+          task.row.detail = "No stable semver tags found in registry.";
+          return;
+        }
+        task.row.latestVersion = latest.latestTag;
+        task.row.updateAvailable = latest.updateAvailable;
+        task.row.status = latest.updateAvailable ? "update" : "current";
+        task.row.statusText = latest.updateAvailable
+          ? "Update available"
+          : "Up to date";
+        task.row.detail = latest.updateAvailable
+          ? `New version ${latest.latestTag} available.`
+          : "Running latest known stable version.";
+      } catch (err) {
+        task.row.status = "unknown";
+        task.row.statusText = "Registry error";
+        task.row.detail = err.message;
+      }
+    },
+  );
 
   return {
     checkedAt: nowIso(),
@@ -1940,7 +1975,8 @@ function renderControlPanelHtml() {
             nameEl.textContent = item.name || item.id || "";
             const idEl = document.createElement("div");
             idEl.className = "svc-id";
-            idEl.textContent = item.id || "";
+            const nsPrefix = item.namespace ? item.namespace + "/" : "";
+            idEl.textContent = nsPrefix + (item.id || "");
             serviceTd.append(nameEl, idEl);
 
             const currentTd = document.createElement("td");
@@ -1963,7 +1999,10 @@ function renderControlPanelHtml() {
             imageEl.textContent = item.imageRepo || item.image || "\\u2014";
             const subEl = document.createElement("div");
             subEl.className = "updates-sub";
-            subEl.textContent = item.detail || "";
+            const details = [];
+            if (item.detail) details.push(item.detail);
+            if (item.pod) details.push("pod/" + item.pod);
+            subEl.textContent = details.join(" · ");
             imageTd.append(imageEl, subEl);
 
             tr.append(serviceTd, currentTd, latestTd, statusTd, imageTd);
