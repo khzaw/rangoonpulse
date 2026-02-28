@@ -21,12 +21,13 @@ spec:
   values:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
-      serviceAccountName: exposure-control
       nodeSelector:
         kubernetes.io/hostname: talos-uua-g6r
 
     controllers:
       main:
+        serviceAccount:
+          name: exposure-control
         strategy: Recreate
         containers:
           main:
