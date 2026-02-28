@@ -7,7 +7,7 @@ This document records the GitOps deployment and operational decisions for study-
 ### 1) Obsidian LiveSync backend (`obsidian-livesync`)
 - Path: `apps/obsidian-livesync/helmrelease.yaml`
 - Hostname: `https://livesync.khzaw.dev`
-- Backend: CouchDB (`couchdb:3.1.2`)
+- Backend: CouchDB (`couchdb:3.5.1`)
 - Purpose: self-hosted sync target for Obsidian LiveSync plugin.
 
 Current rollout note:
