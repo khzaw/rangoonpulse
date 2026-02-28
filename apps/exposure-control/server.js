@@ -34,6 +34,24 @@ const SHARE_RATE_LIMIT_WINDOW_SECONDS = clampInt(
   10,
   3600,
 );
+const IMAGE_UPDATES_CACHE_FILE = path.join(DATA_DIR, "image-updates-cache.json");
+const IMAGE_UPDATE_CACHE_TTL_HOURS = clampInt(
+  process.env.IMAGE_UPDATE_CACHE_TTL_HOURS,
+  168,
+  24,
+  24 * 30,
+);
+const IMAGE_UPDATE_HTTP_TIMEOUT_MS = clampInt(
+  process.env.IMAGE_UPDATE_HTTP_TIMEOUT_MS,
+  6000,
+  2000,
+  15000,
+);
+const KUBE_SERVICE_HOST = process.env.KUBERNETES_SERVICE_HOST || "";
+const KUBE_SERVICE_PORT = process.env.KUBERNETES_SERVICE_PORT_HTTPS || "443";
+const KUBE_TOKEN_FILE =
+  "/var/run/secrets/kubernetes.io/serviceaccount/token";
+const KUBE_CA_FILE = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
 
 const metrics = {
   enableTotal: 0,
@@ -49,6 +67,10 @@ const metrics = {
 };
 
 const rateLimits = new Map();
+const kubeServicesCache = new Map();
+const kubePodsCache = new Map();
+const registryTagCache = new Map();
+let imageUpdateRefreshPromise = null;
 
 function nowIso() {
   return new Date().toISOString();
@@ -288,6 +310,559 @@ function parseBody(req) {
   });
 }
 
+function readJsonFile(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeJsonFile(filePath, value) {
+  ensureDataDir();
+  fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
+}
+
+function parseClusterServiceTarget(target) {
+  try {
+    const u = new URL(target);
+    const host = String(u.hostname || "").toLowerCase();
+    const m = host.match(
+      /^([a-z0-9-]+)\.([a-z0-9-]+)\.svc(?:\.cluster\.local)?$/,
+    );
+    if (!m) return null;
+    return { service: m[1], namespace: m[2] };
+  } catch {
+    return null;
+  }
+}
+
+function parseImageReference(image) {
+  const raw = String(image || "").trim();
+  if (!raw) return null;
+  let withoutDigest = raw;
+  const digestIndex = withoutDigest.indexOf("@");
+  if (digestIndex >= 0) withoutDigest = withoutDigest.slice(0, digestIndex);
+  if (!withoutDigest) return null;
+
+  const lastSlash = withoutDigest.lastIndexOf("/");
+  const lastColon = withoutDigest.lastIndexOf(":");
+  let tag = "latest";
+  let imagePath = withoutDigest;
+  if (lastColon > lastSlash) {
+    tag = withoutDigest.slice(lastColon + 1);
+    imagePath = withoutDigest.slice(0, lastColon);
+  }
+
+  const first = imagePath.split("/")[0] || "";
+  const hasExplicitRegistry =
+    first.includes(".") || first.includes(":") || first === "localhost";
+  let registry = hasExplicitRegistry ? first : "docker.io";
+  let repository = hasExplicitRegistry
+    ? imagePath.slice(first.length + 1)
+    : imagePath;
+  if (!repository) return null;
+  if ((registry === "docker.io" || registry === "index.docker.io") && !repository.includes("/")) {
+    repository = `library/${repository}`;
+  }
+  if (registry === "index.docker.io") registry = "docker.io";
+  return { raw, registry, repository, tag };
+}
+
+function parseSemverTag(tag) {
+  const s = String(tag || "").trim();
+  const m = s.match(
+    /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/,
+  );
+  if (!m) return null;
+  return {
+    raw: s,
+    major: Number(m[1]),
+    minor: Number(m[2]),
+    patch: Number(m[3]),
+    prerelease: m[4] || "",
+  };
+}
+
+function compareSemver(a, b) {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  if (a.patch !== b.patch) return a.patch - b.patch;
+  if (!a.prerelease && b.prerelease) return 1;
+  if (a.prerelease && !b.prerelease) return -1;
+  return a.prerelease.localeCompare(b.prerelease);
+}
+
+function parseWwwAuthenticate(header) {
+  const value = String(header || "");
+  const space = value.indexOf(" ");
+  if (space <= 0) return null;
+  const scheme = value.slice(0, space).toLowerCase();
+  const rest = value.slice(space + 1);
+  const params = {};
+  const re = /([a-zA-Z]+)="([^"]*)"/g;
+  let match = null;
+  while ((match = re.exec(rest))) {
+    params[match[1].toLowerCase()] = match[2];
+  }
+  return { scheme, params };
+}
+
+function nextLinkUrl(linkHeader, baseUrl) {
+  const m = String(linkHeader || "").match(/<([^>]+)>\s*;\s*rel="?next"?/i);
+  if (!m) return null;
+  try {
+    return new URL(m[1], baseUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+function requestHttps(urlString, options) {
+  const opts = options || {};
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlString);
+    const req = https.request(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        port: u.port || 443,
+        path: `${u.pathname}${u.search}`,
+        method: opts.method || "GET",
+        headers: opts.headers || {},
+        ca: opts.ca,
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on("end", () => {
+          resolve({
+            statusCode: res.statusCode || 0,
+            headers: res.headers || {},
+            body: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+      },
+    );
+    req.setTimeout(opts.timeoutMs || IMAGE_UPDATE_HTTP_TIMEOUT_MS, () => {
+      req.destroy(new Error("request timeout"));
+    });
+    req.on("error", reject);
+    if (opts.body) req.write(opts.body);
+    req.end();
+  });
+}
+
+async function fetchRegistryBearerToken(challenge, repository) {
+  if (!challenge || challenge.scheme !== "bearer") {
+    throw new Error("unsupported registry auth scheme");
+  }
+  const realm = challenge.params.realm;
+  if (!realm) throw new Error("missing registry auth realm");
+  const tokenUrl = new URL(realm);
+  if (challenge.params.service) {
+    tokenUrl.searchParams.set("service", challenge.params.service);
+  }
+  tokenUrl.searchParams.set(
+    "scope",
+    challenge.params.scope || `repository:${repository}:pull`,
+  );
+  const res = await requestHttps(tokenUrl.toString(), {
+    headers: {
+      accept: "application/json",
+      "user-agent": "exposure-control/1.0",
+    },
+  });
+  if (res.statusCode !== 200) {
+    throw new Error(`token request failed (${res.statusCode})`);
+  }
+  const parsed = JSON.parse(res.body || "{}");
+  const token = parsed.token || parsed.access_token || "";
+  if (!token) throw new Error("registry token missing in response");
+  return token;
+}
+
+async function listRegistryTags(imageRef) {
+  const cacheKey = `${imageRef.registry}/${imageRef.repository}`;
+  const cached = registryTagCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.ts < 6 * 60 * 60 * 1000) return cached.tags;
+
+  const apiHost =
+    imageRef.registry === "docker.io"
+      ? "registry-1.docker.io"
+      : imageRef.registry;
+  const base = `https://${apiHost}`;
+  let nextUrl = `${base}/v2/${imageRef.repository}/tags/list?n=200`;
+  let token = "";
+  const tags = [];
+  const seen = new Set();
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < 8) {
+    pageCount += 1;
+    const headers = {
+      accept: "application/json",
+      "user-agent": "exposure-control/1.0",
+    };
+    if (token) headers.authorization = `Bearer ${token}`;
+    const res = await requestHttps(nextUrl, { headers });
+
+    if (res.statusCode === 401) {
+      if (token) throw new Error("registry authentication failed");
+      const challenge = parseWwwAuthenticate(res.headers["www-authenticate"]);
+      token = await fetchRegistryBearerToken(challenge, imageRef.repository);
+      continue;
+    }
+    if (res.statusCode !== 200) {
+      throw new Error(`tags request failed (${res.statusCode})`);
+    }
+
+    const payload = JSON.parse(res.body || "{}");
+    if (Array.isArray(payload.tags)) {
+      for (const tag of payload.tags) {
+        const value = String(tag || "").trim();
+        if (!value || seen.has(value)) continue;
+        seen.add(value);
+        tags.push(value);
+      }
+    }
+    nextUrl = nextLinkUrl(res.headers.link, nextUrl);
+  }
+
+  registryTagCache.set(cacheKey, { ts: now, tags });
+  return tags;
+}
+
+function kubeApiAvailable() {
+  return (
+    Boolean(KUBE_SERVICE_HOST) &&
+    fs.existsSync(KUBE_TOKEN_FILE) &&
+    fs.existsSync(KUBE_CA_FILE)
+  );
+}
+
+function kubeAuthContext() {
+  const token = fs.readFileSync(KUBE_TOKEN_FILE, "utf8").trim();
+  const ca = fs.readFileSync(KUBE_CA_FILE);
+  return { token, ca };
+}
+
+async function kubeGetJson(pathname) {
+  if (!kubeApiAvailable()) throw new Error("kubernetes api unavailable");
+  const auth = kubeAuthContext();
+  const url = `https://${KUBE_SERVICE_HOST}:${KUBE_SERVICE_PORT}${pathname}`;
+  const res = await requestHttps(url, {
+    ca: auth.ca,
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${auth.token}`,
+      "user-agent": "exposure-control/1.0",
+    },
+  });
+  if (res.statusCode === 404) return null;
+  if (res.statusCode !== 200) {
+    throw new Error(`kubernetes api request failed (${res.statusCode})`);
+  }
+  return JSON.parse(res.body || "{}");
+}
+
+function buildLabelSelector(selectorObj) {
+  const keys = Object.keys(selectorObj || {}).sort();
+  if (keys.length === 0) return "";
+  return keys.map((k) => `${k}=${selectorObj[k]}`).join(",");
+}
+
+async function getKubeService(namespace, name) {
+  const key = `${namespace}/${name}`;
+  if (kubeServicesCache.has(key)) return kubeServicesCache.get(key);
+  const value = await kubeGetJson(
+    `/api/v1/namespaces/${namespace}/services/${name}`,
+  );
+  kubeServicesCache.set(key, value);
+  return value;
+}
+
+async function listKubePods(namespace, selector) {
+  const key = `${namespace}|${selector}`;
+  if (kubePodsCache.has(key)) return kubePodsCache.get(key);
+  const qs = selector ? `?labelSelector=${encodeURIComponent(selector)}` : "";
+  const list = await kubeGetJson(`/api/v1/namespaces/${namespace}/pods${qs}`);
+  const items = Array.isArray(list && list.items) ? list.items : [];
+  kubePodsCache.set(key, items);
+  return items;
+}
+
+function podRank(pod) {
+  const phase = pod && pod.status && pod.status.phase;
+  if (phase === "Running") return 2;
+  if (phase === "Pending") return 1;
+  return 0;
+}
+
+function newestPod(a, b) {
+  const aTs = Date.parse(
+    (a && a.metadata && a.metadata.creationTimestamp) || "",
+  );
+  const bTs = Date.parse(
+    (b && b.metadata && b.metadata.creationTimestamp) || "",
+  );
+  return (Number.isFinite(bTs) ? bTs : 0) - (Number.isFinite(aTs) ? aTs : 0);
+}
+
+function pickPrimaryContainer(pod) {
+  const containers = (pod && pod.spec && pod.spec.containers) || [];
+  if (containers.length === 0) return null;
+  return containers[0];
+}
+
+function resolveLatestSemver(currentTag, tags) {
+  const current = parseSemverTag(currentTag);
+  if (!current || current.prerelease) return null;
+  let best = null;
+  for (const tag of tags || []) {
+    const parsed = parseSemverTag(tag);
+    if (!parsed || parsed.prerelease) continue;
+    if (!best || compareSemver(parsed, best) > 0) best = parsed;
+  }
+  if (!best) return null;
+  return {
+    latestTag: best.raw,
+    updateAvailable: compareSemver(best, current) > 0,
+  };
+}
+
+function loadImageUpdateCache() {
+  const cached = readJsonFile(IMAGE_UPDATES_CACHE_FILE);
+  if (!cached || !Array.isArray(cached.items)) return null;
+  return cached;
+}
+
+function imageUpdateNextCheckAt(checkedAt) {
+  const ts = Date.parse(checkedAt || "");
+  if (!Number.isFinite(ts)) return null;
+  return new Date(
+    ts + IMAGE_UPDATE_CACHE_TTL_HOURS * 60 * 60 * 1000,
+  ).toISOString();
+}
+
+function isImageUpdateCacheFresh(cached) {
+  const nextCheckAt = imageUpdateNextCheckAt(cached && cached.checkedAt);
+  if (!nextCheckAt) return false;
+  return Date.parse(nextCheckAt) > Date.now();
+}
+
+async function buildImageUpdateSnapshot() {
+  kubeServicesCache.clear();
+  kubePodsCache.clear();
+
+  const items = [];
+  for (const svc of services) {
+    const base = {
+      id: svc.id,
+      name: svc.name,
+      currentVersion: null,
+      latestVersion: null,
+      image: null,
+      imageRepo: null,
+      updateAvailable: false,
+      status: "unknown",
+      statusText: "Unknown",
+      detail: "",
+    };
+    const target = parseClusterServiceTarget(svc.target);
+    if (!target) {
+      items.push({
+        ...base,
+        status: "external",
+        statusText: "External target",
+        detail: "Not a cluster service target.",
+      });
+      continue;
+    }
+    try {
+      const k8sService = await getKubeService(target.namespace, target.service);
+      if (!k8sService) {
+        items.push({
+          ...base,
+          status: "not-installed",
+          statusText: "Not installed",
+          detail: "Service object not found.",
+        });
+        continue;
+      }
+      const selector = buildLabelSelector(k8sService.spec && k8sService.spec.selector);
+      if (!selector) {
+        items.push({
+          ...base,
+          status: "unknown",
+          statusText: "No selector",
+          detail: "Service does not define pod selector labels.",
+        });
+        continue;
+      }
+      const pods = await listKubePods(target.namespace, selector);
+      if (!pods.length) {
+        items.push({
+          ...base,
+          status: "not-installed",
+          statusText: "No pods",
+          detail: "No matching pods currently exist.",
+        });
+        continue;
+      }
+      const rankedPods = pods.slice().sort((a, b) => {
+        const rankDiff = podRank(b) - podRank(a);
+        if (rankDiff !== 0) return rankDiff;
+        return newestPod(a, b);
+      });
+      const pod = rankedPods[0];
+      const container = pickPrimaryContainer(pod);
+      if (!container || !container.image) {
+        items.push({
+          ...base,
+          status: "unknown",
+          statusText: "No image",
+          detail: "Pod has no primary container image.",
+        });
+        continue;
+      }
+      const imageRef = parseImageReference(container.image);
+      if (!imageRef) {
+        items.push({
+          ...base,
+          image: container.image,
+          status: "unknown",
+          statusText: "Invalid image",
+          detail: "Could not parse image reference.",
+        });
+        continue;
+      }
+
+      const row = {
+        ...base,
+        image: container.image,
+        imageRepo: `${imageRef.registry}/${imageRef.repository}`,
+        currentVersion: imageRef.tag || null,
+      };
+
+      const semverCurrent = parseSemverTag(imageRef.tag);
+      if (!semverCurrent || semverCurrent.prerelease) {
+        items.push({
+          ...row,
+          status: "unknown",
+          statusText: "Unknown",
+          detail: "Current tag is not stable semver.",
+        });
+        continue;
+      }
+
+      try {
+        const tags = await listRegistryTags(imageRef);
+        const latest = resolveLatestSemver(imageRef.tag, tags);
+        if (!latest) {
+          items.push({
+            ...row,
+            status: "unknown",
+            statusText: "Unknown",
+            detail: "No stable semver tags found in registry.",
+          });
+          continue;
+        }
+        items.push({
+          ...row,
+          latestVersion: latest.latestTag,
+          updateAvailable: latest.updateAvailable,
+          status: latest.updateAvailable ? "update" : "current",
+          statusText: latest.updateAvailable ? "Update available" : "Up to date",
+          detail: latest.updateAvailable
+            ? `New version ${latest.latestTag} available.`
+            : "Running latest known stable version.",
+        });
+      } catch (err) {
+        items.push({
+          ...row,
+          status: "unknown",
+          statusText: "Registry error",
+          detail: err.message,
+        });
+      }
+    } catch (err) {
+      items.push({
+        ...base,
+        status: "unknown",
+        statusText: "Cluster error",
+        detail: err.message,
+      });
+    }
+  }
+
+  return {
+    checkedAt: nowIso(),
+    ttlHours: IMAGE_UPDATE_CACHE_TTL_HOURS,
+    items,
+  };
+}
+
+async function getImageUpdates(forceRefresh) {
+  const cached = loadImageUpdateCache();
+  const hasFreshCache = cached && isImageUpdateCacheFresh(cached);
+
+  if (!forceRefresh && hasFreshCache) {
+    return {
+      ...cached,
+      source: "cache",
+      stale: false,
+      refreshInProgress: Boolean(imageUpdateRefreshPromise),
+      nextCheckAt: imageUpdateNextCheckAt(cached.checkedAt),
+    };
+  }
+
+  if (!imageUpdateRefreshPromise) {
+    imageUpdateRefreshPromise = (async () => {
+      const snapshot = await buildImageUpdateSnapshot();
+      writeJsonFile(IMAGE_UPDATES_CACHE_FILE, snapshot);
+      return snapshot;
+    })().finally(() => {
+      imageUpdateRefreshPromise = null;
+    });
+  }
+
+  if (!forceRefresh && cached) {
+    return {
+      ...cached,
+      source: "cache",
+      stale: true,
+      refreshInProgress: true,
+      nextCheckAt: imageUpdateNextCheckAt(cached.checkedAt),
+    };
+  }
+
+  try {
+    const fresh = await imageUpdateRefreshPromise;
+    return {
+      ...fresh,
+      source: "live",
+      stale: false,
+      refreshInProgress: false,
+      nextCheckAt: imageUpdateNextCheckAt(fresh.checkedAt),
+    };
+  } catch (err) {
+    if (cached) {
+      return {
+        ...cached,
+        source: "cache",
+        stale: true,
+        refreshInProgress: false,
+        error: err.message,
+        nextCheckAt: imageUpdateNextCheckAt(cached.checkedAt),
+      };
+    }
+    throw err;
+  }
+}
+
 const services = loadServices();
 const serviceById = new Map(services.map((svc) => [svc.id, svc]));
 const serviceByHost = new Map(
@@ -430,7 +1005,8 @@ function renderMetrics() {
   ].join("\n");
 }
 
-async function handleApi(req, res, pathname) {
+async function handleApi(req, res, parsedUrl) {
+  const pathname = parsedUrl.pathname;
   if (req.method === "GET" && pathname === "/api/services") {
     disableExpiredExposures();
     return sendJson(res, 200, { services: snapshotServices() });
@@ -514,6 +1090,18 @@ async function handleApi(req, res, pathname) {
   if (req.method === "GET" && pathname === "/api/audit") {
     const entries = loadAuditEntries(100);
     return sendJson(res, 200, { entries });
+  }
+
+  if (req.method === "GET" && pathname === "/api/image-updates") {
+    const force =
+      parsedUrl.searchParams.get("force") === "1" ||
+      parsedUrl.searchParams.get("refresh") === "1";
+    try {
+      const payload = await getImageUpdates(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
   }
 
   return sendJson(res, 404, { error: "not found" });
@@ -612,7 +1200,37 @@ function renderControlPanelHtml() {
         margin-top: 4px;
         font-family: var(--font-mono);
       }
-      .header-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+      .tabs {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .tab-btn {
+        padding: 6px 14px;
+        border-radius: 999px;
+      }
+      .tab-btn.active {
+        color: var(--text-1);
+        border-color: rgba(121, 184, 255, 0.45);
+        background: rgba(121, 184, 255, 0.12);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+      }
+      .panel { animation: fade-up 400ms ease-out both; }
+      [hidden] { display: none !important; }
+      .panel-actions,
+      .updates-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .updates-meta {
+        color: var(--text-3);
+        font-size: 11px;
+        font-family: var(--font-mono);
+      }
 
       /* ── Shared form controls ── */
       button {
@@ -692,10 +1310,10 @@ function renderControlPanelHtml() {
         top: 0;
         z-index: 1;
       }
-      thead th:nth-child(2),
-      tbody td:nth-child(2),
-      thead th:nth-child(6),
-      tbody td:nth-child(6) {
+      .exposure-table thead th:nth-child(2),
+      .exposure-table tbody td:nth-child(2),
+      .exposure-table thead th:nth-child(6),
+      .exposure-table tbody td:nth-child(6) {
         white-space: nowrap;
       }
       tbody td {
@@ -829,6 +1447,49 @@ function renderControlPanelHtml() {
       .action-emergency { color: var(--red); font-weight: 500; }
       .action-expire { color: var(--yellow); }
 
+      /* ── Updates ── */
+      .updates-scroll {
+        max-height: min(62vh, 620px);
+        overflow-y: auto;
+        border-radius: 10px;
+      }
+      .update-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .update-chip::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .update-chip.current { color: var(--green); }
+      .update-chip.update { color: var(--yellow); }
+      .update-chip.update::before {
+        box-shadow: 0 0 0 rgba(210, 153, 34, 0.5);
+        animation: pulse-update 1.6s ease-out infinite;
+      }
+      .update-chip.unknown { color: var(--text-2); }
+      .update-chip.external { color: var(--text-3); }
+      .update-chip.not-installed { color: var(--red); }
+      .updates-version {
+        font-size: 12px;
+        font-family: var(--font-mono);
+        color: var(--text-2);
+      }
+      .updates-sub {
+        margin-top: 2px;
+        font-size: 11px;
+        color: var(--text-3);
+        font-family: var(--font-mono);
+      }
+
       /* ── Empty state ── */
       .empty-row td {
         text-align: center;
@@ -851,11 +1512,25 @@ function renderControlPanelHtml() {
         75% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
         100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
       }
+      @keyframes pulse-update {
+        0% { box-shadow: 0 0 0 0 rgba(210, 153, 34, 0.45); }
+        75% { box-shadow: 0 0 0 9px rgba(210, 153, 34, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(210, 153, 34, 0); }
+      }
 
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
           animation: none !important;
           transition: none !important;
+        }
+      }
+      @media (max-width: 820px) {
+        main { padding: 22px 14px; }
+        .controls { flex-wrap: wrap; }
+        .panel-actions,
+        .updates-toolbar {
+          flex-direction: column;
+          align-items: flex-start;
         }
       }
     </style>
@@ -865,59 +1540,131 @@ function renderControlPanelHtml() {
       <div class="header">
         <div>
           <h1>Exposure Control</h1>
-          <div class="subtitle">${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} &middot; ${DEFAULT_EXPIRY_HOURS}h default &middot; UI auth default: none</div>
-        </div>
-        <div class="header-actions">
-          <button id="refreshBtn">Refresh</button>
-          <button id="emergencyBtn" class="danger">Disable All</button>
+          <div class="subtitle">${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} - ${DEFAULT_EXPIRY_HOURS}h default - weekly image update checks</div>
         </div>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Service</th>
-            <th>Status</th>
-            <th>Auth</th>
-            <th>Public URL</th>
-            <th>Expires</th>
-            <th>Controls</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-      <div id="msg" class="msg"></div>
+      <div class="tabs" role="tablist" aria-label="Control panel sections">
+        <button id="tabExposure" class="tab-btn active" type="button" data-tab="exposure">Exposure</button>
+        <button id="tabUpdates" class="tab-btn" type="button" data-tab="updates">Image Updates</button>
+      </div>
 
-      <div class="section">
-        <div class="section-header">Audit Log</div>
-        <div class="audit-scroll">
-          <table class="audit-table">
+      <section id="panelExposure" class="panel">
+        <div class="panel-actions">
+          <div class="section-header">Temporary Exposure Control</div>
+          <div>
+            <button id="refreshBtn" type="button">Refresh</button>
+            <button id="emergencyBtn" class="danger" type="button">Disable All</button>
+          </div>
+        </div>
+        <table class="exposure-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Status</th>
+              <th>Auth</th>
+              <th>Public URL</th>
+              <th>Expires</th>
+              <th>Controls</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <div id="msg" class="msg"></div>
+
+        <div class="section">
+          <div class="section-header">Audit Log</div>
+          <div class="audit-scroll">
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Action</th>
+                  <th>Service</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="auditRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="panelUpdates" class="panel" hidden>
+        <div class="updates-toolbar">
+          <div>
+            <div class="section-header">Installed Service Image Versions</div>
+            <div id="updatesMeta" class="updates-meta">No update check yet.</div>
+          </div>
+          <button id="updatesRefreshBtn" type="button">Check Now</button>
+        </div>
+        <div class="updates-scroll">
+          <table class="updates-table">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Action</th>
                 <th>Service</th>
-                <th>Details</th>
+                <th>Current</th>
+                <th>Latest</th>
+                <th>Status</th>
+                <th>Image</th>
               </tr>
             </thead>
-            <tbody id="auditRows"></tbody>
+            <tbody id="updatesRows"></tbody>
           </table>
         </div>
-      </div>
+        <div id="updatesMsg" class="msg"></div>
+      </section>
     </main>
     <script>
+      const panelExposureEl = document.getElementById("panelExposure");
+      const panelUpdatesEl = document.getElementById("panelUpdates");
+      const tabExposureBtn = document.getElementById("tabExposure");
+      const tabUpdatesBtn = document.getElementById("tabUpdates");
       const rowsEl = document.getElementById("rows");
       const auditRowsEl = document.getElementById("auditRows");
+      const updatesRowsEl = document.getElementById("updatesRows");
       const msgEl = document.getElementById("msg");
+      const updatesMsgEl = document.getElementById("updatesMsg");
+      const updatesMetaEl = document.getElementById("updatesMeta");
       const refreshBtn = document.getElementById("refreshBtn");
       const emergencyBtn = document.getElementById("emergencyBtn");
+      const updatesRefreshBtn = document.getElementById("updatesRefreshBtn");
       let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
+      let updatesLoaded = false;
+
+      function setMessage(target, text, isError) {
+        target.textContent = text || "";
+        target.style.color = isError ? "var(--red)" : "var(--text-3)";
+      }
 
       function setMsg(text, isError) {
-        msgEl.textContent = text;
-        msgEl.style.color = isError ? "var(--red)" : "var(--text-3)";
+        setMessage(msgEl, text, isError);
       }
+
+      function setUpdatesMsg(text, isError) {
+        setMessage(updatesMsgEl, text, isError);
+      }
+
+      function setActiveTab(tab) {
+        const exposure = tab !== "updates";
+        panelExposureEl.hidden = !exposure;
+        panelUpdatesEl.hidden = exposure;
+        tabExposureBtn.classList.toggle("active", exposure);
+        tabUpdatesBtn.classList.toggle("active", !exposure);
+        if (!exposure && !updatesLoaded) {
+          loadUpdates();
+        }
+      }
+
+      tabExposureBtn.onclick = function() {
+        setActiveTab("exposure");
+        history.replaceState(null, "", "#exposure");
+      };
+      tabUpdatesBtn.onclick = function() {
+        setActiveTab("updates");
+        history.replaceState(null, "", "#updates");
+      };
 
       function fmtExpiry(value) {
         if (!value) return { text: "\\u2014", state: "none" };
@@ -965,7 +1712,7 @@ function renderControlPanelHtml() {
           pendingExpiryRefresh = true;
           setTimeout(async () => {
             try {
-              await load({ silent: true });
+              await loadExposure({ silent: true });
             } finally {
               pendingExpiryRefresh = false;
             }
@@ -1088,7 +1835,7 @@ function renderControlPanelHtml() {
                 authMode: authSelect.value,
               });
               setMsg("Enabled " + svc.id);
-              await load({ silent: true });
+              await loadExposure({ silent: true });
             } catch (err) {
               setMsg(err.message, true);
             } finally {
@@ -1108,7 +1855,7 @@ function renderControlPanelHtml() {
               authSelect.disabled = true;
               await request("/api/services/" + svc.id + "/disable", "POST");
               setMsg("Disabled " + svc.id);
-              await load({ silent: true });
+              await loadExposure({ silent: true });
             } catch (err) {
               setMsg(err.message, true);
             } finally {
@@ -1171,7 +1918,75 @@ function renderControlPanelHtml() {
         }
       }
 
-      async function load(options) {
+      function renderUpdates(payload) {
+        const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        updatesRowsEl.innerHTML = "";
+        if (items.length === 0) {
+          const tr = document.createElement("tr");
+          tr.className = "empty-row";
+          const td = document.createElement("td");
+          td.colSpan = 5;
+          td.textContent = "No update rows available.";
+          tr.appendChild(td);
+          updatesRowsEl.appendChild(tr);
+        } else {
+          for (const [index, item] of items.entries()) {
+            const tr = document.createElement("tr");
+            tr.style.setProperty("--row-index", String(index));
+
+            const serviceTd = document.createElement("td");
+            const nameEl = document.createElement("div");
+            nameEl.className = "svc-name";
+            nameEl.textContent = item.name || item.id || "";
+            const idEl = document.createElement("div");
+            idEl.className = "svc-id";
+            idEl.textContent = item.id || "";
+            serviceTd.append(nameEl, idEl);
+
+            const currentTd = document.createElement("td");
+            currentTd.className = "updates-version";
+            currentTd.textContent = item.currentVersion || "\\u2014";
+
+            const latestTd = document.createElement("td");
+            latestTd.className = "updates-version";
+            latestTd.textContent = item.latestVersion || "\\u2014";
+
+            const statusTd = document.createElement("td");
+            const chip = document.createElement("span");
+            chip.className = "update-chip " + (item.status || "unknown");
+            chip.textContent = item.statusText || "Unknown";
+            statusTd.appendChild(chip);
+
+            const imageTd = document.createElement("td");
+            const imageEl = document.createElement("div");
+            imageEl.className = "updates-version";
+            imageEl.textContent = item.imageRepo || item.image || "\\u2014";
+            const subEl = document.createElement("div");
+            subEl.className = "updates-sub";
+            subEl.textContent = item.detail || "";
+            imageTd.append(imageEl, subEl);
+
+            tr.append(serviceTd, currentTd, latestTd, statusTd, imageTd);
+            updatesRowsEl.appendChild(tr);
+          }
+        }
+
+        const checkedAt = payload && payload.checkedAt ? new Date(payload.checkedAt) : null;
+        const nextCheckAt = payload && payload.nextCheckAt ? new Date(payload.nextCheckAt) : null;
+        const checkedText = checkedAt && !Number.isNaN(checkedAt.getTime())
+          ? checkedAt.toLocaleString()
+          : "not checked yet";
+        const nextText = nextCheckAt && !Number.isNaN(nextCheckAt.getTime())
+          ? nextCheckAt.toLocaleString()
+          : "unknown";
+        const source = payload && payload.source ? payload.source : "unknown";
+        const staleText = payload && payload.stale ? " - stale cache" : "";
+        const refreshingText = payload && payload.refreshInProgress ? " - background refresh running" : "";
+        updatesMetaEl.textContent =
+          "Checked: " + checkedText + " | Next check: " + nextText + " | Source: " + source + staleText + refreshingText;
+      }
+
+      async function loadExposure(options) {
         const silent = Boolean(options && options.silent);
         if (!silent) setMsg("Refreshing...");
         try {
@@ -1187,7 +2002,31 @@ function renderControlPanelHtml() {
         }
       }
 
-      refreshBtn.onclick = () => load();
+      async function loadUpdates(options) {
+        const force = Boolean(options && options.force);
+        if (force) {
+          setUpdatesMsg("Checking registries...");
+        } else if (!updatesLoaded) {
+          setUpdatesMsg("Loading cached update report...");
+        }
+        try {
+          const path = force ? "/api/image-updates?force=1" : "/api/image-updates";
+          const payload = await request(path, "GET");
+          renderUpdates(payload);
+          updatesLoaded = true;
+          if (payload.error) {
+            setUpdatesMsg("Showing cached data: " + payload.error, true);
+          } else if (payload.stale) {
+            setUpdatesMsg("Showing cached data while background refresh runs.");
+          } else {
+            setUpdatesMsg("Update report loaded.");
+          }
+        } catch (err) {
+          setUpdatesMsg(err.message, true);
+        }
+      }
+
+      refreshBtn.onclick = () => loadExposure();
 
       emergencyBtn.onclick = async () => {
         if (!confirm("Disable ALL temporary exposures?")) return;
@@ -1196,7 +2035,7 @@ function renderControlPanelHtml() {
           emergencyBtn.disabled = true;
           await request("/api/admin/disable-all", "POST");
           setMsg("All exposures disabled");
-          await load({ silent: true });
+          await loadExposure({ silent: true });
         } catch (err) {
           setMsg(err.message, true);
         } finally {
@@ -1205,8 +2044,17 @@ function renderControlPanelHtml() {
         }
       };
 
+      updatesRefreshBtn.onclick = function() {
+        loadUpdates({ force: true });
+      };
+
       setInterval(tickExpiryCountdowns, 1000);
-      load();
+      loadExposure();
+      if (window.location.hash === "#updates") {
+        setActiveTab("updates");
+      } else {
+        setActiveTab("exposure");
+      }
     </script>
   </body>
 </html>`;
@@ -1238,7 +2086,7 @@ const server = http.createServer(async (req, res) => {
           error: "api access is restricted to control panel host",
         });
       }
-      return handleApi(req, res, parsed.pathname);
+      return handleApi(req, res, parsed);
     }
 
     if (svc) {
