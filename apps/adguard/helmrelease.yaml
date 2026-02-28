@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: adguard/adguardhome
-              tag: v0.107.56
+              tag: v0.107.72
             command:
               - sh
               - -c
