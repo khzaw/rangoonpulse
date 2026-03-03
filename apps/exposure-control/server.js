@@ -1175,11 +1175,19 @@ function renderControlPanelHtml() {
         --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
       }
       * { box-sizing: border-box; margin: 0; }
+      html {
+        min-height: 100%;
+        background-color: #0b0b0b;
+      }
       body {
-        background:
+        background-color: #0b0b0b;
+        background-image:
           radial-gradient(1200px 600px at 8% -20%, rgba(121, 184, 255, 0.08), transparent 56%),
           radial-gradient(1000px 520px at 92% -30%, rgba(63, 185, 80, 0.07), transparent 62%),
           linear-gradient(180deg, #0b0b0b 0%, var(--bg) 46%, #0b0b0b 100%);
+        background-repeat: no-repeat;
+        background-size: 100vw 100vh, 100vw 100vh, 100vw 100vh;
+        background-attachment: fixed, fixed, fixed;
         color: var(--text-1);
         font-family: system-ui, -apple-system, sans-serif;
         font-size: 13px;
