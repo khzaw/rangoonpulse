@@ -1185,6 +1185,7 @@ function renderControlPanelHtml() {
         font-size: 13px;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
+        min-height: 100dvh;
       }
       main {
         max-width: 1240px;
@@ -1465,8 +1466,8 @@ function renderControlPanelHtml() {
 
       /* ── Updates ── */
       .updates-scroll {
-        max-height: min(62vh, 620px);
-        overflow-y: auto;
+        overflow-x: auto;
+        overflow-y: visible;
         border-radius: 10px;
       }
       .update-chip {
