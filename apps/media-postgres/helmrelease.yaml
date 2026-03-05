@@ -53,11 +53,6 @@ spec:
                 value: /var/lib/postgresql/data/pgdata
 
               # Used by init script to create per-app roles/DBs.
-              - name: JELLYSTAT_DB_PASSWORD
-                valueFrom:
-                  secretKeyRef:
-                    name: jellystat-db-secret
-                    key: POSTGRES_PASSWORD
               - name: TRACERR_DB_PASSWORD
                 valueFrom:
                   secretKeyRef:
@@ -85,18 +80,7 @@ spec:
           10-init-app-dbs.sh: |
             (
               set -eu
-              echo "Initializing app databases/users (jellystat, tracearr) ..."
-
-              # Role: jellystat
-              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='jellystat'" | grep -q 1; then
-                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE jellystat LOGIN PASSWORD '${JELLYSTAT_DB_PASSWORD}'"
-              fi
-              # Jellystat attempts to create its database on startup; grant createdb to avoid noisy errors.
-              psql -v ON_ERROR_STOP=1 -c "ALTER ROLE jellystat CREATEDB"
-              # DB: jellystat
-              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='jellystat'" | grep -q 1; then
-                createdb -O jellystat jellystat
-              fi
+              echo "Initializing app databases/users (tracearr) ..."
 
               # Role: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then

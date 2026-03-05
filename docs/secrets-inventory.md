@@ -51,16 +51,8 @@ Notes:
 - **media-postgres** (`apps/media-postgres/helmrelease.yaml`)
   - `default/media-postgres-secret`
     - key: `POSTGRES_PASSWORD` (postgres superuser password)
-  - `default/jellystat-db-secret`
-    - key: `POSTGRES_PASSWORD` (used by init script to create role/db)
   - `default/tracerr-db-secret`
     - key: `POSTGRES_PASSWORD` (used by init script to create role/db)
-
-- **jellystat** (`apps/jellystat/helmrelease.yaml`)
-  - `default/jellystat-db-secret`
-    - key: `POSTGRES_PASSWORD`
-  - `default/jellystat-app-secret`
-    - key: `JWT_SECRET`
 
 - **tracerr** (`apps/tracerr/helmrelease.yaml`)
   - `default/tracerr-db-secret`

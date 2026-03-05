@@ -33,7 +33,6 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "tracerr": "apps/tracerr/helmrelease.yaml",
     "jellyfin": "apps/jellyfin/helmrelease.yaml",
     "jellyseerr": "apps/seerr/helmrelease.yaml",
-    "jellystat": "apps/jellystat/helmrelease.yaml",
     "nodecast-tv": "apps/nodecast-tv/helmrelease.yaml",
     "obsidian-livesync": "apps/obsidian-livesync/helmrelease.yaml",
     "prowlarr": "apps/prowlarr/helmrelease.yaml",

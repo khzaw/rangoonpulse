@@ -286,7 +286,7 @@ Important external-dns behavior:
   - current auto-apply scope includes:
     - `actualbudget`, `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
-      `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `jellystat`, `nodecast-tv`,
+      `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
       `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
       `uptime-kuma`, `vaultwarden`
   - excluded from auto-apply by policy (analyzed only): `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,

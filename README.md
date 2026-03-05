@@ -135,7 +135,6 @@
 | Service | Description |
 |---------|-------------|
 | 📺 **nodecast-tv** | Live TV streaming |
-| 🧠 **Jellystat** | Jellyfin analytics |
 | 🧩 **iSponsorBlockTV** | SponsorBlock for TV clients |
 | 🎞️ **Tunarr** | Channel scheduling |
 | 📼 **ErsatzTV** | Custom TV channels |

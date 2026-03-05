@@ -61,7 +61,6 @@ resources:
   - ./kustomizations/bazarr.yaml
   - ./kustomizations/jellyfin.yaml
   - ./kustomizations/seerr.yaml
-  - ./kustomizations/jellystat.yaml
   - ./kustomizations/immich.yaml
   - ./kustomizations/adguard.yaml
   - ./kustomizations/glance.yaml

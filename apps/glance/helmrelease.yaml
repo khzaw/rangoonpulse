@@ -268,9 +268,6 @@ spec:
                               - title: Grafana
                                 url: https://grafana.khzaw.dev
                                 icon: di:grafana
-                              - title: Jellystat
-                                url: https://jellystat.khzaw.dev
-                                icon: di:jellystat
                               - title: Tracerr
                                 url: https://tracerr.khzaw.dev
                                 icon: mdi:graph-box
@@ -648,7 +645,6 @@ spec:
                           - jellyfin/jellyfin
                           - advplyr/audiobookshelf
                           - seerr-team/seerr
-                          - CyferShepard/Jellystat
                           - chrisbenincasa/tunarr
                           - actualbudget/actual
                           - dani-garcia/vaultwarden
@@ -1176,10 +1172,6 @@ spec:
                             url: https://sabnzbd.khzaw.dev
                             check-url: http://sabnzbd.default.svc.cluster.local:8080
                             icon: di:sabnzbd
-                          - title: Jellystat
-                            url: https://jellystat.khzaw.dev
-                            check-url: http://jellystat.default.svc.cluster.local:3000
-                            icon: di:jellystat
                           - title: Tracerr
                             url: https://tracerr.khzaw.dev
                             check-url: http://tracerr.default.svc.cluster.local:3000
