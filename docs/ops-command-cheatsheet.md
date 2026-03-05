@@ -249,3 +249,24 @@ scripts/storage-sunset-cleanup.sh
 # Example apply mode
 scripts/storage-sunset-cleanup.sh --apply --namespace default --match 'default/booklore'
 ```
+
+## 14) Node Power Estimation Checks
+
+```bash
+# Reconcile monitoring stack
+flux reconcile kustomization monitoring -n flux-system --with-source
+
+# Ensure rule + dashboard objects are present
+kubectl get prometheusrule -n monitoring node-power-estimation
+kubectl get configmap -n monitoring grafana-dashboard-node-power-estimation
+```
+
+```bash
+# Validate estimated node watts series in Prometheus
+kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
+  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_estimated_power_watts'
+
+# Cluster aggregate estimate
+kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
+  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:cluster_estimated_power_watts'
+```

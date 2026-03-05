@@ -244,6 +244,10 @@ Important external-dns behavior:
   - alias: `monitoring.khzaw.dev` (CNAME via `infrastructure/monitoring/monitoring-cname.yaml`)
 - Current critical settings:
   - `nodeExporter.enabled: false` (correct key for chart line in use)
+  - node power tracking is estimate-only (no smart-plug telemetry):
+    - recording rules: `infrastructure/monitoring/prometheusrule-power-estimation.yaml`
+    - dashboard import: `infrastructure/monitoring/grafana-dashboard-node-power-estimation.yaml`
+    - model = container CPU utilization + fixed per-node idle/max watts (tune constants in the rule file)
   - Prometheus retention policy tuned for advisor window:
     - `retention: 14d`
     - `retentionSize: 8GB`
@@ -363,5 +367,6 @@ Examples:
 - `docs/public-exposure-control-panel-plan.md`
 - `docs/public-edge-phase1-bootstrap.md`
 - `docs/ops-command-cheatsheet.md`
+- `docs/power-estimation-dashboard.md`
 - `docs/exposure-control-phase2-phase3-mvp.md`
 - `docs/cloudflare-access-share-hosts-email-otp-plan.md`

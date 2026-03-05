@@ -6,5 +6,7 @@ resources:
   - namespace.yaml
   - helmrelease.yaml
   - monitoring-cname.yaml
+  - grafana-dashboard-node-power-estimation.yaml
+  - prometheusrule-power-estimation.yaml
   - servicemonitor-exposure-control.yaml
   - prometheusrule-exposure-control.yaml
