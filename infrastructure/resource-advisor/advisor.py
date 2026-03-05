@@ -13,7 +13,6 @@ from pathlib import Path
 
 
 APP_TEMPLATE_RELEASE_FILE_MAP = {
-    "actualbudget": "apps/actualbudget/helmrelease.yaml",
     "adguard": "apps/adguard/helmrelease.yaml",
     "anki-server": "apps/anki-server/helmrelease.yaml",
     "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",

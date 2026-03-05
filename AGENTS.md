@@ -288,13 +288,13 @@ Important external-dns behavior:
   - include decision rationale, constraints, and skipped reasons in PR description
   - apply planner uses live pod request footprint + current pod placement for node-fit simulation; see `docs/resource-advisor-phase1-phase2.md`
   - current auto-apply scope includes:
-    - `actualbudget`, `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
+    - `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
       `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
       `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
       `uptime-kuma`, `vaultwarden`
-  - excluded from auto-apply by policy (analyzed only): `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,
-    `blog`, `mmcal`
+  - excluded from auto-apply by policy (analyzed only): `actualbudget`, `immich`, `immich-postgres`, `media-postgres`,
+    `vaultwarden-postgres`, `blog`, `mmcal`
   - do not chase raw averages; deadband is enforced by default:
     - `DEADBAND_PERCENT=10`
     - `DEADBAND_CPU_M=25`

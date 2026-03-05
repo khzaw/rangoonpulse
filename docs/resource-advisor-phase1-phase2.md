@@ -94,14 +94,15 @@ Operational expectation:
 
 ## Current Apply Scope Policy
 Auto-apply (Phase 3 PR commits) is currently enabled for:
-- `actualbudget`, `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`
+- `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`
 - `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`
 - `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`
 - `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`
 
 Analyzed but intentionally excluded from auto-apply (manual-only adjustments):
-- `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`, `blog`, `mmcal`
+- `actualbudget` (non-`app-template` chart), `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,
+  `blog`, `mmcal`
 
 ## Outputs
 The latest report is written to ConfigMap:
