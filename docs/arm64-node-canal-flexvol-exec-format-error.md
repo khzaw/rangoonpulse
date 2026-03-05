@@ -1,9 +1,13 @@
-# ARM64 Node: `canal` CrashLoop (`flexvol-driver` exec format error)
+# Historical Incident: ARM64 Node `canal` CrashLoop (`flexvol-driver` exec format error)
 
-## Symptom
-- ARM64 worker (example: Raspberry Pi 4) shows as `Ready`, but pods scheduled to it fail to create a sandbox, or `canal` is not `Ready`.
-- `kubectl -n kube-system get pods -l k8s-app=canal -o wide` shows the ARM node's `canal` pod stuck in `Init:CrashLoopBackOff`.
-- `kubectl -n kube-system logs <canal-pod> -c flexvol-driver --previous` shows:
+Status:
+- Resolved. Both homelab nodes are currently functional (`talos-7nf-osf` and `talos-uua-g6r`).
+- Keep this document as a recovery runbook in case the same ARM64 CNI issue reappears.
+
+## Symptom (when this incident occurs)
+- ARM64 worker (example: Raspberry Pi 4) may show as `Ready`, but pods scheduled to it fail to create a sandbox, or `canal` is not `Ready`.
+- `kubectl -n kube-system get pods -l k8s-app=canal -o wide` may show the ARM node's `canal` pod stuck in `Init:CrashLoopBackOff`.
+- `kubectl -n kube-system logs <canal-pod> -c flexvol-driver --previous` may show:
   - `exec /usr/local/bin/flexvol.sh: exec format error`
 
 ## Root Cause
@@ -40,4 +44,3 @@ If you want to verify an image tag is multi-arch before using it:
 ```bash
 crane manifest docker.io/calico/pod2daemon-flexvol:v3.28.0 | rg -n 'architecture'
 ```
-

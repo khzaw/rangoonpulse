@@ -58,6 +58,8 @@
 | `talos-7nf-osf` | Control Plane + Workloads | `amd64` | i5-8400T (6c/6t) · 32GB · NVMe · Intel iGPU | `10.0.0.197` |
 | `talos-uua-g6r` | Utility Workloads | `arm64` | 4 cores · 8GB (Raspberry Pi) | `10.0.0.38` |
 
+Current cluster status: both nodes are functional and schedulable.
+
 ---
 
 ## 🏗️ Stack

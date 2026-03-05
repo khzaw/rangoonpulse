@@ -84,6 +84,7 @@ Notes:
 ## Nodes (Current)
 - Primary node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)
 - Utility node (Raspberry Pi): `talos-uua-g6r` (`arm64`, `10.0.0.38`)
+- Current node health: both nodes are functional and schedulable.
 
 ## Scheduling / Node Placement (Important)
 - Default policy: pin userland workloads to the primary node (`talos-7nf-osf`).
