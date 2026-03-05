@@ -15,6 +15,8 @@ This repository now uses a unified destination model:
   - `Service/ingress-nginx-controller` in namespace `ingress-nginx`
   - Type `LoadBalancer`
   - MetalLB external IP: `10.0.0.231`
+  - Primary ports: `80` and `443`
+  - Additional scoped listener: `Service/ingress-nginx-calibre-controller` exposes `9090` on the same VIP (`10.0.0.231`) using MetalLB shared-IP, for `calibre-manage` content path only
 - DNS:
   - Cloudflare records for app hostnames resolve to `10.0.0.231` (managed by external-dns)
   - LAN clients use AdGuard (`Service/adguard-dns`) at `10.0.0.233` for recursive resolution/filtering
@@ -37,19 +39,22 @@ This repository now uses a unified destination model:
 
 ### Components And Their Roles
 1. `ingress-nginx-controller` (MetalLB VIP `10.0.0.231`)
-- Single entrypoint for all Kubernetes apps.
+- Primary entrypoint for all Kubernetes apps (`80/443`).
 
-2. Cloudflare DNS + external-dns
+2. `ingress-nginx-calibre-controller` (same MetalLB VIP `10.0.0.231`, port `9090`)
+- Dedicated ingress class `nginx-calibre` for `calibre-manage` explicit `:9090` access to `/content` only.
+
+3. Cloudflare DNS + external-dns
 - Keeps public DNS records aligned with ingress state, pointing app hostnames to `10.0.0.231`.
 
-3. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`)
+4. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`)
 - Primary LAN recursive resolver/filter for client DNS queries.
 - Forwards upstream while preserving the same app destination IP model.
 
-4. Tailscale subnet router (`Connector`)
+5. Tailscale subnet router (`Connector`)
 - Enables tailnet clients to reach `10.0.0.x` LAN destinations without a separate ingress proxy.
 
-5. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
+6. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
 - Allows `nas.khzaw.dev` / `router.khzaw.dev` to terminate trusted TLS at ingress while proxying to LAN IPs.
 
 ### Data Flow

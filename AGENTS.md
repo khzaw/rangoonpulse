@@ -75,6 +75,11 @@ Notes:
 - Permanent public: `blog.khzaw.dev` routes directly through Cloudflare Tunnel to `blog.default.svc.cluster.local:8080` (bypasses exposure-control)
   - DNS ownership for `blog.khzaw.dev` is `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`).
   - Do not add `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev` on the blog Ingress, or it will publish a private `A` record (`10.0.0.231`).
+- Calibre manage explicit port access:
+  - `https://calibre-manage.khzaw.dev/content` stays on shared ingress class `nginx`.
+  - `https://calibre-manage.khzaw.dev:9090/content` is served by dedicated ingress class `nginx-calibre`.
+  - `core/ingress-nginx/calibre-controller.yaml` defines `Service/ingress-nginx-calibre-controller` (port `9090`) sharing VIP `10.0.0.231` via MetalLB `allow-shared-ip`.
+  - `apps/calibre/ingress.yaml` includes `Ingress/calibre-content-9090`, which is content-path-only and intentionally has no `external-dns` or `cert-manager` annotation.
 
 ## Nodes (Current)
 - Primary node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)
@@ -109,6 +114,10 @@ For public or tailnet-only app hostnames, use:
 - annotation: `cert-manager.io/cluster-issuer: letsencrypt-prod`
 - annotation: `nginx.ingress.kubernetes.io/ssl-redirect: "true"`
 - TLS section with matching hosts
+
+Exception (`calibre-manage` explicit port):
+- Use ingress class `nginx-calibre` in `apps/calibre/ingress.yaml` (`Ingress/calibre-content-9090`) for `:9090/content`.
+- Do not add `external-dns` or `cert-manager` annotations on the `nginx-calibre` Ingress; it reuses hostname DNS + TLS secret managed by the primary `nginx` Ingress.
 
 Important external-dns behavior:
 - external-dns is configured to ignore `spec.rules[].host` and `spec.tls[].hosts` on Ingress resources.

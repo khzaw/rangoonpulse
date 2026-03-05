@@ -39,3 +39,32 @@ spec:
                 name: calibre
                 port:
                   name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: calibre-content-9090
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10000m"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx-calibre
+  tls:
+    - hosts:
+        - calibre-manage.khzaw.dev
+      secretName: calibre-manage-tls
+  rules:
+    - host: calibre-manage.khzaw.dev
+      http:
+        paths:
+          - path: /content/?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: calibre
+                port:
+                  name: server

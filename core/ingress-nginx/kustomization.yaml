@@ -5,17 +5,21 @@ kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/baremetal/deploy.yaml
   - custom-headers.yaml
+  - calibre-controller.yaml
 
 patches:
-  # Patch 1: Change Service type
+  # Patch 1: Change Service type and pin the shared ingress VIP
   - patch: |-
-      - op: replace
-        path: /spec/type
-        value: LoadBalancer
-    target:
+      apiVersion: v1
       kind: Service
-      name: ingress-nginx-controller
-      namespace: ingress-nginx
+      metadata:
+        name: ingress-nginx-controller
+        namespace: ingress-nginx
+        annotations:
+          metallb.universe.tf/allow-shared-ip: ingress-nginx-shared-vip
+      spec:
+        type: LoadBalancer
+        loadBalancerIP: 10.0.0.231
 
   # Patch 2: Add the missing --publish-service argument to the Deployment
   #  path: /spec/template/spec/containers/0/args/- uses JSON Patch syntax to append (add to path ending in -) the value to the existing args array for the first container).
