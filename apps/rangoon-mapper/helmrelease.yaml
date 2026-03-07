@@ -13,8 +13,8 @@ spec:
         kind: HelmRepository
         name: bjw-s-charts
         namespace: flux-system
-  install: { remediation: { retries: 3 } }
-  upgrade: { remediation: { retries: 3 } }
+  install: {remediation: {retries: 3}}
+  upgrade: {remediation: {retries: 3}}
   values:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
@@ -31,7 +31,7 @@ spec:
           main:
             image:
               repository: ghcr.io/projectrangoon/rangoon-mapper
-              tag: latest # {"$imagepolicy": "flux-system:rangoon-mapper:tag"}
+              tag: 1772915487-482c5b17e17d53fba334ead73118408f15f2cb97 # {"$imagepolicy": "flux-system:rangoon-mapper:tag"}
             probes:
               liveness:
                 enabled: true
