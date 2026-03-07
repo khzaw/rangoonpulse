@@ -205,6 +205,8 @@ flux reconcile kustomization <name> --with-source
 # Cluster triage
 kubectl get pods -A
 kubectl get events -A --sort-by=.lastTimestamp | tail -n 50
+kubectl top nodes
+kubectl top pods -A
 
 # Talos node dashboard
 talosctl -n 10.0.0.197 dashboard

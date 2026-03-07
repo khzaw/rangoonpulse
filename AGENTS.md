@@ -15,6 +15,7 @@ continue work without re-discovery.
 - LAN recursive DNS/filtering: AdGuard Home (`Service/adguard-dns`, `10.0.0.233:53`)
 - Remote access: Tailscale operator + subnet router (`Connector`)
 - Storage mix: `local-path`, TrueNAS NFS classes (`truenas-*`), democratic-csi present
+- Operational metrics: `metrics-server` in `kube-system` (`kubectl top`, HPA inputs)
 - Timezone standard: `Asia/Singapore`
 
 ## Repository Structure
@@ -240,6 +241,10 @@ Important external-dns behavior:
 
 ## Monitoring/Grafana Notes
 - Monitoring stack: `infrastructure/monitoring/helmrelease.yaml`
+- Real-time operational metrics: `infrastructure/metrics-server/helmrelease.yaml`
+  - namespace: `kube-system`
+  - purpose: enable `kubectl top` and provide Metrics API for future HPA experiments
+  - current Talos compatibility setting: `--kubelet-insecure-tls`
 - Grafana hostnames:
   - primary: `grafana.khzaw.dev`
   - alias: `monitoring.khzaw.dev` (CNAME via `infrastructure/monitoring/monitoring-cname.yaml`)
@@ -326,6 +331,8 @@ flux reconcile kustomization <name> --with-source
 kubectl get pods -A
 kubectl describe hr -n <ns> <name>
 kubectl get events -n <ns> --sort-by=.lastTimestamp
+kubectl top nodes
+kubectl top pods -A
 
 # Talos node checks
 talosctl -n 10.0.0.197 dashboard
@@ -356,6 +363,7 @@ Examples:
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
 - `docs/dashboards-homepage-glance.md`
+- `docs/metrics-server-operational-metrics.md`
 - `docs/study-services-livesync-anki-booklore.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
