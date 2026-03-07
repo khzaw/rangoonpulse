@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: santiagosayshey/profilarr
-              tag: latest
+              tag: v1.1.4
             env:
               TZ: "Asia/Singapore"
             resources:

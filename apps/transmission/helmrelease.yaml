@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/transmission
-              tag: latest
+              tag: 4.1.1-r1-ls333
             env:
               TZ: "Asia/Singapore"
               PUID: "1000"

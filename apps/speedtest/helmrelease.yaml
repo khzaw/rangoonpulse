@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/librespeed
-              tag: latest
+              tag: v5.5.1-ls262
             env:
               TZ: "Asia/Singapore"
             resources:

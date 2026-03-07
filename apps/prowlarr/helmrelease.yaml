@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/prowlarr
-              tag: latest
+              tag: 2.3.0.5236-ls138
             env:
               TZ: "Asia/Singapore"
               PUID: "1000"
