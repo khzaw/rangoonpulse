@@ -7,3 +7,5 @@ metadata:
 spec:
   image: ghcr.io/projectrangoon/rangoon-mapper
   interval: 6h
+  secretRef:
+    name: ghcr-pull-secret

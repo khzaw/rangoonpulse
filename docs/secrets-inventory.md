@@ -42,6 +42,15 @@ Notes:
   - `cert-manager/cloudflare-api-token`
     - key: `token` (Cloudflare API token for DNS-01)
 
+### Registry Auth
+- **Flux image automation for private GHCR repos** (`infrastructure/image-automation/*.yaml`)
+  - `flux-system/ghcr-pull-secret`
+    - key: `.dockerconfigjson` (registry auth for ImageRepository scans)
+
+- **rangoon-mapper** (`apps/rangoon-mapper/helmrelease.yaml`)
+  - `default/ghcr-pull-secret`
+    - key: `.dockerconfigjson` (registry auth for kubelet image pulls)
+
 ### Storage
 - **democratic-csi** (`infrastructure/storage/democratic-csi/hr-hdd.yaml`, `infrastructure/storage/democratic-csi/hr-nvme.yaml`)
   - `democratic-csi/truenas-credentials`
