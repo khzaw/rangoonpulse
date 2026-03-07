@@ -77,6 +77,12 @@ const KUBE_SERVICE_PORT = process.env.KUBERNETES_SERVICE_PORT_HTTPS || "443";
 const KUBE_TOKEN_FILE =
   "/var/run/secrets/kubernetes.io/serviceaccount/token";
 const KUBE_CA_FILE = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
+const TRANSMISSION_VPN_NAMESPACE =
+  process.env.TRANSMISSION_VPN_NAMESPACE || "default";
+const TRANSMISSION_VPN_CONTROL_CONFIGMAP =
+  process.env.TRANSMISSION_VPN_CONTROL_CONFIGMAP || "transmission-vpn-control";
+const TRANSMISSION_VPN_RUNTIME_CONFIGMAP_FALLBACK =
+  process.env.TRANSMISSION_VPN_RUNTIME_CONFIGMAP || "transmission-vpn-state";
 
 const metrics = {
   enableTotal: 0,
@@ -111,6 +117,12 @@ function clampInt(value, fallback, min, max) {
 function normalizeAuthMode(value) {
   const mode = String(value || "").toLowerCase();
   if (mode === "none" || mode === "cloudflare-access") return mode;
+  return null;
+}
+
+function normalizeTransmissionVpnMode(value) {
+  const mode = String(value || "").toLowerCase();
+  if (mode === "direct" || mode === "vpn") return mode;
   return null;
 }
 
@@ -560,22 +572,80 @@ function kubeAuthContext() {
 }
 
 async function kubeGetJson(pathname) {
-  if (!kubeApiAvailable()) throw new Error("kubernetes api unavailable");
-  const auth = kubeAuthContext();
-  const url = `https://${KUBE_SERVICE_HOST}:${KUBE_SERVICE_PORT}${pathname}`;
-  const res = await requestHttps(url, {
-    ca: auth.ca,
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${auth.token}`,
-      "user-agent": "exposure-control/1.0",
-    },
-  });
+  const res = await kubeRequest(pathname);
   if (res.statusCode === 404) return null;
   if (res.statusCode !== 200) {
     throw new Error(`kubernetes api request failed (${res.statusCode})`);
   }
   return JSON.parse(res.body || "{}");
+}
+
+async function kubeRequest(pathname, options) {
+  if (!kubeApiAvailable()) throw new Error("kubernetes api unavailable");
+  const auth = kubeAuthContext();
+  const opts = options || {};
+  const url = `https://${KUBE_SERVICE_HOST}:${KUBE_SERVICE_PORT}${pathname}`;
+  const res = await requestHttps(url, {
+    ca: auth.ca,
+    method: opts.method || "GET",
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${auth.token}`,
+      "content-type": opts.contentType || "application/json",
+      "user-agent": "exposure-control/1.0",
+      ...(opts.headers || {}),
+    },
+  });
+  return res;
+}
+
+async function kubeUpsertConfigMap(namespace, name, data, labels) {
+  const existing = await kubeGetJson(
+    `/api/v1/namespaces/${namespace}/configmaps/${name}`,
+  );
+  const mergedLabels = {
+    ...((existing && existing.metadata && existing.metadata.labels) || {}),
+    ...(labels || {}),
+  };
+  const payload = {
+    apiVersion: "v1",
+    kind: "ConfigMap",
+    metadata: {
+      name,
+      namespace,
+      labels: mergedLabels,
+    },
+    data,
+  };
+
+  if (!existing) {
+    const created = await kubeRequest(`/api/v1/namespaces/${namespace}/configmaps`, {
+      method: "POST",
+      body: payload,
+    });
+    if (created.statusCode !== 201) {
+      throw new Error(`failed to create configmap ${name} (${created.statusCode})`);
+    }
+    return JSON.parse(created.body || "{}");
+  }
+
+  payload.metadata.resourceVersion =
+    existing.metadata && existing.metadata.resourceVersion;
+  if (existing.metadata && existing.metadata.annotations) {
+    payload.metadata.annotations = existing.metadata.annotations;
+  }
+  const updated = await kubeRequest(
+    `/api/v1/namespaces/${namespace}/configmaps/${name}`,
+    {
+      method: "PUT",
+      body: payload,
+    },
+  );
+  if (updated.statusCode !== 200) {
+    throw new Error(`failed to update configmap ${name} (${updated.statusCode})`);
+  }
+  return JSON.parse(updated.body || "{}");
 }
 
 async function listNamespacePods(namespace) {
@@ -879,6 +949,151 @@ async function getImageUpdates(forceRefresh) {
   }
 }
 
+async function getTransmissionVpnControlConfig() {
+  const cm = await kubeGetJson(
+    `/api/v1/namespaces/${TRANSMISSION_VPN_NAMESPACE}/configmaps/${TRANSMISSION_VPN_CONTROL_CONFIGMAP}`,
+  );
+  if (!cm || !cm.data) {
+    throw new Error("transmission vpn control configmap not found");
+  }
+
+  const defaultMode =
+    normalizeTransmissionVpnMode(cm.data["default-mode"]) || "direct";
+  const runtimeConfigMap =
+    String(cm.data["runtime-configmap"] || "").trim() ||
+    TRANSMISSION_VPN_RUNTIME_CONFIGMAP_FALLBACK;
+  const directValues = String(cm.data["direct-values.yaml"] || "").trim();
+  const vpnValues = String(cm.data["vpn-values.yaml"] || "").trim();
+  if (!directValues || !vpnValues) {
+    throw new Error("transmission vpn control configmap is missing mode templates");
+  }
+
+  return {
+    namespace: TRANSMISSION_VPN_NAMESPACE,
+    defaultMode,
+    runtimeConfigMap,
+    directValues,
+    vpnValues,
+    provider: String(cm.data.provider || "custom").trim() || "custom",
+    vpnType: String(cm.data["vpn-type"] || "wireguard").trim() || "wireguard",
+    placeholderConfig:
+      String(cm.data["placeholder-config"] || "").toLowerCase() === "true",
+  };
+}
+
+function transmissionVpnConfigMapLabels() {
+  return {
+    "reconcile.fluxcd.io/watch": "Enabled",
+    "app.kubernetes.io/name": "transmission",
+    "app.kubernetes.io/component": "vpn-state",
+  };
+}
+
+function transmissionVpnValuesForMode(config, mode) {
+  return mode === "vpn" ? config.vpnValues : config.directValues;
+}
+
+async function ensureTransmissionVpnState() {
+  const config = await getTransmissionVpnControlConfig();
+  const path = `/api/v1/namespaces/${config.namespace}/configmaps/${config.runtimeConfigMap}`;
+  let cm = await kubeGetJson(path);
+  if (!cm || !cm.data) {
+    cm = await kubeUpsertConfigMap(
+      config.namespace,
+      config.runtimeConfigMap,
+      {
+        mode: config.defaultMode,
+        "values.yaml": transmissionVpnValuesForMode(config, config.defaultMode),
+        updatedAt: nowIso(),
+        source: "default-seed",
+      },
+      transmissionVpnConfigMapLabels(),
+    );
+  }
+  return { config, cm };
+}
+
+function selectTransmissionPod(pods) {
+  let selected = null;
+  for (const pod of pods || []) {
+    if (String(inferWorkloadId(pod) || "").toLowerCase() !== "transmission") {
+      continue;
+    }
+    if (isBetterPod(pod, selected)) selected = pod;
+  }
+  return selected;
+}
+
+async function getTransmissionVpnStatus() {
+  const { config, cm } = await ensureTransmissionVpnState();
+  const data = (cm && cm.data) || {};
+  const desiredMode =
+    normalizeTransmissionVpnMode(data.mode) || config.defaultMode;
+  const updatedAt = data.updatedAt || null;
+  let effectiveMode = desiredMode;
+  let rolloutPending = false;
+  let podName = null;
+  let podPhase = null;
+
+  try {
+    const pods = await listNamespacePods(config.namespace);
+    const pod = selectTransmissionPod(pods);
+    if (pod) {
+      podName = (pod.metadata && pod.metadata.name) || null;
+      podPhase = (pod.status && pod.status.phase) || null;
+      const containerNames = ((pod.spec && pod.spec.containers) || [])
+        .map((container) => String(container.name || "").toLowerCase());
+      effectiveMode = containerNames.includes("gluetun") ? "vpn" : "direct";
+      rolloutPending = effectiveMode !== desiredMode || podPhase !== "Running";
+    } else {
+      rolloutPending = true;
+      effectiveMode = null;
+    }
+  } catch (err) {
+    rolloutPending = true;
+  }
+
+  return {
+    desiredMode,
+    effectiveMode,
+    enabled: desiredMode === "vpn",
+    defaultMode: config.defaultMode,
+    provider: config.provider,
+    vpnType: config.vpnType,
+    placeholderConfig: config.placeholderConfig,
+    runtimeConfigMap: config.runtimeConfigMap,
+    updatedAt,
+    rolloutPending,
+    podName,
+    podPhase,
+  };
+}
+
+async function setTransmissionVpnMode(mode) {
+  const normalizedMode = normalizeTransmissionVpnMode(mode);
+  if (!normalizedMode) throw new Error("invalid transmission vpn mode");
+
+  const { config } = await ensureTransmissionVpnState();
+  await kubeUpsertConfigMap(
+    config.namespace,
+    config.runtimeConfigMap,
+    {
+      mode: normalizedMode,
+      "values.yaml": transmissionVpnValuesForMode(config, normalizedMode),
+      updatedAt: nowIso(),
+      source: "control-panel",
+    },
+    transmissionVpnConfigMapLabels(),
+  );
+  kubePodsCache.delete(`${config.namespace}|running`);
+  appendAuditEntry({
+    action: "transmission-vpn-set",
+    serviceId: "transmission",
+    mode: normalizedMode,
+  });
+  return getTransmissionVpnStatus();
+}
+
 const services = loadServices();
 const serviceById = new Map(services.map((svc) => [svc.id, svc]));
 const serviceByHost = new Map(
@@ -913,6 +1128,18 @@ const state = loadState(services);
     `state: recovered ${services.length} services, ${activeCount} active, ${expiredCount} expired on startup`,
   );
 })();
+
+if (kubeApiAvailable()) {
+  getTransmissionVpnStatus()
+    .then((status) => {
+      console.log(
+        `transmission-vpn: desired=${status.desiredMode} default=${status.defaultMode}`,
+      );
+    })
+    .catch((err) => {
+      console.error("transmission-vpn: bootstrap failed:", err.message);
+    });
+}
 
 function snapshotServices() {
   return services.map((svc) => {
@@ -1103,6 +1330,42 @@ async function handleApi(req, res, parsedUrl) {
     return sendJson(res, 200, { disabled, services: snapshotServices() });
   }
 
+  if (req.method === "GET" && pathname === "/api/transmission-vpn") {
+    try {
+      const status = await getTransmissionVpnStatus();
+      return sendJson(res, 200, status);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/transmission-vpn") {
+    let body = {};
+    try {
+      body = await parseBody(req);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+
+    const mode =
+      normalizeTransmissionVpnMode(body.mode) ||
+      (typeof body.enabled === "boolean"
+        ? body.enabled
+          ? "vpn"
+          : "direct"
+        : null);
+    if (!mode) {
+      return sendJson(res, 400, { error: "mode must be direct or vpn" });
+    }
+
+    try {
+      const status = await setTransmissionVpnMode(mode);
+      return sendJson(res, 200, status);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
   if (req.method === "GET" && pathname === "/api/audit") {
     const entries = loadAuditEntries(100);
     return sendJson(res, 200, { entries });
@@ -1256,6 +1519,31 @@ function renderControlPanelHtml() {
         font-size: 11px;
         font-family: var(--font-mono);
       }
+      .vpn-card {
+        margin-bottom: 18px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.008));
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+      }
+      .vpn-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+      }
+      .vpn-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-1);
+        margin-bottom: 4px;
+      }
+      .vpn-meta {
+        color: var(--text-3);
+        font-size: 11px;
+        font-family: var(--font-mono);
+      }
 
       /* ── Shared form controls ── */
       button {
@@ -1293,6 +1581,11 @@ function renderControlPanelHtml() {
       button:disabled { opacity: 0.4; cursor: not-allowed; }
       button.danger { color: var(--red); }
       button.danger:hover { color: var(--red); border-color: var(--red); background: rgba(248, 81, 73, 0.08); }
+      button.mode-active {
+        color: var(--text-1);
+        border-color: rgba(121, 184, 255, 0.45);
+        background: rgba(121, 184, 255, 0.12);
+      }
       select {
         padding: 4px 8px;
         font-size: 12px;
@@ -1552,6 +1845,7 @@ function renderControlPanelHtml() {
       @media (max-width: 820px) {
         main { padding: 22px 14px; }
         .controls { flex-wrap: wrap; }
+        .vpn-row,
         .panel-actions,
         .updates-toolbar {
           flex-direction: column;
@@ -1565,7 +1859,7 @@ function renderControlPanelHtml() {
       <div class="header">
         <div>
           <h1>rangoonpulse control panel</h1>
-          <div class="subtitle">exposure controls + image update tracker · ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} · ${DEFAULT_EXPIRY_HOURS}h default · weekly checks</div>
+          <div class="subtitle">transmission vpn + exposure controls + image update tracker · ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} · ${DEFAULT_EXPIRY_HOURS}h default · weekly checks</div>
         </div>
       </div>
 
@@ -1576,12 +1870,26 @@ function renderControlPanelHtml() {
 
       <section id="panelExposure" class="panel">
         <div class="panel-actions">
-          <div class="section-header">Temporary Exposure Control</div>
+          <div class="section-header">Operational Controls</div>
           <div>
             <button id="refreshBtn" type="button">Refresh</button>
             <button id="emergencyBtn" class="danger" type="button">Disable All</button>
           </div>
         </div>
+        <div class="vpn-card">
+          <div class="vpn-row">
+            <div>
+              <div class="vpn-title">Transmission Egress</div>
+              <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
+            </div>
+            <div class="controls">
+              <button id="vpnDirectBtn" type="button">Route Direct</button>
+              <button id="vpnEnableBtn" type="button">Route via VPN</button>
+            </div>
+          </div>
+          <div id="vpnMsg" class="msg"></div>
+        </div>
+        <div class="section-header">Temporary Exposure Control</div>
         <table class="exposure-table">
           <thead>
             <tr>
@@ -1648,15 +1956,20 @@ function renderControlPanelHtml() {
       const rowsEl = document.getElementById("rows");
       const auditRowsEl = document.getElementById("auditRows");
       const updatesRowsEl = document.getElementById("updatesRows");
+      const vpnMetaEl = document.getElementById("vpnMeta");
       const msgEl = document.getElementById("msg");
+      const vpnMsgEl = document.getElementById("vpnMsg");
       const updatesMsgEl = document.getElementById("updatesMsg");
       const updatesMetaEl = document.getElementById("updatesMeta");
       const refreshBtn = document.getElementById("refreshBtn");
       const emergencyBtn = document.getElementById("emergencyBtn");
+      const vpnDirectBtn = document.getElementById("vpnDirectBtn");
+      const vpnEnableBtn = document.getElementById("vpnEnableBtn");
       const updatesRefreshBtn = document.getElementById("updatesRefreshBtn");
       let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
       let updatesLoaded = false;
+      let transmissionVpnState = null;
 
       function setMessage(target, text, isError) {
         target.textContent = text || "";
@@ -1665,6 +1978,10 @@ function renderControlPanelHtml() {
 
       function setMsg(text, isError) {
         setMessage(msgEl, text, isError);
+      }
+
+      function setVpnMsg(text, isError) {
+        setMessage(vpnMsgEl, text, isError);
       }
 
       function setUpdatesMsg(text, isError) {
@@ -1754,6 +2071,42 @@ function renderControlPanelHtml() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "request failed");
         return data;
+      }
+
+      function renderTransmissionVpn(status) {
+        transmissionVpnState = status || null;
+        if (!status) {
+          vpnMetaEl.textContent = "Transmission VPN status unavailable.";
+          vpnDirectBtn.disabled = true;
+          vpnEnableBtn.disabled = true;
+          vpnDirectBtn.classList.remove("mode-active");
+          vpnEnableBtn.classList.remove("mode-active");
+          return;
+        }
+
+        const desiredMode = status.desiredMode || "direct";
+        const effectiveMode = status.effectiveMode || "pending";
+        const meta = [
+          "desired: " + desiredMode,
+          "running: " + effectiveMode,
+          "default: " + (status.defaultMode || "direct"),
+          "provider: " + (status.provider || "custom") + "/" + (status.vpnType || "wireguard"),
+        ];
+        if (status.podName) {
+          meta.push("pod/" + status.podName);
+        }
+        if (status.rolloutPending) {
+          meta.push("rollout pending");
+        }
+        if (status.placeholderConfig) {
+          meta.push("placeholder credentials scaffolded");
+        }
+        vpnMetaEl.textContent = meta.join(" | ");
+
+        vpnDirectBtn.disabled = mutationInFlight > 0 || desiredMode === "direct";
+        vpnEnableBtn.disabled = mutationInFlight > 0 || desiredMode === "vpn";
+        vpnDirectBtn.classList.toggle("mode-active", desiredMode === "direct");
+        vpnEnableBtn.classList.toggle("mode-active", desiredMode === "vpn");
       }
 
       function renderRows(services) {
@@ -1928,6 +2281,7 @@ function renderControlPanelHtml() {
           else if (e.action === "disable") actionTd.className = "action-disable";
           else if (e.action === "emergency-disable-all") actionTd.className = "action-emergency";
           else if (e.action === "auto-expire") actionTd.className = "action-expire";
+          else if (e.action === "transmission-vpn-set") actionTd.className = "action-enable";
           const svcTd = document.createElement("td");
           svcTd.className = "audit-svc";
           svcTd.textContent = e.serviceId || "";
@@ -1936,6 +2290,7 @@ function renderControlPanelHtml() {
           const parts = [];
           if (e.hours) parts.push(e.hours + "h");
           if (e.authMode) parts.push(e.authMode);
+          if (e.mode) parts.push("mode: " + e.mode);
           if (e.disabled != null) parts.push("disabled: " + e.disabled);
           detailsTd.textContent = parts.join(" \\u00B7 ");
           tr.append(timeTd, actionTd, svcTd, detailsTd);
@@ -2015,16 +2370,46 @@ function renderControlPanelHtml() {
           "Checked: " + checkedText + " | Next check: " + nextText + " | Source: " + source + staleText + refreshingText;
       }
 
+      async function loadTransmissionVpn(options) {
+        const silent = Boolean(options && options.silent);
+        if (!silent) setVpnMsg("Refreshing Transmission VPN status...");
+        try {
+          const payload = await request("/api/transmission-vpn", "GET");
+          renderTransmissionVpn(payload);
+          if (!silent) {
+            const verb = payload && payload.desiredMode === "vpn" ? "VPN" : "direct";
+            setVpnMsg("Transmission desired route: " + verb);
+          }
+        } catch (err) {
+          renderTransmissionVpn(null);
+          setVpnMsg(err.message, true);
+        }
+      }
+
       async function loadExposure(options) {
         const silent = Boolean(options && options.silent);
         if (!silent) setMsg("Refreshing...");
         try {
-          const [svcData, auditData] = await Promise.all([
+          const [svcData, auditData, vpnData] = await Promise.allSettled([
             request("/api/services", "GET"),
             request("/api/audit", "GET"),
+            request("/api/transmission-vpn", "GET"),
           ]);
-          renderRows(svcData.services || []);
-          renderAudit(auditData.entries || []);
+
+          if (svcData.status !== "fulfilled" || auditData.status !== "fulfilled") {
+            const failure = svcData.status !== "fulfilled" ? svcData.reason : auditData.reason;
+            throw failure;
+          }
+
+          renderRows(svcData.value.services || []);
+          renderAudit(auditData.value.entries || []);
+          if (vpnData.status === "fulfilled") {
+            renderTransmissionVpn(vpnData.value);
+            if (!silent) setVpnMsg("");
+          } else {
+            renderTransmissionVpn(null);
+            setVpnMsg(vpnData.reason.message, true);
+          }
           if (!silent) setMsg("Updated " + new Date().toLocaleTimeString());
         } catch (err) {
           setMsg(err.message, true);
@@ -2071,6 +2456,43 @@ function renderControlPanelHtml() {
           mutationInFlight = Math.max(0, mutationInFlight - 1);
           emergencyBtn.disabled = false;
         }
+      };
+
+      async function setTransmissionVpnMode(mode) {
+        const nextMode = mode === "vpn" ? "vpn" : "direct";
+        const prompt = nextMode === "vpn"
+          ? "Route Transmission through the VPN sidecar?"
+          : "Route Transmission directly through the normal network path?";
+        if (!confirm(prompt)) return;
+        try {
+          mutationInFlight += 1;
+          vpnDirectBtn.disabled = true;
+          vpnEnableBtn.disabled = true;
+          setVpnMsg("Applying " + nextMode + " mode...");
+          const payload = await request("/api/transmission-vpn", "POST", {
+            mode: nextMode,
+          });
+          renderTransmissionVpn(payload);
+          setVpnMsg(
+            "Transmission desired route set to " +
+              nextMode +
+              ". Flux will roll the pod if needed.",
+          );
+          await loadExposure({ silent: true });
+        } catch (err) {
+          setVpnMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          if (transmissionVpnState) renderTransmissionVpn(transmissionVpnState);
+        }
+      }
+
+      vpnDirectBtn.onclick = function() {
+        setTransmissionVpnMode("direct");
+      };
+
+      vpnEnableBtn.onclick = function() {
+        setTransmissionVpnMode("vpn");
       };
 
       updatesRefreshBtn.onclick = function() {

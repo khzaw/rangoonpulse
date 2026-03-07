@@ -73,6 +73,13 @@ Notes:
   - default temporary exposure expiry: `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
   - UI auth default: `none`; backend/API default auth mode: `cloudflare-access` (configurable per enable action)
   - rate limiting, Prometheus metrics at `/metrics`, emergency disable-all
+- Transmission optional VPN toggle:
+  - control/API host: `controlpanel.khzaw.dev`
+  - GitOps control config: `apps/transmission/transmission-vpn-control.yaml`
+  - runtime state: `ConfigMap/default/transmission-vpn-state` (runtime-owned; do not reconcile with Flux)
+  - credentials: `infrastructure/secrets/default/transmission-vpn-secret.yaml`
+  - current scaffold: `gluetun` + custom WireGuard placeholder values
+  - default seed mode is `direct`; switch via control panel or `POST /api/transmission-vpn`
 - Permanent public: `blog.khzaw.dev` routes directly through Cloudflare Tunnel to `blog.default.svc.cluster.local:8080` (bypasses exposure-control)
   - DNS ownership for `blog.khzaw.dev` is `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`).
   - Do not add `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev` on the blog Ingress, or it will publish a private `A` record (`10.0.0.231`).
@@ -379,3 +386,4 @@ Examples:
 - `docs/power-estimation-dashboard.md`
 - `docs/exposure-control-phase2-phase3-mvp.md`
 - `docs/cloudflare-access-share-hosts-email-otp-plan.md`
+- `docs/transmission-optional-vpn.md`

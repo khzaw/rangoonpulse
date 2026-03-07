@@ -81,6 +81,12 @@ Notes:
   - `tailscale/operator-oauth`
     - keys: `client_id`, `client_secret`
 
+### Downloaders / VPN
+- **transmission optional VPN sidecar** (`apps/transmission/helmrelease.yaml`)
+  - `default/transmission-vpn-secret`
+    - keys: `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_PRESHARED_KEY`
+    - consumed by `gluetun` via `envFrom.secretRef`
+
 ## Not Managed By GitOps (But Present In Cluster)
 These exist in-cluster but are not currently referenced by this repo's GitOps manifests (or are chart-owned/generated state):
 - cert-manager account keys (e.g. `cert-manager/letsencrypt-prod-account-key`)

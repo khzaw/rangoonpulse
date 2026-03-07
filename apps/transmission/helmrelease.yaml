@@ -15,6 +15,11 @@ spec:
         kind: HelmRepository
         name: bjw-s-charts
         namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: transmission-vpn-state
+      valuesKey: values.yaml
+      optional: true
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
@@ -25,6 +30,7 @@ spec:
 
     controllers:
       main:
+        strategy: Recreate
         containers:
           main:
             image:
@@ -41,6 +47,36 @@ spec:
               limits:
                 cpu: "1000m"
                 memory: "2Gi"
+          gluetun:
+            enabled: false
+            image:
+              repository: qmcgaw/gluetun
+              tag: v3.40.0
+            env:
+              TZ: "Asia/Singapore"
+              VPN_SERVICE_PROVIDER: custom
+              VPN_TYPE: wireguard
+              FIREWALL_INPUT_PORTS: "9091,51413"
+              FIREWALL_OUTBOUND_SUBNETS: "10.96.0.0/12,10.244.0.0/16,10.0.0.0/24"
+              WIREGUARD_ENDPOINT_IP: "198.51.100.10"
+              WIREGUARD_ENDPOINT_PORT: "51820"
+              WIREGUARD_PUBLIC_KEY: "REPLACE_ME_WITH_PROVIDER_PUBLIC_KEY"
+              WIREGUARD_ADDRESSES: "10.64.0.2/32"
+            envFrom:
+              - secretRef:
+                  name: transmission-vpn-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                add:
+                  - NET_ADMIN
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "64Mi"
+              limits:
+                cpu: "300m"
+                memory: "256Mi"
 
     service:
       main:
@@ -98,3 +134,12 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         existingClaim: downloads
+      tun:
+        enabled: true
+        type: hostPath
+        hostPath: /dev/net/tun
+        hostPathType: CharDevice
+        advancedMounts:
+          main:
+            gluetun:
+              - path: /dev/net/tun
