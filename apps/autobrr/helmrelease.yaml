@@ -37,7 +37,7 @@ spec:
           main:
             image:
               repository: ghcr.io/autobrr/autobrr
-              tag: latest
+              tag: v1.73.0
             env:
               TZ: "Asia/Singapore"
             resources:

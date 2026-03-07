@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: flaresolverr/flaresolverr
-              tag: latest
+              tag: v3.4.6
             env:
               TZ: "Asia/Singapore"
               LOG_LEVEL: "debug"

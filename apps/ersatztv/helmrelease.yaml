@@ -31,7 +31,7 @@ spec:
           main:
             image:
               repository: ghcr.io/ersatztv/ersatztv
-              tag: latest
+              tag: v26.3.0
             env:
               TZ: "Asia/Singapore"
             resources:
