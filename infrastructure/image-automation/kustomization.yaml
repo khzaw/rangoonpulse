@@ -6,4 +6,6 @@ resources:
   - blog-image-policy.yaml
   - mmcal-image-repository.yaml
   - mmcal-image-policy.yaml
+  - rangoon-mapper-image-repository.yaml
+  - rangoon-mapper-image-policy.yaml
   - image-update-automation.yaml

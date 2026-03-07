@@ -1,0 +1,78 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: rangoon-mapper
+  namespace: default
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    controllers:
+      main:
+        strategy: Recreate
+        replicas: 1
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: talos-7nf-osf
+        containers:
+          main:
+            image:
+              repository: ghcr.io/projectrangoon/rangoon-mapper
+              tag: latest # {"$imagepolicy": "flux-system:rangoon-mapper:tag"}
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 30
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: "10m"
+                memory: "24Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"
+    service:
+      main:
+        ports:
+          http:
+            port: 8080
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: rangoonmapper.khzaw.dev
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        annotations:
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls:
+          - secretName: rangoon-mapper-tls
+            hosts:
+              - rangoonmapper.khzaw.dev
