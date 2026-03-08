@@ -36,7 +36,16 @@ spec:
             args:
               - |
                 set -eu
-                CFG=/opt/adguardhome/conf/AdGuardHome.yaml
+                DATA=/adguard-data
+                CFG="$DATA/conf/AdGuardHome.yaml"
+                WORK="$DATA/work"
+
+                if ! grep -q " $DATA " /proc/self/mountinfo; then
+                  echo "expected $DATA to be a mounted PVC; refusing to start on container overlay" >&2
+                  exit 1
+                fi
+
+                mkdir -p "$DATA/conf" "$WORK/data"
 
                 # Keep key DNS performance settings in GitOps so runtime changes do not drift.
                 if [ -f "$CFG" ]; then
@@ -96,7 +105,7 @@ spec:
                 exec /opt/adguardhome/AdGuardHome \
                   --no-check-update \
                   -c "$CFG" \
-                  -w /opt/adguardhome/work
+                  -w "$WORK"
             env:
               TZ: "Asia/Singapore"
             resources:
@@ -156,10 +165,5 @@ spec:
         storageClass: local-path
         accessMode: ReadWriteOnce
         size: 2Gi
-        advancedMounts:
-          main:
-            main:
-              - path: /opt/adguardhome/work
-                subPath: work
-              - path: /opt/adguardhome/conf
-                subPath: conf
+        globalMounts:
+          - path: /adguard-data

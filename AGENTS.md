@@ -143,6 +143,8 @@ Important external-dns behavior:
 - Do not use Kubernetes `ClusterIP` addresses in LAN DNS settings.
 - AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
 - Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.
+- Mount the AdGuard PVC at a neutral path (current: `/adguard-data`), not split `conf/` and `work/` behind `subPath` mounts.
+  If the PVC is not a real mount, startup should fail fast rather than silently writing state into container overlay storage.
 - Runtime DNS tuning is enforced at container startup in `apps/adguard/helmrelease.yaml` (including `upstream_mode: fastest_addr`)
   to avoid drift after UI/wizard changes.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`

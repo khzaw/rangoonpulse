@@ -70,7 +70,7 @@ Expected GitOps state:
 - `apps/adguard/helmrelease.yaml` -> `service.main.ports.http.port: 80`
 
 ### 2) Runtime Config Drift vs GitOps
-AdGuard writes runtime config into `/opt/adguardhome/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
+AdGuard writes runtime config into `/adguard-data/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
 drift away from intended GitOps behavior.
 
 To keep behavior stable, startup now enforces DNS keys in
@@ -85,13 +85,26 @@ To keep behavior stable, startup now enforces DNS keys in
 - `http.address: 0.0.0.0:80`
 - `dhcp.enabled: false` (router remains DHCP authority)
 
-### 3) Router DNS Rebind Protection
+### 3) Do Not Store AdGuard State Behind `subPath` Mounts
+AdGuard writes both runtime config and state into its data directory. In this cluster, mounting the PVC once at a neutral path
+(`/adguard-data`) is safer than splitting `conf/` and `work/` behind separate `subPath` mounts.
+
+Why this matters:
+- a bad `subPath` mount can let AdGuard silently write into container overlay storage instead of the PVC,
+- the app can appear healthy until the pod is recreated,
+- after a reboot/reschedule, AdGuard comes back as a first-run install on `:3000`, and ingress still returns `502`.
+
+Expected GitOps state:
+- `apps/adguard/helmrelease.yaml` mounts the PVC at `/adguard-data`
+- container startup refuses to continue unless `/adguard-data` is an actual mounted volume
+
+### 4) Router DNS Rebind Protection
 If DNS answers point public hostnames to private IPs (for example `10.0.0.231`), some routers block replies.
 
 See:
 - `docs/router-dns-rebind-private-a-records.md`
 
-### 4) Seeing Real Client IPs In AdGuard Query Log
+### 5) Seeing Real Client IPs In AdGuard Query Log
 If AdGuard query logs show only a Kubernetes node IP, source NAT is happening before traffic reaches the pod.
 
 Expected GitOps state:
