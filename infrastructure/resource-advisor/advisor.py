@@ -14,6 +14,7 @@ from pathlib import Path
 
 APP_TEMPLATE_RELEASE_FILE_MAP = {
     "adguard": "apps/adguard/helmrelease.yaml",
+    "adguard-secondary": "apps/adguard/helmrelease-secondary.yaml",
     "anki-server": "apps/anki-server/helmrelease.yaml",
     "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",
     "autobrr": "apps/autobrr/helmrelease.yaml",

@@ -46,8 +46,11 @@ kubectl logs -n <ns> deploy/<name> --tail=120
 # Public DNS answer
 dig @1.1.1.1 +short <host>.khzaw.dev
 
-# Local resolver answer (for split/rebind checks)
+# Local resolver answer via AdGuard Pi (for split/rebind checks)
 dig @10.0.0.233 +short <host>.khzaw.dev
+
+# Local resolver answer via AdGuard secondary
+dig @10.0.0.234 +short <host>.khzaw.dev
 
 # HTTPS response headers
 curl -I --max-time 20 https://<host>.khzaw.dev

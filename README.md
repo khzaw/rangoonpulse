@@ -99,7 +99,7 @@ Current cluster status: both nodes are functional and schedulable.
 
 | Service | Description |
 |---------|-------------|
-| 🛡️ **AdGuard Home** | DNS filtering & ad blocking |
+| 🛡️ **AdGuard Home** | Dual LAN DNS filtering & ad blocking |
 | 🧭 **Glance** | Dashboard & service hub |
 | ⏱️ **Uptime Kuma** | Uptime monitoring |
 | 📈 **Grafana** | Metrics & dashboards |
@@ -297,7 +297,7 @@ make deploy-mmcal
 | Doc | Description |
 |-----|-------------|
 | [`ops-command-cheatsheet.md`](docs/ops-command-cheatsheet.md) | Full command reference |
-| [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | DNS architecture |
+| [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
 | [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource tuning automation |
 | [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |
 | [`secrets-inventory.md`](docs/secrets-inventory.md) | Secrets reference |

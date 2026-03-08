@@ -234,6 +234,9 @@ spec:
                               - title: AdGuard
                                 url: https://adguard.khzaw.dev
                                 icon: di:adguard-home
+                              - title: AdGuard 2
+                                url: https://adguard2.khzaw.dev
+                                icon: di:adguard-home
                           - title: Arr Stack
                             links:
                               - title: Sonarr
@@ -336,6 +339,14 @@ spec:
                             url: https://controlpanel.khzaw.dev
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
                             icon: mdi:cloud-lock-outline
+                          - title: AdGuard
+                            url: https://adguard.khzaw.dev
+                            check-url: http://adguard-main.default.svc.cluster.local/login.html
+                            icon: di:adguard-home
+                          - title: AdGuard 2
+                            url: https://adguard2.khzaw.dev
+                            check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
+                            icon: di:adguard-home
                           - title: Resource Advisor
                             url: https://tuning.khzaw.dev
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
@@ -734,6 +745,14 @@ spec:
                             url: https://controlpanel.khzaw.dev
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
                             icon: mdi:cloud-lock-outline
+                          - title: AdGuard
+                            url: https://adguard.khzaw.dev
+                            check-url: http://adguard-main.default.svc.cluster.local/login.html
+                            icon: di:adguard-home
+                          - title: AdGuard 2
+                            url: https://adguard2.khzaw.dev
+                            check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
+                            icon: di:adguard-home
                           - title: Resource Advisor
                             url: https://tuning.khzaw.dev
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz

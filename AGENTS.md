@@ -12,7 +12,8 @@ continue work without re-discovery.
 - Primary ingress: ingress-nginx with MetalLB
 - DNS/TLS: Cloudflare + external-dns + cert-manager (Let's Encrypt)
 - DNS automation model: external-dns (Cloudflare); tofu/terraform controller path is not active
-- LAN recursive DNS/filtering: AdGuard Home (`Service/adguard-dns`, `10.0.0.233:53`)
+- LAN recursive DNS/filtering: AdGuard Home (`Service/adguard-dns`, `10.0.0.233:53`) with secondary resolver
+  (`Service/adguard-secondary-dns`, `10.0.0.234:53`)
 - Remote access: Tailscale operator + subnet router (`Connector`)
 - Storage mix: `local-path`, TrueNAS NFS classes (`truenas-*`), democratic-csi present
 - Operational metrics: `metrics-server` in `kube-system` (`kubectl top`, HPA inputs)
@@ -41,6 +42,17 @@ continue work without re-discovery.
   `AGENTS.md` ("Useful Reference Docs").
 - Keep docs actionable: file paths, k8s object names, and concrete commands beat long narratives.
 - Don’t churn docs for small tweaks; update docs only when it improves future ops/debugging.
+
+## Service Change Touch Points
+- When adding, moving, renaming, or materially changing a service, update all relevant operators surfaces in the same
+  change:
+  - Glance links/monitors in `apps/glance/helmrelease.yaml`
+  - control panel catalog in `apps/exposure-control/services.json` if the service should be share-managed
+  - resource advisor mapping/allowlist in `infrastructure/resource-advisor/advisor.py`,
+    `infrastructure/resource-advisor/cronjob-apply-pr.yaml`, and related docs if the service is auto-tuned
+  - ingress/DNS/TLS exposure annotations if external access changes
+  - `AGENTS.md`, `README.md`, and the most relevant `docs/*.md` references
+- Do not leave stale paths or service names behind after refactors.
 
 ## Current Access Model (Important)
 The cluster uses a simplified unified path:
@@ -136,7 +148,7 @@ Important external-dns behavior:
 
 ## LAN DNS (AdGuard)
 - Primary deployment: `apps/adguard/helmrelease.yaml`
-- Secondary deployment: `apps/adguard-secondary/helmrelease.yaml`
+- Secondary deployment: `apps/adguard/helmrelease-secondary.yaml`
 - DNS endpoints for router/clients:
   - `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`) on the Raspberry Pi node
   - `Service/adguard-secondary-dns` (`LoadBalancer` `10.0.0.234`, TCP/UDP `53`) on the primary node
@@ -309,7 +321,7 @@ Important external-dns behavior:
   - include decision rationale, constraints, and skipped reasons in PR description
   - apply planner uses live pod request footprint + current pod placement for node-fit simulation; see `docs/resource-advisor-phase1-phase2.md`
   - current auto-apply scope includes:
-    - `adguard`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
+    - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
       `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
       `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,

@@ -19,7 +19,8 @@ This repository now uses a unified destination model:
   - Additional scoped listener: `Service/ingress-nginx-calibre-controller` exposes `9090` on the same VIP (`10.0.0.231`) using MetalLB shared-IP, for `calibre-manage` content path only
 - DNS:
   - Cloudflare records for app hostnames resolve to `10.0.0.231` (managed by external-dns)
-  - LAN clients use AdGuard (`Service/adguard-dns`) at `10.0.0.233` for recursive resolution/filtering
+  - LAN clients use AdGuard (`Service/adguard-dns`) at `10.0.0.233` with `Service/adguard-secondary-dns` at `10.0.0.234`
+    for recursive resolution/filtering redundancy
   - LAN devices use the same destination IPs
 - Tailscale:
   - Tailscale operator is deployed in the cluster
@@ -47,8 +48,8 @@ This repository now uses a unified destination model:
 3. Cloudflare DNS + external-dns
 - Keeps public DNS records aligned with ingress state, pointing app hostnames to `10.0.0.231`.
 
-4. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`)
-- Primary LAN recursive resolver/filter for client DNS queries.
+4. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`; `Service/adguard-secondary-dns`, `10.0.0.234`)
+- Primary + secondary LAN recursive resolvers/filters for client DNS queries.
 - Forwards upstream while preserving the same app destination IP model.
 
 5. Tailscale subnet router (`Connector`)

@@ -21,7 +21,7 @@ This document explains:
   - Web UI ingress:
     - hostname: `adguard.khzaw.dev`
     - ingress VIP: `10.0.0.231`
-- Secondary HelmRelease: `apps/adguard-secondary/helmrelease.yaml`
+- Secondary HelmRelease: `apps/adguard/helmrelease-secondary.yaml`
   - node: `talos-7nf-osf`
   - DNS Service: `Service/adguard-secondary-dns`
     - type: `LoadBalancer`
@@ -59,7 +59,7 @@ What stays the same:
 - cert-manager + ingress-nginx TLS flow is unchanged.
 
 What changes:
-- LAN clients query AdGuard (`10.0.0.233`) first.
+- LAN clients query the AdGuard pair (`10.0.0.233`, `10.0.0.234`) from router DHCP/DNS settings.
 - AdGuard applies filtering/policies and forwards to upstream resolvers.
 
 ```mermaid
