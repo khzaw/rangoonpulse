@@ -65,7 +65,6 @@ resources:
   - ./kustomizations/seerr.yaml
   - ./kustomizations/immich.yaml
   - ./kustomizations/adguard.yaml
-  - ./kustomizations/adguard-secondary.yaml
   - ./kustomizations/glance.yaml
   - ./kustomizations/tracerr.yaml
   - ./kustomizations/lan-access.yaml
