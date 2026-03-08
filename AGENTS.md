@@ -163,8 +163,9 @@ Important external-dns behavior:
   If the PVC is not a real mount, startup should fail fast rather than silently writing state into container overlay storage.
 - Do not make two live AdGuard instances share one writable data directory. Keep PVCs separate; seed secondary config from primary
   if you need matching behavior, or move the desired settings into GitOps.
-- Runtime DNS tuning is enforced at container startup in `apps/adguard/helmrelease.yaml` (including `upstream_mode: fastest_addr`)
-  to avoid drift after UI/wizard changes.
+- Runtime DNS tuning is enforced at container startup in both `apps/adguard/helmrelease.yaml` and
+  `apps/adguard/helmrelease-secondary.yaml` (including `upstream_mode: fastest_addr`) to avoid drift after UI/wizard
+  changes.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`
 
 ## Cluster DNS Reliability (Flux Path)

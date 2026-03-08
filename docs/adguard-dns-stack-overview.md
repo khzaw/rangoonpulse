@@ -91,7 +91,7 @@ AdGuard writes runtime config into `/adguard-data/conf/AdGuardHome.yaml` on the 
 drift away from intended GitOps behavior.
 
 To keep behavior stable, startup now enforces DNS keys in
-`apps/adguard/helmrelease.yaml` before launching AdGuard:
+`apps/adguard/helmrelease.yaml` and `apps/adguard/helmrelease-secondary.yaml` before launching AdGuard:
 - `dns.upstream_mode: fastest_addr`
 - `dns.fastest_timeout: 1s`
 - `dns.cache_size: 16777216`
@@ -112,7 +112,7 @@ Why this matters:
 - after a reboot/reschedule, AdGuard comes back as a first-run install on `:3000`, and ingress still returns `502`.
 
 Expected GitOps state:
-- `apps/adguard/helmrelease.yaml` mounts the PVC at `/adguard-data`
+- both AdGuard HelmReleases mount their PVC at `/adguard-data`
 - container startup refuses to continue unless `/adguard-data` is an actual mounted volume
 
 ### 4) Do Not Make Two Active AdGuard Pods Share One Writable State Directory
@@ -138,7 +138,7 @@ See:
 If AdGuard query logs show only a Kubernetes node IP, source NAT is happening before traffic reaches the pod.
 
 Expected GitOps state:
-- `apps/adguard/helmrelease.yaml` -> `service.dns.externalTrafficPolicy: Local`
+- `apps/adguard/helmrelease.yaml` and `apps/adguard/helmrelease-secondary.yaml` -> `service.dns.externalTrafficPolicy: Local`
 
 Important:
 - If all queries still appear as one IP after this change, that IP is usually the router (DNS proxy/relay mode).
