@@ -6,33 +6,46 @@ This document explains:
 - what DNS IP to configure on the router, and
 - how AdGuard changes the overall DNS stack without changing GitOps DNS ownership.
 
-## Current Deployment (As Of 2026-02-19)
-- HelmRelease: `apps/adguard/helmrelease.yaml`
+## Current Deployment (As Of 2026-03-08)
 - Namespace: `default`
-- DNS Service: `Service/adguard-dns`
-  - type: `LoadBalancer`
-  - IP: `10.0.0.233`
-  - `externalTrafficPolicy: Local` (preserve source IPs for AdGuard query logs)
-  - ports: TCP/UDP `53`
-- Web UI Service: `Service/adguard-main`
-  - type: `ClusterIP`
-  - web port: `80`
-- Web UI ingress:
-  - hostname: `adguard.khzaw.dev`
-  - ingress VIP: `10.0.0.231`
+- Primary HelmRelease: `apps/adguard/helmrelease.yaml`
+  - node: `talos-uua-g6r`
+  - DNS Service: `Service/adguard-dns`
+    - type: `LoadBalancer`
+    - IP: `10.0.0.233`
+    - `externalTrafficPolicy: Local` (preserve source IPs for AdGuard query logs)
+    - ports: TCP/UDP `53`
+  - Web UI Service: `Service/adguard-main`
+    - type: `ClusterIP`
+    - web port: `80`
+  - Web UI ingress:
+    - hostname: `adguard.khzaw.dev`
+    - ingress VIP: `10.0.0.231`
+- Secondary HelmRelease: `apps/adguard-secondary/helmrelease.yaml`
+  - node: `talos-7nf-osf`
+  - DNS Service: `Service/adguard-secondary-dns`
+    - type: `LoadBalancer`
+    - IP: `10.0.0.234`
+    - `externalTrafficPolicy: Local`
+    - ports: TCP/UDP `53`
+  - Web UI Service: `Service/adguard-secondary-main`
+    - type: `ClusterIP`
+    - web port: `80`
+  - Web UI ingress:
+    - hostname: `adguard2.khzaw.dev`
+    - ingress VIP: `10.0.0.231`
 
 ## Router Configuration (What To Enter)
 Use this LAN DNS server in router DHCP/DNS settings:
-- `10.0.0.233`
+- Primary DNS: `10.0.0.233`
+- Secondary DNS: `10.0.0.234`
 
 Do not use:
 - Kubernetes `ClusterIP` addresses (for example `10.109.x.x`), since they are cluster-internal only.
 
 Recommended DNS policy:
 - Primary DNS: `10.0.0.233`
-- Secondary DNS:
-  - leave empty, or
-  - set to another AdGuard instance (if you have one)
+- Secondary DNS: `10.0.0.234`
 
 Avoid using public DNS as secondary (for example `1.1.1.1`, `8.8.8.8`) if you want consistent filtering, because many
 clients will bypass AdGuard when a secondary resolver is present.
@@ -51,11 +64,15 @@ What changes:
 
 ```mermaid
 flowchart LR
-  C["LAN Client"] --> A["AdGuard DNS (10.0.0.233:53)"]
+  C["LAN Client"] --> A["AdGuard DNS A (10.0.0.233:53)"]
+  C --> B["AdGuard DNS B (10.0.0.234:53)"]
   A --> U["Upstream Recursive DNS"]
+  B --> U
   U --> F["Cloudflare Authoritative DNS"]
   F --> A
+  F --> B
   A --> C
+  B --> C
   C --> I["ingress-nginx (10.0.0.231)"]
 ```
 
@@ -98,13 +115,26 @@ Expected GitOps state:
 - `apps/adguard/helmrelease.yaml` mounts the PVC at `/adguard-data`
 - container startup refuses to continue unless `/adguard-data` is an actual mounted volume
 
-### 4) Router DNS Rebind Protection
+### 4) Do Not Make Two Active AdGuard Pods Share One Writable State Directory
+Two active AdGuard instances should not share the same writable PVC for `conf/` and `work/`.
+
+Why this matters:
+- AdGuard stores runtime config, sessions, logs, and statistics in its data directory.
+- Running two pods against one writable state tree risks conflicting writes and corrupt state.
+- HA DNS should use separate PVCs per instance.
+
+Safe pattern in this cluster:
+- one PVC per AdGuard instance,
+- same GitOps-enforced baseline runtime tuning on both instances,
+- if you want matching behavior, copy `AdGuardHome.yaml` from the primary instance to the secondary instance as a one-way sync.
+
+### 5) Router DNS Rebind Protection
 If DNS answers point public hostnames to private IPs (for example `10.0.0.231`), some routers block replies.
 
 See:
 - `docs/router-dns-rebind-private-a-records.md`
 
-### 5) Seeing Real Client IPs In AdGuard Query Log
+### 6) Seeing Real Client IPs In AdGuard Query Log
 If AdGuard query logs show only a Kubernetes node IP, source NAT is happening before traffic reaches the pod.
 
 Expected GitOps state:
@@ -118,17 +148,25 @@ Important:
 ```bash
 # Check AdGuard DNS service exposure
 kubectl get svc -n default adguard-dns -o wide
+kubectl get svc -n default adguard-secondary-dns -o wide
 kubectl get svc -n default adguard-dns -o jsonpath='{.spec.externalTrafficPolicy}{"\n"}'
+kubectl get svc -n default adguard-secondary-dns -o jsonpath='{.spec.externalTrafficPolicy}{"\n"}'
 
 # Check web service and ingress backend port
 kubectl get svc -n default adguard-main -o wide
+kubectl get svc -n default adguard-secondary-main -o wide
 kubectl describe ingress -n default adguard
+kubectl describe ingress -n default adguard-secondary
 
 # DNS resolution through AdGuard
 dig @10.0.0.233 hq.khzaw.dev +short
+dig @10.0.0.234 hq.khzaw.dev +short
 dig @10.0.0.233 google.com +short
+dig @10.0.0.234 google.com +short
 
 # App health
 flux get hr -n default adguard
+flux get hr -n default adguard-secondary
 kubectl logs -n default deploy/adguard --tail=100
+kubectl logs -n default deploy/adguard-secondary --tail=100
 ```

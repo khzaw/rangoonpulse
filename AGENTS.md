@@ -135,16 +135,22 @@ Important external-dns behavior:
   Services (example: `infrastructure/monitoring/monitoring-cname.yaml`).
 
 ## LAN DNS (AdGuard)
-- Deployment: `apps/adguard/helmrelease.yaml`
-- DNS endpoint for router/clients: `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`)
-- `Service/adguard-dns` uses `externalTrafficPolicy: Local` to preserve client source IP in AdGuard query logs.
+- Primary deployment: `apps/adguard/helmrelease.yaml`
+- Secondary deployment: `apps/adguard-secondary/helmrelease.yaml`
+- DNS endpoints for router/clients:
+  - `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`) on the Raspberry Pi node
+  - `Service/adguard-secondary-dns` (`LoadBalancer` `10.0.0.234`, TCP/UDP `53`) on the primary node
+- Both DNS Services use `externalTrafficPolicy: Local` to preserve client source IP in AdGuard query logs.
 - Router DHCP is the active DHCP authority in the current model.
 - AdGuard built-in DHCP is kept disabled (enforced at startup) in this Kubernetes deployment model.
 - Do not use Kubernetes `ClusterIP` addresses in LAN DNS settings.
 - AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
+- Secondary AdGuard web UI is exposed at `https://adguard2.khzaw.dev` through ingress (`Service/adguard-secondary-main`).
 - Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.
 - Mount the AdGuard PVC at a neutral path (current: `/adguard-data`), not split `conf/` and `work/` behind `subPath` mounts.
   If the PVC is not a real mount, startup should fail fast rather than silently writing state into container overlay storage.
+- Do not make two live AdGuard instances share one writable data directory. Keep PVCs separate; seed secondary config from primary
+  if you need matching behavior, or move the desired settings into GitOps.
 - Runtime DNS tuning is enforced at container startup in `apps/adguard/helmrelease.yaml` (including `upstream_mode: fastest_addr`)
   to avoid drift after UI/wizard changes.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`

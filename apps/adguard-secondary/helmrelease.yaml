@@ -3,7 +3,7 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: adguard
+  name: adguard-secondary
   namespace: default
 spec:
   interval: 15m
@@ -24,7 +24,7 @@ spec:
         strategy: Recreate
         pod:
           nodeSelector:
-            kubernetes.io/hostname: talos-uua-g6r
+            kubernetes.io/hostname: talos-7nf-osf
         containers:
           main:
             image:
@@ -127,7 +127,7 @@ spec:
       dns:
         controller: main
         type: LoadBalancer
-        loadBalancerIP: 10.0.0.233
+        loadBalancerIP: 10.0.0.234
         externalTrafficPolicy: Local
         ports:
           dns-tcp:
@@ -142,11 +142,11 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: adguard.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: adguard2.khzaw.dev
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: adguard.khzaw.dev
+          - host: adguard2.khzaw.dev
             paths:
               - path: /
                 pathType: Prefix
@@ -154,9 +154,9 @@ spec:
                   identifier: main
                   port: http
         tls:
-          - secretName: adguard-tls
+          - secretName: adguard2-tls
             hosts:
-              - adguard.khzaw.dev
+              - adguard2.khzaw.dev
 
     persistence:
       data:
