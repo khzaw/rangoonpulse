@@ -85,6 +85,8 @@ Notes:
   - default temporary exposure expiry: `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
   - UI auth default: `none`; backend/API default auth mode: `cloudflare-access` (configurable per enable action)
   - rate limiting, Prometheus metrics at `/metrics`, emergency disable-all
+  - image update tracker exclusions are configured by `IMAGE_UPDATE_EXCLUDED_WORKLOADS` in
+    `apps/exposure-control/helmrelease.yaml` (current exclusions: `blog`, `mmcal`, `rangoon-mapper`)
 - Transmission optional VPN toggle:
   - control/API host: `controlpanel.khzaw.dev`
   - GitOps control config: `apps/transmission/transmission-vpn-control.yaml`

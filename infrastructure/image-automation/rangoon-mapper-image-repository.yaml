@@ -1,0 +1,11 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: rangoon-mapper
+  namespace: flux-system
+spec:
+  image: ghcr.io/projectrangoon/rangoon-mapper
+  interval: 6h
+  secretRef:
+    name: ghcr-pull-secret

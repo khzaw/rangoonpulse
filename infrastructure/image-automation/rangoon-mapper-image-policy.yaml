@@ -1,0 +1,15 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: rangoon-mapper
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: rangoon-mapper
+  filterTags:
+    pattern: '^(?P<ts>\\d+)-[a-f0-9]{40}$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
