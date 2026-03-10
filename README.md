@@ -303,6 +303,7 @@ make deploy-mmcal
 | [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
 | [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource tuning automation |
 | [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |
+| [`pangolin-fit-analysis.md`](docs/pangolin-fit-analysis.md) | Where Pangolin could fit in the current access model |
 | [`secrets-inventory.md`](docs/secrets-inventory.md) | Secrets reference |
 | [`backup-plan.md`](docs/backup-plan.md) | Backup strategy |
 

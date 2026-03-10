@@ -387,6 +387,7 @@ Examples:
 ## Useful Reference Docs
 - `docs/resource-advisor-phase1-phase2.md`
 - `docs/networking-current-state-and-simplification.md`
+- `docs/pangolin-fit-analysis.md`
 - `docs/networking-simplified-migration-todo.md`
 - `docs/lan-access-current-state-and-lean-plan.md`
 - `docs/secrets-management-current-state-options-and-plan.md`
