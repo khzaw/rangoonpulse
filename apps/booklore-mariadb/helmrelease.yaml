@@ -33,7 +33,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/mariadb
-              tag: "11.4.8"
+              tag: "11.4.9-r0-ls208"
             env:
               TZ: "Asia/Singapore"
               PUID: "1000"

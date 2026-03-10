@@ -26,7 +26,7 @@ Current rollout note:
   - `apps/booklore-mariadb/helmrelease.yaml`
 - Hostname: `https://booklore.khzaw.dev`
 - App image: `ghcr.io/booklore-app/booklore:v2.0.5`
-- DB image: `lscr.io/linuxserver/mariadb:11.4.8`
+- DB image: `lscr.io/linuxserver/mariadb:11.4.9-r0-ls208`
 - Purpose: book library management/reader that can index existing Calibre books.
 
 ## Mochi Cards Status (Important)
