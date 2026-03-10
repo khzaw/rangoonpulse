@@ -668,7 +668,7 @@ spec:
                           - morpheus65535/bazarr
                           - transmission/transmission
                           - sabnzbd/sabnzbd
-                          - flaresolverr/flaresolverr
+                          - alexfozor/flaresolverr
                           - linuxserver/docker-calibre
                           - crocodilestick/Calibre-Web-Automated
 

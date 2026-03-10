@@ -132,6 +132,8 @@ Current cluster status: both nodes are functional and schedulable.
 
 *Plus: tracerr for tracking automation metrics*
 
+*Flaresolverr currently tracks `alexfozor/flaresolverr:pr-1300` on the Raspberry Pi utility node.*
+
 ### 📺 Live TV & Tools
 
 | Service | Description |

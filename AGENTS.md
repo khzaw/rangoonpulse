@@ -190,6 +190,8 @@ Important external-dns behavior:
   - `flux/kustomizations/<name>.yaml`
   - add entry in `flux/kustomization.yaml`
 - Most apps use `bjw-s-charts/app-template` chart.
+- `apps/flaresolverr/helmrelease.yaml` currently tracks the forked image
+  `alexfozor/flaresolverr:pr-1300` and remains pinned to the Raspberry Pi node (`talos-uua-g6r`).
 - Keep resources explicit (requests and limits) for homelab capacity control.
 - Validate manifests before pushing.
 
