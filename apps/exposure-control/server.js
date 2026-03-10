@@ -99,8 +99,11 @@ const metrics = {
 
 const rateLimits = new Map();
 const kubePodsCache = new Map();
+const kubeNodePlatformCache = new Map();
 const registryTagCache = new Map();
+const registryManifestCache = new Map();
 let imageUpdateRefreshPromise = null;
+const MOVING_TAG_FAMILY_TOKENS = new Set(["ls", "r", "rev", "build"]);
 
 function nowIso() {
   return new Date().toISOString();
@@ -416,6 +419,132 @@ function compareSemver(a, b) {
   return a.prerelease.localeCompare(b.prerelease);
 }
 
+function isHashLikeTag(tag) {
+  const s = String(tag || "").trim().toLowerCase();
+  return (
+    /^sha[-_][0-9a-f]{7,}$/.test(s) ||
+    /^\d{9,}-[0-9a-f]{7,}$/.test(s) ||
+    /^[0-9a-f]{12,}$/.test(s)
+  );
+}
+
+function parseComparableTag(tag) {
+  const raw = String(tag || "").trim();
+  if (!raw || isHashLikeTag(raw)) return null;
+  const parts = raw.match(/[A-Za-z]+|\d+/g);
+  if (!parts || parts.length === 0) return null;
+
+  let sawString = false;
+  let previousString = "";
+  let hasVariableNumber = false;
+  const tokens = parts.map((part) => {
+    if (/^\d+$/.test(part)) {
+      const variable =
+        !sawString || MOVING_TAG_FAMILY_TOKENS.has(previousString);
+      if (variable) hasVariableNumber = true;
+      return {
+        type: "num",
+        value: Number(part),
+        raw: part,
+        variable,
+      };
+    }
+
+    sawString = true;
+    previousString = part.toLowerCase();
+    return {
+      type: "str",
+      value: previousString,
+      raw: part,
+      variable: false,
+    };
+  });
+
+  if (!hasVariableNumber) return null;
+  return { raw, tokens };
+}
+
+function sameComparableTagFamily(current, candidate) {
+  if (!current || !candidate) return false;
+  if (current.tokens.length !== candidate.tokens.length) return false;
+
+  for (let i = 0; i < current.tokens.length; i++) {
+    const base = current.tokens[i];
+    const next = candidate.tokens[i];
+    if (base.type !== next.type) return false;
+    if (base.type === "str") {
+      if (base.value !== next.value) return false;
+      continue;
+    }
+    if (!base.variable && base.value !== next.value) return false;
+  }
+
+  return true;
+}
+
+function compareComparableTags(a, b) {
+  if (!a || !b) return 0;
+  const length = Math.min(a.tokens.length, b.tokens.length);
+  for (let i = 0; i < length; i++) {
+    const left = a.tokens[i];
+    const right = b.tokens[i];
+    if (left.type !== right.type) return 0;
+    if (left.type === "str") {
+      const diff = left.value.localeCompare(right.value);
+      if (diff !== 0) return diff;
+      continue;
+    }
+    if (left.value !== right.value) return left.value - right.value;
+  }
+  return a.raw.localeCompare(b.raw);
+}
+
+function extractImageDigest(imageId) {
+  const m = String(imageId || "").match(/(sha256:[0-9a-f]{64})/i);
+  return m ? m[1].toLowerCase() : "";
+}
+
+function shortDigest(digest) {
+  const value = String(digest || "");
+  if (!value) return "";
+  return value.length <= 19 ? value : `${value.slice(0, 19)}...`;
+}
+
+function contentTypeBase(value) {
+  return String(value || "").split(";")[0].trim().toLowerCase();
+}
+
+function isManifestListContentType(value) {
+  const contentType = contentTypeBase(value);
+  return (
+    contentType === "application/vnd.oci.image.index.v1+json" ||
+    contentType === "application/vnd.docker.distribution.manifest.list.v2+json"
+  );
+}
+
+function selectManifestForPlatform(manifests, platform) {
+  if (!Array.isArray(manifests) || manifests.length === 0) return null;
+  const targetOs = String((platform && platform.os) || "linux").toLowerCase();
+  const targetArch = String(
+    (platform && platform.architecture) || "",
+  ).toLowerCase();
+
+  if (targetArch) {
+    for (const manifest of manifests) {
+      const itemPlatform = manifest && manifest.platform;
+      if (!itemPlatform) continue;
+      if (
+        String(itemPlatform.os || "").toLowerCase() === targetOs &&
+        String(itemPlatform.architecture || "").toLowerCase() === targetArch
+      ) {
+        return manifest;
+      }
+    }
+  }
+
+  return manifests[0];
+}
+
 function parseWwwAuthenticate(header) {
   const value = String(header || "");
   const space = value.indexOf(" ");
@@ -476,6 +605,40 @@ function requestHttps(urlString, options) {
   });
 }
 
+async function registryRequest(urlString, repository, tokenState, options) {
+  const opts = options || {};
+  while (true) {
+    const headers = {
+      accept: "application/json",
+      "user-agent": "exposure-control/1.0",
+      ...(opts.headers || {}),
+    };
+    if (tokenState && tokenState.token) {
+      headers.authorization = `Bearer ${tokenState.token}`;
+    }
+
+    const res = await requestHttps(urlString, {
+      ...opts,
+      headers,
+    });
+
+    if (res.statusCode === 401) {
+      if (tokenState && tokenState.token) {
+        throw new Error("registry authentication failed");
+      }
+      const challenge = parseWwwAuthenticate(res.headers["www-authenticate"]);
+      const token = await fetchRegistryBearerToken(challenge, repository);
+      if (!tokenState) {
+        throw new Error("registry authentication state unavailable");
+      }
+      tokenState.token = token;
+      continue;
+    }
+
+    return res;
+  }
+}
+
 async function fetchRegistryBearerToken(challenge, repository) {
   if (!challenge || challenge.scheme !== "bearer") {
     throw new Error("unsupported registry auth scheme");
@@ -517,26 +680,19 @@ async function listRegistryTags(imageRef) {
       : imageRef.registry;
   const base = `https://${apiHost}`;
   let nextUrl = `${base}/v2/${imageRef.repository}/tags/list?n=200`;
-  let token = "";
+  const tokenState = { token: "" };
   const tags = [];
   const seen = new Set();
   let pageCount = 0;
 
   while (nextUrl && pageCount < 8) {
     pageCount += 1;
-    const headers = {
-      accept: "application/json",
-      "user-agent": "exposure-control/1.0",
-    };
-    if (token) headers.authorization = `Bearer ${token}`;
-    const res = await requestHttps(nextUrl, { headers });
-
-    if (res.statusCode === 401) {
-      if (token) throw new Error("registry authentication failed");
-      const challenge = parseWwwAuthenticate(res.headers["www-authenticate"]);
-      token = await fetchRegistryBearerToken(challenge, imageRef.repository);
-      continue;
-    }
+    const res = await registryRequest(
+      nextUrl,
+      imageRef.repository,
+      tokenState,
+      {},
+    );
     if (res.statusCode !== 200) {
       throw new Error(`tags request failed (${res.statusCode})`);
     }
@@ -555,6 +711,63 @@ async function listRegistryTags(imageRef) {
 
   registryTagCache.set(cacheKey, { ts: now, tags });
   return tags;
+}
+
+async function getNodePlatform(nodeName) {
+  const key = String(nodeName || "").trim();
+  if (!key) return { os: "linux", architecture: "" };
+  if (kubeNodePlatformCache.has(key)) return kubeNodePlatformCache.get(key);
+
+  const node = await kubeGetJson(`/api/v1/nodes/${key}`);
+  const labels = (node && node.metadata && node.metadata.labels) || {};
+  const platform = {
+    os: String(labels["kubernetes.io/os"] || "linux").toLowerCase(),
+    architecture: String(labels["kubernetes.io/arch"] || "").toLowerCase(),
+  };
+  kubeNodePlatformCache.set(key, platform);
+  return platform;
+}
+
+async function fetchRegistryManifestDigest(imageRef, tag, platform) {
+  const cacheKey = `${imageRef.registry}/${imageRef.repository}:${tag}:${(platform && platform.os) || "linux"}:${(platform && platform.architecture) || ""}`;
+  const cached = registryManifestCache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.ts < 6 * 60 * 60 * 1000) return cached.value;
+
+  const apiHost =
+    imageRef.registry === "docker.io"
+      ? "registry-1.docker.io"
+      : imageRef.registry;
+  const url = `https://${apiHost}/v2/${imageRef.repository}/manifests/${encodeURIComponent(tag)}`;
+  const tokenState = { token: "" };
+  const res = await registryRequest(url, imageRef.repository, tokenState, {
+    headers: {
+      accept: [
+        "application/vnd.oci.image.index.v1+json",
+        "application/vnd.docker.distribution.manifest.list.v2+json",
+        "application/vnd.oci.image.manifest.v1+json",
+        "application/vnd.docker.distribution.manifest.v2+json",
+        "application/vnd.docker.distribution.manifest.v1+json",
+      ].join(", "),
+    },
+  });
+  if (res.statusCode !== 200) {
+    throw new Error(`manifest request failed (${res.statusCode})`);
+  }
+
+  const headerDigest = extractImageDigest(
+    res.headers["docker-content-digest"] || "",
+  );
+  let value = headerDigest;
+  const contentType = res.headers["content-type"];
+  if (isManifestListContentType(contentType)) {
+    const payload = JSON.parse(res.body || "{}");
+    const selected = selectManifestForPlatform(payload.manifests, platform);
+    value = extractImageDigest(selected && selected.digest);
+  }
+
+  registryManifestCache.set(cacheKey, { ts: now, value });
+  return value;
 }
 
 function kubeApiAvailable() {
@@ -702,6 +915,13 @@ function pickPrimaryContainer(pod) {
   return containers[0];
 }
 
+function findContainerStatus(pod, containerName) {
+  const statuses = (pod && pod.status && pod.status.containerStatuses) || [];
+  return (
+    statuses.find((status) => status && status.name === containerName) || null
+  );
+}
+
 async function mapWithConcurrency(items, limit, worker) {
   const maxWorkers = Math.max(1, Math.min(limit, items.length || 1));
   let cursor = 0;
@@ -735,6 +955,23 @@ function resolveLatestSemver(currentTag, tags) {
   };
 }
 
+function resolveLatestComparableTag(currentTag, tags) {
+  const current = parseComparableTag(currentTag);
+  if (!current) return null;
+
+  let best = current;
+  for (const tag of tags || []) {
+    const parsed = parseComparableTag(tag);
+    if (!parsed || !sameComparableTagFamily(current, parsed)) continue;
+    if (compareComparableTags(parsed, best) > 0) best = parsed;
+  }
+
+  return {
+    latestTag: best.raw,
+    updateAvailable: compareComparableTags(best, current) > 0,
+  };
+}
+
 function loadImageUpdateCache() {
   const cached = readJsonFile(IMAGE_UPDATES_CACHE_FILE);
   if (!cached || !Array.isArray(cached.items)) return null;
@@ -757,6 +994,7 @@ function isImageUpdateCacheFresh(cached) {
 
 async function buildImageUpdateSnapshot() {
   kubePodsCache.clear();
+  kubeNodePlatformCache.clear();
   const selectedPods = new Map();
 
   for (const namespace of IMAGE_UPDATE_NAMESPACES) {
@@ -835,15 +1073,28 @@ async function buildImageUpdateSnapshot() {
     };
     items.push(row);
 
+    const containerStatus = findContainerStatus(pod, container.name);
+    const currentDigest = extractImageDigest(
+      (containerStatus && containerStatus.imageID) || "",
+    );
     const semverCurrent = parseSemverTag(imageRef.tag);
-    if (!semverCurrent || semverCurrent.prerelease) {
-      row.status = "unknown";
-      row.statusText = "Unknown";
-      row.detail = `Current tag '${imageRef.tag}' is not stable semver.`;
-      continue;
-    }
+    const comparableCurrent =
+      !semverCurrent || semverCurrent.prerelease
+        ? parseComparableTag(imageRef.tag)
+        : null;
 
-    lookupTasks.push({ row, imageRef });
+    lookupTasks.push({
+      row,
+      imageRef,
+      currentDigest,
+      podNodeName: String((pod && pod.spec && pod.spec.nodeName) || ""),
+      strategy:
+        semverCurrent && !semverCurrent.prerelease
+          ? "semver"
+          : comparableCurrent
+            ? "comparable"
+            : "digest",
+    });
   }
 
   await mapWithConcurrency(
@@ -851,23 +1102,75 @@ async function buildImageUpdateSnapshot() {
     IMAGE_UPDATE_CONCURRENCY,
     async function(task) {
       try {
-        const tags = await listRegistryTags(task.imageRef);
-        const latest = resolveLatestSemver(task.imageRef.tag, tags);
-        if (!latest) {
-          task.row.status = "unknown";
-          task.row.statusText = "Unknown";
-          task.row.detail = "No stable semver tags found in registry.";
+        if (task.strategy === "semver") {
+          const tags = await listRegistryTags(task.imageRef);
+          const latest = resolveLatestSemver(task.imageRef.tag, tags);
+          if (!latest) {
+            task.row.status = "unknown";
+            task.row.statusText = "Unknown";
+            task.row.detail = "No stable semver tags found in registry.";
+            return;
+          }
+          task.row.latestVersion = latest.latestTag;
+          task.row.updateAvailable = latest.updateAvailable;
+          task.row.status = latest.updateAvailable ? "update" : "current";
+          task.row.statusText = latest.updateAvailable
+            ? "Update available"
+            : "Up to date";
+          task.row.detail = latest.updateAvailable
+            ? `New version ${latest.latestTag} available.`
+            : "Running latest known stable version.";
           return;
         }
-        task.row.latestVersion = latest.latestTag;
-        task.row.updateAvailable = latest.updateAvailable;
-        task.row.status = latest.updateAvailable ? "update" : "current";
-        task.row.statusText = latest.updateAvailable
+
+        if (task.strategy === "comparable") {
+          const tags = await listRegistryTags(task.imageRef);
+          const latest = resolveLatestComparableTag(task.imageRef.tag, tags);
+          if (latest) {
+            task.row.latestVersion = latest.latestTag;
+            task.row.updateAvailable = latest.updateAvailable;
+            task.row.status = latest.updateAvailable ? "update" : "current";
+            task.row.statusText = latest.updateAvailable
+              ? "Update available"
+              : "Up to date";
+            task.row.detail = latest.updateAvailable
+              ? `New matching tag ${latest.latestTag} available.`
+              : "Running latest known matching tag.";
+            return;
+          }
+        }
+
+        if (!task.currentDigest) {
+          task.row.status = "unknown";
+          task.row.statusText = "Unknown";
+          task.row.detail = `Current tag '${task.imageRef.tag}' is not version-sortable and pod image digest is unavailable.`;
+          return;
+        }
+
+        const platform = task.podNodeName
+          ? await getNodePlatform(task.podNodeName)
+          : { os: "linux", architecture: "" };
+        const remoteDigest = await fetchRegistryManifestDigest(
+          task.imageRef,
+          task.imageRef.tag,
+          platform,
+        );
+        if (!remoteDigest) {
+          task.row.status = "unknown";
+          task.row.statusText = "Unknown";
+          task.row.detail = `Current tag '${task.imageRef.tag}' could not be compared against a registry digest.`;
+          return;
+        }
+
+        task.row.latestVersion = task.imageRef.tag;
+        task.row.updateAvailable = remoteDigest !== task.currentDigest;
+        task.row.status = task.row.updateAvailable ? "update" : "current";
+        task.row.statusText = task.row.updateAvailable
           ? "Update available"
           : "Up to date";
-        task.row.detail = latest.updateAvailable
-          ? `New version ${latest.latestTag} available.`
-          : "Running latest known stable version.";
+        task.row.detail = task.row.updateAvailable
+          ? `Tag '${task.imageRef.tag}' now points to ${shortDigest(remoteDigest)}.`
+          : `Registry digest matches running tag '${task.imageRef.tag}'.`;
       } catch (err) {
         task.row.status = "unknown";
         task.row.statusText = "Registry error";

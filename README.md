@@ -239,6 +239,9 @@ make deploy-mmcal
 >
 > See: [`docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`](docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md)
 
+> [!NOTE]
+> The control panel image-updates view is best-effort. It compares stable semver tags directly, compares matching non-semver numeric tag families when the pattern is clear, and falls back to remote digest checks for floating tags like `latest` or `next`.
+
 ---
 
 ## 📸 Screenshots

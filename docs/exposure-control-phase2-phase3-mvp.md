@@ -70,6 +70,11 @@ Default exposure expiry:
 - emergency disable-all endpoint is available
 - Prometheus metrics are available at `/metrics`
 - monitoring alerts are defined in `infrastructure/monitoring/`
+8. Image update tracker:
+- compares stable semver tags directly
+- compares same-family non-semver numeric tags when the tag shape is clear (for example `24-alpine`, `25.07`, `4.0.16.2944-ls304`)
+- falls back to remote registry digest checks for floating or non-sortable tags (for example `latest`, `next`, `stable-alpine`, `pg16`)
+- still remains best-effort; hash-like tags may stay `Unknown` if there is no safe ordering signal
 
 ## Validation Checklist (Passed)
 
