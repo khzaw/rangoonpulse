@@ -230,7 +230,7 @@ Important external-dns behavior:
 - Grafana:
   - persistent storage enabled on `local-path` (currently 1Gi PVC)
 - Prometheus:
-  - TSDB on NFS PVC (`truenas-nfs`, `12Gi`, via `prometheus.prometheusSpec.storageSpec.volumeClaimTemplate`)
+  - TSDB on node-local storage (`local-path`, `12Gi`) pinned to `talos-7nf-osf`
   - guardrails: `retention: 14d`, `retentionSize: 8GB`, `walCompression: true`
 - Uptime Kuma:
   - data on node-local storage (`local-path`, 1Gi, pinned to `talos-uua-g6r`)
@@ -294,7 +294,7 @@ Important external-dns behavior:
     - `retention: 14d`
     - `retentionSize: 8GB`
     - `walCompression: true`
-    - `storageSpec.volumeClaimTemplate` on `truenas-nfs` (`12Gi`)
+    - `storageSpec.volumeClaimTemplate` on `local-path` (`12Gi`) pinned to `talos-7nf-osf`
   - one-time migration note: moving from `emptyDir` to PVC resets historical TSDB data on first rollout
   - Grafana persistence enabled
   - Grafana `defaultDashboardsTimezone: browser`
@@ -400,6 +400,7 @@ Examples:
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
 - `docs/uptime-kuma-sqlite-on-nfs-timeouts.md`
+- `docs/prometheus-tsdb-local-path-migration.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/metrics-server-operational-metrics.md`
 - `docs/study-services-livesync-anki-booklore.md`

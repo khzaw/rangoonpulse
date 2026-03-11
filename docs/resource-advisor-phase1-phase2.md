@@ -71,7 +71,8 @@ Downsizes are blocked until the 14-day window is sufficiently populated.
 Resource Advisor quality depends on Prometheus keeping enough history to satisfy `METRICS_WINDOW=14d`.
 
 Current monitoring guardrails:
-- Prometheus TSDB is persisted on PVC (`truenas-nfs`, `12Gi`) via `infrastructure/monitoring/helmrelease.yaml`.
+- Prometheus TSDB is persisted on node-local PVC (`local-path`, `12Gi`) on `talos-7nf-osf`
+  via `infrastructure/monitoring/helmrelease.yaml`.
 - `retention: 14d` keeps the advisor window aligned.
 - `retentionSize: 8GB` bounds disk usage and auto-prunes old blocks before the PVC fills.
 - `walCompression: true` reduces WAL footprint and helps maintain retention coverage under bounded storage.

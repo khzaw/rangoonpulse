@@ -13,5 +13,6 @@ spec:
     name: flux-system
   timeout: 15m
   dependsOn:
+  - name: local-path-provisioner
   - name: ingress-nginx
   - name: cert-manager
