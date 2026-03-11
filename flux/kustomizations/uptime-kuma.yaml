@@ -14,5 +14,5 @@ spec:
   targetNamespace: default
   timeout: 5m
   dependsOn:
-    - name: democratic-csi
+    - name: local-path-provisioner
     - name: ingress-nginx

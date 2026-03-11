@@ -59,9 +59,7 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: truenas-nfs
-        accessMode: ReadWriteOnce
-        size: 1Gi
+        existingClaim: uptime-kuma-data-local
         globalMounts:
           - path: /app/data
 

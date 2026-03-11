@@ -233,7 +233,7 @@ Important external-dns behavior:
   - TSDB on NFS PVC (`truenas-nfs`, `12Gi`, via `prometheus.prometheusSpec.storageSpec.volumeClaimTemplate`)
   - guardrails: `retention: 14d`, `retentionSize: 8GB`, `walCompression: true`
 - Uptime Kuma:
-  - data on NFS (`truenas-nfs`, 1Gi, expandable)
+  - data on node-local storage (`local-path`, 1Gi, pinned to `talos-uua-g6r`)
 - Obsidian LiveSync:
   - CouchDB data on `local-path` (`obsidian-livesync-local`, 5Gi, node-affined)
 - Anki server:
@@ -399,6 +399,7 @@ Examples:
 - `docs/adguard-dns-stack-overview.md`
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
+- `docs/uptime-kuma-sqlite-on-nfs-timeouts.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/metrics-server-operational-metrics.md`
 - `docs/study-services-livesync-anki-booklore.md`
