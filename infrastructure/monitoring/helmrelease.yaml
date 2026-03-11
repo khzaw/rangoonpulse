@@ -31,6 +31,7 @@ spec:
     prometheus:
 
       prometheusSpec:
+        replicas: 1
         retention: 14d
         retentionSize: "8GB"
         walCompression: true
