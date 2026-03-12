@@ -409,6 +409,8 @@ def build_index_html() -> str:
                 recommended_cpu,
                 current_mem,
                 recommended_mem,
+                str(window or ""),
+                str(coverage_days or ""),
             ]
         ).lower()
 
@@ -442,6 +444,10 @@ def build_index_html() -> str:
                 <div class="workload-meta">{html.escape(str(replicas))} replica(s)</div>
               </td>
               <td>
+                <div class="usage-line">{html.escape(_fmt_decimal(coverage_days))}d</div>
+                <div class="workload-meta">{html.escape(window or 'advisor window')}</div>
+              </td>
+              <td>
                 <div class="usage-line">{html.escape(_fmt_decimal(restarts_window, 2))}</div>
                 <div class="workload-meta">restart count over advisor window</div>
               </td>
@@ -465,7 +471,7 @@ def build_index_html() -> str:
     note_html = "".join(
         f'<span class="token note-token">{html.escape(note)} <strong>{count}</strong></span>'
         for note, count in top_notes
-    ) or '<span class="muted">No note annotations in current report.</span>'
+    ) or '<span class="muted">no note annotations in current report.</span>'
 
     try:
         window_days = float(str(window).rstrip("d")) if str(window).endswith("d") else 0.0
@@ -512,14 +518,14 @@ def build_index_html() -> str:
 
     support_cards = f"""
       <article class="support-card">
-        <div class="support-card-title">Policy guardrails</div>
+        <div class="support-card-title">policy guardrails</div>
         <div class="policy-grid">{policy_html}</div>
-        <p class="support-copy">Active planner bounds applied to each report and apply pass.</p>
+        <p class="support-copy">active planner bounds applied to each report and apply pass.</p>
       </article>
       <article class="support-card">
-        <div class="support-card-title">Common notes</div>
+        <div class="support-card-title">common notes</div>
         <div class="policy-grid">{note_html}</div>
-        <p class="support-copy">Most common skip reasons and advisory annotations in the current window.</p>
+        <p class="support-copy">most common skip reasons and advisory annotations in the current window.</p>
       </article>
     """
 
@@ -534,7 +540,7 @@ def build_index_html() -> str:
         f"""
         <div class="log-line">
           <span class="log-time">[{index + 1:02d}]</span>
-          <span class="log-level {'log-info' if index < 4 else 'log-muted'}">{'INFO' if index < 4 else 'DATA'}</span>
+          <span class="log-level {'log-info' if index < 4 else 'log-muted'}">{'info' if index < 4 else 'data'}</span>
           <span>{html.escape(line)}</span>
         </div>
         """
@@ -544,8 +550,8 @@ def build_index_html() -> str:
         runtime_html = """
         <div class="log-line">
           <span class="log-time">[00]</span>
-          <span class="log-level log-muted">DATA</span>
-          <span>No report markdown found in ConfigMap.</span>
+          <span class="log-level log-muted">data</span>
+          <span>no report markdown found in configmap.</span>
         </div>
         """
 
@@ -609,7 +615,7 @@ def build_index_html() -> str:
         backdrop-filter: blur(8px);
       }}
       .topbar-inner {{
-        max-width: 1180px;
+        max-width: 1360px;
         margin: 0 auto;
         padding: 14px 24px;
         display: flex;
@@ -684,7 +690,7 @@ def build_index_html() -> str:
         color: var(--text-primary);
       }}
       main {{
-        max-width: 1180px;
+        max-width: 1360px;
         margin: 0 auto;
         padding: 52px 24px 72px;
         display: flex;
@@ -727,7 +733,6 @@ def build_index_html() -> str:
       .section-note,
       .overview-meta {{
         letter-spacing: 0.08em;
-        text-transform: uppercase;
       }}
       .overview-strip,
       .table-shell,
@@ -780,7 +785,7 @@ def build_index_html() -> str:
       .overview-subtitle {{
         color: var(--text-secondary);
         font-size: 12px;
-        max-width: 22ch;
+        max-width: 28ch;
       }}
       .overview-meter {{
         margin-top: auto;
@@ -860,7 +865,7 @@ def build_index_html() -> str:
         align-items: center;
         gap: 8px;
         padding: 8px 10px;
-        min-width: 268px;
+        min-width: 320px;
         background: var(--bg-surface-soft);
       }}
       .input-prefix {{
@@ -891,6 +896,7 @@ def build_index_html() -> str:
         width: 100%;
         border-collapse: collapse;
         text-align: left;
+        table-layout: auto;
       }}
       th,
       td {{
@@ -904,7 +910,6 @@ def build_index_html() -> str:
         font-size: 11px;
         font-weight: 400;
         letter-spacing: 0.08em;
-        text-transform: uppercase;
         font-family: var(--font-mono);
       }}
       tr:last-child td {{
@@ -915,6 +920,18 @@ def build_index_html() -> str:
       }}
       tbody tr:hover td {{
         background: var(--bg-hover);
+      }}
+      th:nth-child(2),
+      td:nth-child(2),
+      th:nth-child(3),
+      td:nth-child(3),
+      th:nth-child(4),
+      td:nth-child(4),
+      th:nth-child(5),
+      td:nth-child(5),
+      th:nth-child(6),
+      td:nth-child(6) {{
+        white-space: nowrap;
       }}
       .workload {{
         color: var(--text-primary);
@@ -947,6 +964,8 @@ def build_index_html() -> str:
         height: 8px;
         border-radius: 50%;
         background: currentColor;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.12);
+        animation: indicator-pulse 2.8s ease-out infinite;
       }}
       .action.upsize {{
         color: var(--warn);
@@ -1068,6 +1087,23 @@ def build_index_html() -> str:
       [hidden] {{
         display: none !important;
       }}
+      @keyframes indicator-pulse {{
+        0% {{
+          transform: scale(0.96);
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.14);
+          opacity: 0.82;
+        }}
+        55% {{
+          transform: scale(1);
+          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.0);
+          opacity: 1;
+        }}
+        100% {{
+          transform: scale(0.96);
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.0);
+          opacity: 0.82;
+        }}
+      }}
       @media (max-width: 1024px) {{
         .overview-strip,
         .focus-grid,
@@ -1127,12 +1163,12 @@ def build_index_html() -> str:
           <span class="brand-mark">A</span>
           <span class="crumb-separator">/</span>
           <span class="crumb-label">rangoonpulse</span>
-          <span class="env-pill">Production</span>
+          <span class="env-pill">production</span>
         </div>
         <div class="top-actions">
-          <a class="top-button" href="/latest.json">JSON</a>
-          <a class="top-button" href="/latest.md">Markdown</a>
-          <a class="top-button" href="/metrics">Metrics</a>
+          <a class="top-button" href="/latest.json">json</a>
+          <a class="top-button" href="/latest.md">markdown</a>
+          <a class="top-button" href="/metrics">metrics</a>
         </div>
       </div>
     </header>
@@ -1141,7 +1177,7 @@ def build_index_html() -> str:
       <section id="overview" class="section">
         <div class="section-bar">
           <div>
-            <h1 class="section-heading">Overview</h1>
+            <h1 class="section-heading">overview</h1>
             <p class="section-copy">{html.escape(status_copy)}</p>
           </div>
           <div class="overview-meta">last {html.escape(window or 'report')} window</div>
@@ -1165,22 +1201,22 @@ def build_index_html() -> str:
       <section id="recommendations" class="section">
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Recommendation Set</h2>
-            <p class="section-copy">Filterable live view from the current ConfigMap report.</p>
+            <h2 class="section-heading">recommendation set</h2>
+            <p class="section-copy">filterable live view from the current configmap report.</p>
           </div>
-          <a class="primary-button" href="/latest.json">Open report</a>
+          <a class="primary-button" href="/latest.json">open report</a>
         </div>
 
         <div class="toolbar">
           <div class="toolbar-left">
             <div class="filter-group" role="tablist" aria-label="Action filters">
-              <button class="filter-btn active" type="button" data-filter-action="all">All</button>
-              <button class="filter-btn" type="button" data-filter-action="upsize">Upsize</button>
-              <button class="filter-btn" type="button" data-filter-action="downsize">Downsize</button>
-              <button class="filter-btn" type="button" data-filter-action="no-change">No change</button>
+              <button class="filter-btn active" type="button" data-filter-action="all">all</button>
+              <button class="filter-btn" type="button" data-filter-action="upsize">upsize</button>
+              <button class="filter-btn" type="button" data-filter-action="downsize">downsize</button>
+              <button class="filter-btn" type="button" data-filter-action="no-change">no change</button>
             </div>
             <select id="noteFilter" class="control-select" aria-label="Note filter">
-              <option value="all">All notes</option>
+              <option value="all">all notes</option>
               {note_options}
             </select>
           </div>
@@ -1197,13 +1233,14 @@ def build_index_html() -> str:
           <table>
             <thead>
               <tr>
-                <th>Workload</th>
-                <th>Action</th>
-                <th>CPU Request</th>
-                <th>Memory Request</th>
-                <th>Observed Usage</th>
-                <th>Restarts</th>
-                <th>Notes</th>
+                <th>workload</th>
+                <th>action</th>
+                <th>cpu request</th>
+                <th>memory request</th>
+                <th>observed usage</th>
+                <th>basis</th>
+                <th>restarts</th>
+                <th>notes</th>
               </tr>
             </thead>
             <tbody id="recommendationRows">
@@ -1217,23 +1254,23 @@ def build_index_html() -> str:
       <section class="section">
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Recommendation Focus</h2>
-            <p class="section-copy">Highest-signal slices from the current advisor window.</p>
+            <h2 class="section-heading">recommendation focus</h2>
+            <p class="section-copy">highest-signal slices from the current advisor window.</p>
           </div>
           <div class="section-detail">{html.escape(_fmt_decimal(coverage_days))}d of metrics coverage</div>
         </div>
         <div class="focus-grid">
-          {_build_focus_card("Largest memory shifts", "Absolute request-memory deltas across all recommendations.", biggest_mem_items)}
-          {_build_focus_card("Restart-guarded items", "Rows where restart activity is directly influencing the advice.", restart_guard_items)}
-          {_build_focus_card("Highest restart volume", "Most restart-heavy rows in the current advisor window.", restart_volume_items)}
+          {_build_focus_card("largest memory shifts", "absolute request-memory deltas across all recommendations.", biggest_mem_items)}
+          {_build_focus_card("restart-guarded items", "rows where restart activity is directly influencing the advice.", restart_guard_items)}
+          {_build_focus_card("highest restart volume", "most restart-heavy rows in the current advisor window.", restart_volume_items)}
         </div>
       </section>
 
       <section class="section">
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Control Notes</h2>
-            <p class="section-copy">Planner bounds and recurring note patterns behind the current recommendation set.</p>
+            <h2 class="section-heading">control notes</h2>
+            <p class="section-copy">planner bounds and recurring note patterns behind the current recommendation set.</p>
           </div>
           <div class="section-detail">{rec_count} total recommendations</div>
         </div>
@@ -1245,8 +1282,8 @@ def build_index_html() -> str:
       <section id="runtime" class="section">
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">System Output</h2>
-            <p class="section-copy">Recent report markdown lines served by the exporter.</p>
+            <h2 class="section-heading">system output</h2>
+            <p class="section-copy">recent report markdown lines served by the exporter.</p>
           </div>
           <div class="section-detail">{html.escape(fetch_detail)}</div>
         </div>
