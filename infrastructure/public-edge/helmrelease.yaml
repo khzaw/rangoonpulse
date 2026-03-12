@@ -80,9 +80,11 @@ spec:
                 service: http://mmcal.default.svc.cluster.local:8080
               - hostname: rangoonmapper.khzaw.dev
                 service: http://rangoon-mapper.default.svc.cluster.local:8080
-              - hostname: share-sponsorblocktv.khzaw.dev
-                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-speedtest.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-chartsdb.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-booklore.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-jellyfin.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
@@ -97,10 +99,6 @@ spec:
               - hostname: share-radarr.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-tracerr.khzaw.dev
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-prowlarr.khzaw.dev
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-bazarr.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-tunarr.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080

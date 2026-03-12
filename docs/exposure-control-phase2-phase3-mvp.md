@@ -25,8 +25,9 @@ Default exposure expiry:
 2. Share DNS aliases (external-dns managed):
 - `infrastructure/public-edge/share-hosts-cname.yaml`
 - Current hosts:
-  - `share-sponsorblocktv.khzaw.dev`
   - `share-speedtest.khzaw.dev`
+  - `share-chartsdb.khzaw.dev`
+  - `share-booklore.khzaw.dev`
   - `share-jellyfin.khzaw.dev`
   - `share-seerr.khzaw.dev`
   - `share-audiobookshelf.khzaw.dev`
@@ -34,8 +35,6 @@ Default exposure expiry:
   - `share-sonarr.khzaw.dev`
   - `share-radarr.khzaw.dev`
   - `share-tracerr.khzaw.dev`
-  - `share-prowlarr.khzaw.dev`
-  - `share-bazarr.khzaw.dev`
   - `share-tunarr.khzaw.dev`
   - `share-vaultwarden.khzaw.dev`
   - `share-immich.khzaw.dev`

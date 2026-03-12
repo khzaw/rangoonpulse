@@ -39,11 +39,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-sponsorblocktv-cname
+  name: share-speedtest-cname
   namespace: public-edge
   annotations:
     # Create DNS alias to Cloudflare Tunnel edge endpoint.
-    external-dns.alpha.kubernetes.io/hostname: share-sponsorblocktv.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: share-speedtest.khzaw.dev
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -52,11 +52,22 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-speedtest-cname
+  name: share-chartsdb-cname
   namespace: public-edge
   annotations:
-    # Create DNS alias to Cloudflare Tunnel edge endpoint.
-    external-dns.alpha.kubernetes.io/hostname: share-speedtest.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: share-chartsdb.khzaw.dev
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: share-booklore-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: share-booklore.khzaw.dev
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -141,30 +152,6 @@ metadata:
   namespace: public-edge
   annotations:
     external-dns.alpha.kubernetes.io/hostname: share-tracerr.khzaw.dev
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-prowlarr-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: share-prowlarr.khzaw.dev
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-bazarr-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: share-bazarr.khzaw.dev
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName

@@ -12,6 +12,12 @@
     "description": "ChartDB"
   },
   {
+    "id": "booklore",
+    "name": "BookLore",
+    "target": "http://booklore.default.svc.cluster.local:6060",
+    "description": "BookLore"
+  },
+  {
     "id": "jellyfin",
     "name": "Jellyfin",
     "target": "http://jellyfin.default.svc.cluster.local:8096",
