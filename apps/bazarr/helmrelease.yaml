@@ -7,7 +7,6 @@ metadata:
   namespace: default
 spec:
   interval: 15m
-  timeout: 15m
   chart:
     spec:
       chart: app-template
@@ -77,7 +76,9 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: bazarr-config-nfs
+        storageClass: local-path
+        size: 1Gi
+        accessMode: ReadWriteOnce
 
       media:
         enabled: true

@@ -242,8 +242,6 @@ Important external-dns behavior:
   - CouchDB data on `local-path` (`obsidian-livesync-local`, 5Gi, node-affined)
 - Anki server:
   - sync data on NFS (`truenas-nfs`, 5Gi, expandable)
-- Bazarr:
-  - config/state on NFS (`bazarr-config-nfs`, 1Gi, expandable)
 - BookLore:
   - app data and MariaDB config/state on NFS (`truenas-nfs`, expandable)
   - mounts existing Calibre books data read-only for evaluation (`calibre-books-nfs`)
