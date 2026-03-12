@@ -251,36 +251,37 @@ def _build_budget_card(
     recommended_pct = _clamp_pct(recommended_percent, 100.0)
 
     return f"""
-      <article class="surface budget-card">
-        <div class="surface-topline">{html.escape(title)}</div>
-        <div class="budget-main">
-          <div>
-            <div class="budget-value">{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</div>
-            <div class="budget-caption">current requested from {html.escape(str(allocatable or "n/a"))} allocatable</div>
+      <article class="panel metric-card budget-card">
+        <div class="card-texture"></div>
+        <div class="metric-content">
+          <div class="metric-head">
+            <div class="metric-label font-mono text-cyan">{html.escape(title)}</div>
+            <div class="metric-delta {delta_class}">{html.escape(_fmt_signed(delta, unit_label))}</div>
           </div>
-          <div class="delta-pill {delta_class}">{html.escape(_fmt_signed(delta, unit_label))}</div>
-        </div>
-        <div class="progress-block">
-          <div class="progress-meta">
-            <span>current</span>
-            <strong>{html.escape(_fmt_decimal(current_percent))}%</strong>
+          <div class="metric-value">{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</div>
+          <div class="metric-meta">current requested from {html.escape(str(allocatable or "n/a"))} allocatable</div>
+          <div class="meter-group">
+            <div class="meter-row">
+              <span>current</span>
+              <strong>{html.escape(_fmt_decimal(current_percent))}%</strong>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill current {html.escape(accent)}" style="width:{current_pct:.1f}%"></div>
+            </div>
           </div>
-          <div class="progress-track">
-            <div class="progress-fill current {html.escape(accent)}" style="width:{current_pct:.1f}%"></div>
+          <div class="meter-group">
+            <div class="meter-row">
+              <span>recommended</span>
+              <strong>{html.escape(_fmt_decimal(recommended_percent))}%</strong>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill recommended {html.escape(accent)}" style="width:{recommended_pct:.1f}%"></div>
+            </div>
           </div>
-        </div>
-        <div class="progress-block">
-          <div class="progress-meta">
-            <span>recommended</span>
-            <strong>{html.escape(_fmt_decimal(recommended_percent))}%</strong>
+          <div class="budget-foot">
+            <span>{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</span>
+            <span>{html.escape(_fmt_decimal(recommended_total))}{html.escape(unit_label)}</span>
           </div>
-          <div class="progress-track">
-            <div class="progress-fill recommended {html.escape(accent)}" style="width:{recommended_pct:.1f}%"></div>
-          </div>
-        </div>
-        <div class="budget-foot">
-          <span>{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</span>
-          <span>{html.escape(_fmt_decimal(recommended_total))}{html.escape(unit_label)}</span>
         </div>
       </article>
     """
@@ -291,10 +292,13 @@ def _build_focus_card(title: str, subtitle: str, items: list[str]) -> str:
         items = ["No items in this slice."]
     rows = "".join(f"<li>{item}</li>" for item in items)
     return f"""
-      <article class="surface focus-card">
-        <div class="surface-topline">{html.escape(title)}</div>
-        <div class="focus-subtitle">{html.escape(subtitle)}</div>
-        <ul class="focus-list">{rows}</ul>
+      <article class="panel focus-card">
+        <div class="card-texture"></div>
+        <div class="metric-content">
+          <div class="section-caption font-mono text-cyan">{html.escape(title)}</div>
+          <div class="focus-subtitle">{html.escape(subtitle)}</div>
+          <ul class="focus-list">{rows}</ul>
+        </div>
       </article>
     """
 
@@ -483,10 +487,13 @@ def build_index_html() -> str:
 
     overview_html = "".join(
         f"""
-        <article class="surface stat-card">
-          <div class="surface-topline">{html.escape(label)}</div>
-          <div class="stat-value">{html.escape(value)}</div>
-          <div class="stat-sub">{html.escape(subtitle)}</div>
+        <article class="panel metric-card stat-card">
+          <div class="card-texture"></div>
+          <div class="metric-content">
+            <div class="metric-label font-mono text-cyan">{html.escape(label)}</div>
+            <div class="metric-value">{html.escape(value)}</div>
+            <div class="metric-meta">{html.escape(subtitle)}</div>
+          </div>
         </article>
         """
         for label, value, subtitle in overview_cards
@@ -531,13 +538,16 @@ def build_index_html() -> str:
             "memory",
         )
         + f"""
-          <article class="surface policy-card">
-            <div class="surface-topline">Policy guardrails</div>
-            <div class="policy-grid">{policy_html}</div>
-            <div class="policy-copy">These are the active planner bounds applied to each report or apply-PR pass.</div>
-            <div class="surface-divider"></div>
-            <div class="surface-topline">Common notes</div>
-            <div class="policy-grid">{note_html}</div>
+          <article class="panel metric-card policy-card">
+            <div class="card-texture"></div>
+            <div class="metric-content">
+              <div class="metric-label font-mono text-cyan">Policy guardrails</div>
+              <div class="policy-grid">{policy_html}</div>
+              <div class="policy-copy">These are the active planner bounds applied to each report or apply-PR pass.</div>
+              <div class="surface-divider"></div>
+              <div class="metric-label font-mono text-cyan">Common notes</div>
+              <div class="policy-grid">{note_html}</div>
+            </div>
           </article>
         """
     )
@@ -548,6 +558,26 @@ def build_index_html() -> str:
         else "No parsed report is currently available from the runtime ConfigMap."
     )
 
+    runtime_lines = [line.strip() for line in md.splitlines() if line.strip()][:18]
+    runtime_html = "".join(
+        f"""
+        <div class="log-line">
+          <span class="log-time">[{index + 1:02d}]</span>
+          <span class="log-level {'log-info' if index < 4 else 'log-muted'}">{'INFO' if index < 4 else 'DATA'}</span>
+          <span>{html.escape(line)}</span>
+        </div>
+        """
+        for index, line in enumerate(runtime_lines)
+    )
+    if not runtime_html:
+        runtime_html = """
+        <div class="log-line">
+          <span class="log-time">[00]</span>
+          <span class="log-level log-muted">DATA</span>
+          <span>No report markdown found in ConfigMap.</span>
+        </div>
+        """
+
     html_doc = f"""<!doctype html>
 <html lang="en">
   <head>
@@ -556,386 +586,342 @@ def build_index_html() -> str:
     <title>{html.escape(title)}</title>
     <style>
       :root {{
-        --bg: #0c0c0d;
-        --bg-subtle: #121214;
-        --card: rgba(255, 255, 255, 0.028);
-        --card-strong: rgba(255, 255, 255, 0.04);
-        --border: rgba(255, 255, 255, 0.055);
-        --border-strong: rgba(255, 255, 255, 0.1);
-        --text-1: #f4f4f5;
-        --text-2: #b4b4ba;
-        --text-3: #7d7d86;
-        --text-dim: #666670;
-        --accent: #82aaff;
-        --accent-2: #5eead4;
-        --green: #4ade80;
-        --red: #fb7185;
-        --amber: #f59e0b;
-        --violet: #a78bfa;
-        --shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
-        --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.12);
-        --font-sans: "Geist", "Inter", "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
-        --font-mono: "Geist Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+        --bg-base: #000000;
+        --bg-surface: #0a0a0a;
+        --bg-surface-hover: rgba(94, 234, 212, 0.05);
+        --accent-cyan: #5eead4;
+        --accent-cyan-dim: rgba(94, 234, 212, 0.2);
+        --accent-cyan-glow: rgba(94, 234, 212, 0.36);
+        --text-primary: #ffffff;
+        --text-secondary: #a3a3a3;
+        --text-tertiary: #525252;
+        --border-subtle: #1a1a1a;
+        --border-active: #333333;
+        --grid-color: rgba(94, 234, 212, 0.055);
+        --warn: #f59e0b;
+        --danger: #fb7185;
+        --success: #34d399;
+        --font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        --radius-sm: 2px;
+        --radius-md: 4px;
       }}
-      * {{ box-sizing: border-box; margin: 0; }}
+      * {{
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }}
       html {{
         min-height: 100%;
-        background: #09090b;
+        background: var(--bg-base);
       }}
       body {{
-        min-height: 100dvh;
-        color: var(--text-1);
+        background-color: var(--bg-base);
+        color: var(--text-primary);
         font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }}
+      body::before {{
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-size: 24px 24px;
+        background-image:
+          linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+          linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+        opacity: 0.55;
+        pointer-events: none;
+        z-index: 0;
+      }}
+      body::after {{
+        content: "";
+        position: fixed;
+        inset: 0;
         background:
-          radial-gradient(1200px 700px at 4% -10%, rgba(130, 170, 255, 0.12), transparent 56%),
-          radial-gradient(1100px 640px at 96% -8%, rgba(94, 234, 212, 0.08), transparent 54%),
-          linear-gradient(180deg, #09090b 0%, #0c0c0d 48%, #09090b 100%);
-        background-attachment: fixed;
-        -webkit-font-smoothing: antialiased;
+          radial-gradient(circle at top center, rgba(94, 234, 212, 0.07), transparent 32%),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.3));
+        pointer-events: none;
+        z-index: 0;
       }}
       a {{
-        color: var(--text-2);
-        text-decoration: underline;
-        text-decoration-color: rgba(255, 255, 255, 0.18);
-        text-underline-offset: 3px;
+        color: var(--text-secondary);
+        text-decoration: none;
       }}
-      a:hover {{ color: var(--text-1); }}
-      main {{
-        max-width: 1460px;
-        margin: 0 auto;
-        padding: 36px 24px 56px;
+      a:hover {{
+        color: var(--text-primary);
       }}
-      .page-shell {{
-        display: grid;
-        gap: 22px;
-      }}
-      .hero {{
-        display: grid;
-        grid-template-columns: 1.5fr 1fr;
-        gap: 18px;
-        align-items: stretch;
-      }}
-      .surface {{
-        border: none;
-        border-radius: 24px;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.012)),
-          rgba(255,255,255,0.01);
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(14px);
-        position: relative;
-      }}
-      .surface::before {{
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        pointer-events: none;
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.05),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.015);
-      }}
-      .hero-panel {{
-        padding: 24px 24px 20px;
-        overflow: hidden;
-      }}
-      .hero-panel::after {{
-        content: "";
-        position: absolute;
-        inset: auto -12% -46% auto;
-        width: 340px;
-        height: 340px;
-        border-radius: 999px;
-        background: radial-gradient(circle, rgba(130, 170, 255, 0.15), transparent 64%);
-        pointer-events: none;
-      }}
-      .eyebrow {{
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0;
-        border-radius: 999px;
-        color: var(--text-2);
-        font-size: 11px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }}
-      .eyebrow::before {{
-        content: "";
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: {'var(--green)' if fetch_state == 'live' else 'var(--red)'};
-        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.38);
-        animation: pulse-dot 1.9s ease-out infinite;
-      }}
-      h1 {{
-        margin-top: 16px;
-        font-size: clamp(28px, 4vw, 44px);
-        line-height: 1.04;
-        letter-spacing: -0.04em;
-      }}
-      .hero-copy {{
-        margin-top: 12px;
-        max-width: 72ch;
-        color: var(--text-2);
-        font-size: 14px;
-        line-height: 1.7;
-      }}
-      .hero-meta {{
+      .text-primary {{ color: var(--text-primary); }}
+      .text-cyan {{ color: var(--accent-cyan); }}
+      .font-mono {{ font-family: var(--font-mono); }}
+      header {{
+        border-bottom: 1px solid var(--border-subtle);
+        padding: 0 24px;
+        height: 48px;
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }}
-      .pill {{
-        display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 0;
-        border-radius: 999px;
-        color: var(--text-2);
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: blur(8px);
+        z-index: 10;
+      }}
+      .header-nav {{
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }}
+      .header-link {{
+        color: var(--text-secondary);
+        transition: color 0.2s;
+        font-size: 13px;
+      }}
+      .header-link:hover,
+      .header-link.active {{
+        color: var(--text-primary);
+      }}
+      .header-chip,
+      .header-button {{
+        border: 1px solid var(--border-active);
+        border-radius: var(--radius-sm);
+        padding: 6px 12px;
+        color: var(--text-primary);
         font-size: 12px;
+        font-family: var(--font-mono);
+        background: var(--bg-surface);
+      }}
+      .header-button:hover {{
+        border-color: var(--accent-cyan-dim);
+        color: var(--accent-cyan);
+      }}
+      main {{
         position: relative;
+        z-index: 1;
+        padding: 32px 24px 56px;
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
       }}
-      .pill::after {{
-        content: "";
-        width: 1px;
-        height: 16px;
-        margin-left: 10px;
-        background: var(--border);
+      .page-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 24px;
       }}
-      .pill strong {{
-        color: var(--text-1);
-        font-weight: 600;
+      .page-title {{
+        font-size: 22px;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        color: var(--accent-cyan);
       }}
-      .hero-meta .pill:last-child::after {{
-        display: none;
+      .page-subtitle {{
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-top: 6px;
       }}
-      .endpoint-list {{
-        margin-top: 22px;
+      .page-meta {{
         display: flex;
         flex-wrap: wrap;
-        gap: 14px;
-      }}
-      .endpoint-link {{
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0;
-        border-radius: 0;
-        color: var(--text-1);
-        text-decoration: underline;
-        text-decoration-color: rgba(255,255,255,0.16);
+        justify-content: flex-end;
+        gap: 16px;
+        color: var(--text-secondary);
         font-size: 12px;
         font-family: var(--font-mono);
       }}
-      .endpoint-link:hover {{
-        text-decoration-color: rgba(255,255,255,0.38);
-      }}
-      .overview-grid {{
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-      }}
-      .stat-card {{
-        padding: 18px;
-        min-height: 138px;
-      }}
-      .surface-topline {{
-        font-size: 11px;
-        color: var(--text-3);
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }}
-      .stat-value {{
-        margin-top: 14px;
-        font-size: 32px;
-        line-height: 1;
-        letter-spacing: -0.05em;
-      }}
-      .stat-sub {{
-        margin-top: 10px;
-        color: var(--text-2);
-        font-size: 12px;
-        line-height: 1.55;
+      .page-meta strong {{
+        color: var(--text-primary);
+        font-weight: 500;
       }}
       .section {{
-        display: grid;
+        display: flex;
+        flex-direction: column;
         gap: 16px;
-        padding-top: 8px;
-      }}
-      .section + .section {{
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        padding-top: 24px;
       }}
       .section-head {{
         display: flex;
-        align-items: baseline;
         justify-content: space-between;
-        gap: 12px;
-      }}
-      .section-title {{
-        font-size: 13px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--text-3);
-      }}
-      .section-detail {{
-        color: var(--text-3);
-        font-size: 12px;
-        font-family: var(--font-mono);
-      }}
-      .budget-grid {{
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: center;
         gap: 16px;
       }}
-      .budget-card,
-      .policy-card,
-      .focus-card {{
-        padding: 18px;
-      }}
-      .budget-main {{
-        margin-top: 14px;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-      }}
-      .budget-value {{
-        font-size: 28px;
-        letter-spacing: -0.05em;
-      }}
-      .budget-caption,
-      .policy-copy,
-      .focus-subtitle {{
-        margin-top: 6px;
-        color: var(--text-3);
-        font-size: 12px;
-        line-height: 1.6;
-      }}
-      .delta-pill {{
-        flex: 0 0 auto;
-        padding: 7px 0 7px 12px;
-        border-radius: 999px;
-        font-size: 12px;
+      .section-title {{
+        color: var(--text-primary);
         font-family: var(--font-mono);
-        border-left: 1px solid var(--border);
-        color: var(--text-2);
-      }}
-      .delta-pill.positive {{ color: var(--amber); }}
-      .delta-pill.negative {{ color: var(--green); }}
-      .progress-block {{
-        margin-top: 14px;
-      }}
-      .progress-meta {{
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        color: var(--text-2);
         font-size: 12px;
-        margin-bottom: 7px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }}
-      .progress-track {{
+      .section-detail {{
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }}
+      .metrics-grid,
+      .focus-grid {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }}
+      .panel,
+      .table-container,
+      .terminal-area {{
         position: relative;
         overflow: hidden;
-        height: 10px;
-        border-radius: 999px;
-        border: none;
-        background: rgba(255,255,255,0.045);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
       }}
-      .progress-fill {{
+      .card-texture {{
+        position: absolute;
+        inset: 0;
+        background-size: 12px 12px;
+        background-image:
+          linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+          linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+        opacity: 0.45;
+        pointer-events: none;
+        z-index: 0;
+      }}
+      .metric-card {{
+        min-height: 166px;
+      }}
+      .metric-content {{
+        position: relative;
+        z-index: 1;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }}
+      .metric-label,
+      .section-caption {{
+        color: var(--accent-cyan);
+        font-size: 12px;
+        letter-spacing: 0.03em;
+      }}
+      .metric-head {{
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+      }}
+      .metric-value {{
+        font-family: var(--font-mono);
+        font-size: 18px;
+        color: var(--text-primary);
+      }}
+      .metric-meta,
+      .focus-subtitle,
+      .policy-copy,
+      .budget-foot {{
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.6;
+      }}
+      .metric-delta {{
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }}
+      .positive {{ color: var(--warn); }}
+      .negative {{ color: var(--success); }}
+      .neutral {{ color: var(--text-tertiary); }}
+      .meter-group {{
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }}
+      .meter-row {{
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }}
+      .meter-row strong {{
+        color: var(--text-primary);
+        font-weight: 500;
+      }}
+      .meter-track {{
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        position: relative;
+        overflow: hidden;
+      }}
+      .meter-fill {{
         position: absolute;
         inset: 0 auto 0 0;
-        border-radius: inherit;
       }}
-      .progress-fill.current.cpu {{ background: linear-gradient(90deg, rgba(130,170,255,0.55), rgba(130,170,255,0.9)); }}
-      .progress-fill.recommended.cpu {{ background: linear-gradient(90deg, rgba(167,139,250,0.55), rgba(167,139,250,0.9)); }}
-      .progress-fill.current.memory {{ background: linear-gradient(90deg, rgba(94,234,212,0.55), rgba(94,234,212,0.88)); }}
-      .progress-fill.recommended.memory {{ background: linear-gradient(90deg, rgba(245,158,11,0.5), rgba(245,158,11,0.88)); }}
+      .meter-fill.current.cpu {{ background: linear-gradient(90deg, rgba(94, 234, 212, 0.25), rgba(94, 234, 212, 0.85)); }}
+      .meter-fill.recommended.cpu {{ background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.8)); }}
+      .meter-fill.current.memory {{ background: linear-gradient(90deg, rgba(94, 234, 212, 0.25), rgba(94, 234, 212, 0.85)); }}
+      .meter-fill.recommended.memory {{ background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.9)); }}
       .budget-foot {{
-        margin-top: 12px;
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        color: var(--text-3);
-        font-size: 11px;
-        font-family: var(--font-mono);
+        margin-top: auto;
       }}
       .policy-grid {{
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 14px;
+        gap: 12px;
       }}
       .token {{
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 0;
-        border-radius: 0;
-        border: none;
-        color: var(--text-2);
-        font-size: 12px;
-        position: relative;
-      }}
-      .token::after {{
-        content: "";
-        width: 1px;
-        height: 14px;
-        margin-left: 10px;
-        background: var(--border);
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
       }}
       .token strong {{
-        color: var(--text-1);
-        font-family: var(--font-mono);
-        font-weight: 600;
-      }}
-      .policy-grid .token:last-child::after {{
-        display: none;
+        color: var(--text-primary);
+        font-weight: 500;
       }}
       .surface-divider {{
         height: 1px;
-        background: rgba(255,255,255,0.05);
-        margin: 18px 0 2px;
-      }}
-      .focus-grid {{
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
+        background: var(--border-subtle);
+        margin: 2px 0;
       }}
       .focus-list {{
         list-style: none;
-        margin-top: 14px;
         display: grid;
-        gap: 12px;
+        gap: 10px;
+        margin-top: 2px;
       }}
       .focus-list li {{
-        padding: 12px 14px;
-        border-radius: 14px;
-        border: none;
-        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
-        box-shadow: var(--shadow-soft);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
       }}
       .focus-path {{
         display: block;
-        font-size: 13px;
-        color: var(--text-1);
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: 12px;
         font-weight: 600;
       }}
       .focus-inline {{
         display: block;
-        margin-top: 4px;
-        color: var(--text-2);
-        font-size: 12px;
+        margin-top: 3px;
+        color: var(--text-tertiary);
         font-family: var(--font-mono);
+        font-size: 11px;
       }}
       .toolbar {{
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: 16px;
         flex-wrap: wrap;
       }}
       .toolbar-left,
@@ -946,189 +932,197 @@ def build_index_html() -> str:
         flex-wrap: wrap;
       }}
       .filter-group {{
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 8px;
-        padding: 4px;
-        border-radius: 999px;
-        border: none;
-        background: rgba(255,255,255,0.03);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       }}
       .filter-btn,
-      select,
-      input {{
-        border: none;
-        background: rgba(255,255,255,0.028);
-        color: var(--text-2);
-        border-radius: 999px;
-        padding: 10px 14px;
-        font: inherit;
+      .control-select,
+      .header-action {{
+        background: transparent;
+        color: var(--text-primary);
+        border: 1px solid var(--border-active);
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-sans);
         font-size: 12px;
-        outline: none;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
-      }}
-      .filter-btn {{
         cursor: pointer;
-        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+        transition: all 0.2s;
+      }}
+      .filter-btn:hover,
+      .control-select:hover,
+      .header-action:hover {{
+        border-color: var(--accent-cyan-dim);
+        color: var(--accent-cyan);
       }}
       .filter-btn.active {{
-        color: var(--text-1);
-        background: rgba(130, 170, 255, 0.18);
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,0.08),
-          0 6px 18px rgba(130, 170, 255, 0.12);
+        background: var(--text-primary);
+        color: var(--bg-base);
+        border-color: var(--text-primary);
       }}
-      select,
-      input {{
-        min-height: 42px;
+      .control-select {{
+        font-family: var(--font-mono);
+        background: var(--bg-surface);
       }}
-      input {{
-        min-width: 260px;
+      .input-group {{
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--border-active);
+        border-radius: var(--radius-sm);
+        padding: 4px 8px;
+        background: var(--bg-base);
+      }}
+      .input-prefix {{
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        margin-right: 8px;
+      }}
+      .input-group input {{
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        outline: none;
+        width: 240px;
+      }}
+      .input-group input::placeholder {{
+        color: var(--text-tertiary);
       }}
       .result-count {{
-        color: var(--text-3);
-        font-size: 12px;
+        color: var(--text-tertiary);
         font-family: var(--font-mono);
+        font-size: 11px;
       }}
-      .table-shell {{
-        overflow: hidden;
-        padding: 2px 0 0;
+      .table-container {{
+        min-height: 180px;
       }}
       table {{
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-      }}
-      thead th {{
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        padding: 14px 16px;
+        border-collapse: collapse;
         text-align: left;
-        font-size: 11px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--text-3);
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        background: rgba(12, 12, 13, 0.72);
-        backdrop-filter: blur(8px);
+        position: relative;
+        z-index: 1;
       }}
-      tbody td {{
-        padding: 16px;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+      th,
+      td {{
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-subtle);
         vertical-align: top;
+      }}
+      th {{
+        color: var(--text-secondary);
+        font-weight: normal;
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        font-family: var(--font-mono);
+        background: rgba(10, 10, 10, 0.9);
+      }}
+      tr:last-child td {{
+        border-bottom: none;
       }}
       tbody tr {{
         opacity: 0;
         transform: translateY(8px);
-        animation: row-in 320ms cubic-bezier(.2,.75,.3,1) forwards;
-        animation-delay: calc(var(--row-index, 0) * 14ms);
+        animation: row-in 220ms cubic-bezier(.2,.75,.3,1) forwards;
+        animation-delay: calc(var(--row-index, 0) * 10ms);
+        transition: background-color 0.15s ease;
       }}
-      tbody tr:hover td {{
-        background: rgba(255,255,255,0.016);
-      }}
-      tbody tr:last-child td {{
-        border-bottom: none;
+      tbody tr:hover {{
+        background-color: var(--bg-surface-hover);
       }}
       .workload {{
+        color: var(--text-primary);
+        font-family: var(--font-sans);
         font-size: 14px;
-        font-weight: 600;
+        font-weight: 500;
       }}
       .workload-meta,
       .usage-line,
-      .notes-cell {{
-        margin-top: 5px;
-        color: var(--text-3);
-        font-size: 12px;
+      .notes-cell,
+      .metric-pair,
+      .metric-delta {{
+        color: var(--text-tertiary);
         font-family: var(--font-mono);
-        line-height: 1.55;
+        font-size: 11px;
+        line-height: 1.6;
       }}
       .metric-pair {{
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        font-family: var(--font-mono);
+        color: var(--text-primary);
       }}
       .arrow {{
-        color: var(--text-3);
+        color: var(--text-tertiary);
+        padding: 0 5px;
       }}
-      .metric-delta {{
-        margin-top: 6px;
-        font-size: 12px;
-        font-family: var(--font-mono);
-      }}
-      .positive {{ color: var(--amber); }}
-      .negative {{ color: var(--green); }}
-      .neutral {{ color: var(--text-3); }}
       .action {{
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 7px 10px;
-        border-radius: 999px;
+        font-family: var(--font-mono);
         font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
-        background: rgba(255,255,255,0.05);
       }}
       .action::before {{
         content: "";
-        width: 7px;
-        height: 7px;
-        border-radius: 999px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
         background: currentColor;
       }}
-      .action.upsize {{ color: var(--amber); }}
-      .action.downsize {{ color: var(--green); }}
-      .action.no-change {{ color: var(--text-3); }}
-      .action.unknown {{ color: var(--text-3); }}
-      .empty-row td,
+      .action.upsize {{ color: var(--warn); }}
+      .action.downsize {{ color: var(--success); }}
+      .action.no-change {{ color: var(--accent-cyan); }}
+      .action.unknown {{ color: var(--text-tertiary); }}
       .empty-state {{
         text-align: center;
-        color: var(--text-3);
-        font-size: 13px;
-        padding: 28px 16px;
-      }}
-      details {{
-        border-radius: 18px;
-        background: rgba(255,255,255,0.018);
-        overflow: hidden;
-        box-shadow: var(--shadow-soft);
-      }}
-      summary {{
-        cursor: pointer;
-        list-style: none;
-        padding: 16px 18px;
-        color: var(--text-2);
-        font-size: 13px;
-        border-bottom: 1px solid rgba(255,255,255,0.04);
-      }}
-      summary::-webkit-details-marker {{ display: none; }}
-      pre {{
-        margin: 0;
-        padding: 0 18px 18px;
-        overflow: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-        color: var(--text-2);
+        color: var(--text-tertiary);
         font-size: 12px;
+        padding: 24px 16px;
         font-family: var(--font-mono);
       }}
-      .muted {{
-        color: var(--text-3);
+      .empty-row td {{
+        text-align: center;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        padding: 24px 16px;
+        font-family: var(--font-mono);
+      }}
+      .terminal-area {{
+        padding: 16px;
+        min-height: 220px;
+      }}
+      .terminal-content {{
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }}
+      .log-line {{
+        display: grid;
+        grid-template-columns: 52px 56px 1fr;
+        gap: 14px;
+      }}
+      .log-time {{
+        color: var(--text-tertiary);
+      }}
+      .log-level {{
+        color: var(--accent-cyan);
+      }}
+      .log-muted {{
+        color: var(--text-tertiary);
       }}
       [hidden] {{ display: none !important; }}
       @keyframes row-in {{
         from {{ opacity: 0; transform: translateY(8px); }}
         to {{ opacity: 1; transform: translateY(0); }}
-      }}
-      @keyframes pulse-dot {{
-        0% {{ box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.36); }}
-        75% {{ box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }}
-        100% {{ box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }}
       }}
       @media (prefers-reduced-motion: reduce) {{
         *, *::before, *::after {{
@@ -1136,146 +1130,164 @@ def build_index_html() -> str:
           transition: none !important;
         }}
       }}
-      @media (max-width: 1180px) {{
-        .hero,
-        .budget-grid,
-        .focus-grid {{
-          grid-template-columns: 1fr;
+      @media (max-width: 920px) {{
+        .page-header,
+        .section-head {{
+          flex-direction: column;
+          align-items: flex-start;
+        }}
+        .page-meta {{
+          justify-content: flex-start;
         }}
       }}
       @media (max-width: 760px) {{
-        main {{ padding: 22px 14px 40px; }}
-        .hero-meta {{
-          gap: 2px 16px;
+        header {{
+          padding: 0 14px;
         }}
-        .pill {{
-          width: auto;
+        main {{
+          padding: 24px 14px 40px;
         }}
-        .pill::after {{
-          display: none;
+        .header-nav {{
+          gap: 12px;
+          flex-wrap: wrap;
         }}
-        .overview-grid {{
+        .metrics-grid,
+        .focus-grid {{
           grid-template-columns: 1fr;
-        }}
-        input {{
-          min-width: 0;
-          width: 100%;
         }}
         .toolbar-left,
         .toolbar-right {{
           width: 100%;
         }}
+        .input-group,
+        .input-group input {{
+          width: 100%;
+        }}
         .filter-group {{
           width: 100%;
-          justify-content: space-between;
-          overflow-x: auto;
+          flex-wrap: wrap;
+        }}
+        .log-line {{
+          grid-template-columns: 44px 46px 1fr;
+          gap: 8px;
         }}
       }}
     </style>
   </head>
   <body>
-    <main>
-      <div class="page-shell">
-        <section class="hero">
-          <article class="surface hero-panel">
-            <div class="eyebrow">Resource Advisor</div>
-            <h1>Dense tuning context without waiting on a PR.</h1>
-            <p class="hero-copy">{html.escape(status_copy)}</p>
-            <div class="hero-meta">
-              <div class="pill">last run <strong id="last-run-local" data-utc="{_escape_attr(last_run)}">{html.escape(last_run or "n/a")}</strong></div>
-              <div class="pill">browser tz <strong id="browser-tz">browser local</strong></div>
-              <div class="pill">mode <strong>{html.escape(mode or 'n/a')}</strong></div>
-              <div class="pill">window <strong>{html.escape(window or 'n/a')}</strong></div>
-              <div class="pill">coverage <strong>{html.escape(_fmt_decimal(coverage_days))}d</strong></div>
-            </div>
-            <div class="endpoint-list">
-              <a class="endpoint-link" href="/latest.json">raw report json</a>
-              <a class="endpoint-link" href="/latest.md">raw report markdown</a>
-              <a class="endpoint-link" href="/metrics">exporter metrics</a>
-            </div>
-          </article>
-          <div class="overview-grid">
-            {overview_html}
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-head">
-            <div class="section-title">Budget Posture</div>
-            <div class="section-detail">allocatable {html.escape(str(alloc.get('cpu') or 'n/a'))} cpu · {html.escape(str(alloc.get('memory') or 'n/a'))} memory</div>
-          </div>
-          <div class="budget-grid">
-            {budget_cards}
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-head">
-            <div class="section-title">Recommendation Focus</div>
-            <div class="section-detail">high-signal slices from the latest report</div>
-          </div>
-          <div class="focus-grid">
-            {_build_focus_card("Largest memory shifts", "Absolute request-memory deltas across all recommendations.", biggest_mem_items)}
-            {_build_focus_card("Restart-guarded items", "Rows where restart activity is influencing the advice.", restart_guard_items)}
-            {_build_focus_card("Highest restart volume", "Most restart-heavy rows in the current advisor window.", restart_volume_items)}
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-head">
-            <div class="section-title">Recommendation Set</div>
-            <div class="section-detail">filterable live view from ConfigMap data</div>
-          </div>
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <div class="filter-group" role="tablist" aria-label="Action filters">
-                <button class="filter-btn active" type="button" data-filter-action="all">All</button>
-                <button class="filter-btn" type="button" data-filter-action="upsize">Upsize</button>
-                <button class="filter-btn" type="button" data-filter-action="downsize">Downsize</button>
-                <button class="filter-btn" type="button" data-filter-action="no-change">No Change</button>
-              </div>
-              <select id="noteFilter" aria-label="Note filter">
-                <option value="all">All notes</option>
-                {note_options}
-              </select>
-            </div>
-            <div class="toolbar-right">
-              <input id="searchInput" type="search" placeholder="Search namespace, workload, release, notes…" />
-              <div id="resultCount" class="result-count">{rec_count} visible rows</div>
-            </div>
-          </div>
-          <div class="surface table-shell">
-            <table>
-              <thead>
-                <tr>
-                  <th>Workload</th>
-                  <th>Action</th>
-                  <th>CPU Request</th>
-                  <th>Memory Request</th>
-                  <th>Observed Usage</th>
-                  <th>Restarts</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody id="recommendationRows">
-                {''.join(table_rows)}
-              </tbody>
-            </table>
-            <div id="emptyState" class="empty-state" hidden>No rows match the current filters.</div>
-          </div>
-        </section>
-
-        <section class="section">
-          <div class="section-head">
-            <div class="section-title">Raw Report</div>
-            <div class="section-detail">same runtime-owned markdown surfaced below</div>
-          </div>
-          <details>
-            <summary>Show latest markdown report</summary>
-            <pre>{html.escape(md) if md else 'No report markdown found in ConfigMap.'}</pre>
-          </details>
-        </section>
+    <header>
+      <div class="header-nav font-mono">
+        <span class="text-primary font-mono" style="font-weight: 700; letter-spacing: -0.5px;">SYS_CTRL</span>
+        <span style="color: var(--text-tertiary);">/</span>
+        <a href="#overview" class="header-link">Overview</a>
+        <a href="#recommendations" class="header-link active">Recommendations</a>
+        <a href="#runtime" class="header-link">Runtime</a>
       </div>
+      <div class="header-nav">
+        <span class="header-chip">Mode: {html.escape(mode or 'n/a')}</span>
+      </div>
+    </header>
+
+    <main>
+      <section id="overview" class="section">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title font-mono">Cluster Tuning</h1>
+            <p class="page-subtitle">{html.escape(status_copy)}</p>
+          </div>
+          <div class="page-meta">
+            <span>last run <strong id="last-run-local" data-utc="{_escape_attr(last_run)}">{html.escape(last_run or 'n/a')}</strong></span>
+            <span>browser tz <strong id="browser-tz">browser local</strong></span>
+            <span>window <strong>{html.escape(window or 'n/a')}</strong></span>
+            <span>coverage <strong>{html.escape(_fmt_decimal(coverage_days))}d</strong></span>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <a class="header-action" href="/latest.json">Raw JSON</a>
+            <a class="header-action" href="/latest.md">Raw Markdown</a>
+            <a class="header-action" href="/metrics">Exporter Metrics</a>
+          </div>
+          <div class="result-count">allocatable {html.escape(str(alloc.get('cpu') or 'n/a'))} cpu · {html.escape(str(alloc.get('memory') or 'n/a'))} memory</div>
+        </div>
+        <div class="metrics-grid">
+          {overview_html}
+          {budget_cards}
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Recommendation Focus</h2>
+          <div class="section-detail">high-signal slices from the latest report</div>
+        </div>
+        <div class="focus-grid">
+          {_build_focus_card("Largest memory shifts", "Absolute request-memory deltas across all recommendations.", biggest_mem_items)}
+          {_build_focus_card("Restart-guarded items", "Rows where restart activity is influencing the advice.", restart_guard_items)}
+          {_build_focus_card("Highest restart volume", "Most restart-heavy rows in the current advisor window.", restart_volume_items)}
+        </div>
+      </section>
+
+      <section id="recommendations" class="section">
+        <div class="section-head">
+          <h2 class="section-title">Recommendation Set</h2>
+          <div class="section-detail">filterable live view from ConfigMap data</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="filter-group" role="tablist" aria-label="Action filters">
+              <button class="filter-btn active" type="button" data-filter-action="all">All</button>
+              <button class="filter-btn" type="button" data-filter-action="upsize">Upsize</button>
+              <button class="filter-btn" type="button" data-filter-action="downsize">Downsize</button>
+              <button class="filter-btn" type="button" data-filter-action="no-change">No change</button>
+            </div>
+            <select id="noteFilter" class="control-select" aria-label="Note filter">
+              <option value="all">All notes</option>
+              {note_options}
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <div class="input-group">
+              <span class="input-prefix">&gt;</span>
+              <input id="searchInput" type="search" placeholder="Filter workloads..." />
+            </div>
+            <div id="resultCount" class="result-count">{rec_count} visible rows</div>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="card-texture"></div>
+          <table>
+            <thead>
+              <tr>
+                <th>Workload</th>
+                <th>Action</th>
+                <th>CPU Request</th>
+                <th>Memory Request</th>
+                <th>Observed Usage</th>
+                <th>Restarts</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="recommendationRows">
+              {''.join(table_rows)}
+            </tbody>
+          </table>
+          <div id="emptyState" class="empty-state" hidden>No rows match the current filters.</div>
+        </div>
+      </section>
+
+      <section id="runtime" class="section">
+        <div class="section-head">
+          <h2 class="section-title">System Output</h2>
+          <div class="section-detail">{html.escape(fetch_detail)}</div>
+        </div>
+        <div class="terminal-area">
+          <div class="card-texture" style="opacity: 0.22;"></div>
+          <div class="terminal-content">
+            {runtime_html}
+          </div>
+        </div>
+      </section>
     </main>
     <script>
       (function () {{
