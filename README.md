@@ -305,6 +305,8 @@ make deploy-mmcal
 |-----|-------------|
 | [`ops-command-cheatsheet.md`](docs/ops-command-cheatsheet.md) | Full command reference |
 | [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
+| [`gitops-change-timeline-dashboard.md`](docs/gitops-change-timeline-dashboard.md) | Flux activity and reconcile timeline |
+| [`dns-access-path-dashboard.md`](docs/dns-access-path-dashboard.md) | DNS health and access surface |
 | [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource tuning automation |
 | [`node-capacity-dashboard.md`](docs/node-capacity-dashboard.md) | Whole-host node CPU/RAM dashboard |
 | [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |

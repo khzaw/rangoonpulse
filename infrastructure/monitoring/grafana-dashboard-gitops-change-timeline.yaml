@@ -1,0 +1,582 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-gitops-change-timeline
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: gitops-change-timeline
+data:
+  gitops-change-timeline.json: |
+    {
+      "uid": "gitops-change-timeline",
+      "title": "GitOps Change Timeline",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["gitops", "flux", "timeline", "homelab"],
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          },
+          {
+            "name": "controller",
+            "label": "Controller",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(controller_runtime_reconcile_total{job=\"monitoring/flux-controllers\"}, controller)",
+              "refId": "ControllerVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "kind",
+            "label": "Kind",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(gotk_reconcile_duration_seconds_count{job=\"monitoring/flux-controllers\"}, kind)",
+              "refId": "KindVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "name",
+            "label": "Object",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(gotk_reconcile_duration_seconds_count{job=\"monitoring/flux-controllers\",kind=~\"$kind\"}, name)",
+              "refId": "ObjectVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "Use this when the question is `what changed?` or `which Flux controller/object got noisy?` The dashboard leans on Flux controller metrics, reconcile histograms, and restart history in `flux-system`."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Reconcile Errors (1h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(controller_runtime_reconcile_errors_total{job=\"monitoring/flux-controllers\",controller=~\"$controller\"}[1h]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Reconciles (1h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(controller_runtime_reconcile_total{job=\"monitoring/flux-controllers\",controller=~\"$controller\",result=~\"success|error|requeue|requeue_after\"}[1h]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "GitRepository Errors (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(controller_runtime_reconcile_total{job=\"monitoring/flux-controllers\",controller=\"gitrepository\",result=\"error\"}[24h]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Selected Scope P95 Reconcile Duration",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by(le) (rate(gotk_reconcile_duration_seconds_bucket{job=\"monitoring/flux-controllers\",kind=~\"$kind\",name=~\"$name\"}[15m])))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Flux Pod Restarts (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"flux-system\"}[24h]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Active Workers",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(controller_runtime_active_workers{job=\"monitoring/flux-controllers\",controller=~\"$controller\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "Reconcile Activity by Controller and Result",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(controller, result) (increase(controller_runtime_reconcile_total{job=\"monitoring/flux-controllers\",controller=~\"$controller\",result=~\"success|error|requeue|requeue_after\"}[5m]))",
+              "legendFormat": "{{controller}} / {{result}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "Reconcile Errors by Controller",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(controller) (increase(controller_runtime_reconcile_errors_total{job=\"monitoring/flux-controllers\",controller=~\"$controller\"}[5m]))",
+              "legendFormat": "{{controller}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "P95 Reconcile Duration by Kind",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by(le, kind) (rate(gotk_reconcile_duration_seconds_bucket{job=\"monitoring/flux-controllers\",kind=~\"$kind\",name=~\"$name\"}[15m])))",
+              "legendFormat": "{{kind}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 11,
+          "type": "timeseries",
+          "title": "Flux Pod Restarts",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(pod) (increase(kube_pod_container_status_restarts_total{namespace=\"flux-system\"}[1h]))",
+              "legendFormat": "{{pod}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 12,
+          "type": "bargauge",
+          "title": "Top Reconciled Objects This Range",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(15, sum by(kind, name, exported_namespace) (increase(gotk_reconcile_duration_seconds_count{job=\"monitoring/flux-controllers\",kind=~\"$kind\",name=~\"$name\"}[$__range])))",
+              "legendFormat": "{{kind}} {{exported_namespace}}/{{name}}",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0
+            }
+          },
+          "options": {
+            "displayMode": "basic",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 13,
+          "type": "bargauge",
+          "title": "Slowest Objects Avg Reconcile Duration This Range",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(15, sum by(kind, name, exported_namespace) (increase(gotk_reconcile_duration_seconds_sum{job=\"monitoring/flux-controllers\",kind=~\"$kind\",name=~\"$name\"}[$__range])) / clamp_min(sum by(kind, name, exported_namespace) (increase(gotk_reconcile_duration_seconds_count{job=\"monitoring/flux-controllers\",kind=~\"$kind\",name=~\"$name\"}[$__range])), 1))",
+              "legendFormat": "{{kind}} {{exported_namespace}}/{{name}}",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "displayMode": "basic",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        }
+      ]
+    }

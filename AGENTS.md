@@ -420,6 +420,8 @@ Examples:
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
 - `docs/homelab-operations-dashboards.md`
+- `docs/gitops-change-timeline-dashboard.md`
+- `docs/dns-access-path-dashboard.md`
 - `docs/uptime-kuma-sqlite-on-nfs-timeouts.md`
 - `docs/prometheus-tsdb-local-path-migration.md`
 - `docs/kube-state-metrics-oomkills.md`

@@ -24,6 +24,14 @@ Additional GitOps-managed Grafana dashboards live under `infrastructure/monitori
   - file: `infrastructure/monitoring/grafana-dashboard-stateful-services-risk.yaml`
   - purpose: PVC-backed pod health, restart pressure, and persistent-volume risk for stateful services.
 
+- `GitOps Change Timeline`
+  - file: `infrastructure/monitoring/grafana-dashboard-gitops-change-timeline.yaml`
+  - purpose: Flux reconcile activity, controller noise, slow objects, and restart spikes in `flux-system`.
+
+- `DNS and Access Paths`
+  - file: `infrastructure/monitoring/grafana-dashboard-dns-access-paths.yaml`
+  - purpose: CoreDNS health, DNS failure signals, ingress host inventory, TLS coverage, and public-edge access surfaces.
+
 ## Shared Recording Rules
 
 These dashboards rely on precomputed series in:
@@ -60,6 +68,8 @@ kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-st
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-public-edge-overview.yaml
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-efficiency-and-placement.yaml
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-stateful-services-risk.yaml
+kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-gitops-change-timeline.yaml
+kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-dns-access-paths.yaml
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 

@@ -7,6 +7,8 @@ resources:
   - helmrelease.yaml
   - monitoring-cname.yaml
   - servicemonitor-kubelet-resource.yaml
+  - grafana-dashboard-gitops-change-timeline.yaml
+  - grafana-dashboard-dns-access-paths.yaml
   - grafana-dashboard-node-power-estimation.yaml
   - grafana-dashboard-node-capacity-overview.yaml
   - grafana-dashboard-homelab-control-room.yaml

@@ -1,0 +1,642 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dns-access-paths
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: dns-access-paths
+data:
+  dns-access-paths.json: |
+    {
+      "uid": "dns-access-paths",
+      "title": "DNS and Access Paths",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["dns", "access", "ingress", "homelab"],
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(kube_ingress_info, namespace)",
+              "refId": "NamespaceVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2,
+            "sort": 1
+          },
+          {
+            "name": "ingressclass",
+            "label": "Ingress Class",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(kube_ingress_info{namespace=~\"$namespace\"}, ingressclass)",
+              "refId": "IngressClassVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2,
+            "sort": 1
+          },
+          {
+            "name": "host",
+            "label": "Host",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(kube_ingress_path{namespace=~\"$namespace\"}, host)",
+              "refId": "HostVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2,
+            "sort": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "Use this when the question is `can clients resolve and reach the thing I exposed?` It combines CoreDNS health, DNS failure signals, ingress/TLS inventory, and public-edge access endpoints already modeled in this cluster."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "CoreDNS Targets Down",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(up{job=\"coredns\"} == 0)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "DNS Requests / s",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(coredns_dns_requests_total[5m]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "SERVFAIL / s",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(coredns_dns_responses_total{rcode=\"SERVFAIL\"}[5m]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.01
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Cache Hit Ratio",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(coredns_cache_hits_total[5m])) / clamp_min(sum(rate(coredns_cache_requests_total[5m])), 1)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Exposed Hosts",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(count by(host) (kube_ingress_path{namespace=~\"$namespace\",host=~\"$host\"} * on(namespace, ingress) group_left(ingressclass) max by(namespace, ingress, ingressclass) (kube_ingress_info{namespace=~\"$namespace\",ingressclass=~\"$ingressclass\"})))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Share Hosts (Tunnel CNAMEs)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(kube_service_info{namespace=\"public-edge\",external_name!=\"\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "DNS Responses by Rcode",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(rcode) (rate(coredns_dns_responses_total[5m]))",
+              "legendFormat": "{{rcode}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "CoreDNS Request Latency P95",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by(le) (rate(coredns_dns_request_duration_seconds_bucket[5m])))",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "CoreDNS Cache Hit Ratio",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(coredns_cache_hits_total[5m])) / clamp_min(sum(rate(coredns_cache_requests_total[5m])), 1)",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        {
+          "id": 11,
+          "type": "timeseries",
+          "title": "DNS and Forwarding Failure Signals",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(coredns_forward_healthcheck_broken_total[5m]))",
+              "legendFormat": "forward healthcheck broken",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "sum(increase(coredns_proxy_healthcheck_failures_total[5m]))",
+              "legendFormat": "proxy healthcheck failures",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "increase(prometheus_sd_dns_lookup_failures_total[5m])",
+              "legendFormat": "prometheus sd dns lookup failures",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 12,
+          "type": "bargauge",
+          "title": "Ingress Surface by Class",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count by(ingressclass) (kube_ingress_info{namespace=~\"$namespace\",ingressclass=~\"$ingressclass\"})",
+              "instant": true,
+              "legendFormat": "{{ingressclass}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "displayMode": "basic",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 13,
+          "type": "table",
+          "title": "Hosts Missing TLS",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by(namespace, ingress, host) ((kube_ingress_path{namespace=~\"$namespace\",host=~\"$host\"} * on(namespace, ingress) group_left(ingressclass) max by(namespace, ingress, ingressclass) (kube_ingress_info{namespace=~\"$namespace\",ingressclass=~\"$ingressclass\"})) unless on(namespace, ingress, host) label_replace(kube_ingress_tls{namespace=~\"$namespace\"}, \"host\", \"$1\", \"tls_host\", \"(.*)\"))",
+              "instant": true,
+              "format": "table",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true
+          }
+        },
+        {
+          "id": 14,
+          "type": "table",
+          "title": "Ingress Host Inventory",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 8,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by(namespace, ingress, ingressclass, host, service_name, service_port, path) (kube_ingress_path{namespace=~\"$namespace\",host=~\"$host\"} * on(namespace, ingress) group_left(ingressclass) max by(namespace, ingress, ingressclass) (kube_ingress_info{namespace=~\"$namespace\",ingressclass=~\"$ingressclass\"}))",
+              "instant": true,
+              "format": "table",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true
+          }
+        },
+        {
+          "id": 15,
+          "type": "table",
+          "title": "Access Endpoints",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 8,
+            "x": 16,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by(namespace, service, load_balancer_ip, external_name, external_traffic_policy) (kube_service_info{namespace=~\"default|ingress-nginx|monitoring|public-edge\",load_balancer_ip!=\"\"} or kube_service_info{namespace=~\"default|ingress-nginx|monitoring|public-edge\",external_name!=\"\"})",
+              "instant": true,
+              "format": "table",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "options": {
+            "showHeader": true
+          }
+        }
+      ]
+    }
