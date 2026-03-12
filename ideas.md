@@ -22,14 +22,15 @@ This file tracks ideas explicitly rated `good` or better.
 5. `good` - Lean Ops Command Center v2
 - Runbook-driven operational UI on top of self-service actions, with guided diagnostics and incident context.
 
-6. `okay` - GitOps App Bootstrapper
-- CLI/script scaffolding for new apps (`apps/<name>`, Flux kustomization, ingress/TLS/external-dns, baseline resources, and PVC policy).
+6. `really good` - Away Mode / Quiet Hours Control Plane
+- Add an operator-facing control at `controlpanel.khzaw.dev` for "I’m away for a few hours" posture changes with expiry and auto-restore.
+- Candidate actions: disable all temporary public shares, switch Transmission to a safer/default egress mode, and optionally pause selected noisy or non-essential workloads.
+- Keep all changes runtime-owned and auditable (similar to the current exposure-control and Transmission VPN toggles), without fighting Flux desired state.
 
-7. `really good` - Backup Implementation (CronJobs + TrueNAS Snapshots + Offsite)
-- Implement backup plan from `docs/backup-plan.md`. Priority: Vaultwarden `pg_dump` CronJob writing to TrueNAS NFS backup dataset, then Immich Postgres dump.
-- Enable TrueNAS snapshot schedules on NFS-backed datasets (zero cluster overhead).
-- For offsite: `restic` to Backblaze B2, nightly CronJob pushing Tier 1 dumps.
-- Critical gap: `local-path` databases (Vaultwarden Postgres, Immich Postgres, Grafana, Obsidian LiveSync) have no redundancy today. NVMe failure = total loss.
+7. `really good` - Jellyfin-Aware Load Shedding
+- Detect active Jellyfin streaming/transcode pressure and temporarily shed lower-priority cluster load, then restore automatically when playback returns to idle.
+- Candidate controls: pause or downscale download/automation workloads, reduce background churn, and preserve headroom on the primary node during rare higher-load media sessions.
+- Build this as a policy-driven control loop with clear guardrails, Prometheus visibility, and an audit trail rather than one-off shell automation.
 
 8. `good` - Prometheus Persistent Storage
 - Replace `storageSpec.emptyDir` with a PVC (`truenas-nfs` or `local-path`, ~10Gi).
