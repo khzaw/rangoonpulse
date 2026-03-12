@@ -235,55 +235,28 @@ def _escape_attr(value: object) -> str:
     return html.escape(str(value or ""), quote=True)
 
 
-def _build_budget_card(
-    title: str,
-    unit_label: str,
-    allocatable: object,
-    current_total: float,
-    recommended_total: float,
-    current_percent: object,
-    recommended_percent: object,
-    accent: str,
+def _build_overview_segment(
+    label: str,
+    value: str,
+    subtitle: str,
+    *,
+    eyebrow: str = "",
+    bar_pct: float = 0.0,
+    tone: str = "neutral",
 ) -> str:
-    delta = recommended_total - current_total
-    delta_class = "positive" if delta > 0 else "negative" if delta < 0 else "neutral"
-    current_pct = _clamp_pct(current_percent, 100.0)
-    recommended_pct = _clamp_pct(recommended_percent, 100.0)
-
+    eyebrow_html = f'<span class="overview-eyebrow">{html.escape(eyebrow)}</span>' if eyebrow else ""
     return f"""
-      <article class="panel metric-card budget-card">
-        <div class="card-texture"></div>
-        <div class="metric-content">
-          <div class="metric-head">
-            <div class="metric-label font-mono text-cyan">{html.escape(title)}</div>
-            <div class="metric-delta {delta_class}">{html.escape(_fmt_signed(delta, unit_label))}</div>
-          </div>
-          <div class="metric-value">{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</div>
-          <div class="metric-meta">current requested from {html.escape(str(allocatable or "n/a"))} allocatable</div>
-          <div class="meter-group">
-            <div class="meter-row">
-              <span>current</span>
-              <strong>{html.escape(_fmt_decimal(current_percent))}%</strong>
-            </div>
-            <div class="meter-track">
-              <div class="meter-fill current {html.escape(accent)}" style="width:{current_pct:.1f}%"></div>
-            </div>
-          </div>
-          <div class="meter-group">
-            <div class="meter-row">
-              <span>recommended</span>
-              <strong>{html.escape(_fmt_decimal(recommended_percent))}%</strong>
-            </div>
-            <div class="meter-track">
-              <div class="meter-fill recommended {html.escape(accent)}" style="width:{recommended_pct:.1f}%"></div>
-            </div>
-          </div>
-          <div class="budget-foot">
-            <span>{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</span>
-            <span>{html.escape(_fmt_decimal(recommended_total))}{html.escape(unit_label)}</span>
-          </div>
+      <section class="overview-segment">
+        <div class="overview-segment-head">
+          <span class="overview-label">{html.escape(label)}</span>
+          {eyebrow_html}
         </div>
-      </article>
+        <div class="overview-value">{html.escape(value)}</div>
+        <div class="overview-subtitle">{html.escape(subtitle)}</div>
+        <div class="overview-meter">
+          <span class="overview-meter-fill {html.escape(tone)}" style="width:{_clamp_pct(bar_pct, 100.0):.1f}%"></span>
+        </div>
+      </section>
     """
 
 
@@ -292,10 +265,9 @@ def _build_focus_card(title: str, subtitle: str, items: list[str]) -> str:
         items = ["No items in this slice."]
     rows = "".join(f"<li>{item}</li>" for item in items)
     return f"""
-      <article class="panel focus-card">
-        <div class="card-texture"></div>
-        <div class="metric-content">
-          <div class="section-caption font-mono text-cyan">{html.escape(title)}</div>
+      <article class="focus-card">
+        <div class="focus-card-body">
+          <div class="focus-card-title">{html.escape(title)}</div>
           <div class="focus-subtitle">{html.escape(subtitle)}</div>
           <ul class="focus-list">{rows}</ul>
         </div>
@@ -478,27 +450,6 @@ def build_index_html() -> str:
             """
         )
 
-    overview_cards = [
-        ("Recommendations", str(rec_count), f"{upsize_count} up · {downsize_count} down · {no_change_count} steady"),
-        ("Containers analyzed", str(analyzed), f"{with_metrics} with Prometheus data"),
-        ("Metrics coverage", f"{_fmt_decimal(coverage_days)}d", f"window {window or 'n/a'}"),
-        ("Fetcher", "healthy" if fetch_state == "live" else "degraded", fetch_detail),
-    ]
-
-    overview_html = "".join(
-        f"""
-        <article class="panel metric-card stat-card">
-          <div class="card-texture"></div>
-          <div class="metric-content">
-            <div class="metric-label font-mono text-cyan">{html.escape(label)}</div>
-            <div class="metric-value">{html.escape(value)}</div>
-            <div class="metric-meta">{html.escape(subtitle)}</div>
-          </div>
-        </article>
-        """
-        for label, value, subtitle in overview_cards
-    )
-
     policy_html = "".join(
         f'<span class="token">{html.escape(label)} <strong>{html.escape(value)}</strong></span>'
         for label, value in [
@@ -516,44 +467,64 @@ def build_index_html() -> str:
         for note, count in top_notes
     ) or '<span class="muted">No note annotations in current report.</span>'
 
-    budget_cards = (
-        _build_budget_card(
-            "CPU request posture",
-            "m",
-            alloc.get("cpu") or "n/a",
-            current_cpu_m,
-            recommended_cpu_m,
-            cur_pct.get("cpu"),
-            rec_pct.get("cpu"),
-            "cpu",
-        )
-        + _build_budget_card(
-            "Memory request posture",
-            "Mi",
-            alloc.get("memory") or "n/a",
-            current_mem_mi,
-            recommended_mem_mi,
-            cur_pct.get("memory"),
-            rec_pct.get("memory"),
-            "memory",
-        )
-        + f"""
-          <article class="panel metric-card policy-card">
-            <div class="card-texture"></div>
-            <div class="metric-content">
-              <div class="metric-label font-mono text-cyan">Policy guardrails</div>
-              <div class="policy-grid">{policy_html}</div>
-              <div class="policy-copy">These are the active planner bounds applied to each report or apply-PR pass.</div>
-              <div class="surface-divider"></div>
-              <div class="metric-label font-mono text-cyan">Common notes</div>
-              <div class="policy-grid">{note_html}</div>
-            </div>
-          </article>
-        """
+    try:
+        window_days = float(str(window).rstrip("d")) if str(window).endswith("d") else 0.0
+    except Exception:
+        window_days = 0.0
+    coverage_pct = (float(coverage_days or 0.0) / window_days * 100.0) if window_days > 0 else 0.0
+
+    overview_html = "".join(
+        [
+            _build_overview_segment(
+                "Recommendations",
+                str(rec_count),
+                f"{upsize_count} upsize, {downsize_count} downsize, {no_change_count} steady",
+                eyebrow=f"{with_metrics}/{analyzed} with metrics" if analyzed else "",
+                bar_pct=(with_metrics / analyzed * 100.0) if analyzed else 0.0,
+                tone="neutral",
+            ),
+            _build_overview_segment(
+                "CPU request posture",
+                f"{_fmt_decimal(current_cpu_m)}m",
+                f"{_fmt_decimal(cur_pct.get('cpu'))}% of {alloc.get('cpu') or 'n/a'} allocatable",
+                eyebrow=_fmt_signed(recommended_cpu_m - current_cpu_m, "m", 0),
+                bar_pct=float(cur_pct.get("cpu") or 0.0),
+                tone="cpu",
+            ),
+            _build_overview_segment(
+                "Memory request posture",
+                f"{_fmt_decimal(current_mem_mi)}Mi",
+                f"{_fmt_decimal(cur_pct.get('memory'))}% of {alloc.get('memory') or 'n/a'} allocatable",
+                eyebrow=_fmt_signed(recommended_mem_mi - current_mem_mi, "Mi", 0),
+                bar_pct=float(cur_pct.get("memory") or 0.0),
+                tone="memory",
+            ),
+            _build_overview_segment(
+                "Fetcher",
+                "healthy" if fetch_state == "live" else "degraded",
+                f"window {window or 'n/a'} · coverage {_fmt_decimal(coverage_days)}d",
+                eyebrow=(mode or "report").replace("-", " "),
+                bar_pct=100.0 if fetch_state == "live" else coverage_pct,
+                tone="status" if fetch_state == "live" else "warning",
+            ),
+        ]
     )
 
+    support_cards = f"""
+      <article class="support-card">
+        <div class="support-card-title">Policy guardrails</div>
+        <div class="policy-grid">{policy_html}</div>
+        <p class="support-copy">Active planner bounds applied to each report and apply pass.</p>
+      </article>
+      <article class="support-card">
+        <div class="support-card-title">Common notes</div>
+        <div class="policy-grid">{note_html}</div>
+        <p class="support-copy">Most common skip reasons and advisory annotations in the current window.</p>
+      </article>
+    """
+
     status_copy = (
-        "Budget-aware tuning view for the latest runtime-owned advisor report."
+        "Budget-aware recommendation view from the runtime-owned advisor report."
         if report
         else "No parsed report is currently available from the runtime ConfigMap."
     )
@@ -587,20 +558,18 @@ def build_index_html() -> str:
     <style>
       :root {{
         --bg-base: #000000;
-        --bg-surface: #0a0a0a;
-        --bg-surface-hover: rgba(94, 234, 212, 0.05);
-        --accent-cyan: #5eead4;
-        --accent-cyan-dim: rgba(94, 234, 212, 0.2);
-        --accent-cyan-glow: rgba(94, 234, 212, 0.36);
-        --text-primary: #ffffff;
-        --text-secondary: #a3a3a3;
-        --text-tertiary: #525252;
-        --border-subtle: #1a1a1a;
-        --border-active: #333333;
-        --grid-color: rgba(94, 234, 212, 0.055);
-        --warn: #f59e0b;
+        --bg-surface: #070707;
+        --bg-surface-soft: #090909;
+        --bg-hover: #0d0d0d;
+        --text-primary: #f5f5f5;
+        --text-secondary: #999999;
+        --text-tertiary: #5f5f5f;
+        --border-subtle: #171717;
+        --border-active: #2a2a2a;
+        --accent-soft: #d4d4d4;
+        --warn: #f4b52d;
         --danger: #fb7185;
-        --success: #34d399;
+        --success: #38d39f;
         --font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
         --radius-sm: 2px;
@@ -618,273 +587,427 @@ def build_index_html() -> str:
         background: var(--bg-base);
       }}
       body {{
-        background-color: var(--bg-base);
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top center, rgba(255, 255, 255, 0.03), transparent 26%),
+          var(--bg-base);
         color: var(--text-primary);
         font-family: var(--font-sans);
         font-size: 13px;
         line-height: 1.5;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-      }}
-      body::before {{
-        display: none;
-      }}
-      body::after {{
-        content: "";
-        position: fixed;
-        inset: 0;
-        background:
-          radial-gradient(circle at top center, rgba(94, 234, 212, 0.07), transparent 32%),
-          linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.3));
-        pointer-events: none;
-        z-index: 0;
       }}
       a {{
-        color: var(--text-secondary);
+        color: inherit;
         text-decoration: none;
       }}
-      a:hover {{
-        color: var(--text-primary);
-      }}
-      .text-primary {{ color: var(--text-primary); }}
-      .text-cyan {{ color: var(--accent-cyan); }}
-      .font-mono {{ font-family: var(--font-mono); }}
-      header {{
-        border-bottom: 1px solid var(--border-subtle);
-        padding: 0 24px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+      .topbar {{
         position: sticky;
         top: 0;
+        z-index: 10;
+        border-bottom: 1px solid var(--border-subtle);
         background: rgba(0, 0, 0, 0.9);
         backdrop-filter: blur(8px);
-        z-index: 10;
       }}
-      .header-nav {{
+      .topbar-inner {{
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 14px 24px;
         display: flex;
-        gap: 20px;
         align-items: center;
+        justify-content: space-between;
+        gap: 16px;
       }}
-      .header-link {{
-        color: var(--text-secondary);
-        transition: color 0.2s;
-        font-size: 13px;
+      .crumbs,
+      .top-actions {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
       }}
-      .header-link:hover,
-      .header-link.active {{
+      .brand-mark {{
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        border: 1px solid var(--border-active);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
         color: var(--text-primary);
       }}
-      .header-chip,
-      .header-button {{
+      .crumb-separator,
+      .crumb-subtle {{
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }}
+      .crumb-label {{
+        color: var(--text-primary);
+        font-size: 15px;
+        font-weight: 500;
+      }}
+      .env-pill,
+      .top-button,
+      .filter-btn,
+      .control-select,
+      .search-shell {{
         border: 1px solid var(--border-active);
         border-radius: var(--radius-sm);
-        padding: 6px 12px;
-        color: var(--text-primary);
-        font-size: 12px;
-        font-family: var(--font-mono);
-        background: var(--bg-surface);
+        background: transparent;
+        color: var(--text-secondary);
       }}
-      .header-button:hover {{
-        border-color: var(--accent-cyan-dim);
-        color: var(--accent-cyan);
+      .env-pill {{
+        padding: 4px 9px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+      }}
+      .top-button {{
+        padding: 8px 14px;
+        font-size: 12px;
+        color: var(--text-primary);
+      }}
+      .top-button:hover,
+      .filter-btn:hover,
+      .control-select:hover,
+      .search-shell:focus-within {{
+        border-color: #3a3a3a;
+      }}
+      .primary-button {{
+        background: #f5f5f5;
+        color: #000000;
+        border: 1px solid #f5f5f5;
+        border-radius: var(--radius-sm);
+        padding: 9px 15px;
+        font-size: 12px;
+      }}
+      .primary-button:hover {{
+        background: transparent;
+        color: var(--text-primary);
       }}
       main {{
-        position: relative;
-        z-index: 1;
-        padding: 32px 24px 56px;
-        max-width: 1400px;
+        max-width: 1180px;
         margin: 0 auto;
-        width: 100%;
+        padding: 52px 24px 72px;
         display: flex;
         flex-direction: column;
-        gap: 32px;
-      }}
-      .page-header {{
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 24px;
-      }}
-      .page-title {{
-        font-size: 22px;
-        font-weight: 500;
-        letter-spacing: -0.02em;
-        color: var(--accent-cyan);
-      }}
-      .page-subtitle {{
-        color: var(--text-secondary);
-        font-size: 13px;
-        margin-top: 6px;
-      }}
-      .page-meta {{
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        gap: 16px;
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-family: var(--font-mono);
-      }}
-      .page-meta strong {{
-        color: var(--text-primary);
-        font-weight: 500;
+        gap: 42px;
       }}
       .section {{
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 18px;
       }}
-      .section-head {{
+      .section-bar {{
         display: flex;
+        align-items: flex-end;
         justify-content: space-between;
-        align-items: center;
         gap: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-subtle);
       }}
-      .section-title {{
+      .section-heading {{
         color: var(--text-primary);
+        font-size: 15px;
+        font-weight: 500;
+      }}
+      .section-copy,
+      .section-note,
+      .section-detail,
+      .overview-meta,
+      .support-copy,
+      .focus-subtitle,
+      .workload-meta,
+      .usage-line,
+      .notes-cell,
+      .metric-delta {{
+        color: var(--text-tertiary);
         font-family: var(--font-mono);
-        font-size: 12px;
-        letter-spacing: 0.05em;
+        font-size: 11px;
+        line-height: 1.7;
+      }}
+      .section-note,
+      .overview-meta {{
+        letter-spacing: 0.08em;
         text-transform: uppercase;
       }}
-      .section-detail {{
-        color: var(--text-tertiary);
-        font-family: var(--font-mono);
-        font-size: 11px;
-      }}
-      .metrics-grid,
-      .focus-grid {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-      }}
-      .panel,
-      .table-container,
-      .terminal-area {{
-        position: relative;
-        overflow: hidden;
-        background: var(--bg-surface);
+      .overview-strip,
+      .table-shell,
+      .focus-card,
+      .support-card,
+      .terminal-shell {{
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-md);
+        background: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(4, 4, 4, 0.98));
       }}
-      .card-texture {{
-        display: none;
+      .overview-strip {{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        overflow: hidden;
       }}
-      .metric-card {{
+      .overview-segment {{
         min-height: 166px;
-      }}
-      .metric-content {{
-        position: relative;
-        z-index: 1;
-        padding: 16px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
         gap: 10px;
+        border-right: 1px solid var(--border-subtle);
       }}
-      .metric-label,
-      .section-caption {{
-        color: var(--accent-cyan);
-        font-size: 12px;
-        letter-spacing: 0.03em;
+      .overview-segment:last-child {{
+        border-right: none;
       }}
-      .metric-head {{
+      .overview-segment-head {{
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        align-items: baseline;
         gap: 12px;
       }}
-      .metric-value {{
-        font-family: var(--font-mono);
-        font-size: 18px;
-        color: var(--text-primary);
-      }}
-      .metric-meta,
-      .focus-subtitle,
-      .policy-copy,
-      .budget-foot {{
-        color: var(--text-tertiary);
-        font-family: var(--font-mono);
-        font-size: 11px;
-        line-height: 1.6;
-      }}
-      .metric-delta {{
+      .overview-label,
+      .overview-eyebrow {{
         font-family: var(--font-mono);
         font-size: 11px;
       }}
-      .positive {{ color: var(--warn); }}
-      .negative {{ color: var(--success); }}
-      .neutral {{ color: var(--text-tertiary); }}
-      .meter-group {{
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }}
-      .meter-row {{
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
+      .overview-label {{
         color: var(--text-secondary);
-        font-family: var(--font-mono);
-        font-size: 11px;
       }}
-      .meter-row strong {{
+      .overview-eyebrow {{
+        color: var(--text-tertiary);
+      }}
+      .overview-value {{
         color: var(--text-primary);
-        font-weight: 500;
+        font-size: 19px;
+        font-weight: 300;
+        letter-spacing: -0.03em;
       }}
-      .meter-track {{
-        height: 4px;
-        background: rgba(255, 255, 255, 0.06);
+      .overview-subtitle {{
+        color: var(--text-secondary);
+        font-size: 12px;
+        max-width: 22ch;
+      }}
+      .overview-meter {{
+        margin-top: auto;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.08);
         position: relative;
         overflow: hidden;
       }}
-      .meter-fill {{
+      .overview-meter-fill {{
         position: absolute;
         inset: 0 auto 0 0;
+        background: rgba(255, 255, 255, 0.8);
       }}
-      .meter-fill.current.cpu {{ background: linear-gradient(90deg, rgba(94, 234, 212, 0.25), rgba(94, 234, 212, 0.85)); }}
-      .meter-fill.recommended.cpu {{ background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.8)); }}
-      .meter-fill.current.memory {{ background: linear-gradient(90deg, rgba(94, 234, 212, 0.25), rgba(94, 234, 212, 0.85)); }}
-      .meter-fill.recommended.memory {{ background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.9)); }}
-      .budget-foot {{
+      .overview-meter-fill.cpu {{
+        background: rgba(255, 255, 255, 0.75);
+      }}
+      .overview-meter-fill.memory {{
+        background: rgba(244, 181, 45, 0.92);
+      }}
+      .overview-meter-fill.status {{
+        background: rgba(56, 211, 159, 0.9);
+      }}
+      .overview-meter-fill.warning {{
+        background: rgba(251, 113, 133, 0.9);
+      }}
+      .overview-meta-row {{
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        margin-top: auto;
-      }}
-      .policy-grid {{
-        display: flex;
+        gap: 18px;
         flex-wrap: wrap;
-        gap: 12px;
       }}
-      .token {{
+      .overview-meta-cluster {{
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
         color: var(--text-secondary);
         font-family: var(--font-mono);
         font-size: 11px;
       }}
-      .token strong {{
+      .overview-meta-cluster strong {{
         color: var(--text-primary);
         font-weight: 500;
       }}
-      .surface-divider {{
-        height: 1px;
-        background: var(--border-subtle);
-        margin: 2px 0;
+      .toolbar {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }}
+      .toolbar-left,
+      .toolbar-right,
+      .filter-group {{
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }}
+      .filter-btn,
+      .control-select {{
+        padding: 8px 12px;
+        font-size: 12px;
+      }}
+      .filter-btn.active {{
+        color: var(--text-primary);
+        border-color: #f5f5f5;
+      }}
+      .control-select {{
+        background: var(--bg-surface-soft);
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+      }}
+      .search-shell {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        min-width: 268px;
+        background: var(--bg-surface-soft);
+      }}
+      .input-prefix {{
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+      }}
+      .search-shell input {{
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }}
+      .search-shell input::placeholder {{
+        color: var(--text-tertiary);
+      }}
+      .result-count {{
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }}
+      .table-shell {{
+        overflow: hidden;
+      }}
+      table {{
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+      }}
+      th,
+      td {{
+        padding: 14px 22px;
+        border-bottom: 1px solid var(--border-subtle);
+        vertical-align: top;
+        background: transparent;
+      }}
+      th {{
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-family: var(--font-mono);
+      }}
+      tr:last-child td {{
+        border-bottom: none;
+      }}
+      tbody tr {{
+        transition: background-color 0.15s ease;
+      }}
+      tbody tr:hover td {{
+        background: var(--bg-hover);
+      }}
+      .workload {{
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 2px;
+      }}
+      .metric-pair {{
+        color: var(--text-primary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.7;
+      }}
+      .arrow {{
+        color: var(--text-tertiary);
+        padding: 0 6px;
+      }}
+      .action {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: capitalize;
+      }}
+      .action::before {{
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }}
+      .action.upsize {{
+        color: var(--warn);
+      }}
+      .action.downsize {{
+        color: var(--success);
+      }}
+      .action.no-change {{
+        color: var(--accent-soft);
+      }}
+      .action.unknown {{
+        color: var(--text-tertiary);
+      }}
+      .positive {{
+        color: var(--warn);
+      }}
+      .negative {{
+        color: var(--success);
+      }}
+      .neutral,
+      .muted {{
+        color: var(--text-tertiary);
+      }}
+      .empty-state {{
+        padding: 24px 22px;
+        text-align: center;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }}
+      .focus-grid,
+      .support-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }}
+      .support-grid {{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }}
+      .focus-card-body,
+      .support-card,
+      .terminal-shell {{
+        padding: 18px 20px;
+      }}
+      .focus-card-title,
+      .support-card-title {{
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 500;
       }}
       .focus-list {{
         list-style: none;
-        display: grid;
-        gap: 10px;
-        margin-top: 2px;
+        margin-top: 12px;
       }}
       .focus-list li {{
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        background: rgba(255, 255, 255, 0.02);
-        padding: 10px 12px;
-        border-radius: var(--radius-sm);
+        padding: 12px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+      }}
+      .focus-list li:first-child {{
+        border-top: none;
+        padding-top: 0;
       }}
       .focus-path {{
         display: block;
@@ -895,335 +1018,159 @@ def build_index_html() -> str:
       }}
       .focus-inline {{
         display: block;
-        margin-top: 3px;
+        margin-top: 4px;
         color: var(--text-tertiary);
         font-family: var(--font-mono);
         font-size: 11px;
       }}
-      .toolbar {{
+      .policy-grid {{
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
         flex-wrap: wrap;
+        gap: 10px 14px;
+        margin-top: 12px;
       }}
-      .toolbar-left,
-      .toolbar-right {{
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }}
-      .filter-group {{
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }}
-      .filter-btn,
-      .control-select,
-      .header-action {{
-        background: transparent;
-        color: var(--text-primary);
-        border: 1px solid var(--border-active);
-        padding: 6px 12px;
-        border-radius: var(--radius-sm);
-        font-family: var(--font-sans);
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-      }}
-      .filter-btn:hover,
-      .control-select:hover,
-      .header-action:hover {{
-        border-color: var(--accent-cyan-dim);
-        color: var(--accent-cyan);
-      }}
-      .filter-btn.active {{
-        background: var(--text-primary);
-        color: var(--bg-base);
-        border-color: var(--text-primary);
-      }}
-      .control-select {{
-        font-family: var(--font-mono);
-        background: var(--bg-surface);
-      }}
-      .input-group {{
-        display: flex;
-        align-items: center;
-        border: 1px solid var(--border-active);
-        border-radius: var(--radius-sm);
-        padding: 4px 8px;
-        background: var(--bg-base);
-      }}
-      .input-prefix {{
-        color: var(--text-tertiary);
-        font-family: var(--font-mono);
-        margin-right: 8px;
-      }}
-      .input-group input {{
-        background: transparent;
-        border: none;
-        color: var(--text-primary);
-        font-family: var(--font-mono);
-        font-size: 12px;
-        outline: none;
-        width: 240px;
-      }}
-      .input-group input::placeholder {{
-        color: var(--text-tertiary);
-      }}
-      .result-count {{
-        color: var(--text-tertiary);
-        font-family: var(--font-mono);
-        font-size: 11px;
-      }}
-      .table-container {{
-        min-height: 180px;
-        background: #060606;
-      }}
-      .table-container .card-texture {{
-        display: none;
-      }}
-      table {{
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-        position: relative;
-        z-index: 1;
-      }}
-      th,
-      td {{
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border-subtle);
-        vertical-align: top;
-        background: #060606;
-      }}
-      th {{
+      .token {{
         color: var(--text-secondary);
-        font-weight: normal;
-        font-size: 11px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
         font-family: var(--font-mono);
-        background: rgba(10, 10, 10, 0.9);
+        font-size: 11px;
       }}
-      tr:last-child td {{
-        border-bottom: none;
-      }}
-      tbody tr {{
-        opacity: 0;
-        transform: translateY(8px);
-        animation: row-in 220ms cubic-bezier(.2,.75,.3,1) forwards;
-        animation-delay: calc(var(--row-index, 0) * 10ms);
-        transition: background-color 0.15s ease;
-      }}
-      tbody tr:hover {{
-        background-color: transparent;
-      }}
-      tbody tr:hover td {{
-        background: #081110;
-      }}
-      .workload {{
+      .token strong {{
         color: var(--text-primary);
-        font-family: var(--font-sans);
-        font-size: 14px;
         font-weight: 500;
       }}
-      .workload-meta,
-      .usage-line,
-      .notes-cell,
-      .metric-pair,
-      .metric-delta {{
-        color: var(--text-tertiary);
-        font-family: var(--font-mono);
-        font-size: 11px;
-        line-height: 1.6;
-      }}
-      .metric-pair {{
-        color: var(--text-primary);
-      }}
-      .arrow {{
-        color: var(--text-tertiary);
-        padding: 0 5px;
-      }}
-      .action {{
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }}
-      .action::before {{
-        content: "";
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        background: currentColor;
-      }}
-      .action.upsize {{ color: var(--warn); }}
-      .action.downsize {{ color: var(--success); }}
-      .action.no-change {{ color: var(--accent-cyan); }}
-      .action.unknown {{ color: var(--text-tertiary); }}
-      .empty-state {{
-        text-align: center;
-        color: var(--text-tertiary);
-        font-size: 12px;
-        padding: 24px 16px;
-        font-family: var(--font-mono);
-      }}
-      .empty-row td {{
-        text-align: center;
-        color: var(--text-tertiary);
-        font-size: 12px;
-        padding: 24px 16px;
-        font-family: var(--font-mono);
-      }}
-      .terminal-area {{
-        padding: 16px;
-        min-height: 220px;
+      .support-copy {{
+        margin-top: 12px;
       }}
       .terminal-content {{
-        position: relative;
-        z-index: 1;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 8px;
         font-family: var(--font-mono);
         font-size: 12px;
-        color: var(--text-secondary);
-        line-height: 1.6;
       }}
       .log-line {{
         display: grid;
-        grid-template-columns: 52px 56px 1fr;
+        grid-template-columns: 44px 52px 1fr;
         gap: 14px;
       }}
       .log-time {{
         color: var(--text-tertiary);
       }}
       .log-level {{
-        color: var(--accent-cyan);
+        color: var(--text-primary);
+      }}
+      .log-info {{
+        color: var(--text-primary);
       }}
       .log-muted {{
         color: var(--text-tertiary);
       }}
-      [hidden] {{ display: none !important; }}
-      @keyframes row-in {{
-        from {{ opacity: 0; transform: translateY(8px); }}
-        to {{ opacity: 1; transform: translateY(0); }}
+      [hidden] {{
+        display: none !important;
       }}
-      @media (prefers-reduced-motion: reduce) {{
-        *, *::before, *::after {{
-          animation: none !important;
-          transition: none !important;
-        }}
-      }}
-      @media (max-width: 920px) {{
-        .page-header,
-        .section-head {{
-          flex-direction: column;
-          align-items: flex-start;
-        }}
-        .page-meta {{
-          justify-content: flex-start;
+      @media (max-width: 1024px) {{
+        .overview-strip,
+        .focus-grid,
+        .support-grid {{
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }}
       }}
-      @media (max-width: 760px) {{
-        header {{
-          padding: 0 14px;
-        }}
+      @media (max-width: 820px) {{
+        .topbar-inner,
         main {{
-          padding: 24px 14px 40px;
+          padding-left: 16px;
+          padding-right: 16px;
         }}
-        .header-nav {{
-          gap: 12px;
-          flex-wrap: wrap;
+        .section-bar,
+        .overview-meta-row,
+        .toolbar {{
+          align-items: flex-start;
+          flex-direction: column;
         }}
-        .metrics-grid,
-        .focus-grid {{
+        .overview-meta-cluster,
+        .toolbar-left,
+        .toolbar-right,
+        .filter-group,
+        .search-shell {{
+          width: 100%;
+        }}
+      }}
+      @media (max-width: 700px) {{
+        .overview-strip,
+        .focus-grid,
+        .support-grid {{
           grid-template-columns: 1fr;
         }}
-        .toolbar-left,
-        .toolbar-right {{
-          width: 100%;
+        .overview-segment {{
+          min-height: 0;
+          border-right: none;
+          border-bottom: 1px solid var(--border-subtle);
         }}
-        .input-group,
-        .input-group input {{
-          width: 100%;
+        .overview-segment:last-child {{
+          border-bottom: none;
         }}
-        .filter-group {{
-          width: 100%;
-          flex-wrap: wrap;
+        th,
+        td {{
+          padding: 12px 14px;
         }}
         .log-line {{
-          grid-template-columns: 44px 46px 1fr;
-          gap: 8px;
+          grid-template-columns: 36px 44px 1fr;
+          gap: 10px;
         }}
       }}
     </style>
   </head>
   <body>
-    <header>
-      <div class="header-nav font-mono">
-        <span class="text-primary font-mono" style="font-weight: 700; letter-spacing: -0.5px;">SYS_CTRL</span>
-        <span style="color: var(--text-tertiary);">/</span>
-        <a href="#overview" class="header-link">Overview</a>
-        <a href="#recommendations" class="header-link active">Recommendations</a>
-        <a href="#runtime" class="header-link">Runtime</a>
-      </div>
-      <div class="header-nav">
-        <span class="header-chip">Mode: {html.escape(mode or 'n/a')}</span>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="crumbs">
+          <span class="brand-mark">A</span>
+          <span class="crumb-separator">/</span>
+          <span class="crumb-label">rangoonpulse</span>
+          <span class="env-pill">Production</span>
+        </div>
+        <div class="top-actions">
+          <a class="top-button" href="/latest.json">JSON</a>
+          <a class="top-button" href="/latest.md">Markdown</a>
+          <a class="top-button" href="/metrics">Metrics</a>
+        </div>
       </div>
     </header>
 
     <main>
       <section id="overview" class="section">
-        <div class="page-header">
+        <div class="section-bar">
           <div>
-            <h1 class="page-title font-mono">Cluster Tuning</h1>
-            <p class="page-subtitle">{html.escape(status_copy)}</p>
+            <h1 class="section-heading">Overview</h1>
+            <p class="section-copy">{html.escape(status_copy)}</p>
           </div>
-          <div class="page-meta">
+          <div class="overview-meta">last {html.escape(window or 'report')} window</div>
+        </div>
+
+        <div class="overview-strip">
+          {overview_html}
+        </div>
+
+        <div class="overview-meta-row">
+          <div class="overview-meta-cluster">
             <span>last run <strong id="last-run-local" data-utc="{_escape_attr(last_run)}">{html.escape(last_run or 'n/a')}</strong></span>
             <span>browser tz <strong id="browser-tz">browser local</strong></span>
-            <span>window <strong>{html.escape(window or 'n/a')}</strong></span>
-            <span>coverage <strong>{html.escape(_fmt_decimal(coverage_days))}d</strong></span>
+            <span>mode <strong>{html.escape(mode or 'n/a')}</strong></span>
+            <span>allocatable <strong>{html.escape(str(alloc.get('cpu') or 'n/a'))} cpu</strong> <strong>{html.escape(str(alloc.get('memory') or 'n/a'))} memory</strong></span>
           </div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <a class="header-action" href="/latest.json">Raw JSON</a>
-            <a class="header-action" href="/latest.md">Raw Markdown</a>
-            <a class="header-action" href="/metrics">Exporter Metrics</a>
-          </div>
-          <div class="result-count">allocatable {html.escape(str(alloc.get('cpu') or 'n/a'))} cpu · {html.escape(str(alloc.get('memory') or 'n/a'))} memory</div>
-        </div>
-        <div class="metrics-grid">
-          {overview_html}
-          {budget_cards}
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="section-head">
-          <h2 class="section-title">Recommendation Focus</h2>
-          <div class="section-detail">high-signal slices from the latest report</div>
-        </div>
-        <div class="focus-grid">
-          {_build_focus_card("Largest memory shifts", "Absolute request-memory deltas across all recommendations.", biggest_mem_items)}
-          {_build_focus_card("Restart-guarded items", "Rows where restart activity is influencing the advice.", restart_guard_items)}
-          {_build_focus_card("Highest restart volume", "Most restart-heavy rows in the current advisor window.", restart_volume_items)}
+          <div class="result-count">{html.escape(fetch_detail)}</div>
         </div>
       </section>
 
       <section id="recommendations" class="section">
-        <div class="section-head">
-          <h2 class="section-title">Recommendation Set</h2>
-          <div class="section-detail">filterable live view from ConfigMap data</div>
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">Recommendation Set</h2>
+            <p class="section-copy">Filterable live view from the current ConfigMap report.</p>
+          </div>
+          <a class="primary-button" href="/latest.json">Open report</a>
         </div>
+
         <div class="toolbar">
           <div class="toolbar-left">
             <div class="filter-group" role="tablist" aria-label="Action filters">
@@ -1238,15 +1185,15 @@ def build_index_html() -> str:
             </select>
           </div>
           <div class="toolbar-right">
-            <div class="input-group">
+            <label class="search-shell">
               <span class="input-prefix">&gt;</span>
               <input id="searchInput" type="search" placeholder="Filter workloads..." />
-            </div>
+            </label>
             <div id="resultCount" class="result-count">{rec_count} visible rows</div>
           </div>
         </div>
-        <div class="table-container">
-          <div class="card-texture"></div>
+
+        <div class="table-shell">
           <table>
             <thead>
               <tr>
@@ -1267,13 +1214,43 @@ def build_index_html() -> str:
         </div>
       </section>
 
+      <section class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">Recommendation Focus</h2>
+            <p class="section-copy">Highest-signal slices from the current advisor window.</p>
+          </div>
+          <div class="section-detail">{html.escape(_fmt_decimal(coverage_days))}d of metrics coverage</div>
+        </div>
+        <div class="focus-grid">
+          {_build_focus_card("Largest memory shifts", "Absolute request-memory deltas across all recommendations.", biggest_mem_items)}
+          {_build_focus_card("Restart-guarded items", "Rows where restart activity is directly influencing the advice.", restart_guard_items)}
+          {_build_focus_card("Highest restart volume", "Most restart-heavy rows in the current advisor window.", restart_volume_items)}
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">Control Notes</h2>
+            <p class="section-copy">Planner bounds and recurring note patterns behind the current recommendation set.</p>
+          </div>
+          <div class="section-detail">{rec_count} total recommendations</div>
+        </div>
+        <div class="support-grid">
+          {support_cards}
+        </div>
+      </section>
+
       <section id="runtime" class="section">
-        <div class="section-head">
-          <h2 class="section-title">System Output</h2>
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">System Output</h2>
+            <p class="section-copy">Recent report markdown lines served by the exporter.</p>
+          </div>
           <div class="section-detail">{html.escape(fetch_detail)}</div>
         </div>
-        <div class="terminal-area">
-          <div class="card-texture" style="opacity: 0.22;"></div>
+        <div class="terminal-shell">
           <div class="terminal-content">
             {runtime_html}
           </div>
