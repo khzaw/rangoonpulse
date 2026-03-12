@@ -21,6 +21,14 @@ Keep the user-facing `url` pointing at the public hostname, but keep Glance's ow
 where possible. This avoids ingress/TLS overhead, reduces page render latency, and keeps the monitor widget's response
 times closer to the actual service path Glance is testing.
 
+### Health Page
+The `Health` page is intentionally lighter than `Home` and is the preferred place for Glance monitor widgets that show
+response times.
+
+Glance refreshes a full page server-side before returning widget HTML. If monitor widgets live on a page with many
+other slow or external widgets, the displayed response times can look inflated even when the underlying services are
+healthy.
+
 ### Node Placement
 Glance is pinned to the ARM64 Raspberry Pi utility node (`talos-uua-g6r`) to keep the primary node focused on heavier apps.
 

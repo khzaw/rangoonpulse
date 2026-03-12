@@ -307,106 +307,6 @@ spec:
                               - title: TrueNAS
                                 url: https://nas.khzaw.dev
                                 icon: di:truenas
-                      - type: monitor
-                        title: Bookmark Status (UP/OK)
-                        cache: 1m
-                        style: compact
-                        sites:
-                          - title: Jellyfin
-                            url: https://jellyfin.khzaw.dev
-                            check-url: http://jellyfin.default.svc.cluster.local:8096
-                            icon: di:jellyfin
-                          - title: Seerr
-                            url: https://seerr.khzaw.dev
-                            check-url: http://jellyseerr.default.svc.cluster.local:5055
-                            icon: di:jellyseerr
-                          - title: Booklore
-                            url: https://booklore.khzaw.dev
-                            check-url: http://booklore.default.svc.cluster.local:6060
-                            icon: mdi:book-open-page-variant
-                          - title: Anki
-                            url: https://anki.khzaw.dev
-                            check-url: http://anki-server.default.svc.cluster.local:8080
-                            icon: mdi:cards-outline
-                            alt-status-codes:
-                              - 404
-                          - title: LiveSync
-                            url: https://livesync.khzaw.dev
-                            check-url: http://obsidian-livesync.default.svc.cluster.local:5984
-                            icon: mdi:notebook-sync-outline
-                          - title: Actual Budget
-                            url: https://actual.khzaw.dev
-                            check-url: http://actualbudget.default.svc.cluster.local:5006
-                            icon: di:actual-budget
-                          - title: Control Panel
-                            url: https://controlpanel.khzaw.dev
-                            check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
-                            icon: mdi:cloud-lock-outline
-                          - title: AdGuard
-                            url: https://adguard.khzaw.dev
-                            check-url: http://adguard-main.default.svc.cluster.local/login.html
-                            icon: di:adguard-home
-                          - title: AdGuard 2
-                            url: https://adguard2.khzaw.dev
-                            check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
-                            icon: di:adguard-home
-                          - title: Resource Advisor
-                            url: https://tuning.khzaw.dev
-                            check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
-                            icon: mdi:tune
-                          - title: Transmission
-                            url: https://torrent.khzaw.dev
-                            check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
-                            icon: di:transmission
-                          - title: Transmission VPN
-                            url: https://torrent-vpn.khzaw.dev
-                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
-                            icon: mdi:shield-link-variant
-                          - title: Router
-                            url: https://router.khzaw.dev
-                            check-url: https://router.khzaw.dev
-                            icon: mdi:router-network
-                          - title: TrueNAS
-                            url: https://nas.khzaw.dev
-                            check-url: https://nas.khzaw.dev/ui/
-                            icon: di:truenas
-                      - type: monitor
-                        title: Arr and Download Health
-                        cache: 1m
-                        style: compact
-                        sites:
-                          - title: Sonarr
-                            url: https://sonarr.khzaw.dev
-                            check-url: http://sonarr.default.svc.cluster.local:8989
-                            icon: di:sonarr
-                          - title: Radarr
-                            url: https://radarr.khzaw.dev
-                            check-url: http://radarr.default.svc.cluster.local:7878
-                            icon: di:radarr
-                          - title: Prowlarr
-                            url: https://prowlarr.khzaw.dev
-                            check-url: http://prowlarr.default.svc.cluster.local:9696
-                            icon: di:prowlarr
-                          - title: Bazarr
-                            url: https://bazarr.khzaw.dev
-                            check-url: http://bazarr.default.svc.cluster.local:6767
-                            icon: di:bazarr
-                          - title: Seerr
-                            url: https://seerr.khzaw.dev
-                            check-url: http://jellyseerr.default.svc.cluster.local:5055
-                            icon: di:jellyseerr
-                          - title: Transmission
-                            url: https://torrent.khzaw.dev
-                            check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
-                            icon: di:transmission
-                          - title: Transmission VPN
-                            url: https://torrent-vpn.khzaw.dev
-                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
-                            icon: mdi:shield-link-variant
-                          - title: SABnzbd
-                            url: https://sabnzbd.khzaw.dev
-                            check-url: http://sabnzbd.default.svc.cluster.local:8080
-                            icon: di:sabnzbd
                       - type: split-column
                         title: Stats
                         max-columns: 3
@@ -743,6 +643,10 @@ spec:
                         extra-sort-by: engagement
                         limit: 12
                         collapse-after: 4
+              - name: Health
+                columns:
+                  - size: full
+                    widgets:
                       - type: monitor
                         title: Service Health
                         cache: 1m
@@ -834,6 +738,106 @@ spec:
                             url: https://nas.khzaw.dev
                             check-url: http://nas-lan.default.svc.cluster.local/ui/
                             icon: di:truenas
+                      - type: monitor
+                        title: Bookmark Status (UP/OK)
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Jellyfin
+                            url: https://jellyfin.khzaw.dev
+                            check-url: http://jellyfin.default.svc.cluster.local:8096
+                            icon: di:jellyfin
+                          - title: Seerr
+                            url: https://seerr.khzaw.dev
+                            check-url: http://jellyseerr.default.svc.cluster.local:5055
+                            icon: di:jellyseerr
+                          - title: Booklore
+                            url: https://booklore.khzaw.dev
+                            check-url: http://booklore.default.svc.cluster.local:6060
+                            icon: mdi:book-open-page-variant
+                          - title: Anki
+                            url: https://anki.khzaw.dev
+                            check-url: http://anki-server.default.svc.cluster.local:8080
+                            icon: mdi:cards-outline
+                            alt-status-codes:
+                              - 404
+                          - title: LiveSync
+                            url: https://livesync.khzaw.dev
+                            check-url: http://obsidian-livesync.default.svc.cluster.local:5984
+                            icon: mdi:notebook-sync-outline
+                          - title: Actual Budget
+                            url: https://actual.khzaw.dev
+                            check-url: http://actualbudget.default.svc.cluster.local:5006
+                            icon: di:actual-budget
+                          - title: Control Panel
+                            url: https://controlpanel.khzaw.dev
+                            check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
+                            icon: mdi:cloud-lock-outline
+                          - title: AdGuard
+                            url: https://adguard.khzaw.dev
+                            check-url: http://adguard-main.default.svc.cluster.local/login.html
+                            icon: di:adguard-home
+                          - title: AdGuard 2
+                            url: https://adguard2.khzaw.dev
+                            check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
+                            icon: di:adguard-home
+                          - title: Resource Advisor
+                            url: https://tuning.khzaw.dev
+                            check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
+                            icon: mdi:tune
+                          - title: Transmission
+                            url: https://torrent.khzaw.dev
+                            check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
+                            icon: di:transmission
+                          - title: Transmission VPN
+                            url: https://torrent-vpn.khzaw.dev
+                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
+                            icon: mdi:shield-link-variant
+                          - title: Router
+                            url: https://router.khzaw.dev
+                            check-url: https://router.khzaw.dev
+                            icon: mdi:router-network
+                          - title: TrueNAS
+                            url: https://nas.khzaw.dev
+                            check-url: http://nas-lan.default.svc.cluster.local/ui/
+                            icon: di:truenas
+                      - type: monitor
+                        title: Arr and Download Health
+                        cache: 1m
+                        style: compact
+                        sites:
+                          - title: Sonarr
+                            url: https://sonarr.khzaw.dev
+                            check-url: http://sonarr.default.svc.cluster.local:8989
+                            icon: di:sonarr
+                          - title: Radarr
+                            url: https://radarr.khzaw.dev
+                            check-url: http://radarr.default.svc.cluster.local:7878
+                            icon: di:radarr
+                          - title: Prowlarr
+                            url: https://prowlarr.khzaw.dev
+                            check-url: http://prowlarr.default.svc.cluster.local:9696
+                            icon: di:prowlarr
+                          - title: Bazarr
+                            url: https://bazarr.khzaw.dev
+                            check-url: http://bazarr.default.svc.cluster.local:6767
+                            icon: di:bazarr
+                          - title: Seerr
+                            url: https://seerr.khzaw.dev
+                            check-url: http://jellyseerr.default.svc.cluster.local:5055
+                            icon: di:jellyseerr
+                          - title: Transmission
+                            url: https://torrent.khzaw.dev
+                            check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
+                            icon: di:transmission
+                          - title: Transmission VPN
+                            url: https://torrent-vpn.khzaw.dev
+                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
+                            icon: mdi:shield-link-variant
+                          - title: SABnzbd
+                            url: https://sabnzbd.khzaw.dev
+                            check-url: http://sabnzbd.default.svc.cluster.local:8080
+                            icon: di:sabnzbd
 
               - name: Media
                 columns:
