@@ -150,7 +150,6 @@ Current cluster status: both nodes are functional and schedulable.
 | Service | Description |
 |---------|-------------|
 | 💸 **Actual Budget** | Personal finance tracking |
-| 💼 **Job Ops** | Job search pipeline, scoring, resume tailoring, and tracking |
 | 🔐 **Vaultwarden** | Password manager |
 | 📊 **ChartDB** | Database schema diagrams |
 | 📝 **Obsidian LiveSync** | Note sync via CouchDB |

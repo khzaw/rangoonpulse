@@ -238,8 +238,6 @@ Important external-dns behavior:
   - guardrails: `retention: 14d`, `retentionSize: 8GB`, `walCompression: true`
 - Uptime Kuma:
   - data on node-local storage (`local-path`, 1Gi, pinned to `talos-uua-g6r`)
-- Job Ops:
-  - SQLite DB, generated PDFs, and backups on node-local storage (`local-path`, 10Gi, mounted at `/app/data`)
 - Obsidian LiveSync:
   - CouchDB data on `local-path` (`obsidian-livesync-local`, 5Gi, node-affined)
 - Anki server:
@@ -356,7 +354,6 @@ Important external-dns behavior:
   - current auto-apply scope includes:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
-      `job-ops`,
       `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
       `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
       `uptime-kuma`, `vaultwarden`
@@ -433,7 +430,6 @@ Examples:
 - `docs/study-services-livesync-anki-booklore.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
-- `docs/job-ops.md`
 - `docs/isponsorblocktv.md`
 - `docs/media-postgres.md`
 - `docs/calibre-storage-migration-to-truenas-nfs.md`

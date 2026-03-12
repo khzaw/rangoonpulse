@@ -228,9 +228,6 @@ spec:
                               - title: Actual Budget
                                 url: https://actual.khzaw.dev
                                 icon: di:actual-budget
-                              - title: Job Ops
-                                url: https://job-ops.khzaw.dev
-                                icon: mdi:briefcase-search
                               - title: Vaultwarden
                                 url: https://passwords.khzaw.dev
                                 icon: di:vaultwarden
@@ -341,10 +338,6 @@ spec:
                             url: https://actual.khzaw.dev
                             check-url: http://actualbudget.default.svc.cluster.local:5006
                             icon: di:actual-budget
-                          - title: Job Ops
-                            url: https://job-ops.khzaw.dev
-                            check-url: http://job-ops.default.svc.cluster.local:3001/health
-                            icon: mdi:briefcase-search
                           - title: Control Panel
                             url: https://controlpanel.khzaw.dev
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
@@ -783,10 +776,6 @@ spec:
                             url: https://chartsdb.khzaw.dev
                             check-url: http://chartsdb.default.svc.cluster.local
                             icon: mdi:database-outline
-                          - title: Job Ops
-                            url: https://job-ops.khzaw.dev
-                            check-url: http://job-ops.default.svc.cluster.local:3001/health
-                            icon: mdi:briefcase-search
                           - title: Immich
                             url: https://photos.khzaw.dev
                             icon: di:immich
