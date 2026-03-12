@@ -15,6 +15,7 @@ import datetime as dt
 import html
 import json
 import os
+import re
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -223,6 +224,14 @@ def _fmt_signed(value: float, suffix: str, digits: int = 1) -> str:
     return f"{sign}{_fmt_decimal(value, digits)}{suffix}"
 
 
+def _with_unit_space(value: object) -> str:
+    text = str(value or "")
+    match = re.fullmatch(r"([+-]?\d+(?:\.\d+)?)([A-Za-z]+)", text)
+    if not match:
+        return text
+    return f"{match.group(1)} {match.group(2)}"
+
+
 def _clamp_pct(value: object, upper: float = 100.0) -> float:
     try:
         number = float(value)
@@ -273,6 +282,21 @@ def _build_focus_card(title: str, subtitle: str, items: list[str]) -> str:
         </div>
       </article>
     """
+
+
+def _note_kind(note: str) -> str:
+    normalized = note.strip().lower()
+    if "excluded" in normalized:
+        return "excluded"
+    if "guard" in normalized:
+        return "guarded"
+    return "neutral"
+
+
+def _render_note_pill(note: str, count: int | None = None) -> str:
+    label = note.replace("_", " ")
+    count_html = f" <strong>{count}</strong>" if count is not None else ""
+    return f'<span class="note-pill {_note_kind(note)}">{html.escape(label)}{count_html}</span>'
 
 
 def build_index_html() -> str:
@@ -381,6 +405,7 @@ def build_index_html() -> str:
         notes = [str(note) for note in rec.get("notes") or []]
         notes_text = ", ".join(notes) if notes else "—"
         notes_attr = ",".join(notes)
+        notes_markup = "".join(_render_note_pill(note) for note in notes) if notes else '<span class="muted">—</span>'
 
         current_requests = (rec.get("current") or {}).get("requests") or {}
         recommended_requests = (rec.get("recommended") or {}).get("requests") or {}
@@ -425,33 +450,33 @@ def build_index_html() -> str:
               <td><span class="action {html.escape(action)}">{html.escape(action)}</span></td>
               <td>
                 <div class="metric-pair">
-                  <span>{html.escape(current_cpu)}</span>
+                  <span>{html.escape(_with_unit_space(current_cpu))}</span>
                   <span class="arrow">→</span>
-                  <span>{html.escape(recommended_cpu)}</span>
+                  <span>{html.escape(_with_unit_space(recommended_cpu))}</span>
                 </div>
-                <div class="metric-delta {'positive' if cpu_delta_m > 0 else 'negative' if cpu_delta_m < 0 else 'neutral'}">{html.escape(_fmt_signed(cpu_delta_m, 'm', 0))}</div>
+                <div class="metric-delta {'positive' if cpu_delta_m > 0 else 'negative' if cpu_delta_m < 0 else 'neutral'}">{html.escape(_with_unit_space(_fmt_signed(cpu_delta_m, 'm', 0)))}</div>
               </td>
               <td>
                 <div class="metric-pair">
-                  <span>{html.escape(current_mem)}</span>
+                  <span>{html.escape(_with_unit_space(current_mem))}</span>
                   <span class="arrow">→</span>
-                  <span>{html.escape(recommended_mem)}</span>
+                  <span>{html.escape(_with_unit_space(recommended_mem))}</span>
                 </div>
-                <div class="metric-delta {'positive' if mem_delta_mi > 0 else 'negative' if mem_delta_mi < 0 else 'neutral'}">{html.escape(_fmt_signed(mem_delta_mi, 'Mi', 0))}</div>
+                <div class="metric-delta {'positive' if mem_delta_mi > 0 else 'negative' if mem_delta_mi < 0 else 'neutral'}">{html.escape(_with_unit_space(_fmt_signed(mem_delta_mi, 'Mi', 0)))}</div>
               </td>
               <td>
-                <div class="usage-line">p95 {html.escape(cpu_p95)}m · {html.escape(mem_p95)}Mi</div>
+                <div class="usage-line">p95 {html.escape(_with_unit_space(f"{cpu_p95}m"))} · {html.escape(_with_unit_space(f"{mem_p95}Mi"))}</div>
                 <div class="workload-meta">{html.escape(str(replicas))} replica(s)</div>
               </td>
               <td>
-                <div class="usage-line">{html.escape(_fmt_decimal(coverage_days))}d</div>
+                <div class="usage-line">{html.escape(_with_unit_space(f"{_fmt_decimal(coverage_days)}d"))}</div>
                 <div class="workload-meta">{html.escape(window or 'advisor window')}</div>
               </td>
               <td>
                 <div class="usage-line">{html.escape(_fmt_decimal(restarts_window, 2))}</div>
                 <div class="workload-meta">restart count over advisor window</div>
               </td>
-              <td><div class="notes-cell">{html.escape(notes_text)}</div></td>
+              <td><div class="notes-cell">{notes_markup}</div></td>
             </tr>
             """
         )
@@ -468,10 +493,7 @@ def build_index_html() -> str:
         ]
     )
 
-    note_html = "".join(
-        f'<span class="token note-token">{html.escape(note)} <strong>{count}</strong></span>'
-        for note, count in top_notes
-    ) or '<span class="muted">no note annotations in current report.</span>'
+    note_html = "".join(_render_note_pill(note, count) for note, count in top_notes) or '<span class="muted">no note annotations in current report.</span>'
 
     try:
         window_days = float(str(window).rstrip("d")) if str(window).endswith("d") else 0.0
@@ -491,24 +513,24 @@ def build_index_html() -> str:
             ),
             _build_overview_segment(
                 "cpu request posture",
-                f"{_fmt_decimal(current_cpu_m)}m",
-                f"{_fmt_decimal(cur_pct.get('cpu'))}% of {alloc.get('cpu') or 'n/a'} allocatable",
-                eyebrow=_fmt_signed(recommended_cpu_m - current_cpu_m, "m", 0),
+                _with_unit_space(f"{_fmt_decimal(current_cpu_m)}m"),
+                f"{_fmt_decimal(cur_pct.get('cpu'))}% of {_with_unit_space(alloc.get('cpu') or 'n/a')} allocatable",
+                eyebrow=_with_unit_space(_fmt_signed(recommended_cpu_m - current_cpu_m, "m", 0)),
                 bar_pct=float(cur_pct.get("cpu") or 0.0),
                 tone="cpu",
             ),
             _build_overview_segment(
                 "memory request posture",
-                f"{_fmt_decimal(current_mem_mi)}Mi",
-                f"{_fmt_decimal(cur_pct.get('memory'))}% of {alloc.get('memory') or 'n/a'} allocatable",
-                eyebrow=_fmt_signed(recommended_mem_mi - current_mem_mi, "Mi", 0),
+                _with_unit_space(f"{_fmt_decimal(current_mem_mi)}Mi"),
+                f"{_fmt_decimal(cur_pct.get('memory'))}% of {_with_unit_space(alloc.get('memory') or 'n/a')} allocatable",
+                eyebrow=_with_unit_space(_fmt_signed(recommended_mem_mi - current_mem_mi, "Mi", 0)),
                 bar_pct=float(cur_pct.get("memory") or 0.0),
                 tone="memory",
             ),
             _build_overview_segment(
                 "fetcher",
                 "healthy" if fetch_state == "live" else "degraded",
-                f"window {window or 'n/a'} · coverage {_fmt_decimal(coverage_days)}d",
+                f"window {window or 'n/a'} · coverage {_with_unit_space(f'{_fmt_decimal(coverage_days)}d')}",
                 eyebrow=(mode or "report").replace("-", " "),
                 bar_pct=100.0 if fetch_state == "live" else coverage_pct,
                 tone="status" if fetch_state == "live" else "warning",
@@ -945,6 +967,11 @@ def build_index_html() -> str:
         font-size: 11px;
         line-height: 1.7;
       }}
+      .notes-cell {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }}
       .arrow {{
         color: var(--text-tertiary);
         padding: 0 6px;
@@ -1056,6 +1083,38 @@ def build_index_html() -> str:
       .token strong {{
         color: var(--text-primary);
         font-weight: 500;
+      }}
+      .note-pill {{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border-active);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.4;
+      }}
+      .note-pill strong {{
+        color: inherit;
+        font-weight: 500;
+      }}
+      .note-pill.excluded {{
+        color: #fca5a5;
+        border-color: rgba(252, 165, 165, 0.35);
+        background: rgba(127, 29, 29, 0.25);
+      }}
+      .note-pill.guarded {{
+        color: #fcd34d;
+        border-color: rgba(252, 211, 77, 0.28);
+        background: rgba(120, 53, 15, 0.24);
+      }}
+      .note-pill.neutral {{
+        color: #cbd5e1;
+        border-color: rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.22);
       }}
       .support-copy {{
         margin-top: 12px;
@@ -1192,7 +1251,7 @@ def build_index_html() -> str:
             <span>last run <strong id="last-run-local" data-utc="{_escape_attr(last_run)}">{html.escape(last_run or 'n/a')}</strong></span>
             <span>browser tz <strong id="browser-tz">browser local</strong></span>
             <span>mode <strong>{html.escape(mode or 'n/a')}</strong></span>
-            <span>allocatable <strong>{html.escape(str(alloc.get('cpu') or 'n/a'))} cpu</strong> <strong>{html.escape(str(alloc.get('memory') or 'n/a'))} memory</strong></span>
+            <span>allocatable <strong>{html.escape(_with_unit_space(alloc.get('cpu') or 'n/a'))}</strong> cpu <strong>{html.escape(_with_unit_space(alloc.get('memory') or 'n/a'))}</strong> memory</span>
           </div>
           <div class="result-count">{html.escape(fetch_detail)}</div>
         </div>
@@ -1257,7 +1316,7 @@ def build_index_html() -> str:
             <h2 class="section-heading">recommendation focus</h2>
             <p class="section-copy">highest-signal slices from the current advisor window.</p>
           </div>
-          <div class="section-detail">{html.escape(_fmt_decimal(coverage_days))}d of metrics coverage</div>
+          <div class="section-detail">{html.escape(_with_unit_space(f"{_fmt_decimal(coverage_days)}d"))} of metrics coverage</div>
         </div>
         <div class="focus-grid">
           {_build_focus_card("largest memory shifts", "absolute request-memory deltas across all recommendations.", biggest_mem_items)}
