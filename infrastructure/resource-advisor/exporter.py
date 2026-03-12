@@ -997,6 +997,9 @@ def build_index_html() -> str:
       .table-container {{
         min-height: 180px;
       }}
+      .table-container .card-texture {{
+        display: none;
+      }}
       table {{
         width: 100%;
         border-collapse: collapse;
