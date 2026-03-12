@@ -482,7 +482,7 @@ def build_index_html() -> str:
     overview_html = "".join(
         [
             _build_overview_segment(
-                "Recommendations",
+                "recommendations",
                 str(rec_count),
                 f"{upsize_count} upsize, {downsize_count} downsize, {no_change_count} steady",
                 eyebrow=f"{with_metrics}/{analyzed} with metrics" if analyzed else "",
@@ -490,7 +490,7 @@ def build_index_html() -> str:
                 tone="neutral",
             ),
             _build_overview_segment(
-                "CPU request posture",
+                "cpu request posture",
                 f"{_fmt_decimal(current_cpu_m)}m",
                 f"{_fmt_decimal(cur_pct.get('cpu'))}% of {alloc.get('cpu') or 'n/a'} allocatable",
                 eyebrow=_fmt_signed(recommended_cpu_m - current_cpu_m, "m", 0),
@@ -498,7 +498,7 @@ def build_index_html() -> str:
                 tone="cpu",
             ),
             _build_overview_segment(
-                "Memory request posture",
+                "memory request posture",
                 f"{_fmt_decimal(current_mem_mi)}Mi",
                 f"{_fmt_decimal(cur_pct.get('memory'))}% of {alloc.get('memory') or 'n/a'} allocatable",
                 eyebrow=_fmt_signed(recommended_mem_mi - current_mem_mi, "Mi", 0),
@@ -506,7 +506,7 @@ def build_index_html() -> str:
                 tone="memory",
             ),
             _build_overview_segment(
-                "Fetcher",
+                "fetcher",
                 "healthy" if fetch_state == "live" else "degraded",
                 f"window {window or 'n/a'} · coverage {_fmt_decimal(coverage_days)}d",
                 eyebrow=(mode or "report").replace("-", " "),
