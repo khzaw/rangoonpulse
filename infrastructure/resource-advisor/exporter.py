@@ -996,6 +996,7 @@ def build_index_html() -> str:
       }}
       .table-container {{
         min-height: 180px;
+        background: #060606;
       }}
       .table-container .card-texture {{
         display: none;
@@ -1012,6 +1013,7 @@ def build_index_html() -> str:
         padding: 12px 16px;
         border-bottom: 1px solid var(--border-subtle);
         vertical-align: top;
+        background: #060606;
       }}
       th {{
         color: var(--text-secondary);
@@ -1033,7 +1035,10 @@ def build_index_html() -> str:
         transition: background-color 0.15s ease;
       }}
       tbody tr:hover {{
-        background-color: var(--bg-surface-hover);
+        background-color: transparent;
+      }}
+      tbody tr:hover td {{
+        background: #081110;
       }}
       .workload {{
         color: var(--text-primary);
