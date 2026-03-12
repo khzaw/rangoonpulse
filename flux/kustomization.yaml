@@ -53,6 +53,7 @@ resources:
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml
   - ./kustomizations/actualbudget.yaml
+  - ./kustomizations/job-ops.yaml
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/flaresolverr.yaml
   - ./kustomizations/transmission.yaml
