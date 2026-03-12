@@ -1,0 +1,546 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-public-edge-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: public-edge-overview
+data:
+  public-edge-overview.json: |
+    {
+      "uid": "public-edge-overview",
+      "title": "Public Edge Overview",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["edge", "exposure", "homelab"],
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "This dashboard tracks the public sharing control plane exported by `exposure-control`. UI: `https://controlpanel.khzaw.dev`."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Active Exposures",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(exposure_control_active_exposures)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Allows (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 3,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_share_allowed_total[24h])",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Denied Auth (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 6,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_share_denied_auth_total[24h])",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Denied Rate Limit (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 9,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_share_denied_rate_limited_total[24h])",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Reconcile Errors (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_reconcile_errors_total[24h])",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Last Reconcile Age",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 15,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "time() - max(exposure_control_last_reconcile_timestamp_seconds)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "stat",
+          "title": "Emergency Disable (7d)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 18,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_emergency_disable_total[7d])",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "stat",
+          "title": "Expired Disable (7d)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 21,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_expired_disable_total[7d])",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "Active Exposure Count",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "exposure_control_active_exposures",
+              "legendFormat": "active",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          }
+        },
+        {
+          "id": 11,
+          "type": "timeseries",
+          "title": "Enable vs Disable Activity",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_enable_total[1h])",
+              "legendFormat": "enable",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "increase(exposure_control_disable_total[1h])",
+              "legendFormat": "disable",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "timeseries",
+          "title": "Share Outcomes",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_share_allowed_total[1h])",
+              "legendFormat": "allowed",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "increase(exposure_control_share_denied_auth_total[1h])",
+              "legendFormat": "denied auth",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "increase(exposure_control_share_denied_disabled_total[1h])",
+              "legendFormat": "denied disabled",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "D",
+              "expr": "increase(exposure_control_share_denied_rate_limited_total[1h])",
+              "legendFormat": "denied rate limited",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "bargauge",
+          "title": "Deny Reasons (7d)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_share_denied_auth_total[7d])",
+              "legendFormat": "auth",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "increase(exposure_control_share_denied_disabled_total[7d])",
+              "legendFormat": "disabled",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "increase(exposure_control_share_denied_rate_limited_total[7d])",
+              "legendFormat": "rate limited",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 14,
+          "type": "timeseries",
+          "title": "Disable Paths",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_expired_disable_total[1h])",
+              "legendFormat": "expired disable",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "increase(exposure_control_emergency_disable_total[1h])",
+              "legendFormat": "emergency disable",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ]
+        }
+      ]
+    }

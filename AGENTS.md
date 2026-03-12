@@ -289,6 +289,13 @@ Important external-dns behavior:
   - `kube-state-metrics` currently needs `128Mi` request / `256Mi` limit on this cluster; `128Mi` limit caused `OOMKilled` restart loops
   - whole-host node CPU/RAM comes from kubelet `/metrics/resource` via
     `infrastructure/monitoring/servicemonitor-kubelet-resource.yaml`
+  - custom ops dashboards:
+    - `infrastructure/monitoring/grafana-dashboard-homelab-control-room.yaml`
+    - `infrastructure/monitoring/grafana-dashboard-storage-risk-overview.yaml`
+    - `infrastructure/monitoring/grafana-dashboard-public-edge-overview.yaml`
+    - `infrastructure/monitoring/grafana-dashboard-efficiency-and-placement.yaml`
+    - `infrastructure/monitoring/grafana-dashboard-stateful-services-risk.yaml`
+  - shared ops recording rules: `infrastructure/monitoring/prometheusrule-homelab-ops-dashboards.yaml`
   - node capacity overview dashboard + rules:
     - dashboard import: `infrastructure/monitoring/grafana-dashboard-node-capacity-overview.yaml`
     - recording rules: `infrastructure/monitoring/prometheusrule-node-capacity-overview.yaml`
@@ -408,6 +415,7 @@ Examples:
 - `docs/adguard-dns-stack-overview.md`
 - `docs/dns-reliability-flux-gitrepository-timeouts.md`
 - `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
+- `docs/homelab-operations-dashboards.md`
 - `docs/uptime-kuma-sqlite-on-nfs-timeouts.md`
 - `docs/prometheus-tsdb-local-path-migration.md`
 - `docs/kube-state-metrics-oomkills.md`

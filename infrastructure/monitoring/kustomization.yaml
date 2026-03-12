@@ -9,7 +9,13 @@ resources:
   - servicemonitor-kubelet-resource.yaml
   - grafana-dashboard-node-power-estimation.yaml
   - grafana-dashboard-node-capacity-overview.yaml
+  - grafana-dashboard-homelab-control-room.yaml
+  - grafana-dashboard-storage-risk-overview.yaml
+  - grafana-dashboard-public-edge-overview.yaml
+  - grafana-dashboard-efficiency-and-placement.yaml
+  - grafana-dashboard-stateful-services-risk.yaml
   - prometheusrule-power-estimation.yaml
   - prometheusrule-node-capacity-overview.yaml
+  - prometheusrule-homelab-ops-dashboards.yaml
   - servicemonitor-exposure-control.yaml
   - prometheusrule-exposure-control.yaml

@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-ops-dashboards
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab-ops-dashboards.rules
+      interval: 1m
+      rules:
+        - record: homelab:pvc_used_bytes
+          expr: >
+            max by (namespace, persistentvolumeclaim, storageclass, node) (
+              kubelet_volume_stats_used_bytes
+              * on(namespace, persistentvolumeclaim) group_left(storageclass)
+                kube_persistentvolumeclaim_info
+            )
+
+        - record: homelab:pvc_capacity_bytes
+          expr: >
+            max by (namespace, persistentvolumeclaim, storageclass, node) (
+              kubelet_volume_stats_capacity_bytes
+              * on(namespace, persistentvolumeclaim) group_left(storageclass)
+                kube_persistentvolumeclaim_info
+            )
+
+        - record: homelab:pvc_available_bytes
+          expr: >
+            max by (namespace, persistentvolumeclaim, storageclass, node) (
+              kubelet_volume_stats_available_bytes
+              * on(namespace, persistentvolumeclaim) group_left(storageclass)
+                kube_persistentvolumeclaim_info
+            )
+
+        - record: homelab:pvc_utilization:ratio
+          expr: >
+            clamp_min(
+              clamp_max(
+                homelab:pvc_used_bytes
+                / on(namespace, persistentvolumeclaim, storageclass, node)
+                  homelab:pvc_capacity_bytes,
+                1
+              ),
+              0
+            )
+
+        - record: homelab:node_requested_cpu_cores
+          expr: >
+            sum by (node) (
+              cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{
+                resource="cpu",
+                unit="core"
+              }
+            )
+
+        - record: homelab:node_requested_memory_bytes
+          expr: >
+            sum by (node) (
+              cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{
+                resource="memory",
+                unit="byte"
+              }
+            )
+
+        - record: homelab:node_allocatable_cpu_cores
+          expr: >
+            max by (node) (
+              kube_node_status_allocatable{
+                resource="cpu",
+                unit="core"
+              }
+            )
+
+        - record: homelab:node_allocatable_memory_bytes
+          expr: >
+            max by (node) (
+              kube_node_status_allocatable{
+                resource="memory",
+                unit="byte"
+              }
+            )
+
+        - record: homelab:node_requested_cpu_utilization:ratio
+          expr: >
+            clamp_min(
+              clamp_max(
+                homelab:node_requested_cpu_cores
+                / on(node) homelab:node_allocatable_cpu_cores,
+                1
+              ),
+              0
+            )
+
+        - record: homelab:node_requested_memory_utilization:ratio
+          expr: >
+            clamp_min(
+              clamp_max(
+                homelab:node_requested_memory_bytes
+                / on(node) homelab:node_allocatable_memory_bytes,
+                1
+              ),
+              0
+            )

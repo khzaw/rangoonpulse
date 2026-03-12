@@ -1,0 +1,584 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-homelab-control-room
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: homelab-control-room
+data:
+  homelab-control-room.json: |
+    {
+      "uid": "homelab-control-room",
+      "title": "Homelab Control Room",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["homelab", "ops", "overview"],
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "Single-screen operational view for the cluster. Use `Node Capacity Overview` for workload drilldown, `Storage Risk Overview` for PVC pressure, and `Resource Advisor` for tuning specifics."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Critical Targets Down",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(up{job=~\"coredns|monitoring/flux-controllers|kube-prometheus-stack-prometheus|kube-prometheus-stack-grafana|kube-state-metrics|resource-advisor-exporter|exposure-control\"} == 0)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Flux Reconcile Errors (1h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(controller_runtime_reconcile_errors_total{job=\"monitoring/flux-controllers\"}[1h]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Pod Restarts (1h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(kube_pod_container_status_restarts_total[1h]))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Pending or Unknown Pods",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(kube_pod_status_phase{phase=~\"Pending|Unknown\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "PVCs Above 80%",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_utilization:ratio > 0.8)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Cluster Estimated Power",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:node_estimated_power_watts)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "bargauge",
+          "title": "Host CPU % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_host_cpu_utilization:ratio",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 9,
+          "type": "bargauge",
+          "title": "Host RAM % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_host_memory_utilization:ratio",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 10,
+          "type": "bargauge",
+          "title": "Requested CPU % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_requested_cpu_utilization:ratio",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 11,
+          "type": "bargauge",
+          "title": "Requested RAM % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_requested_memory_utilization:ratio",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 12,
+          "type": "timeseries",
+          "title": "Critical Target Availability",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(job)(up{job=~\"coredns|monitoring/flux-controllers|kube-prometheus-stack-prometheus|kube-prometheus-stack-grafana|kube-state-metrics|resource-advisor-exporter|exposure-control\"})",
+              "legendFormat": "{{job}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          }
+        },
+        {
+          "id": 13,
+          "type": "bargauge",
+          "title": "Top Pod Restarts (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, sum by(namespace, pod)(increase(kube_pod_container_status_restarts_total[24h])))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 14,
+          "type": "timeseries",
+          "title": "Flux Reconcile Throughput",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(controller)(rate(controller_runtime_reconcile_total{job=\"monitoring/flux-controllers\"}[15m]))",
+              "legendFormat": "{{controller}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "timeseries",
+          "title": "Exposure Activity",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "increase(exposure_control_enable_total[1h])",
+              "legendFormat": "enable",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "increase(exposure_control_disable_total[1h])",
+              "legendFormat": "disable",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "exposure_control_active_exposures",
+              "legendFormat": "active",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          }
+        }
+      ]
+    }

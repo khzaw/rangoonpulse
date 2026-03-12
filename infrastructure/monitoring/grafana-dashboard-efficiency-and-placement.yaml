@@ -1,0 +1,722 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-efficiency-and-placement
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: efficiency-and-placement
+data:
+  efficiency-and-placement.json: |
+    {
+      "uid": "efficiency-and-placement",
+      "title": "Efficiency and Placement",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["efficiency", "placement", "tuning", "homelab"],
+      "time": {
+        "from": "now-14d",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          },
+          {
+            "name": "node",
+            "label": "Node",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(homelab:node_requested_cpu_utilization:ratio, node)",
+              "refId": "NodeVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(namespace_workload_pod:kube_pod_owner:relabel, namespace)",
+              "refId": "NamespaceVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "workload",
+            "label": "Workload",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\"}, workload)",
+              "refId": "WorkloadVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "Compares requested resources to actual pressure and highlights where the Pi is carrying request weight. Resource-advisor stats give the cluster-level tuning signal; lower panels show the workload shape behind it."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Coverage (days)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resource_advisor_metrics_coverage_days)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 2
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Recommendations",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resource_advisor_recommendations_total)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Current CPU Requests %",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resource_advisor_current_requests_percent_cpu)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Current Memory Requests %",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resource_advisor_current_requests_percent_memory)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Recommended CPU Requests %",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resource_advisor_recommended_requests_percent_cpu)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Recommended Memory Requests %",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(resource_advisor_recommended_requests_percent_memory)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "bargauge",
+          "title": "Actual CPU % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_host_cpu_utilization:ratio{node=~\"$node\"}",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 9,
+          "type": "bargauge",
+          "title": "Requested CPU % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_requested_cpu_utilization:ratio{node=~\"$node\"}",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 10,
+          "type": "bargauge",
+          "title": "Actual RAM % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 12,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_host_memory_utilization:ratio{node=~\"$node\"}",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 11,
+          "type": "bargauge",
+          "title": "Requested RAM % by Node",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:node_requested_memory_utilization:ratio{node=~\"$node\"}",
+              "instant": true,
+              "legendFormat": "{{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 12,
+          "type": "timeseries",
+          "title": "Cluster Budget: Current vs Recommended",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "resource_advisor_current_requests_percent_cpu",
+              "legendFormat": "current cpu %",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "resource_advisor_current_requests_percent_memory",
+              "legendFormat": "current memory %",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "C",
+              "expr": "resource_advisor_recommended_requests_percent_cpu",
+              "legendFormat": "recommended cpu %",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            },
+            {
+              "refId": "D",
+              "expr": "resource_advisor_recommended_requests_percent_memory",
+              "legendFormat": "recommended memory %",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent"
+            }
+          }
+        },
+        {
+          "id": 13,
+          "type": "bargauge",
+          "title": "Top CPU Headroom by Workload",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, clamp_min(sum by(namespace, workload) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=~\"$node\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})) - sum by(namespace, workload) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace=~\"$namespace\",node=~\"$node\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})), 0))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{workload}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 14,
+          "type": "bargauge",
+          "title": "Top Memory Headroom by Workload",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, clamp_min(sum by(namespace, workload) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=~\"$node\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})) - sum by(namespace, workload) (node_namespace_pod_container:container_memory_working_set_bytes{namespace=~\"$namespace\",node=~\"$node\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})), 0))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{workload}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 15,
+          "type": "bargauge",
+          "title": "Pi Workloads by Requested CPU",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, sum by(namespace, workload) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=\"talos-uua-g6r\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{workload}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 16,
+          "type": "bargauge",
+          "title": "Pi Workloads by Requested Memory",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 33
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, sum by(namespace, workload) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=\"talos-uua-g6r\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{workload}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        }
+      ]
+    }

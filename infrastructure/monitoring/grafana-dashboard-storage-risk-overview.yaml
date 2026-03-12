@@ -1,0 +1,589 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-storage-risk-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: storage-risk-overview
+data:
+  storage-risk-overview.json: |
+    {
+      "uid": "storage-risk-overview",
+      "title": "Storage Risk Overview",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["storage", "pvc", "risk", "homelab"],
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(homelab:pvc_used_bytes, namespace)",
+              "refId": "NamespaceVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "storageclass",
+            "label": "StorageClass",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(homelab:pvc_used_bytes, storageclass)",
+              "refId": "StorageClassVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "PVC saturation and growth view. `local-path` claims usually indicate node-affined blast radius. `truenas-*` claims indicate network-backed storage."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Total Used",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Total Capacity",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 3,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_capacity_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "PVCs Above 80%",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 6,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\"} > 0.8)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "PVCs Above 90%",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 3,
+            "x": 9,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\"} > 0.9)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Local-Path Used",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=\"local-path\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "TrueNAS Used",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"truenas-.*\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "stat",
+          "title": "Projected Full Within 7d",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(predict_linear(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"}[7d], 7 * 24 * 3600) > homelab:pvc_capacity_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "bargauge",
+          "title": "Top PVC Utilization",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(12, homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}} ({{storageclass}})",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 10,
+          "type": "bargauge",
+          "title": "Top PVC Used Bytes",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(12, homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 11,
+          "type": "timeseries",
+          "title": "Used Bytes by StorageClass",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(storageclass)(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "legendFormat": "{{storageclass}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          }
+        },
+        {
+          "id": 12,
+          "type": "bargauge",
+          "title": "Projected Utilization in 7d",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(12, clamp_min(predict_linear(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"}[7d], 7 * 24 * 3600) / homelab:pvc_capacity_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"}, 0))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 13,
+          "type": "bargauge",
+          "title": "Hottest Local-Path Claims",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=\"local-path\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 14,
+          "type": "bargauge",
+          "title": "Hottest TrueNAS Claims",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"truenas-.*\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        }
+      ]
+    }

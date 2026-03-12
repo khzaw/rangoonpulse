@@ -1,0 +1,605 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-stateful-services-risk
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: stateful-services-risk
+data:
+  stateful-services-risk.json: |
+    {
+      "uid": "stateful-services-risk",
+      "title": "Stateful Services Risk",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "1m",
+      "tags": ["stateful", "risk", "storage", "homelab"],
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info, namespace)",
+              "refId": "NamespaceVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": [
+                "default",
+                "monitoring"
+              ],
+              "value": [
+                "default",
+                "monitoring"
+              ]
+            },
+            "refresh": 2
+          },
+          {
+            "name": "storageclass",
+            "label": "StorageClass",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(homelab:pvc_used_bytes{namespace=~\"$namespace\"}, storageclass)",
+              "refId": "StorageClassVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "pod",
+            "label": "Pod",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\"}, pod)",
+              "refId": "PodVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          },
+          {
+            "name": "pvc",
+            "label": "PVC",
+            "type": "query",
+            "datasource": {
+              "uid": "$datasource"
+            },
+            "query": {
+              "query": "label_values(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"}, persistentvolumeclaim)",
+              "refId": "PvcVariableQuery"
+            },
+            "multi": true,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {
+              "selected": true,
+              "text": "All",
+              "value": ".*"
+            },
+            "refresh": 2
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "Tracks PVC-backed pods and their claims. This is where you watch node-local state, persistent restarts, and the difference between `local-path` risk and network-backed `truenas-*` risk."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Selected Persistent Pods",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(count by(namespace, pod)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\",pod=~\"$pod\"}))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Unready Persistent Pods",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum((1 - max by(namespace, pod)(kube_pod_status_ready{condition=\"true\",namespace=~\"$namespace\",pod=~\"$pod\"})) * on(namespace, pod) group_left() max by(namespace, pod)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\",pod=~\"$pod\"}))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Persistent Pod Restarts (24h)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(sum by(namespace, pod)(increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\",pod=~\"$pod\"}[24h])) * on(namespace, pod) group_left() max by(namespace, pod)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\",pod=~\"$pod\"}))",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Local-Path Above 80%",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=\"local-path\",persistentvolumeclaim=~\"$pvc\"} > 0.8)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "TrueNAS Above 80%",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"truenas-.*\",persistentvolumeclaim=~\"$pvc\"} > 0.8)",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Selected PVC Used",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(homelab:pvc_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\",persistentvolumeclaim=~\"$pvc\"})",
+              "instant": true,
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "bargauge",
+          "title": "Persistent Pod Readiness",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by(namespace, pod, node) (kube_pod_status_ready{condition=\"true\",namespace=~\"$namespace\",pod=~\"$pod\"} * on(namespace, pod) group_left(node) max by(namespace, pod, node)(kube_pod_info{namespace=~\"$namespace\",pod=~\"$pod\"}) * on(namespace, pod) group_left() max by(namespace, pod)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\",pod=~\"$pod\"}))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{pod}} @ {{node}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "Selected PVC Utilization",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\",persistentvolumeclaim=~\"$pvc\"}",
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "bargauge",
+          "title": "Persistent Pod Restarts (7d)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, sum by(namespace, pod)(increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\",pod=~\"$pod\"}[7d])) * on(namespace, pod) group_left() max by(namespace, pod)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\",pod=~\"$pod\"}))",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 11,
+          "type": "bargauge",
+          "title": "Selected PVC Utilization",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 17
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(12, homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\",persistentvolumeclaim=~\"$pvc\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 12,
+          "type": "bargauge",
+          "title": "Local-Path Stateful Claims",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=\"local-path\",persistentvolumeclaim=~\"$pvc\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 13,
+          "type": "bargauge",
+          "title": "TrueNAS Stateful Claims",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, homelab:pvc_utilization:ratio{namespace=~\"$namespace\",storageclass=~\"truenas-.*\",persistentvolumeclaim=~\"$pvc\"})",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "datasource": {
+                "uid": "$datasource"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        }
+      ]
+    }
