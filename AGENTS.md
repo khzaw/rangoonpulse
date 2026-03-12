@@ -286,6 +286,7 @@ Important external-dns behavior:
   - alias: `monitoring.khzaw.dev` (CNAME via `infrastructure/monitoring/monitoring-cname.yaml`)
 - Current critical settings:
   - `nodeExporter.enabled: false` (correct key for chart line in use)
+  - `kube-state-metrics` currently needs `128Mi` request / `256Mi` limit on this cluster; `128Mi` limit caused `OOMKilled` restart loops
   - node power tracking is estimate-only (no smart-plug telemetry):
     - recording rules: `infrastructure/monitoring/prometheusrule-power-estimation.yaml`
     - dashboard import: `infrastructure/monitoring/grafana-dashboard-node-power-estimation.yaml`
@@ -401,6 +402,7 @@ Examples:
 - `docs/vaultwarden-db-timeouts-and-postgres-reset.md`
 - `docs/uptime-kuma-sqlite-on-nfs-timeouts.md`
 - `docs/prometheus-tsdb-local-path-migration.md`
+- `docs/kube-state-metrics-oomkills.md`
 - `docs/dashboards-homepage-glance.md`
 - `docs/metrics-server-operational-metrics.md`
 - `docs/study-services-livesync-anki-booklore.md`
