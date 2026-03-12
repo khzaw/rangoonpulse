@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: talos-uua-g6r
 
     controllers:
       main:
@@ -76,10 +76,7 @@ spec:
       config:
         enabled: true
         type: persistentVolumeClaim
-        retain: true
-        storageClass: local-path
-        size: 1Gi
-        accessMode: ReadWriteOnce
+        existingClaim: bazarr-config-nfs
 
       media:
         enabled: true
