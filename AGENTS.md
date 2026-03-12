@@ -287,6 +287,11 @@ Important external-dns behavior:
 - Current critical settings:
   - `nodeExporter.enabled: false` (correct key for chart line in use)
   - `kube-state-metrics` currently needs `128Mi` request / `256Mi` limit on this cluster; `128Mi` limit caused `OOMKilled` restart loops
+  - whole-host node CPU/RAM comes from kubelet `/metrics/resource` via
+    `infrastructure/monitoring/servicemonitor-kubelet-resource.yaml`
+  - node capacity overview dashboard + rules:
+    - dashboard import: `infrastructure/monitoring/grafana-dashboard-node-capacity-overview.yaml`
+    - recording rules: `infrastructure/monitoring/prometheusrule-node-capacity-overview.yaml`
   - node power tracking is estimate-only (no smart-plug telemetry):
     - recording rules: `infrastructure/monitoring/prometheusrule-power-estimation.yaml`
     - dashboard import: `infrastructure/monitoring/grafana-dashboard-node-power-estimation.yaml`
@@ -418,6 +423,7 @@ Examples:
 - `docs/public-edge-phase1-bootstrap.md`
 - `docs/ops-command-cheatsheet.md`
 - `docs/power-estimation-dashboard.md`
+- `docs/node-capacity-dashboard.md`
 - `docs/exposure-control-phase2-phase3-mvp.md`
 - `docs/cloudflare-access-share-hosts-email-otp-plan.md`
 - `docs/transmission-optional-vpn.md`

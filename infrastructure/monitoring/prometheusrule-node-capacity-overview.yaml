@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: node-capacity-overview
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: node-capacity-overview.rules
+      interval: 1m
+      rules:
+        - record: homelab:node_host_cpu_usage_cores:rate5m
+          expr: >
+            sum by (node) (
+              rate(
+                node_cpu_usage_seconds_total{
+                  job="kubelet",
+                  metrics_path="/metrics/resource"
+                }[5m]
+              )
+            )
+
+        - record: homelab:node_host_cpu_utilization:ratio
+          expr: >
+            clamp_min(
+              clamp_max(
+                homelab:node_host_cpu_usage_cores:rate5m
+                / on(node) machine_cpu_cores{job="kubelet",metrics_path="/metrics/cadvisor"},
+                1
+              ),
+              0
+            )
+
+        - record: homelab:node_host_memory_working_set_bytes
+          expr: >
+            max by (node) (
+              node_memory_working_set_bytes{
+                job="kubelet",
+                metrics_path="/metrics/resource"
+              }
+            )
+
+        - record: homelab:node_host_memory_utilization:ratio
+          expr: >
+            clamp_min(
+              clamp_max(
+                homelab:node_host_memory_working_set_bytes
+                / on(node) machine_memory_bytes{job="kubelet",metrics_path="/metrics/cadvisor"},
+                1
+              ),
+              0
+            )

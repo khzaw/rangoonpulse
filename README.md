@@ -304,6 +304,7 @@ make deploy-mmcal
 | [`ops-command-cheatsheet.md`](docs/ops-command-cheatsheet.md) | Full command reference |
 | [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
 | [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource tuning automation |
+| [`node-capacity-dashboard.md`](docs/node-capacity-dashboard.md) | Whole-host node CPU/RAM dashboard |
 | [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |
 | [`pangolin-fit-analysis.md`](docs/pangolin-fit-analysis.md) | Where Pangolin could fit in the current access model |
 | [`secrets-inventory.md`](docs/secrets-inventory.md) | Secrets reference |
