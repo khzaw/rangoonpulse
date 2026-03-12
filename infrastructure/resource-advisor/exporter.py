@@ -558,10 +558,10 @@ def build_index_html() -> str:
       :root {{
         --bg: #0c0c0d;
         --bg-subtle: #121214;
-        --card: rgba(255, 255, 255, 0.035);
-        --card-strong: rgba(255, 255, 255, 0.05);
-        --border: rgba(255, 255, 255, 0.075);
-        --border-strong: rgba(255, 255, 255, 0.14);
+        --card: rgba(255, 255, 255, 0.028);
+        --card-strong: rgba(255, 255, 255, 0.04);
+        --border: rgba(255, 255, 255, 0.055);
+        --border-strong: rgba(255, 255, 255, 0.1);
         --text-1: #f4f4f5;
         --text-2: #b4b4ba;
         --text-3: #7d7d86;
@@ -572,7 +572,8 @@ def build_index_html() -> str:
         --red: #fb7185;
         --amber: #f59e0b;
         --violet: #a78bfa;
-        --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+        --shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+        --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.12);
         --font-sans: "Geist", "Inter", "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
         --font-mono: "Geist Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
       }}
@@ -615,15 +616,27 @@ def build_index_html() -> str:
         align-items: stretch;
       }}
       .surface {{
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.018));
+        border: none;
+        border-radius: 24px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.028), rgba(255,255,255,0.012)),
+          rgba(255,255,255,0.01);
         box-shadow: var(--shadow);
         backdrop-filter: blur(14px);
+        position: relative;
+      }}
+      .surface::before {{
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.05),
+          inset 0 -1px 0 rgba(255, 255, 255, 0.015);
       }}
       .hero-panel {{
         padding: 24px 24px 20px;
-        position: relative;
         overflow: hidden;
       }}
       .hero-panel::after {{
@@ -640,10 +653,8 @@ def build_index_html() -> str:
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 7px 12px;
+        padding: 0;
         border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.025);
         color: var(--text-2);
         font-size: 11px;
         letter-spacing: 0.12em;
@@ -681,39 +692,46 @@ def build_index_html() -> str:
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 12px;
+        padding: 8px 0;
         border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.025);
         color: var(--text-2);
         font-size: 12px;
+        position: relative;
+      }}
+      .pill::after {{
+        content: "";
+        width: 1px;
+        height: 16px;
+        margin-left: 10px;
+        background: var(--border);
       }}
       .pill strong {{
         color: var(--text-1);
         font-weight: 600;
       }}
+      .hero-meta .pill:last-child::after {{
+        display: none;
+      }}
       .endpoint-list {{
         margin-top: 22px;
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 14px;
       }}
       .endpoint-link {{
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 10px 14px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.025);
+        padding: 0;
+        border-radius: 0;
         color: var(--text-1);
-        text-decoration: none;
+        text-decoration: underline;
+        text-decoration-color: rgba(255,255,255,0.16);
         font-size: 12px;
         font-family: var(--font-mono);
       }}
       .endpoint-link:hover {{
-        border-color: var(--border-strong);
-        background: rgba(255,255,255,0.045);
+        text-decoration-color: rgba(255,255,255,0.38);
       }}
       .overview-grid {{
         display: grid;
@@ -745,6 +763,11 @@ def build_index_html() -> str:
       .section {{
         display: grid;
         gap: 16px;
+        padding-top: 8px;
+      }}
+      .section + .section {{
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 24px;
       }}
       .section-head {{
         display: flex;
@@ -794,12 +817,11 @@ def build_index_html() -> str:
       }}
       .delta-pill {{
         flex: 0 0 auto;
-        padding: 8px 10px;
+        padding: 7px 0 7px 12px;
         border-radius: 999px;
         font-size: 12px;
         font-family: var(--font-mono);
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.025);
+        border-left: 1px solid var(--border);
         color: var(--text-2);
       }}
       .delta-pill.positive {{ color: var(--amber); }}
@@ -818,10 +840,10 @@ def build_index_html() -> str:
       .progress-track {{
         position: relative;
         overflow: hidden;
-        height: 12px;
+        height: 10px;
         border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.03);
+        border: none;
+        background: rgba(255,255,255,0.045);
       }}
       .progress-fill {{
         position: absolute;
@@ -851,22 +873,32 @@ def build_index_html() -> str:
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 9px 11px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.025);
+        padding: 8px 0;
+        border-radius: 0;
+        border: none;
         color: var(--text-2);
         font-size: 12px;
+        position: relative;
+      }}
+      .token::after {{
+        content: "";
+        width: 1px;
+        height: 14px;
+        margin-left: 10px;
+        background: var(--border);
       }}
       .token strong {{
         color: var(--text-1);
         font-family: var(--font-mono);
         font-weight: 600;
       }}
+      .policy-grid .token:last-child::after {{
+        display: none;
+      }}
       .surface-divider {{
         height: 1px;
-        background: var(--border);
-        margin: 18px 0 0;
+        background: rgba(255,255,255,0.05);
+        margin: 18px 0 2px;
       }}
       .focus-grid {{
         display: grid;
@@ -881,9 +913,10 @@ def build_index_html() -> str:
       }}
       .focus-list li {{
         padding: 12px 14px;
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.024);
+        border-radius: 14px;
+        border: none;
+        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+        box-shadow: var(--shadow-soft);
       }}
       .focus-path {{
         display: block;
@@ -916,22 +949,24 @@ def build_index_html() -> str:
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 6px;
+        padding: 4px;
         border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.025);
+        border: none;
+        background: rgba(255,255,255,0.03);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       }}
       .filter-btn,
       select,
       input {{
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,0.03);
+        border: none;
+        background: rgba(255,255,255,0.028);
         color: var(--text-2);
         border-radius: 999px;
         padding: 10px 14px;
         font: inherit;
         font-size: 12px;
         outline: none;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
       }}
       .filter-btn {{
         cursor: pointer;
@@ -939,8 +974,10 @@ def build_index_html() -> str:
       }}
       .filter-btn.active {{
         color: var(--text-1);
-        border-color: rgba(130, 170, 255, 0.5);
-        background: rgba(130, 170, 255, 0.14);
+        background: rgba(130, 170, 255, 0.18);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.08),
+          0 6px 18px rgba(130, 170, 255, 0.12);
       }}
       select,
       input {{
@@ -956,6 +993,7 @@ def build_index_html() -> str:
       }}
       .table-shell {{
         overflow: hidden;
+        padding: 2px 0 0;
       }}
       table {{
         width: 100%;
@@ -972,13 +1010,13 @@ def build_index_html() -> str:
         letter-spacing: 0.12em;
         text-transform: uppercase;
         color: var(--text-3);
-        border-bottom: 1px solid var(--border);
-        background: rgba(12, 12, 13, 0.92);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        background: rgba(12, 12, 13, 0.72);
         backdrop-filter: blur(8px);
       }}
       tbody td {{
         padding: 16px;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid rgba(255,255,255,0.04);
         vertical-align: top;
       }}
       tbody tr {{
@@ -988,7 +1026,7 @@ def build_index_html() -> str:
         animation-delay: calc(var(--row-index, 0) * 14ms);
       }}
       tbody tr:hover td {{
-        background: rgba(255,255,255,0.022);
+        background: rgba(255,255,255,0.016);
       }}
       tbody tr:last-child td {{
         border-bottom: none;
@@ -1030,12 +1068,11 @@ def build_index_html() -> str:
         gap: 8px;
         padding: 7px 10px;
         border-radius: 999px;
-        border: 1px solid var(--border);
         font-size: 11px;
         font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        background: rgba(255,255,255,0.025);
+        background: rgba(255,255,255,0.05);
       }}
       .action::before {{
         content: "";
@@ -1056,10 +1093,10 @@ def build_index_html() -> str:
         padding: 28px 16px;
       }}
       details {{
-        border: 1px solid var(--border);
         border-radius: 18px;
-        background: rgba(255,255,255,0.02);
+        background: rgba(255,255,255,0.018);
         overflow: hidden;
+        box-shadow: var(--shadow-soft);
       }}
       summary {{
         cursor: pointer;
@@ -1067,6 +1104,7 @@ def build_index_html() -> str:
         padding: 16px 18px;
         color: var(--text-2);
         font-size: 13px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
       }}
       summary::-webkit-details-marker {{ display: none; }}
       pre {{
@@ -1107,6 +1145,15 @@ def build_index_html() -> str:
       }}
       @media (max-width: 760px) {{
         main {{ padding: 22px 14px 40px; }}
+        .hero-meta {{
+          gap: 2px 16px;
+        }}
+        .pill {{
+          width: auto;
+        }}
+        .pill::after {{
+          display: none;
+        }}
         .overview-grid {{
           grid-template-columns: 1fr;
         }}
