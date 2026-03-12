@@ -85,7 +85,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Estimated node watts are derived from container CPU utilization and fixed idle/max constants per node. This is not wall-power telemetry. Tune constants in `infrastructure/monitoring/prometheusrule-power-estimation.yaml` when hardware changes."
+            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost uses the Singapore regulated household tariff pinned in Prometheus for `1 January 2026` through `31 March 2026` (`29.11` cents/kWh, GST inclusive)."
           }
         },
         {
@@ -99,78 +99,6 @@ data:
             "h": 5,
             "w": 6,
             "x": 0,
-            "y": 4
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "datasource": {
-                "uid": "$datasource"
-              },
-              "expr": "sum(homelab:node_estimated_power_watts)",
-              "instant": true
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "watt",
-              "decimals": 1
-            }
-          },
-          "options": {
-            "reduceOptions": {
-              "calcs": ["lastNotNull"],
-              "values": false
-            }
-          }
-        },
-        {
-          "id": 3,
-          "type": "stat",
-          "title": "Cluster Estimated Energy (24h)",
-          "datasource": {
-            "uid": "$datasource"
-          },
-          "gridPos": {
-            "h": 5,
-            "w": 6,
-            "x": 6,
-            "y": 4
-          },
-          "targets": [
-            {
-              "refId": "A",
-              "datasource": {
-                "uid": "$datasource"
-              },
-              "expr": "sum(avg_over_time(homelab:node_estimated_power_watts[24h])) * 24 / 1000",
-              "instant": true
-            }
-          ],
-          "fieldConfig": {
-            "defaults": {
-              "unit": "kWh",
-              "decimals": 2
-            }
-          },
-          "options": {
-            "reduceOptions": {
-              "calcs": ["lastNotNull"],
-              "values": false
-            }
-          }
-        },
-        {
-          "id": 4,
-          "type": "stat",
-          "title": "Selected Scope Estimated Power",
-          "datasource": {
-            "uid": "$datasource"
-          },
-          "gridPos": {
-            "h": 5,
-            "w": 6,
-            "x": 12,
             "y": 4
           },
           "targets": [
@@ -197,16 +125,16 @@ data:
           }
         },
         {
-          "id": 5,
+          "id": 3,
           "type": "stat",
-          "title": "Selected Scope CPU Utilization",
+          "title": "Selected Scope Estimated Energy",
           "datasource": {
             "uid": "$datasource"
           },
           "gridPos": {
             "h": 5,
-            "w": 6,
-            "x": 18,
+            "w": 4,
+            "x": 4,
             "y": 4
           },
           "targets": [
@@ -215,7 +143,223 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "avg(homelab:node_cpu_utilization:ratio{node=~\"$node\"})",
+              "expr": "sum(avg_over_time(homelab:node_estimated_power_watts{node=~\"$node\"}[$__range])) * $__range_s / 3600000",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "kWh",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Selected Scope Estimated Cost",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "(sum(avg_over_time(homelab:node_estimated_power_watts{node=~\"$node\"}[$__range])) * $__range_s / 3600000) * max(homelab:singapore_household_tariff_sgd_per_kwh)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "prefix:S$",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Cluster Estimated Power",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(homelab:node_estimated_power_watts)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "decimals": 1
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Cluster Estimated Energy",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 16,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "sum(avg_over_time(homelab:node_estimated_power_watts[$__range])) * $__range_s / 3600000",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "kWh",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Cluster Estimated Cost",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 20,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "(sum(avg_over_time(homelab:node_estimated_power_watts[$__range])) * $__range_s / 3600000) * max(homelab:singapore_household_tariff_sgd_per_kwh)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "prefix:S$",
+              "decimals": 2
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "stat",
+          "title": "Singapore Tariff (Q1 2026)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 0,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "max(homelab:singapore_household_tariff_sgd_per_kwh)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "prefix:S$",
+              "decimals": 4
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "stat",
+          "title": "Selected Scope CPU Utilization (Model Input)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 6,
+            "x": 6,
+            "y": 9
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "avg(homelab:node_power_model_cpu_utilization:ratio{node=~\"$node\"})",
               "instant": true
             }
           ],
@@ -233,7 +377,7 @@ data:
           }
         },
         {
-          "id": 6,
+          "id": 10,
           "type": "timeseries",
           "title": "Estimated Power by Node",
           "datasource": {
@@ -241,8 +385,8 @@ data:
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
-            "x": 0,
+            "w": 12,
+            "x": 12,
             "y": 9
           },
           "targets": [
@@ -263,7 +407,7 @@ data:
           }
         },
         {
-          "id": 7,
+          "id": 11,
           "type": "timeseries",
           "title": "CPU Utilization by Node (Model Input)",
           "datasource": {
@@ -281,7 +425,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "homelab:node_cpu_utilization:ratio{node=~\"$node\"}",
+              "expr": "homelab:node_power_model_cpu_utilization:ratio{node=~\"$node\"}",
               "legendFormat": "{{node}}"
             }
           ],

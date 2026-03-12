@@ -37,6 +37,14 @@ spec:
               0
             )
 
+        # Prefer whole-host CPU utilization from kubelet /metrics/resource when present.
+        # Fall back to container-only utilization if the host-level series is absent.
+        - record: homelab:node_power_model_cpu_utilization:ratio
+          expr: >
+            homelab:node_host_cpu_utilization:ratio
+            or
+            homelab:node_cpu_utilization:ratio
+
         # Tune these constants when hardware or node roles change.
         - record: homelab:node_idle_power_watts
           expr: >
@@ -55,8 +63,13 @@ spec:
             homelab:node_idle_power_watts
             + (
               (homelab:node_max_power_watts - homelab:node_idle_power_watts)
-              * on(node) homelab:node_cpu_utilization:ratio
+              * on(node) homelab:node_power_model_cpu_utilization:ratio
             )
 
         - record: homelab:cluster_estimated_power_watts
           expr: sum(homelab:node_estimated_power_watts)
+
+        # Q1 2026 Singapore regulated household tariff (with 9% GST):
+        # 29.11 cents/kWh for 1 Jan 2026 to 31 Mar 2026.
+        - record: homelab:singapore_household_tariff_sgd_per_kwh
+          expr: vector(0.2911)

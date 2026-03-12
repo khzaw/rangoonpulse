@@ -295,7 +295,10 @@ Important external-dns behavior:
   - node power tracking is estimate-only (no smart-plug telemetry):
     - recording rules: `infrastructure/monitoring/prometheusrule-power-estimation.yaml`
     - dashboard import: `infrastructure/monitoring/grafana-dashboard-node-power-estimation.yaml`
-    - model = container CPU utilization + fixed per-node idle/max watts (tune constants in the rule file)
+    - model = preferred whole-host CPU utilization from kubelet `/metrics/resource` (fallback: container CPU utilization)
+      + fixed per-node idle/max watts (tune constants in the rule file)
+    - estimated cost uses Singapore household regulated tariff series `homelab:singapore_household_tariff_sgd_per_kwh`;
+      review/update quarterly against EMA/SP Group
   - Prometheus retention policy tuned for advisor window:
     - `retention: 14d`
     - `retentionSize: 8GB`
