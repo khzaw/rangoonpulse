@@ -629,16 +629,7 @@ def build_index_html() -> str:
         position: relative;
       }}
       body::before {{
-        content: "";
-        position: fixed;
-        inset: 0;
-        background-size: 24px 24px;
-        background-image:
-          linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-          linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-        opacity: 0.55;
-        pointer-events: none;
-        z-index: 0;
+        display: none;
       }}
       body::after {{
         content: "";
@@ -781,15 +772,7 @@ def build_index_html() -> str:
         border-radius: var(--radius-md);
       }}
       .card-texture {{
-        position: absolute;
-        inset: 0;
-        background-size: 12px 12px;
-        background-image:
-          linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-          linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-        opacity: 0.45;
-        pointer-events: none;
-        z-index: 0;
+        display: none;
       }}
       .metric-card {{
         min-height: 166px;
