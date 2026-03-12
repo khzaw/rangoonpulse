@@ -414,12 +414,12 @@ spec:
                           - type: custom-api
                             title: Sonarr
                             cache: 2m
-                            url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
+                            url: "http://sonarr.default.svc.cluster.local:8989/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
                             headers:
                               X-Api-Key: ${SONARR_API_KEY}
                             subrequests:
                               queue:
-                                url: https://sonarr.khzaw.dev/api/v3/queue/status
+                                url: http://sonarr.default.svc.cluster.local:8989/api/v3/queue/status
                                 headers:
                                   X-Api-Key: ${SONARR_API_KEY}
                             template: |
@@ -441,12 +441,12 @@ spec:
                           - type: custom-api
                             title: Radarr
                             cache: 2m
-                            url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
+                            url: "http://radarr.default.svc.cluster.local:7878/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
                             headers:
                               X-Api-Key: ${RADARR_API_KEY}
                             subrequests:
                               queue:
-                                url: https://radarr.khzaw.dev/api/v3/queue/status
+                                url: http://radarr.default.svc.cluster.local:7878/api/v3/queue/status
                                 headers:
                                   X-Api-Key: ${RADARR_API_KEY}
                             template: |
@@ -468,16 +468,16 @@ spec:
                           - type: custom-api
                             title: Prowlarr
                             cache: 5m
-                            url: https://prowlarr.khzaw.dev/api/v1/indexer
+                            url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexer
                             headers:
                               X-Api-Key: ${PROWLARR_API_KEY}
                             subrequests:
                               status:
-                                url: https://prowlarr.khzaw.dev/api/v1/indexerstatus
+                                url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexerstatus
                                 headers:
                                   X-Api-Key: ${PROWLARR_API_KEY}
                               health:
-                                url: https://prowlarr.khzaw.dev/api/v1/health
+                                url: http://prowlarr.default.svc.cluster.local:9696/api/v1/health
                                 headers:
                                   X-Api-Key: ${PROWLARR_API_KEY}
                             template: |
@@ -501,7 +501,7 @@ spec:
                           - type: custom-api
                             title: Bazarr
                             cache: 5m
-                            url: https://bazarr.khzaw.dev/api/badges
+                            url: http://bazarr.default.svc.cluster.local:6767/api/badges
                             headers:
                               X-Api-Key: ${BAZARR_API_KEY}
                             template: |
@@ -522,7 +522,7 @@ spec:
                           - type: custom-api
                             title: Jellyfin
                             cache: 5m
-                            url: "https://jellyfin.khzaw.dev/Items/Counts?api_key=${JELLYFIN_API_KEY}"
+                            url: "http://jellyfin.default.svc.cluster.local:8096/Items/Counts?api_key=${JELLYFIN_API_KEY}"
                             template: |
                               {{`<div class="flex justify-between text-center">
                                 <div>
@@ -541,7 +541,7 @@ spec:
                           - type: custom-api
                             title: Jellyfin Now Playing
                             cache: 15s
-                            url: "https://jellyfin.khzaw.dev/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
+                            url: "http://jellyfin.default.svc.cluster.local:8096/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
                             template: |
                               {{`{{ $sessions := .JSON.Array "" }}
                               {{ $active := 0.0 }}
@@ -590,7 +590,7 @@ spec:
                           - type: custom-api
                             title: Immich
                             cache: 5m
-                            url: https://photos.khzaw.dev/api/server/statistics
+                            url: http://immich-server.default.svc.cluster.local:2283/api/server/statistics
                             headers:
                               x-api-key: ${IMMICH_API_KEY}
                               Accept: application/json
@@ -778,6 +778,7 @@ spec:
                             icon: mdi:database-outline
                           - title: Immich
                             url: https://photos.khzaw.dev
+                            check-url: http://immich-server.default.svc.cluster.local:2283/server-info/ping
                             icon: di:immich
                           - title: Booklore
                             url: https://booklore.khzaw.dev
@@ -815,6 +816,7 @@ spec:
                             icon: mdi:autorenew
                           - title: Grafana
                             url: https://grafana.khzaw.dev
+                            check-url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local/api/health
                             icon: di:grafana
                           - title: Vaultwarden
                             url: https://passwords.khzaw.dev
@@ -830,7 +832,7 @@ spec:
                             icon: mdi:router-network
                           - title: TrueNAS
                             url: https://nas.khzaw.dev
-                            check-url: https://nas.khzaw.dev/ui/
+                            check-url: http://nas-lan.default.svc.cluster.local/ui/
                             icon: di:truenas
 
               - name: Media
@@ -840,7 +842,7 @@ spec:
                       - type: custom-api
                         title: Jellyfin Now Playing
                         cache: 15s
-                        url: "https://jellyfin.khzaw.dev/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
+                        url: "http://jellyfin.default.svc.cluster.local:8096/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
                         template: |
                           {{`{{ $sessions := .JSON.Array "" }}
                           {{ $active := 0.0 }}
@@ -898,7 +900,7 @@ spec:
                       - type: custom-api
                         title: Jellyfin Recently Added
                         cache: 2m
-                        url: "https://jellyfin.khzaw.dev/Users?api_key=${JELLYFIN_API_KEY}"
+                        url: "http://jellyfin.default.svc.cluster.local:8096/Users?api_key=${JELLYFIN_API_KEY}"
                         template: |
                           {{`{{ $users := .JSON.Array "" }}
                           {{ $userId := "" }}
@@ -914,7 +916,7 @@ spec:
                           {{ if eq $userId "" }}
                           <div class="size-h6">No Jellyfin users available for Recently Added.</div>
                           {{ else }}
-                          {{ $latestURL := printf "https://jellyfin.khzaw.dev/Users/%s/Items/Latest" $userId }}
+                          {{ $latestURL := printf "http://jellyfin.default.svc.cluster.local:8096/Users/%s/Items/Latest" $userId }}
                           {{ $resp := newRequest $latestURL | withParameter "api_key" "${JELLYFIN_API_KEY}" | withParameter "Limit" "30" | withParameter "IncludeItemTypes" "Movie,Episode" | getResponse }}
                           {{ $items := $resp.JSON.Array "" }}
                           {{ if eq (len $items) 0 }}
@@ -956,7 +958,7 @@ spec:
                           - type: custom-api
                             title: TV Show Releases
                             cache: 10m
-                            url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=16&sortKey=airDateUtc&sortDirection=descending"
+                            url: "http://sonarr.default.svc.cluster.local:8989/api/v3/wanted/missing?page=1&pageSize=16&sortKey=airDateUtc&sortDirection=descending"
                             headers:
                               X-Api-Key: ${SONARR_API_KEY}
                             template: |
@@ -994,7 +996,7 @@ spec:
                           - type: custom-api
                             title: Movie Releases
                             cache: 10m
-                            url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=20&sortKey=added&sortDirection=descending"
+                            url: "http://radarr.default.svc.cluster.local:7878/api/v3/wanted/missing?page=1&pageSize=20&sortKey=added&sortDirection=descending"
                             headers:
                               X-Api-Key: ${RADARR_API_KEY}
                             template: |
@@ -1032,12 +1034,12 @@ spec:
                           - type: custom-api
                             title: Sonarr
                             cache: 2m
-                            url: "https://sonarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
+                            url: "http://sonarr.default.svc.cluster.local:8989/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
                             headers:
                               X-Api-Key: ${SONARR_API_KEY}
                             subrequests:
                               queue:
-                                url: https://sonarr.khzaw.dev/api/v3/queue/status
+                                url: http://sonarr.default.svc.cluster.local:8989/api/v3/queue/status
                                 headers:
                                   X-Api-Key: ${SONARR_API_KEY}
                             template: |
@@ -1059,12 +1061,12 @@ spec:
                           - type: custom-api
                             title: Radarr
                             cache: 2m
-                            url: "https://radarr.khzaw.dev/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
+                            url: "http://radarr.default.svc.cluster.local:7878/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
                             headers:
                               X-Api-Key: ${RADARR_API_KEY}
                             subrequests:
                               queue:
-                                url: https://radarr.khzaw.dev/api/v3/queue/status
+                                url: http://radarr.default.svc.cluster.local:7878/api/v3/queue/status
                                 headers:
                                   X-Api-Key: ${RADARR_API_KEY}
                             template: |
@@ -1086,16 +1088,16 @@ spec:
                           - type: custom-api
                             title: Prowlarr
                             cache: 5m
-                            url: https://prowlarr.khzaw.dev/api/v1/indexer
+                            url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexer
                             headers:
                               X-Api-Key: ${PROWLARR_API_KEY}
                             subrequests:
                               status:
-                                url: https://prowlarr.khzaw.dev/api/v1/indexerstatus
+                                url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexerstatus
                                 headers:
                                   X-Api-Key: ${PROWLARR_API_KEY}
                               health:
-                                url: https://prowlarr.khzaw.dev/api/v1/health
+                                url: http://prowlarr.default.svc.cluster.local:9696/api/v1/health
                                 headers:
                                   X-Api-Key: ${PROWLARR_API_KEY}
                             template: |
@@ -1119,7 +1121,7 @@ spec:
                           - type: custom-api
                             title: Bazarr
                             cache: 5m
-                            url: https://bazarr.khzaw.dev/api/badges
+                            url: http://bazarr.default.svc.cluster.local:6767/api/badges
                             headers:
                               X-Api-Key: ${BAZARR_API_KEY}
                             template: |
@@ -1140,7 +1142,7 @@ spec:
                           - type: custom-api
                             title: Jellyfin
                             cache: 5m
-                            url: "https://jellyfin.khzaw.dev/Items/Counts?api_key=${JELLYFIN_API_KEY}"
+                            url: "http://jellyfin.default.svc.cluster.local:8096/Items/Counts?api_key=${JELLYFIN_API_KEY}"
                             template: |
                               {{`<div class="flex justify-between text-center">
                                 <div>

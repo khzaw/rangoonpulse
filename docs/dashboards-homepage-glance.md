@@ -12,6 +12,15 @@ GitOps source of truth:
 
 Glance config is embedded as a ConfigMap (`glance.yml`) and mounted read-only into the container.
 
+### In-Cluster Fetching
+For Glance server-side requests, prefer cluster-local service URLs over public `https://*.khzaw.dev` hostnames:
+- `monitor` widget `check-url`
+- `custom-api` widget `url` and subrequests
+
+Keep the user-facing `url` pointing at the public hostname, but keep Glance's own fetch path on `*.svc.cluster.local`
+where possible. This avoids ingress/TLS overhead, reduces page render latency, and keeps the monitor widget's response
+times closer to the actual service path Glance is testing.
+
 ### Node Placement
 Glance is pinned to the ARM64 Raspberry Pi utility node (`talos-uua-g6r`) to keep the primary node focused on heavier apps.
 
