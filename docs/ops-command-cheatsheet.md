@@ -203,6 +203,10 @@ curl -I --max-time 20 https://tuning.khzaw.dev
 curl -s https://tuning.khzaw.dev/latest.json | jq '.summary,.budget'
 curl -s https://tuning.khzaw.dev/metrics | rg '^resource_advisor_'
 
+# If exporter.py changed in Git, restart the pod after reconcile to pick up the new mounted script
+kubectl rollout restart deployment/resource-advisor-exporter -n monitoring
+kubectl rollout status deployment/resource-advisor-exporter -n monitoring --timeout=180s
+
 # Logs
 kubectl logs -n monitoring job/<job-name>
 ```

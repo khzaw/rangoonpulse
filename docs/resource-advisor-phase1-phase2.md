@@ -51,6 +51,9 @@ Apply PR cleanliness:
 - Source files:
   - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/exporter.py`
   - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/ingress-exporter.yaml`
+- Operational note:
+  - `exporter.py` is mounted from a ConfigMap; after a Git change to the exporter code, reconcile alone updates the file but does not restart the running Python process.
+  - Run `kubectl rollout restart deployment/resource-advisor-exporter -n monitoring` after the reconcile when you need the new code live immediately.
 
 ## What It Analyzes
 - Deployments and StatefulSets in namespaces configured by `TARGET_NAMESPACES`.
