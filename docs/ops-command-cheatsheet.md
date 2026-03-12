@@ -145,6 +145,8 @@ curl -s -X POST https://controlpanel.khzaw.dev/api/transmission-vpn \
 curl -s -X POST https://controlpanel.khzaw.dev/api/transmission-vpn \
   -H 'content-type: application/json' -d '{"mode":"direct"}' | jq
 
+curl -I --max-time 20 https://torrent-vpn.khzaw.dev
+
 curl -s https://controlpanel.khzaw.dev/metrics | rg '^exposure_control_'
 ```
 

@@ -95,6 +95,9 @@ Notes:
   - `default/transmission-vpn-secret`
     - keys: `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_PRESHARED_KEY`
     - consumed by `gluetun` via `envFrom.secretRef`
+  - `default/transmission-gluetun-control-secret`
+    - keys: `GLUETUN_API_KEY`, `HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE`
+    - consumed by both `gluetun` and `gluetun-webui` via `envFrom.secretRef`
 
 ## Not Managed By GitOps (But Present In Cluster)
 These exist in-cluster but are not currently referenced by this repo's GitOps manifests (or are chart-owned/generated state):

@@ -93,11 +93,15 @@ Notes:
     `apps/exposure-control/helmrelease.yaml` (current exclusions: `blog`, `mmcal`, `rangoon-mapper`)
 - Transmission optional VPN toggle:
   - control/API host: `controlpanel.khzaw.dev`
+  - Gluetun WebUI host: `torrent-vpn.khzaw.dev`
   - GitOps control config: `apps/transmission/transmission-vpn-control.yaml`
   - runtime state: `ConfigMap/default/transmission-vpn-state` (runtime-owned; do not reconcile with Flux)
   - credentials: `infrastructure/secrets/default/transmission-vpn-secret.yaml`
+  - Gluetun control auth secret: `infrastructure/secrets/default/transmission-gluetun-control-secret.yaml`
   - current scaffold: `gluetun` + custom WireGuard placeholder values
   - default seed mode is `direct`; switch via control panel or `POST /api/transmission-vpn`
+  - `gluetun-webui` runs as a sidecar in the Transmission pod and talks to Gluetun on `127.0.0.1:8000`
+  - control panel changes whether the `gluetun` container exists; the WebUI start/stop button only affects the running VPN process when VPN mode is active
 - Permanent public: `blog.khzaw.dev` routes directly through Cloudflare Tunnel to `blog.default.svc.cluster.local:8080` (bypasses exposure-control)
   - DNS ownership for `blog.khzaw.dev` is `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`).
   - Do not add `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev` on the blog Ingress, or it will publish a private `A` record (`10.0.0.231`).

@@ -132,6 +132,8 @@ Current cluster status: both nodes are functional and schedulable.
 
 *Plus: tracerr for tracking automation metrics*
 
+*Transmission can run direct or through a Gluetun sidecar, with the control toggle on `controlpanel.khzaw.dev` and the Gluetun WebUI at `torrent-vpn.khzaw.dev`.*
+
 *Flaresolverr currently tracks `alexfozor/flaresolverr:pr-1300` on the Raspberry Pi utility node.*
 
 ### 📺 Live TV & Tools

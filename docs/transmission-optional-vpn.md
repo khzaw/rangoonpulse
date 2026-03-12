@@ -5,12 +5,14 @@ Transmission can now run in either:
 - `vpn` mode: `gluetun` WireGuard sidecar enabled in the same pod
 
 The mode is switched from `https://controlpanel.khzaw.dev` or the control panel API.
+The Gluetun sidecar is monitored and controlled through `https://torrent-vpn.khzaw.dev`.
 
 ## GitOps vs Runtime State
 
 Git-managed files:
 - `apps/transmission/helmrelease.yaml`
 - `apps/transmission/transmission-vpn-control.yaml`
+- `infrastructure/secrets/default/transmission-gluetun-control-secret.yaml`
 - `infrastructure/secrets/default/transmission-vpn-secret.yaml`
 
 Runtime-owned state:
@@ -32,8 +34,10 @@ Important:
 
 Current scaffold assumes:
 - `gluetun`
+- `gluetun-webui`
 - `VPN_SERVICE_PROVIDER=custom`
 - `VPN_TYPE=wireguard`
+- Gluetun HTTP control server on `127.0.0.1:8000` with API-key auth
 
 Placeholders to replace before real VPN use:
 - non-secret endpoint/public data in `apps/transmission/helmrelease.yaml`
@@ -44,6 +48,22 @@ Placeholders to replace before real VPN use:
 - secret material in `infrastructure/secrets/default/transmission-vpn-secret.yaml`
   - `WIREGUARD_PRIVATE_KEY`
   - `WIREGUARD_PRESHARED_KEY` (only if required by provider)
+
+## Gluetun WebUI
+
+- Hostname: `https://torrent-vpn.khzaw.dev`
+- Container wiring:
+  - `gluetun-webui` is always present in the Transmission pod
+  - it calls Gluetun on `http://127.0.0.1:8000`
+  - Gluetun control-server auth is configured from `infrastructure/secrets/default/transmission-gluetun-control-secret.yaml`
+- In `direct` mode, the WebUI still loads but will report that the Gluetun control API is unreachable because the `gluetun` container is intentionally absent.
+- In `vpn` mode, the WebUI can start/stop the Gluetun VPN process without changing the desired pod mode.
+
+Operational distinction:
+- control panel (`controlpanel.khzaw.dev`)
+  - chooses `direct` vs `vpn` pod shape for Transmission
+- Gluetun WebUI (`torrent-vpn.khzaw.dev`)
+  - inspects the running Gluetun sidecar and can pause/resume the VPN process only when `vpn` mode is already active
 
 ## After You Buy a VPN Subscription
 
@@ -108,6 +128,7 @@ Use this path when:
 flux reconcile kustomization secrets -n flux-system --with-source
 flux reconcile kustomization transmission -n flux-system --with-source
 kubectl logs -n default deploy/transmission -c gluetun --tail=200
+curl -I --max-time 20 https://torrent-vpn.khzaw.dev
 ```
 
 After the configuration is in place, enable VPN mode:
@@ -153,6 +174,7 @@ curl -s -X POST https://controlpanel.khzaw.dev/api/transmission-vpn \
 kubectl get configmap -n default transmission-vpn-control transmission-vpn-state -o yaml
 kubectl get pods -n default -l app.kubernetes.io/instance=transmission -o wide
 kubectl logs -n default deploy/transmission -c gluetun --tail=200
+kubectl logs -n default deploy/transmission -c gluetun-webui --tail=200
 kubectl describe hr -n default transmission
 flux reconcile kustomization transmission -n flux-system --with-source
 ```
@@ -161,6 +183,7 @@ Expected signals:
 - `desiredMode` from the API reflects the control panel selection.
 - `effectiveMode` flips to `vpn` once the running Transmission pod includes container `gluetun`.
 - `khzaw.dev/transmission-egress-mode` pod annotation should match the selected mode.
+- `https://torrent-vpn.khzaw.dev` returns `200` and `/api/health` returns healthy when the WebUI container is up.
 
 ## Networking Notes
 

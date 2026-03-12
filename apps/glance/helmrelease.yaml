@@ -266,6 +266,9 @@ spec:
                               - title: Transmission
                                 url: https://torrent.khzaw.dev
                                 icon: di:transmission
+                              - title: Transmission VPN
+                                url: https://torrent-vpn.khzaw.dev
+                                icon: mdi:shield-link-variant
                               - title: SABnzbd
                                 url: https://sabnzbd.khzaw.dev
                                 icon: di:sabnzbd
@@ -362,6 +365,10 @@ spec:
                             url: https://torrent.khzaw.dev
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
                             icon: di:transmission
+                          - title: Transmission VPN
+                            url: https://torrent-vpn.khzaw.dev
+                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
+                            icon: mdi:shield-link-variant
                           - title: Router
                             url: https://router.khzaw.dev
                             check-url: https://router.khzaw.dev
@@ -399,6 +406,10 @@ spec:
                             url: https://torrent.khzaw.dev
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
                             icon: di:transmission
+                          - title: Transmission VPN
+                            url: https://torrent-vpn.khzaw.dev
+                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
+                            icon: mdi:shield-link-variant
                           - title: SABnzbd
                             url: https://sabnzbd.khzaw.dev
                             check-url: http://sabnzbd.default.svc.cluster.local:8080
@@ -1198,6 +1209,10 @@ spec:
                             url: https://torrent.khzaw.dev
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
                             icon: di:transmission
+                          - title: Transmission VPN
+                            url: https://torrent-vpn.khzaw.dev
+                            check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
+                            icon: mdi:shield-link-variant
                           - title: SABnzbd
                             url: https://sabnzbd.khzaw.dev
                             check-url: http://sabnzbd.default.svc.cluster.local:8080

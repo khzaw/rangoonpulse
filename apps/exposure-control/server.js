@@ -83,6 +83,8 @@ const TRANSMISSION_VPN_CONTROL_CONFIGMAP =
   process.env.TRANSMISSION_VPN_CONTROL_CONFIGMAP || "transmission-vpn-control";
 const TRANSMISSION_VPN_RUNTIME_CONFIGMAP_FALLBACK =
   process.env.TRANSMISSION_VPN_RUNTIME_CONFIGMAP || "transmission-vpn-state";
+const TRANSMISSION_VPN_WEBUI_URL =
+  process.env.TRANSMISSION_VPN_WEBUI_URL || "https://torrent-vpn.khzaw.dev";
 
 const metrics = {
   enableTotal: 0,
@@ -2184,6 +2186,9 @@ function renderControlPanelHtml() {
             <div>
               <div class="vpn-title">Transmission Egress</div>
               <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
+              <div class="vpn-meta">
+                Gluetun WebUI: <a href="${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
+              </div>
             </div>
             <div class="controls">
               <button id="vpnDirectBtn" type="button">Route Direct</button>
