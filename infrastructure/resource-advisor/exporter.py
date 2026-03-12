@@ -207,93 +207,1110 @@ def build_metrics() -> str:
     return "".join(metrics)
 
 
+def _fmt_decimal(value: object, digits: int = 1) -> str:
+    try:
+        number = float(value)
+    except Exception:
+        return "n/a"
+    if digits <= 0:
+        return str(int(round(number)))
+    text = f"{number:.{digits}f}"
+    return text.rstrip("0").rstrip(".")
+
+
+def _fmt_signed(value: float, suffix: str, digits: int = 1) -> str:
+    sign = "+" if value > 0 else ""
+    return f"{sign}{_fmt_decimal(value, digits)}{suffix}"
+
+
+def _clamp_pct(value: object, upper: float = 100.0) -> float:
+    try:
+        number = float(value)
+    except Exception:
+        return 0.0
+    return max(0.0, min(upper, number))
+
+
+def _escape_attr(value: object) -> str:
+    return html.escape(str(value or ""), quote=True)
+
+
+def _build_budget_card(
+    title: str,
+    unit_label: str,
+    allocatable: object,
+    current_total: float,
+    recommended_total: float,
+    current_percent: object,
+    recommended_percent: object,
+    accent: str,
+) -> str:
+    delta = recommended_total - current_total
+    delta_class = "positive" if delta > 0 else "negative" if delta < 0 else "neutral"
+    current_pct = _clamp_pct(current_percent, 100.0)
+    recommended_pct = _clamp_pct(recommended_percent, 100.0)
+
+    return f"""
+      <article class="surface budget-card">
+        <div class="surface-topline">{html.escape(title)}</div>
+        <div class="budget-main">
+          <div>
+            <div class="budget-value">{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</div>
+            <div class="budget-caption">current requested from {html.escape(str(allocatable or "n/a"))} allocatable</div>
+          </div>
+          <div class="delta-pill {delta_class}">{html.escape(_fmt_signed(delta, unit_label))}</div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-meta">
+            <span>current</span>
+            <strong>{html.escape(_fmt_decimal(current_percent))}%</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill current {html.escape(accent)}" style="width:{current_pct:.1f}%"></div>
+          </div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-meta">
+            <span>recommended</span>
+            <strong>{html.escape(_fmt_decimal(recommended_percent))}%</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill recommended {html.escape(accent)}" style="width:{recommended_pct:.1f}%"></div>
+          </div>
+        </div>
+        <div class="budget-foot">
+          <span>{html.escape(_fmt_decimal(current_total))}{html.escape(unit_label)}</span>
+          <span>{html.escape(_fmt_decimal(recommended_total))}{html.escape(unit_label)}</span>
+        </div>
+      </article>
+    """
+
+
+def _build_focus_card(title: str, subtitle: str, items: list[str]) -> str:
+    if not items:
+        items = ["No items in this slice."]
+    rows = "".join(f"<li>{item}</li>" for item in items)
+    return f"""
+      <article class="surface focus-card">
+        <div class="surface-topline">{html.escape(title)}</div>
+        <div class="focus-subtitle">{html.escape(subtitle)}</div>
+        <ul class="focus-list">{rows}</ul>
+      </article>
+    """
+
+
 def build_index_html() -> str:
     snap = STATE.snapshot()
     report = snap["report"] or {}
-
-    title = "Resource Advisor"
+    title = "rangoonpulse tuning"
     last_run = str(report.get("generated_at") or snap.get("last_run_at") or "")
     mode = str(report.get("mode") or snap.get("mode") or "")
-    cov = report.get("metrics_coverage_days_estimate")
     window = str(report.get("metrics_window") or "")
+    coverage_days = report.get("metrics_coverage_days_estimate")
     recs = report.get("recommendations") or []
-    rec_count = len(recs) if isinstance(recs, list) else 0
-    last_run_escaped = html.escape(last_run) if last_run else ""
-    if last_run_escaped:
-        last_run_pill = (
-            '<div class="pill">last run: <b id="last-run-local" '
-            f'data-utc="{last_run_escaped}">{last_run_escaped}</b></div>'
-        )
-    else:
-        last_run_pill = '<div class="pill">last run: <b id="last-run-local">n/a</b></div>'
+    summary = report.get("summary") or {}
+    policy = report.get("policy") or {}
+    budget = report.get("budget") or {}
 
     md = snap.get("latest_md") or ""
-    if len(md) > 200_000:
-        md = md[:200_000] + "\n\n... (truncated)\n"
+    if len(md) > 120_000:
+        md = md[:120_000] + "\n\n... (truncated)\n"
 
-    parts = [
-        "<!doctype html>",
-        "<html><head>",
-        '<meta charset="utf-8">',
-        '<meta name="viewport" content="width=device-width, initial-scale=1">',
-        f"<title>{html.escape(title)}</title>",
-        "<style>",
-        "body{margin:0;background:#0b0b0b;color:#e6e6e6;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;}",
-        ".wrap{max-width:1100px;margin:0 auto;padding:24px;}",
-        "a{color:#9fd4ff;text-decoration:none} a:hover{text-decoration:underline}",
-        ".meta{display:flex;gap:16px;flex-wrap:wrap;color:#bdbdbd;font-size:14px;margin-bottom:16px}",
-        ".pill{padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.04)}",
-        "pre{white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:16px;}",
-        "</style></head><body><div class=\"wrap\">",
-        "<h1 style=\"margin:0 0 8px 0; font-size:22px;\">Resource Advisor</h1>",
-        "<div class=\"meta\">",
-        last_run_pill,
-        "<div class=\"pill\">time zone: <b id=\"browser-tz\">browser local</b></div>",
-        f"<div class=\"pill\">mode: <b>{html.escape(mode) if mode else 'n/a'}</b></div>",
-        f"<div class=\"pill\">window: <b>{html.escape(window) if window else 'n/a'}</b></div>",
-        f"<div class=\"pill\">coverage: <b>{html.escape(str(cov)) if cov is not None else 'n/a'}</b> days</div>",
-        f"<div class=\"pill\">recommendations: <b>{rec_count}</b></div>",
-        "</div>",
-        "<div style=\"margin: 0 0 12px 0; color:#bdbdbd; font-size:14px;\">",
-        "Endpoints: ",
-        "<a href=\"/latest.md\">/latest.md</a>",
-        " | ",
-        "<a href=\"/latest.json\">/latest.json</a>",
-        " | ",
-        "<a href=\"/metrics\">/metrics</a>",
-        "</div>",
-        "<pre>",
-        html.escape(md) if md else "No report markdown found in ConfigMap.",
-        "</pre>",
-        "<script>",
-        "(function () {",
-        "  var tsNode = document.getElementById('last-run-local');",
-        "  var tzNode = document.getElementById('browser-tz');",
-        "  try {",
-        "    if (tzNode && window.Intl && Intl.DateTimeFormat) {",
-        "      tzNode.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'browser local';",
-        "    }",
-        "  } catch (e) {}",
-        "  if (!tsNode) return;",
-        "  var raw = tsNode.getAttribute('data-utc');",
-        "  if (!raw) return;",
-        "  var d = new Date(raw);",
-        "  if (isNaN(d.getTime())) return;",
-        "  tsNode.textContent = d.toLocaleString(undefined, {",
-        "    year: 'numeric',",
-        "    month: 'short',",
-        "    day: '2-digit',",
-        "    hour: '2-digit',",
-        "    minute: '2-digit',",
-        "    second: '2-digit',",
-        "    timeZoneName: 'short'",
-        "  });",
-        "  tsNode.title = 'UTC: ' + raw;",
-        "})();",
-        "</script>",
-        "</div></body></html>",
+    fetch_state = "live" if snap.get("last_fetch_ok") else "degraded"
+    fetch_detail = "ConfigMap fetch healthy" if snap.get("last_fetch_ok") else snap.get("last_error") or "fetch failed"
+
+    rec_count = len(recs) if isinstance(recs, list) else 0
+    upsize_count = int(summary.get("upsize_count") or 0)
+    downsize_count = int(summary.get("downsize_count") or 0)
+    no_change_count = int(summary.get("no_change_count") or 0)
+    analyzed = int(summary.get("containers_analyzed") or 0)
+    with_metrics = int(summary.get("containers_with_metrics") or 0)
+
+    current_cpu_m = float(summary.get("total_current_requests_cpu_m") or 0.0)
+    recommended_cpu_m = float(summary.get("total_recommended_requests_cpu_m") or 0.0)
+    current_mem_mi = float(summary.get("total_current_requests_memory_mi") or 0.0)
+    recommended_mem_mi = float(summary.get("total_recommended_requests_memory_mi") or 0.0)
+
+    alloc = budget.get("allocatable") or {}
+    cur_pct = budget.get("current_requests_percent_of_allocatable") or {}
+    rec_pct = budget.get("recommended_requests_percent_of_allocatable") or {}
+
+    note_counts: dict[str, int] = {}
+    for rec in recs:
+        if not isinstance(rec, dict):
+            continue
+        for note in rec.get("notes") or []:
+            note_counts[str(note)] = note_counts.get(str(note), 0) + 1
+
+    top_notes = sorted(note_counts.items(), key=lambda item: (-item[1], item[0]))[:8]
+    note_options = "".join(
+        f'<option value="{_escape_attr(note)}">{html.escape(note)} ({count})</option>'
+        for note, count in top_notes
+    )
+
+    def top_slice(items: list[dict[str, Any]], key_fn: Any, limit: int = 4) -> list[dict[str, Any]]:
+        return sorted(items, key=key_fn, reverse=True)[:limit]
+
+    valid_recs = [rec for rec in recs if isinstance(rec, dict)]
+
+    biggest_mem = top_slice(
+        valid_recs,
+        lambda rec: abs(
+            advisor.parse_mem_to_mi(((rec.get("recommended") or {}).get("requests") or {}).get("memory"))
+            - advisor.parse_mem_to_mi(((rec.get("current") or {}).get("requests") or {}).get("memory"))
+        ),
+    )
+    restart_guarded = [
+        rec for rec in valid_recs if "restart_guard" in [str(note) for note in rec.get("notes") or []]
+    ][:4]
+    largest_restarts = top_slice(valid_recs, lambda rec: float(rec.get("restarts_window") or 0.0))
+
+    def focus_line(rec: dict[str, Any], metric: str) -> str:
+        ns = str(rec.get("namespace") or "default")
+        workload = str(rec.get("workload") or rec.get("release") or "unknown")
+        container = str(rec.get("container") or "main")
+        action = str(rec.get("action") or "unknown")
+        return (
+            f"<span class=\"focus-path\">{html.escape(ns)}/{html.escape(workload)}</span>"
+            f"<span class=\"focus-inline\">{html.escape(container)} · {html.escape(metric)} · "
+            f"<span class=\"action {html.escape(action)}\">{html.escape(action)}</span></span>"
+        )
+
+    biggest_mem_items = []
+    for rec in biggest_mem:
+        current_mem = advisor.parse_mem_to_mi(((rec.get("current") or {}).get("requests") or {}).get("memory"))
+        recommended_mem = advisor.parse_mem_to_mi(((rec.get("recommended") or {}).get("requests") or {}).get("memory"))
+        delta_mem = recommended_mem - current_mem
+        biggest_mem_items.append(f"{focus_line(rec, _fmt_signed(delta_mem, 'Mi'))}")
+
+    restart_guard_items = []
+    for rec in restart_guarded:
+        restarts = _fmt_decimal(rec.get("restarts_window") or 0.0, 2)
+        restart_guard_items.append(f"{focus_line(rec, restarts + ' restarts / window')}")
+
+    restart_volume_items = []
+    for rec in largest_restarts:
+        restarts = float(rec.get("restarts_window") or 0.0)
+        if restarts <= 0:
+            continue
+        restart_volume_items.append(f"{focus_line(rec, _fmt_decimal(restarts, 2) + ' restarts / window')}")
+
+    table_rows: list[str] = []
+    for index, rec in enumerate(valid_recs):
+        action = str(rec.get("action") or "unknown")
+        namespace = str(rec.get("namespace") or "")
+        workload = str(rec.get("workload") or "")
+        container = str(rec.get("container") or "")
+        release = str(rec.get("release") or "")
+        notes = [str(note) for note in rec.get("notes") or []]
+        notes_text = ", ".join(notes) if notes else "—"
+        notes_attr = ",".join(notes)
+
+        current_requests = (rec.get("current") or {}).get("requests") or {}
+        recommended_requests = (rec.get("recommended") or {}).get("requests") or {}
+
+        current_cpu = str(current_requests.get("cpu") or "0m")
+        current_mem = str(current_requests.get("memory") or "0Mi")
+        recommended_cpu = str(recommended_requests.get("cpu") or "0m")
+        recommended_mem = str(recommended_requests.get("memory") or "0Mi")
+        cpu_delta_m = advisor.parse_cpu_to_m(recommended_cpu) - advisor.parse_cpu_to_m(current_cpu)
+        mem_delta_mi = advisor.parse_mem_to_mi(recommended_mem) - advisor.parse_mem_to_mi(current_mem)
+
+        cpu_p95 = _fmt_decimal(rec.get("cpu_p95_m") or 0.0)
+        mem_p95 = _fmt_decimal(rec.get("mem_p95_mi") or 0.0)
+        restarts_window = float(rec.get("restarts_window") or 0.0)
+        replicas = int(rec.get("replicas") or 0)
+
+        search_blob = " ".join(
+            [
+                namespace,
+                workload,
+                container,
+                release,
+                action,
+                notes_text,
+                current_cpu,
+                recommended_cpu,
+                current_mem,
+                recommended_mem,
+            ]
+        ).lower()
+
+        table_rows.append(
+            f"""
+            <tr data-rec-row data-action="{_escape_attr(action)}" data-notes="{_escape_attr(notes_attr)}"
+                data-search="{_escape_attr(search_blob)}" style="--row-index:{index}">
+              <td>
+                <div class="workload">{html.escape(workload)}</div>
+                <div class="workload-meta">{html.escape(namespace)} · {html.escape(release)} · {html.escape(container)}</div>
+              </td>
+              <td><span class="action {html.escape(action)}">{html.escape(action)}</span></td>
+              <td>
+                <div class="metric-pair">
+                  <span>{html.escape(current_cpu)}</span>
+                  <span class="arrow">→</span>
+                  <span>{html.escape(recommended_cpu)}</span>
+                </div>
+                <div class="metric-delta {'positive' if cpu_delta_m > 0 else 'negative' if cpu_delta_m < 0 else 'neutral'}">{html.escape(_fmt_signed(cpu_delta_m, 'm', 0))}</div>
+              </td>
+              <td>
+                <div class="metric-pair">
+                  <span>{html.escape(current_mem)}</span>
+                  <span class="arrow">→</span>
+                  <span>{html.escape(recommended_mem)}</span>
+                </div>
+                <div class="metric-delta {'positive' if mem_delta_mi > 0 else 'negative' if mem_delta_mi < 0 else 'neutral'}">{html.escape(_fmt_signed(mem_delta_mi, 'Mi', 0))}</div>
+              </td>
+              <td>
+                <div class="usage-line">p95 {html.escape(cpu_p95)}m · {html.escape(mem_p95)}Mi</div>
+                <div class="workload-meta">{html.escape(str(replicas))} replica(s)</div>
+              </td>
+              <td>
+                <div class="usage-line">{html.escape(_fmt_decimal(restarts_window, 2))}</div>
+                <div class="workload-meta">restart count over advisor window</div>
+              </td>
+              <td><div class="notes-cell">{html.escape(notes_text)}</div></td>
+            </tr>
+            """
+        )
+
+    overview_cards = [
+        ("Recommendations", str(rec_count), f"{upsize_count} up · {downsize_count} down · {no_change_count} steady"),
+        ("Containers analyzed", str(analyzed), f"{with_metrics} with Prometheus data"),
+        ("Metrics coverage", f"{_fmt_decimal(coverage_days)}d", f"window {window or 'n/a'}"),
+        ("Fetcher", "healthy" if fetch_state == "live" else "degraded", fetch_detail),
     ]
-    return "\n".join(parts)
+
+    overview_html = "".join(
+        f"""
+        <article class="surface stat-card">
+          <div class="surface-topline">{html.escape(label)}</div>
+          <div class="stat-value">{html.escape(value)}</div>
+          <div class="stat-sub">{html.escape(subtitle)}</div>
+        </article>
+        """
+        for label, value, subtitle in overview_cards
+    )
+
+    policy_html = "".join(
+        f'<span class="token">{html.escape(label)} <strong>{html.escape(value)}</strong></span>'
+        for label, value in [
+            ("step", f"{_fmt_decimal(policy.get('max_step_percent'))}%"),
+            ("req buffer", f"{_fmt_decimal(policy.get('request_buffer_percent'))}%"),
+            ("limit buffer", f"{_fmt_decimal(policy.get('limit_buffer_percent'))}%"),
+            ("deadband", f"{_fmt_decimal(policy.get('deadband_percent'))}%"),
+            ("cpu floor", f"{_fmt_decimal(policy.get('deadband_cpu_m'))}m"),
+            ("mem floor", f"{_fmt_decimal(policy.get('deadband_mem_mi'))}Mi"),
+        ]
+    )
+
+    note_html = "".join(
+        f'<span class="token note-token">{html.escape(note)} <strong>{count}</strong></span>'
+        for note, count in top_notes
+    ) or '<span class="muted">No note annotations in current report.</span>'
+
+    budget_cards = (
+        _build_budget_card(
+            "CPU request posture",
+            "m",
+            alloc.get("cpu") or "n/a",
+            current_cpu_m,
+            recommended_cpu_m,
+            cur_pct.get("cpu"),
+            rec_pct.get("cpu"),
+            "cpu",
+        )
+        + _build_budget_card(
+            "Memory request posture",
+            "Mi",
+            alloc.get("memory") or "n/a",
+            current_mem_mi,
+            recommended_mem_mi,
+            cur_pct.get("memory"),
+            rec_pct.get("memory"),
+            "memory",
+        )
+        + f"""
+          <article class="surface policy-card">
+            <div class="surface-topline">Policy guardrails</div>
+            <div class="policy-grid">{policy_html}</div>
+            <div class="policy-copy">These are the active planner bounds applied to each report or apply-PR pass.</div>
+            <div class="surface-divider"></div>
+            <div class="surface-topline">Common notes</div>
+            <div class="policy-grid">{note_html}</div>
+          </article>
+        """
+    )
+
+    status_copy = (
+        "Budget-aware tuning view for the latest runtime-owned advisor report."
+        if report
+        else "No parsed report is currently available from the runtime ConfigMap."
+    )
+
+    html_doc = f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{html.escape(title)}</title>
+    <style>
+      :root {{
+        --bg: #0c0c0d;
+        --bg-subtle: #121214;
+        --card: rgba(255, 255, 255, 0.035);
+        --card-strong: rgba(255, 255, 255, 0.05);
+        --border: rgba(255, 255, 255, 0.075);
+        --border-strong: rgba(255, 255, 255, 0.14);
+        --text-1: #f4f4f5;
+        --text-2: #b4b4ba;
+        --text-3: #7d7d86;
+        --text-dim: #666670;
+        --accent: #82aaff;
+        --accent-2: #5eead4;
+        --green: #4ade80;
+        --red: #fb7185;
+        --amber: #f59e0b;
+        --violet: #a78bfa;
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+        --font-sans: "Geist", "Inter", "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "Geist Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+      }}
+      * {{ box-sizing: border-box; margin: 0; }}
+      html {{
+        min-height: 100%;
+        background: #09090b;
+      }}
+      body {{
+        min-height: 100dvh;
+        color: var(--text-1);
+        font-family: var(--font-sans);
+        background:
+          radial-gradient(1200px 700px at 4% -10%, rgba(130, 170, 255, 0.12), transparent 56%),
+          radial-gradient(1100px 640px at 96% -8%, rgba(94, 234, 212, 0.08), transparent 54%),
+          linear-gradient(180deg, #09090b 0%, #0c0c0d 48%, #09090b 100%);
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
+      }}
+      a {{
+        color: var(--text-2);
+        text-decoration: underline;
+        text-decoration-color: rgba(255, 255, 255, 0.18);
+        text-underline-offset: 3px;
+      }}
+      a:hover {{ color: var(--text-1); }}
+      main {{
+        max-width: 1460px;
+        margin: 0 auto;
+        padding: 36px 24px 56px;
+      }}
+      .page-shell {{
+        display: grid;
+        gap: 22px;
+      }}
+      .hero {{
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 18px;
+        align-items: stretch;
+      }}
+      .surface {{
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.018));
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+      }}
+      .hero-panel {{
+        padding: 24px 24px 20px;
+        position: relative;
+        overflow: hidden;
+      }}
+      .hero-panel::after {{
+        content: "";
+        position: absolute;
+        inset: auto -12% -46% auto;
+        width: 340px;
+        height: 340px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(130, 170, 255, 0.15), transparent 64%);
+        pointer-events: none;
+      }}
+      .eyebrow {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--text-2);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }}
+      .eyebrow::before {{
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: {'var(--green)' if fetch_state == 'live' else 'var(--red)'};
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.38);
+        animation: pulse-dot 1.9s ease-out infinite;
+      }}
+      h1 {{
+        margin-top: 16px;
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 1.04;
+        letter-spacing: -0.04em;
+      }}
+      .hero-copy {{
+        margin-top: 12px;
+        max-width: 72ch;
+        color: var(--text-2);
+        font-size: 14px;
+        line-height: 1.7;
+      }}
+      .hero-meta {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }}
+      .pill {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.025);
+        color: var(--text-2);
+        font-size: 12px;
+      }}
+      .pill strong {{
+        color: var(--text-1);
+        font-weight: 600;
+      }}
+      .endpoint-list {{
+        margin-top: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }}
+      .endpoint-link {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.025);
+        color: var(--text-1);
+        text-decoration: none;
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }}
+      .endpoint-link:hover {{
+        border-color: var(--border-strong);
+        background: rgba(255,255,255,0.045);
+      }}
+      .overview-grid {{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }}
+      .stat-card {{
+        padding: 18px;
+        min-height: 138px;
+      }}
+      .surface-topline {{
+        font-size: 11px;
+        color: var(--text-3);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }}
+      .stat-value {{
+        margin-top: 14px;
+        font-size: 32px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }}
+      .stat-sub {{
+        margin-top: 10px;
+        color: var(--text-2);
+        font-size: 12px;
+        line-height: 1.55;
+      }}
+      .section {{
+        display: grid;
+        gap: 16px;
+      }}
+      .section-head {{
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }}
+      .section-title {{
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-3);
+      }}
+      .section-detail {{
+        color: var(--text-3);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }}
+      .budget-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }}
+      .budget-card,
+      .policy-card,
+      .focus-card {{
+        padding: 18px;
+      }}
+      .budget-main {{
+        margin-top: 14px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }}
+      .budget-value {{
+        font-size: 28px;
+        letter-spacing: -0.05em;
+      }}
+      .budget-caption,
+      .policy-copy,
+      .focus-subtitle {{
+        margin-top: 6px;
+        color: var(--text-3);
+        font-size: 12px;
+        line-height: 1.6;
+      }}
+      .delta-pill {{
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-family: var(--font-mono);
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.025);
+        color: var(--text-2);
+      }}
+      .delta-pill.positive {{ color: var(--amber); }}
+      .delta-pill.negative {{ color: var(--green); }}
+      .progress-block {{
+        margin-top: 14px;
+      }}
+      .progress-meta {{
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--text-2);
+        font-size: 12px;
+        margin-bottom: 7px;
+      }}
+      .progress-track {{
+        position: relative;
+        overflow: hidden;
+        height: 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.03);
+      }}
+      .progress-fill {{
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: inherit;
+      }}
+      .progress-fill.current.cpu {{ background: linear-gradient(90deg, rgba(130,170,255,0.55), rgba(130,170,255,0.9)); }}
+      .progress-fill.recommended.cpu {{ background: linear-gradient(90deg, rgba(167,139,250,0.55), rgba(167,139,250,0.9)); }}
+      .progress-fill.current.memory {{ background: linear-gradient(90deg, rgba(94,234,212,0.55), rgba(94,234,212,0.88)); }}
+      .progress-fill.recommended.memory {{ background: linear-gradient(90deg, rgba(245,158,11,0.5), rgba(245,158,11,0.88)); }}
+      .budget-foot {{
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--text-3);
+        font-size: 11px;
+        font-family: var(--font-mono);
+      }}
+      .policy-grid {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }}
+      .token {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 11px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.025);
+        color: var(--text-2);
+        font-size: 12px;
+      }}
+      .token strong {{
+        color: var(--text-1);
+        font-family: var(--font-mono);
+        font-weight: 600;
+      }}
+      .surface-divider {{
+        height: 1px;
+        background: var(--border);
+        margin: 18px 0 0;
+      }}
+      .focus-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }}
+      .focus-list {{
+        list-style: none;
+        margin-top: 14px;
+        display: grid;
+        gap: 12px;
+      }}
+      .focus-list li {{
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.024);
+      }}
+      .focus-path {{
+        display: block;
+        font-size: 13px;
+        color: var(--text-1);
+        font-weight: 600;
+      }}
+      .focus-inline {{
+        display: block;
+        margin-top: 4px;
+        color: var(--text-2);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }}
+      .toolbar {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }}
+      .toolbar-left,
+      .toolbar-right {{
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }}
+      .filter-group {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.025);
+      }}
+      .filter-btn,
+      select,
+      input {{
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.03);
+        color: var(--text-2);
+        border-radius: 999px;
+        padding: 10px 14px;
+        font: inherit;
+        font-size: 12px;
+        outline: none;
+      }}
+      .filter-btn {{
+        cursor: pointer;
+        transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+      }}
+      .filter-btn.active {{
+        color: var(--text-1);
+        border-color: rgba(130, 170, 255, 0.5);
+        background: rgba(130, 170, 255, 0.14);
+      }}
+      select,
+      input {{
+        min-height: 42px;
+      }}
+      input {{
+        min-width: 260px;
+      }}
+      .result-count {{
+        color: var(--text-3);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }}
+      .table-shell {{
+        overflow: hidden;
+      }}
+      table {{
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+      }}
+      thead th {{
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: 14px 16px;
+        text-align: left;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-3);
+        border-bottom: 1px solid var(--border);
+        background: rgba(12, 12, 13, 0.92);
+        backdrop-filter: blur(8px);
+      }}
+      tbody td {{
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }}
+      tbody tr {{
+        opacity: 0;
+        transform: translateY(8px);
+        animation: row-in 320ms cubic-bezier(.2,.75,.3,1) forwards;
+        animation-delay: calc(var(--row-index, 0) * 14ms);
+      }}
+      tbody tr:hover td {{
+        background: rgba(255,255,255,0.022);
+      }}
+      tbody tr:last-child td {{
+        border-bottom: none;
+      }}
+      .workload {{
+        font-size: 14px;
+        font-weight: 600;
+      }}
+      .workload-meta,
+      .usage-line,
+      .notes-cell {{
+        margin-top: 5px;
+        color: var(--text-3);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        line-height: 1.55;
+      }}
+      .metric-pair {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-family: var(--font-mono);
+      }}
+      .arrow {{
+        color: var(--text-3);
+      }}
+      .metric-delta {{
+        margin-top: 6px;
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }}
+      .positive {{ color: var(--amber); }}
+      .negative {{ color: var(--green); }}
+      .neutral {{ color: var(--text-3); }}
+      .action {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgba(255,255,255,0.025);
+      }}
+      .action::before {{
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+      }}
+      .action.upsize {{ color: var(--amber); }}
+      .action.downsize {{ color: var(--green); }}
+      .action.no-change {{ color: var(--text-3); }}
+      .action.unknown {{ color: var(--text-3); }}
+      .empty-row td,
+      .empty-state {{
+        text-align: center;
+        color: var(--text-3);
+        font-size: 13px;
+        padding: 28px 16px;
+      }}
+      details {{
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.02);
+        overflow: hidden;
+      }}
+      summary {{
+        cursor: pointer;
+        list-style: none;
+        padding: 16px 18px;
+        color: var(--text-2);
+        font-size: 13px;
+      }}
+      summary::-webkit-details-marker {{ display: none; }}
+      pre {{
+        margin: 0;
+        padding: 0 18px 18px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--text-2);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }}
+      .muted {{
+        color: var(--text-3);
+      }}
+      [hidden] {{ display: none !important; }}
+      @keyframes row-in {{
+        from {{ opacity: 0; transform: translateY(8px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+      }}
+      @keyframes pulse-dot {{
+        0% {{ box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.36); }}
+        75% {{ box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }}
+      }}
+      @media (prefers-reduced-motion: reduce) {{
+        *, *::before, *::after {{
+          animation: none !important;
+          transition: none !important;
+        }}
+      }}
+      @media (max-width: 1180px) {{
+        .hero,
+        .budget-grid,
+        .focus-grid {{
+          grid-template-columns: 1fr;
+        }}
+      }}
+      @media (max-width: 760px) {{
+        main {{ padding: 22px 14px 40px; }}
+        .overview-grid {{
+          grid-template-columns: 1fr;
+        }}
+        input {{
+          min-width: 0;
+          width: 100%;
+        }}
+        .toolbar-left,
+        .toolbar-right {{
+          width: 100%;
+        }}
+        .filter-group {{
+          width: 100%;
+          justify-content: space-between;
+          overflow-x: auto;
+        }}
+      }}
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="page-shell">
+        <section class="hero">
+          <article class="surface hero-panel">
+            <div class="eyebrow">Resource Advisor</div>
+            <h1>Dense tuning context without waiting on a PR.</h1>
+            <p class="hero-copy">{html.escape(status_copy)}</p>
+            <div class="hero-meta">
+              <div class="pill">last run <strong id="last-run-local" data-utc="{_escape_attr(last_run)}">{html.escape(last_run or "n/a")}</strong></div>
+              <div class="pill">browser tz <strong id="browser-tz">browser local</strong></div>
+              <div class="pill">mode <strong>{html.escape(mode or 'n/a')}</strong></div>
+              <div class="pill">window <strong>{html.escape(window or 'n/a')}</strong></div>
+              <div class="pill">coverage <strong>{html.escape(_fmt_decimal(coverage_days))}d</strong></div>
+            </div>
+            <div class="endpoint-list">
+              <a class="endpoint-link" href="/latest.json">raw report json</a>
+              <a class="endpoint-link" href="/latest.md">raw report markdown</a>
+              <a class="endpoint-link" href="/metrics">exporter metrics</a>
+            </div>
+          </article>
+          <div class="overview-grid">
+            {overview_html}
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title">Budget Posture</div>
+            <div class="section-detail">allocatable {html.escape(str(alloc.get('cpu') or 'n/a'))} cpu · {html.escape(str(alloc.get('memory') or 'n/a'))} memory</div>
+          </div>
+          <div class="budget-grid">
+            {budget_cards}
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title">Recommendation Focus</div>
+            <div class="section-detail">high-signal slices from the latest report</div>
+          </div>
+          <div class="focus-grid">
+            {_build_focus_card("Largest memory shifts", "Absolute request-memory deltas across all recommendations.", biggest_mem_items)}
+            {_build_focus_card("Restart-guarded items", "Rows where restart activity is influencing the advice.", restart_guard_items)}
+            {_build_focus_card("Highest restart volume", "Most restart-heavy rows in the current advisor window.", restart_volume_items)}
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title">Recommendation Set</div>
+            <div class="section-detail">filterable live view from ConfigMap data</div>
+          </div>
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <div class="filter-group" role="tablist" aria-label="Action filters">
+                <button class="filter-btn active" type="button" data-filter-action="all">All</button>
+                <button class="filter-btn" type="button" data-filter-action="upsize">Upsize</button>
+                <button class="filter-btn" type="button" data-filter-action="downsize">Downsize</button>
+                <button class="filter-btn" type="button" data-filter-action="no-change">No Change</button>
+              </div>
+              <select id="noteFilter" aria-label="Note filter">
+                <option value="all">All notes</option>
+                {note_options}
+              </select>
+            </div>
+            <div class="toolbar-right">
+              <input id="searchInput" type="search" placeholder="Search namespace, workload, release, notes…" />
+              <div id="resultCount" class="result-count">{rec_count} visible rows</div>
+            </div>
+          </div>
+          <div class="surface table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Workload</th>
+                  <th>Action</th>
+                  <th>CPU Request</th>
+                  <th>Memory Request</th>
+                  <th>Observed Usage</th>
+                  <th>Restarts</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="recommendationRows">
+                {''.join(table_rows)}
+              </tbody>
+            </table>
+            <div id="emptyState" class="empty-state" hidden>No rows match the current filters.</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div class="section-title">Raw Report</div>
+            <div class="section-detail">same runtime-owned markdown surfaced below</div>
+          </div>
+          <details>
+            <summary>Show latest markdown report</summary>
+            <pre>{html.escape(md) if md else 'No report markdown found in ConfigMap.'}</pre>
+          </details>
+        </section>
+      </div>
+    </main>
+    <script>
+      (function () {{
+        const tzNode = document.getElementById("browser-tz");
+        const tsNode = document.getElementById("last-run-local");
+        const rows = Array.from(document.querySelectorAll("[data-rec-row]"));
+        const buttons = Array.from(document.querySelectorAll("[data-filter-action]"));
+        const searchInput = document.getElementById("searchInput");
+        const noteFilter = document.getElementById("noteFilter");
+        const resultCount = document.getElementById("resultCount");
+        const emptyState = document.getElementById("emptyState");
+        let activeAction = "all";
+
+        try {{
+          if (tzNode && window.Intl && Intl.DateTimeFormat) {{
+            tzNode.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || "browser local";
+          }}
+        }} catch (e) {{}}
+
+        if (tsNode) {{
+          const raw = tsNode.getAttribute("data-utc");
+          if (raw) {{
+            const d = new Date(raw);
+            if (!Number.isNaN(d.getTime())) {{
+              tsNode.textContent = d.toLocaleString(undefined, {{
+                year: "numeric",
+                month: "short",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                timeZoneName: "short"
+              }});
+              tsNode.title = "UTC: " + raw;
+            }}
+          }}
+        }}
+
+        function applyFilters() {{
+          const query = (searchInput && searchInput.value || "").trim().toLowerCase();
+          const noteValue = noteFilter ? noteFilter.value : "all";
+          let visible = 0;
+
+          for (const row of rows) {{
+            const action = row.dataset.action || "";
+            const notes = row.dataset.notes || "";
+            const search = row.dataset.search || "";
+            const actionMatch = activeAction === "all" || action === activeAction;
+            const noteMatch = noteValue === "all" || notes.split(",").includes(noteValue);
+            const searchMatch = !query || search.includes(query);
+            const show = actionMatch && noteMatch && searchMatch;
+            row.hidden = !show;
+            if (show) visible += 1;
+          }}
+
+          if (resultCount) {{
+            resultCount.textContent = visible + " visible row" + (visible === 1 ? "" : "s");
+          }}
+          if (emptyState) {{
+            emptyState.hidden = visible !== 0;
+          }}
+        }}
+
+        for (const button of buttons) {{
+          button.addEventListener("click", function () {{
+            activeAction = button.dataset.filterAction || "all";
+            for (const peer of buttons) {{
+              peer.classList.toggle("active", peer === button);
+            }}
+            applyFilters();
+          }});
+        }}
+
+        if (searchInput) searchInput.addEventListener("input", applyFilters);
+        if (noteFilter) noteFilter.addEventListener("change", applyFilters);
+        applyFilters();
+      }})();
+    </script>
+  </body>
+</html>
+"""
+    return html_doc
 
 
 class Handler(BaseHTTPRequestHandler):

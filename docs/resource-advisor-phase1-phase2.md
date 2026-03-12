@@ -40,6 +40,18 @@ Apply PR cleanliness:
 - `/Users/khz/Code/rangoonpulse/flux/kustomizations/resource-advisor.yaml`
 - `/Users/khz/Code/rangoonpulse/flux/kustomization.yaml`
 
+## Operator UI Surface
+- Hostname: `https://tuning.khzaw.dev`
+- Served by: `monitoring/resource-advisor-exporter`
+- Purpose:
+  - dense operator UI for the latest runtime-owned report,
+  - filterable recommendation table,
+  - budget posture and policy guardrails,
+  - direct links to `/latest.json`, `/latest.md`, and `/metrics`
+- Source files:
+  - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/exporter.py`
+  - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/ingress-exporter.yaml`
+
 ## What It Analyzes
 - Deployments and StatefulSets in namespaces configured by `TARGET_NAMESPACES`.
 - Per-container p95 CPU and memory from Prometheus over a 14-day window (`METRICS_WINDOW=14d`).
@@ -159,6 +171,11 @@ kubectl get prometheus -n monitoring kube-prometheus-stack-prometheus -o yaml | 
 
 # Inspect latest report in-cluster
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
+
+# Open the UI / raw surfaces
+curl -I --max-time 20 https://tuning.khzaw.dev
+curl -s https://tuning.khzaw.dev/latest.json | jq '.summary,.budget'
+curl -s https://tuning.khzaw.dev/metrics | rg '^resource_advisor_'
 
 # Inspect recent jobs
 kubectl get jobs -n monitoring | rg resource-advisor

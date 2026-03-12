@@ -199,6 +199,9 @@ curl -I https://mmcal.khzaw.dev/manifest.webmanifest
 kubectl get cronjobs -n monitoring | rg resource-advisor
 kubectl get jobs -n monitoring | rg resource-advisor
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
+curl -I --max-time 20 https://tuning.khzaw.dev
+curl -s https://tuning.khzaw.dev/latest.json | jq '.summary,.budget'
+curl -s https://tuning.khzaw.dev/metrics | rg '^resource_advisor_'
 
 # Logs
 kubectl logs -n monitoring job/<job-name>
