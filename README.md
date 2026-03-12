@@ -1,4 +1,4 @@
-# ⛵ rangoonpulse
+# rangoonpulse
 
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.30+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 [![Talos](https://img.shields.io/badge/Talos%20Linux-6952f2?logo=linux&logoColor=white)](https://talos.dev/)
@@ -38,20 +38,20 @@
 
 ---
 
-## ✨ Highlights
+## Highlights
 
 | Feature | Description |
 |---------|-------------|
-| 🔄 **GitOps-First** | Everything reconciles via Flux — `Kustomization` + `HelmRelease` |
-| 🌐 **Unified Access** | Single ingress VIP (`10.0.0.231`) for LAN + Tailscale clients |
-| 💾 **Smart Storage** | NAS-backed PVCs by default; `local-path` for DBs & hot caches |
-| 🤖 **Auto Tuning** | Resource Advisor CronJobs generate safe, budgeted resource PRs |
-| 📍 **Node Pinning** | Userland apps pinned to primary node; ARM allowlist for Pi |
-| 🔒 **SOPS Secrets** | Age-encrypted secrets, decrypted by Flux at runtime |
+| **GitOps-First** | Everything reconciles via Flux — `Kustomization` + `HelmRelease` |
+| **Unified Access** | Single ingress VIP (`10.0.0.231`) for LAN + Tailscale clients |
+| **Smart Storage** | NAS-backed PVCs by default; `local-path` for DBs & hot caches |
+| **Auto Tuning** | Resource Advisor CronJobs generate safe, budgeted resource PRs |
+| **Node Pinning** | Userland apps pinned to primary node; ARM allowlist for Pi |
+| **SOPS Secrets** | Age-encrypted secrets, decrypted by Flux at runtime |
 
 ---
 
-## 🖥️ Hardware
+## Hardware
 
 | Node | Role | Arch | Specs | IP |
 |------|------|------|-------|-----|
@@ -62,7 +62,7 @@ Current cluster status: both nodes are functional and schedulable.
 
 ---
 
-## 🏗️ Stack
+## Stack
 
 ### Core Infrastructure
 
@@ -93,30 +93,30 @@ Current cluster status: both nodes are functional and schedulable.
 
 ---
 
-## 🧩 Services
+## Services
 
-### 🛡️ Core Infrastructure
-
-| Service | Description |
-|---------|-------------|
-| 🛡️ **AdGuard Home** | Dual LAN DNS filtering & ad blocking |
-| 🧭 **Glance** | Dashboard & service hub |
-| ⏱️ **Uptime Kuma** | Uptime monitoring |
-| 📈 **Grafana** | Metrics & dashboards |
-| ⚡ **Speedtest** | Network speed testing |
-| 🧮 **Resource Advisor** | Automated resource tuning |
-
-### 🎬 Media & Library
+### Core Infrastructure
 
 | Service | Description |
 |---------|-------------|
-| 🎬 **Jellyfin** | Media server with Intel iGPU transcoding |
-| 📸 **Immich** | Photo & video backup |
-| 🎟️ **Seerr** | Media request manager |
-| 🎧 **Audiobookshelf** | Audiobook & podcast server |
-| 📚 **Calibre** | E-book library management |
+| **AdGuard Home** | Dual LAN DNS filtering & ad blocking |
+| **Glance** | Dashboard & service hub |
+| **Uptime Kuma** | Uptime monitoring |
+| **Grafana** | Metrics & dashboards |
+| **Speedtest** | Network speed testing |
+| **Resource Advisor** | Automated resource tuning |
 
-### 🤖 Media Automation
+### Media & Library
+
+| Service | Description |
+|---------|-------------|
+| **Jellyfin** | Media server with Intel iGPU transcoding |
+| **Immich** | Photo & video backup |
+| **Seerr** | Media request manager |
+| **Audiobookshelf** | Audiobook & podcast server |
+| **Calibre** | E-book library management |
+
+### Media Automation
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -136,40 +136,40 @@ Current cluster status: both nodes are functional and schedulable.
 
 *Flaresolverr currently tracks `alexfozor/flaresolverr:pr-1300` on the Raspberry Pi utility node.*
 
-### 📺 Live TV & Tools
+### Live TV & Tools
 
 | Service | Description |
 |---------|-------------|
-| 📺 **nodecast-tv** | Live TV streaming |
-| 🧩 **iSponsorBlockTV** | SponsorBlock for TV clients |
-| 🎞️ **Tunarr** | Channel scheduling |
-| 📼 **ErsatzTV** | Custom TV channels |
+| **nodecast-tv** | Live TV streaming |
+| **iSponsorBlockTV** | SponsorBlock for TV clients |
+| **Tunarr** | Channel scheduling |
+| **ErsatzTV** | Custom TV channels |
 
-### 💼 Productivity
+### Productivity
 
 | Service | Description |
 |---------|-------------|
-| 💸 **Actual Budget** | Personal finance tracking |
-| 🔐 **Vaultwarden** | Password manager |
-| 📊 **ChartDB** | Database schema diagrams |
-| 📝 **Obsidian LiveSync** | Note sync via CouchDB |
-| 🎴 **Anki Server** | Flashcard sync |
-| 📖 **BookLore** | E-book reader & manager |
+| **Actual Budget** | Personal finance tracking |
+| **Vaultwarden** | Password manager |
+| **ChartDB** | Database schema diagrams |
+| **Obsidian LiveSync** | Note sync via CouchDB |
+| **Anki Server** | Flashcard sync |
+| **BookLore** | E-book reader & manager |
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 .
-├── 📂 apps/                    # User-facing applications
+├── apps/                      # User-facing applications
 │   ├── jellyfin/
 │   ├── immich/
 │   ├── glance/
 │   └── ...
-├── 📂 core/                    # Core cluster components
+├── core/                      # Core cluster components
 │   └── ingress-nginx/
-├── 📂 infrastructure/          # Infrastructure services
+├── infrastructure/            # Infrastructure services
 │   ├── cert-manager/
 │   ├── external-dns/
 │   ├── metallb/
@@ -178,17 +178,17 @@ Current cluster status: both nodes are functional and schedulable.
 │   ├── secrets/
 │   ├── storage/
 │   └── tailscale-operator/
-├── 📂 flux/                    # Flux GitOps configuration
+├── flux/                      # Flux GitOps configuration
 │   ├── repositories/           # Helm repositories
 │   └── kustomizations/         # App kustomizations
-├── 📂 talos/                   # Talos machine configuration
-├── 📂 docs/                    # Documentation & runbooks
-└── 📂 scripts/                 # Operational scripts
+├── talos/                     # Talos machine configuration
+├── docs/                      # Documentation & runbooks
+└── scripts/                   # Operational scripts
 ```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -232,11 +232,11 @@ make deploy-mmcal
 - `make deploy-*` forces image repository scan, image policy resolution, image update automation, source reconcile, and app kustomization reconcile.
 - Cloudflare cache policy should bypass HTML/update-critical routes (`/`, `index.html`, service worker/manifest/feed paths) and cache static assets aggressively.
 
-> 📚 [Full ops cheatsheet →](docs/ops-command-cheatsheet.md)
+> [Full ops cheatsheet →](docs/ops-command-cheatsheet.md)
 
 ---
 
-## ⚠️ Operational Notes
+## Operational Notes
 
 > [!WARNING]
 > **NFS PVCs failing?** Check that the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing issues.
@@ -248,9 +248,9 @@ make deploy-mmcal
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
-### 🧭 Dashboard
+### Dashboard
 
 <img src=".github/screenshots/homepage.webp" />
 
@@ -258,7 +258,7 @@ make deploy-mmcal
 
 ---
 
-### 🎬 Jellyfin
+### Jellyfin
 
 <img src=".github/screenshots/jellyfin.webp" />
 
@@ -281,7 +281,7 @@ make deploy-mmcal
 
 ---
 
-### 📊 Monitoring Stack
+### Monitoring Stack
 
 **Grafana**
 
@@ -293,13 +293,13 @@ make deploy-mmcal
 
 ---
 
-### 🗄️ TrueNAS Storage
+### TrueNAS Storage
 
 <img src=".github/screenshots/truenas.webp" />
 
 ---
 
-## 📜 Documentation
+## Documentation
 
 | Doc | Description |
 |-----|-------------|
@@ -314,7 +314,7 @@ make deploy-mmcal
 
 ---
 
-## 🏠 Domains
+## Domains
 
 | Domain | Purpose |
 |--------|---------|
