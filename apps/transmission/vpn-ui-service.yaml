@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: transmission-vpn-ui
+  namespace: default
+spec:
+  selector:
+    app.kubernetes.io/controller: main
+    app.kubernetes.io/instance: transmission
+  ports:
+    - name: http
+      port: 3000
+      protocol: TCP
+      targetPort: 3000

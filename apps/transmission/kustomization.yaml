@@ -5,3 +5,5 @@ kind: Kustomization
 resources:
   - helmrelease.yaml
   - transmission-vpn-control.yaml
+  - vpn-ui-service.yaml
+  - vpn-ui-ingress.yaml

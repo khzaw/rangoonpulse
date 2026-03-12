@@ -83,7 +83,7 @@ spec:
           gluetun-webui:
             image:
               repository: scuzza/gluetun-webui
-              tag: 1.0.1
+              tag: 1.0.0
             env:
               PORT: "3000"
               TRUST_PROXY: "true"
@@ -110,13 +110,6 @@ spec:
         ports:
           http:
             port: 9091
-      vpn-ui:
-        controller: main
-        type: ClusterIP
-        ports:
-          http:
-            port: 3000
-            targetPort: 3000
       p2p:
         enabled: true
         type: LoadBalancer
@@ -155,28 +148,6 @@ spec:
           - secretName: transmission-tls
             hosts:
               - torrent.khzaw.dev
-      vpn-ui:
-        enabled: true
-        className: nginx
-        hosts:
-          - host: torrent-vpn.khzaw.dev
-            paths:
-              - path: /
-                pathType: Prefix
-                service:
-                  identifier: vpn-ui
-                  port: http
-
-        annotations:
-          external-dns.alpha.kubernetes.io/hostname: torrent-vpn.khzaw.dev
-          nginx.ingress.kubernetes.io/ssl-redirect: "true"
-          cert-manager.io/cluster-issuer: letsencrypt-prod
-
-        tls:
-          - secretName: transmission-vpn-ui-tls
-            hosts:
-              - torrent-vpn.khzaw.dev
-
     persistence:
       config:
         enabled: true

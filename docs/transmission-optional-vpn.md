@@ -12,6 +12,8 @@ The Gluetun sidecar is monitored and controlled through `https://torrent-vpn.khz
 Git-managed files:
 - `apps/transmission/helmrelease.yaml`
 - `apps/transmission/transmission-vpn-control.yaml`
+- `apps/transmission/vpn-ui-service.yaml`
+- `apps/transmission/vpn-ui-ingress.yaml`
 - `infrastructure/secrets/default/transmission-gluetun-control-secret.yaml`
 - `infrastructure/secrets/default/transmission-vpn-secret.yaml`
 
