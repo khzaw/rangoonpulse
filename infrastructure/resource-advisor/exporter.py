@@ -585,23 +585,24 @@ def build_index_html() -> str:
     <title>{html.escape(title)}</title>
     <style>
       :root {{
-        --bg-base: #000000;
-        --bg-surface: #070707;
-        --bg-surface-soft: #090909;
-        --bg-hover: #0d0d0d;
-        --text-primary: #f5f5f5;
-        --text-secondary: #999999;
-        --text-tertiary: #5f5f5f;
-        --border-subtle: #171717;
-        --border-active: #2a2a2a;
-        --accent-soft: #d4d4d4;
-        --warn: #f4b52d;
-        --danger: #fb7185;
-        --success: #38d39f;
-        --font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        --font-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        --bg-base: #0c0c0c;
+        --bg-surface: #141414;
+        --bg-surface-soft: #121212;
+        --bg-hover: rgba(255, 255, 255, 0.028);
+        --text-primary: #e8e8e8;
+        --text-secondary: #888888;
+        --text-tertiary: #555555;
+        --text-dim: #6b6b6b;
+        --border-subtle: rgba(255, 255, 255, 0.07);
+        --border-active: rgba(255, 255, 255, 0.14);
+        --accent-soft: #79b8ff;
+        --warn: #d29922;
+        --danger: #f85149;
+        --success: #3fb950;
+        --font-sans: system-ui, -apple-system, sans-serif;
+        --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
         --radius-sm: 2px;
-        --radius-md: 4px;
+        --radius-md: 10px;
       }}
       * {{
         box-sizing: border-box;
@@ -617,8 +618,12 @@ def build_index_html() -> str:
       body {{
         min-height: 100vh;
         background:
-          radial-gradient(circle at top center, rgba(255, 255, 255, 0.03), transparent 26%),
-          var(--bg-base);
+          radial-gradient(1200px 600px at 8% -20%, rgba(121, 184, 255, 0.08), transparent 56%),
+          radial-gradient(1000px 520px at 92% -30%, rgba(63, 185, 80, 0.07), transparent 62%),
+          linear-gradient(180deg, #0b0b0b 0%, var(--bg-base) 46%, #0b0b0b 100%);
+        background-repeat: no-repeat;
+        background-size: 100vw 100vh, 100vw 100vh, 100vw 100vh;
+        background-attachment: fixed, fixed, fixed;
         color: var(--text-primary);
         font-family: var(--font-sans);
         font-size: 13px;
@@ -633,7 +638,7 @@ def build_index_html() -> str:
         top: 0;
         z-index: 10;
         border-bottom: 1px solid var(--border-subtle);
-        background: rgba(0, 0, 0, 0.9);
+        background: rgba(11, 11, 11, 0.9);
         backdrop-filter: blur(8px);
       }}
       .topbar-inner {{
@@ -679,7 +684,7 @@ def build_index_html() -> str:
       .control-select,
       .search-shell {{
         border: 1px solid var(--border-active);
-        border-radius: var(--radius-sm);
+        border-radius: 3px;
         background: transparent;
         color: var(--text-secondary);
       }}
@@ -689,27 +694,43 @@ def build_index_html() -> str:
         font-family: var(--font-mono);
       }}
       .top-button {{
-        padding: 8px 14px;
+        padding: 5px 12px;
         font-size: 12px;
-        color: var(--text-primary);
+        font-weight: 500;
+        color: var(--text-secondary);
+        transition:
+          color 0.15s linear,
+          border-color 0.15s linear,
+          transform 0.18s ease,
+          background-color 0.18s ease,
+          box-shadow 0.18s ease;
       }}
       .top-button:hover,
       .filter-btn:hover,
       .control-select:hover,
       .search-shell:focus-within {{
-        border-color: #3a3a3a;
+        color: var(--text-primary);
+        border-color: var(--border-active);
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
       }}
       .primary-button {{
-        background: #f5f5f5;
-        color: #000000;
-        border: 1px solid #f5f5f5;
-        border-radius: var(--radius-sm);
-        padding: 9px 15px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
         font-size: 12px;
+        font-weight: 500;
+        border: 1px solid rgba(121, 184, 255, 0.45);
+        border-radius: 3px;
+        color: var(--text-primary);
+        background: rgba(121, 184, 255, 0.12);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
       }}
       .primary-button:hover {{
-        background: transparent;
-        color: var(--text-primary);
+        transform: translateY(-1px);
+        background: rgba(121, 184, 255, 0.16);
       }}
       main {{
         max-width: 1360px;
@@ -763,7 +784,8 @@ def build_index_html() -> str:
       .terminal-shell {{
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-md);
-        background: linear-gradient(180deg, rgba(8, 8, 8, 0.98), rgba(4, 4, 4, 0.98));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.005));
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
       }}
       .overview-strip {{
         display: grid;
@@ -870,12 +892,14 @@ def build_index_html() -> str:
       }}
       .filter-btn,
       .control-select {{
-        padding: 8px 12px;
+        padding: 5px 12px;
         font-size: 12px;
       }}
       .filter-btn.active {{
         color: var(--text-primary);
-        border-color: #f5f5f5;
+        border-color: rgba(121, 184, 255, 0.45);
+        background: rgba(121, 184, 255, 0.12);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
       }}
       .control-select {{
         background: var(--bg-surface-soft);
@@ -886,7 +910,7 @@ def build_index_html() -> str:
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 10px;
+        padding: 5px 10px;
         min-width: 320px;
         background: var(--bg-surface-soft);
       }}
@@ -913,10 +937,12 @@ def build_index_html() -> str:
       }}
       .table-shell {{
         overflow: hidden;
+        border-radius: 10px;
       }}
       table {{
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         text-align: left;
         table-layout: auto;
       }}
@@ -933,11 +959,17 @@ def build_index_html() -> str:
         font-weight: 400;
         letter-spacing: 0.08em;
         font-family: var(--font-mono);
+        background: rgba(12, 12, 12, 0.88);
+        backdrop-filter: blur(4px);
       }}
       tr:last-child td {{
         border-bottom: none;
       }}
       tbody tr {{
+        opacity: 0;
+        transform: translateY(8px);
+        animation: row-in 360ms cubic-bezier(0.2, 0.75, 0.3, 1) both;
+        animation-delay: calc(var(--row-index, 0) * 24ms);
         transition: background-color 0.15s ease;
       }}
       tbody tr:hover td {{
@@ -991,14 +1023,20 @@ def build_index_html() -> str:
         height: 8px;
         border-radius: 50%;
         background: currentColor;
-        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.12);
-        animation: indicator-pulse 2.8s ease-out infinite;
       }}
       .action.upsize {{
         color: var(--warn);
       }}
+      .action.upsize::before {{
+        box-shadow: 0 0 0 rgba(210, 153, 34, 0.45);
+        animation: pulse-update 1.6s ease-out infinite;
+      }}
       .action.downsize {{
         color: var(--success);
+      }}
+      .action.downsize::before {{
+        box-shadow: 0 0 0 rgba(63, 185, 80, 0.5);
+        animation: pulse-dot 1.8s ease-out infinite;
       }}
       .action.no-change {{
         color: var(--accent-soft);
@@ -1102,19 +1140,19 @@ def build_index_html() -> str:
         font-weight: 500;
       }}
       .note-pill.excluded {{
-        color: #fca5a5;
-        border-color: rgba(252, 165, 165, 0.35);
-        background: rgba(127, 29, 29, 0.25);
+        color: var(--danger);
+        border-color: rgba(248, 81, 73, 0.28);
+        background: rgba(248, 81, 73, 0.08);
       }}
       .note-pill.guarded {{
-        color: #fcd34d;
-        border-color: rgba(252, 211, 77, 0.28);
-        background: rgba(120, 53, 15, 0.24);
+        color: var(--warn);
+        border-color: rgba(210, 153, 34, 0.28);
+        background: rgba(210, 153, 34, 0.08);
       }}
       .note-pill.neutral {{
-        color: #cbd5e1;
-        border-color: rgba(148, 163, 184, 0.18);
-        background: rgba(15, 23, 42, 0.22);
+        color: var(--text-secondary);
+        border-color: var(--border-subtle);
+        background: rgba(255, 255, 255, 0.02);
       }}
       .support-copy {{
         margin-top: 12px;
@@ -1146,22 +1184,19 @@ def build_index_html() -> str:
       [hidden] {{
         display: none !important;
       }}
-      @keyframes indicator-pulse {{
-        0% {{
-          transform: scale(0.96);
-          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.14);
-          opacity: 0.82;
-        }}
-        55% {{
-          transform: scale(1);
-          box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.0);
-          opacity: 1;
-        }}
-        100% {{
-          transform: scale(0.96);
-          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.0);
-          opacity: 0.82;
-        }}
+      @keyframes row-in {{
+        from {{ opacity: 0; transform: translateY(8px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+      }}
+      @keyframes pulse-dot {{
+        0% {{ box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.5); }}
+        75% {{ box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }}
+      }}
+      @keyframes pulse-update {{
+        0% {{ box-shadow: 0 0 0 0 rgba(210, 153, 34, 0.45); }}
+        75% {{ box-shadow: 0 0 0 8px rgba(210, 153, 34, 0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(210, 153, 34, 0); }}
       }}
       @media (max-width: 1024px) {{
         .overview-strip,
