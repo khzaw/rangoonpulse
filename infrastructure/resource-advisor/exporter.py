@@ -1015,7 +1015,6 @@ def build_index_html() -> str:
         font-family: var(--font-mono);
         font-size: 11px;
         letter-spacing: 0.04em;
-        text-transform: capitalize;
       }}
       .action::before {{
         content: "";
