@@ -2903,9 +2903,9 @@ function renderCombinedCockpitHtml() {
         --bg-panel-strong: #111111;
         --bg-hover: #141414;
         --text-1: #ededed;
-        --text-2: #8e8e8e;
-        --text-3: #626262;
-        --text-dim: #5f5f5f;
+        --text-2: #717171;
+        --text-3: #4f4f4f;
+        --text-dim: #3e3e3e;
         --border: rgba(255, 255, 255, 0.08);
         --border-strong: rgba(255, 255, 255, 0.16);
         --accent: #1f6feb;
@@ -3076,6 +3076,33 @@ function renderCombinedCockpitHtml() {
         opacity: 0.5;
         cursor: not-allowed;
       }
+      @keyframes statusPulse {
+        0% {
+          transform: scale(0.92);
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.02);
+          opacity: 0.7;
+        }
+        55% {
+          transform: scale(1);
+          box-shadow: 0 0 0 7px rgba(255, 255, 255, 0);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.92);
+          box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+          opacity: 0.7;
+        }
+      }
+      @keyframes pageReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
       main {
         padding: 28px 24px 56px;
       }
@@ -3102,6 +3129,19 @@ function renderCombinedCockpitHtml() {
       .vpn-meta {
         color: var(--text-2);
       }
+      .svc-id,
+      .updates-sub,
+      .workload-meta,
+      .audit-time,
+      .audit-detail,
+      .auth-mode,
+      .overview-meta-cluster,
+      .focus-inline,
+      .support-copy,
+      .vpn-meta,
+      .updates-meta {
+        color: var(--text-3);
+      }
       .hero-subtitle {
         margin-top: 10px;
         max-width: 760px;
@@ -3111,6 +3151,12 @@ function renderCombinedCockpitHtml() {
         border: none;
         margin-bottom: 40px;
         overflow: visible;
+      }
+      .section[data-page-section].page-active {
+        animation: pageReveal 180ms ease;
+      }
+      .overview-shared {
+        margin-bottom: 34px;
       }
       .section[hidden] {
         display: none;
@@ -3139,6 +3185,21 @@ function renderCombinedCockpitHtml() {
         font-weight: 500;
         letter-spacing: -0.02em;
         text-transform: lowercase;
+      }
+      .subsection-bar {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-end;
+        padding: 22px 0 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .subsection-label {
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 11px;
+        font-family: var(--font-mono);
       }
       .section-detail {
         color: var(--text-2);
@@ -3334,6 +3395,7 @@ function renderCombinedCockpitHtml() {
         border-radius: 999px;
         background: currentColor;
         box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.02);
+        animation: statusPulse 1.9s ease-out infinite;
       }
       .badge.on,
       .status-chip.ok {
@@ -3454,6 +3516,10 @@ function renderCombinedCockpitHtml() {
       tr:hover td {
         background: rgba(255, 255, 255, 0.014);
       }
+      .audit-scroll table td:first-child,
+      .audit-scroll table td:nth-child(2) {
+        white-space: nowrap;
+      }
       .log-line {
         display: grid;
         grid-template-columns: 42px 44px 1fr;
@@ -3551,15 +3617,13 @@ function renderCombinedCockpitHtml() {
       </section>
 
       <nav class="section-nav" aria-label="Section navigation">
-        <a class="nav-pill" data-page-link href="#overview">overview</a>
         <a class="nav-pill" data-page-link href="#tuning">tuning</a>
         <a class="nav-pill" data-page-link href="#exposure">exposure</a>
         <a class="nav-pill" data-page-link href="#transmission">transmission</a>
         <a class="nav-pill" data-page-link href="#updates">image updates</a>
-        <a class="nav-pill" data-page-link href="#audit">audit</a>
       </nav>
 
-      <section id="overview" class="section">
+      <section id="overviewPanel" class="section overview-shared">
         <div class="section-bar">
           <div>
             <h2 class="section-heading">overview</h2>
@@ -3574,7 +3638,7 @@ function renderCombinedCockpitHtml() {
         </div>
       </section>
 
-      <section id="tuning" class="section">
+      <section id="tuning" class="section" data-page-section>
         <div class="section-bar">
           <div>
             <h2 class="section-heading">tuning</h2>
@@ -3639,7 +3703,7 @@ function renderCombinedCockpitHtml() {
         </div>
       </section>
 
-      <section id="exposure" class="section">
+      <section id="exposure" class="section" data-page-section>
         <div class="panel-actions">
           <div>
             <h2 class="section-heading">exposure</h2>
@@ -3665,9 +3729,31 @@ function renderCombinedCockpitHtml() {
         <div class="content-block">
           <div id="msg" class="msg"></div>
         </div>
+        <div class="content-block" style="padding-top:0">
+          <div class="subsection-bar">
+            <div>
+              <div class="subsection-label">audit</div>
+              <p class="section-copy">Recent exposure and transmission control actions.</p>
+            </div>
+            <div id="auditMeta" class="section-detail"></div>
+          </div>
+          <div class="audit-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>time</th>
+                  <th>action</th>
+                  <th>service</th>
+                  <th>details</th>
+                </tr>
+              </thead>
+              <tbody id="auditRows"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
-      <section id="transmission" class="section">
+      <section id="transmission" class="section" data-page-section>
         <div class="section-bar">
           <div>
             <h2 class="section-heading">transmission</h2>
@@ -3694,7 +3780,7 @@ function renderCombinedCockpitHtml() {
         </div>
       </section>
 
-      <section id="updates" class="section">
+      <section id="updates" class="section" data-page-section>
         <div class="updates-toolbar">
           <div>
             <h2 class="section-heading">image updates</h2>
@@ -3721,28 +3807,6 @@ function renderCombinedCockpitHtml() {
         </div>
       </section>
 
-      <section id="audit" class="section">
-        <div class="section-bar">
-          <div>
-            <h2 class="section-heading">audit</h2>
-            <p class="section-copy">Recent exposure and transmission control actions.</p>
-          </div>
-          <div id="auditMeta" class="section-detail"></div>
-        </div>
-        <div class="audit-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>time</th>
-                <th>action</th>
-                <th>service</th>
-                <th>details</th>
-              </tr>
-            </thead>
-            <tbody id="auditRows"></tbody>
-          </table>
-        </div>
-      </section>
     </main>
     <script>
       const loadStateEl = document.getElementById('loadState');
@@ -3775,7 +3839,7 @@ function renderCombinedCockpitHtml() {
       const vpnDirectBtn = document.getElementById('vpnDirectBtn');
       const vpnEnableBtn = document.getElementById('vpnEnableBtn');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
-      const pageSections = Array.from(document.querySelectorAll('main > section.section'));
+      const pageSections = Array.from(document.querySelectorAll('[data-page-section]'));
       const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
 
       let mutationInFlight = 0;
@@ -3813,9 +3877,10 @@ function renderCombinedCockpitHtml() {
 
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
-        const knownPages = new Set(['overview', 'tuning', 'exposure', 'transmission', 'updates', 'audit']);
+        if (candidate === 'overview' || candidate === 'audit') return 'exposure';
+        const knownPages = new Set(['tuning', 'exposure', 'transmission', 'updates']);
         if (knownPages.has(candidate)) return candidate;
-        return 'overview';
+        return 'exposure';
       }
 
       function setActivePage(page, options) {
@@ -3823,6 +3888,7 @@ function renderCombinedCockpitHtml() {
         const replace = Boolean(options && options.replace);
         pageSections.forEach((section) => {
           section.hidden = section.id !== nextPage;
+          section.classList.toggle('page-active', section.id === nextPage);
         });
         pageLinks.forEach((link) => {
           const target = normalizePage(link.getAttribute('href'));
@@ -4408,7 +4474,7 @@ function renderCombinedCockpitHtml() {
       });
 
       setInterval(tickExpiryCountdowns, 1000);
-      setActivePage(window.location.hash || '#overview', { replace: true });
+      setActivePage(window.location.hash || '#exposure', { replace: true });
       loadDashboard();
     </script>
   </body>
