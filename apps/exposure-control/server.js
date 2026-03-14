@@ -4779,16 +4779,39 @@ function renderCombinedCockpitHtml() {
 
       async function loadUpdates(options) {
         const force = Boolean(options && options.force);
-        if (force) setUpdatesMsg('Checking registries...');
+        if (force) {
+          updatesRefreshBtn.disabled = true;
+          setLoadState('Checking image updates...');
+          setMsg('Checking image updates...');
+          setUpdatesMsg('Checking registries...');
+        }
         try {
           const path = force ? '/api/image-updates?force=1' : '/api/image-updates';
           const payload = await request(path, 'GET');
           dashboardState.updates = payload;
           renderUpdates(payload);
           renderOverview();
-          setUpdatesMsg(payload.stale ? 'Showing cached data while background refresh runs.' : 'Update report loaded.');
+          if (payload.stale) {
+            setUpdatesMsg('Showing cached data while background refresh runs.');
+            if (force) {
+              setLoadState('Image update check running in background...');
+              setMsg('Image update check started.');
+            }
+          } else {
+            setUpdatesMsg('Update report loaded.');
+            if (force) {
+              setLoadState('Image updates checked at ' + new Date().toLocaleTimeString());
+              setMsg('Image update check complete.');
+            }
+          }
         } catch (err) {
           setUpdatesMsg(err.message, true);
+          if (force) {
+            setLoadState(err.message, true);
+            setMsg(err.message, true);
+          }
+        } finally {
+          if (force) updatesRefreshBtn.disabled = false;
         }
       }
 
