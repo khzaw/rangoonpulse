@@ -106,6 +106,12 @@ spec:
             main:
               - path: /config
                 subPath: shelfmark
+              - path: /integrations/calibre
+                subPath: calibre
+                readOnly: true
+              - path: /integrations/calibre-web-automated
+                subPath: calibre-web-automated
+                readOnly: true
 
       calibre-books:
         enabled: true
@@ -113,28 +119,6 @@ spec:
         existingClaim: calibre-books-nfs
         globalMounts:
           - path: /books
-
-      calibre-config:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: app-configs-pvc-nfs
-        advancedMounts:
-          main:
-            main:
-              - path: /integrations/calibre
-                subPath: calibre
-                readOnly: true
-
-      calibre-web-automated-config:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: app-configs-pvc-nfs
-        advancedMounts:
-          main:
-            main:
-              - path: /integrations/calibre-web-automated
-                subPath: calibre-web-automated
-                readOnly: true
 
       booklore-bookdrop:
         enabled: true
