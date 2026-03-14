@@ -3103,6 +3103,27 @@ function renderCombinedCockpitHtml() {
           transform: translateY(0);
         }
       }
+      @keyframes badgeGlow {
+        0% {
+          filter: brightness(0.92);
+        }
+        50% {
+          filter: brightness(1.08);
+        }
+        100% {
+          filter: brightness(0.92);
+        }
+      }
+      @keyframes rowReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
       main {
         padding: 28px 24px 56px;
       }
@@ -3131,12 +3152,9 @@ function renderCombinedCockpitHtml() {
       }
       .svc-id,
       .updates-sub,
-      .workload-meta,
       .audit-time,
       .audit-detail,
       .auth-mode,
-      .focus-inline,
-      .support-copy,
       .updates-meta {
         color: var(--text-3);
       }
@@ -3358,6 +3376,10 @@ function renderCombinedCockpitHtml() {
         border-radius: 6px;
         background: var(--bg-panel);
       }
+      .audit-scroll {
+        max-height: 420px;
+        overscroll-behavior: contain;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
@@ -3368,6 +3390,10 @@ function renderCombinedCockpitHtml() {
         padding: 12px 14px;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
         vertical-align: top;
+      }
+      tbody tr {
+        animation: rowReveal 180ms ease both;
+        transition: transform 140ms ease, background 140ms ease;
       }
       th {
         position: sticky;
@@ -3390,6 +3416,8 @@ function renderCombinedCockpitHtml() {
         border: none;
         background: transparent;
         font-weight: 500;
+        white-space: nowrap;
+        animation: badgeGlow 2.4s ease-in-out infinite;
       }
       .badge::before,
       .status-chip::before,
@@ -3424,26 +3452,51 @@ function renderCombinedCockpitHtml() {
         display: inline-flex;
         align-items: baseline;
         gap: 8px;
-        padding: 0;
-        border: none;
-        background: transparent;
+        padding: 4px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
         color: var(--text-2);
         text-transform: lowercase;
+        transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
       }
       .note-pill.guarded,
       .stat-pill.guarded {
         color: var(--yellow);
+        border-color: rgba(251, 191, 36, 0.28);
+        background: rgba(251, 191, 36, 0.08);
       }
       .note-pill.excluded,
       .stat-pill.excluded {
         color: var(--red);
+        border-color: rgba(251, 113, 133, 0.28);
+        background: rgba(251, 113, 133, 0.08);
       }
       .stat-pill.ok {
         color: var(--green);
+        border-color: rgba(52, 211, 153, 0.24);
+        background: rgba(52, 211, 153, 0.08);
       }
       .stat-pill strong {
         color: var(--text-1);
         font-weight: 500;
+      }
+      .action {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+      .action::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: currentColor;
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.02);
+        animation: statusPulse 1.9s ease-out infinite;
       }
       .svc-name,
       .vpn-title,
@@ -3458,9 +3511,24 @@ function renderCombinedCockpitHtml() {
       .audit-detail {
         font-size: 12px;
       }
+      .updates-cell-center {
+        vertical-align: middle;
+      }
       .audit-action {
         font-size: 12px;
         font-weight: 500;
+      }
+      .action.upsize {
+        color: var(--yellow);
+      }
+      .action.downsize {
+        color: var(--red);
+      }
+      .action.no-change {
+        color: var(--green);
+      }
+      .action.unknown {
+        color: var(--text-2);
       }
       .action-enable {
         color: var(--green);
@@ -3496,12 +3564,10 @@ function renderCombinedCockpitHtml() {
         color: var(--text-dim);
       }
       .metric-delta.positive,
-      .action.upsize,
       .update-chip.current {
         color: var(--green);
       }
       .metric-delta.negative,
-      .action.downsize,
       .update-chip.not-installed {
         color: var(--red);
       }
@@ -3534,6 +3600,9 @@ function renderCombinedCockpitHtml() {
       }
       tr:hover td {
         background: rgba(255, 255, 255, 0.014);
+      }
+      tbody tr:hover {
+        transform: translateY(-1px);
       }
       .audit-scroll table td:first-child,
       .audit-scroll table td:nth-child(2) {
@@ -4339,9 +4408,9 @@ function renderCombinedCockpitHtml() {
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
             tr.innerHTML =
               '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
-              '<td class="updates-version">' + (item.currentVersion || '—') + '</td>' +
-              '<td class="updates-version">' + (item.latestVersion || '—') + '</td>' +
-              '<td><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
+              '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
+              '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
+              '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
               '<td><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>';
             updatesRowsEl.appendChild(tr);
           });
