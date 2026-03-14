@@ -184,6 +184,7 @@ Current cluster status: both nodes are functional and schedulable.
 ├── flux/                      # Flux GitOps configuration
 │   ├── repositories/           # Helm repositories
 │   └── kustomizations/         # App kustomizations
+├── skills/                    # Project-specific agent skills
 ├── talos/                     # Talos machine configuration
 ├── docs/                      # Documentation & runbooks
 └── scripts/                   # Operational scripts
@@ -236,6 +237,8 @@ make deploy-mmcal
 - Cloudflare cache policy should bypass HTML/update-critical routes (`/`, `index.html`, service worker/manifest/feed paths) and cache static assets aggressively.
 
 > [Full ops cheatsheet →](docs/ops-command-cheatsheet.md)
+>
+> [Docs index →](docs/README.md)
 
 ---
 

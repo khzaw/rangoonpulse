@@ -1,0 +1,6 @@
+interface:
+  display_name: "Rangoonpulse Bootstrap"
+  short_description: "Bootstrap rangoonpulse sessions safely"
+  default_prompt: "Use $rangoonpulse-session-bootstrap before starting work in /Users/khz/Code/rangoonpulse."
+policy:
+  allow_implicit_invocation: true

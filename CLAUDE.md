@@ -13,6 +13,7 @@ flux/           # Helm repositories + Flux Kustomizations
   repositories/ # HelmRepository definitions
   kustomizations/ # Per-app Kustomization definitions
   kustomization.yaml # Root kustomization index
+skills/         # Project-specific agent skills and session bootstraps
 talos/          # Talos machine configuration
 docs/           # Architectural notes, runbooks
 scripts/        # Operational scripts
@@ -26,6 +27,13 @@ scripts/        # Operational scripts
 - Keep ingress, DNS annotation, and TLS settings aligned for every exposed app.
 - Never commit plaintext passwords/API keys. Use SOPS + age encryption (`infrastructure/secrets/`).
 - Keep resources explicit (requests + limits) for homelab capacity control.
+
+## Session Bootstrap
+
+- On every new session in this repo, read `AGENTS.md`, `README.md`, and `docs/README.md` before planning or editing.
+- If the skill catalog exposes `rangoonpulse-session-bootstrap`, use it.
+- After `docs/README.md`, read the focused doc or incident note for the area you are changing before proposing changes.
+- Use the docs index to target the relevant docs; do not bulk-read the whole `docs/` directory by default.
 
 ## Commit Messages
 

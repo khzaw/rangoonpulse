@@ -24,6 +24,7 @@ continue work without re-discovery.
 - `core/`: core components (for example ingress-nginx base install/patch)
 - `infrastructure/`: infra components and non-app services
 - `flux/`: Helm repositories + Flux Kustomizations
+- `skills/`: project-specific agent skills and session bootstraps
 - `talos/`: Talos machine configuration
 - `docs/`: architectural notes, migration docs, backup planning
 
@@ -42,6 +43,12 @@ continue work without re-discovery.
   `AGENTS.md` ("Useful Reference Docs").
 - Keep docs actionable: file paths, k8s object names, and concrete commands beat long narratives.
 - Don’t churn docs for small tweaks; update docs only when it improves future ops/debugging.
+
+## Session Bootstrap (For Agents)
+- On every new session in this repo, read `README.md` and `docs/README.md` after this file before planning or editing.
+- Use the project skill `rangoonpulse-session-bootstrap` when the agent skill catalog exposes it.
+- After reading `docs/README.md`, open the focused doc(s) for the task's domain before making recommendations or edits.
+- Do not brute-force every file in `docs/`; use the docs index to pick the relevant subset.
 
 ## Service Change Touch Points
 - When adding, moving, renaming, or materially changing a service, update all relevant operators surfaces in the same
@@ -445,6 +452,7 @@ Examples:
 - `homepage: reorganize groups and widgets`
 
 ## Useful Reference Docs
+- `docs/README.md`
 - `docs/resource-advisor-phase1-phase2.md`
 - `docs/networking-current-state-and-simplification.md`
 - `docs/pangolin-fit-analysis.md`
