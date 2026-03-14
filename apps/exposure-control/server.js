@@ -3453,6 +3453,20 @@ function renderCombinedCockpitHtml() {
       .audit-detail {
         font-size: 12px;
       }
+      .audit-action {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .action-enable {
+        color: var(--green);
+      }
+      .action-disable {
+        color: var(--red);
+      }
+      .action-emergency {
+        color: var(--red);
+        font-weight: 600;
+      }
       .metric-pair,
       .usage-line,
       .workload-meta,
@@ -4291,9 +4305,16 @@ function renderCombinedCockpitHtml() {
           if (entry.authMode) parts.push(entry.authMode);
           if (entry.mode) parts.push('mode: ' + entry.mode);
           if (entry.disabled != null) parts.push('disabled: ' + entry.disabled);
+          const actionClass = entry.action === 'enable'
+            ? 'action-enable'
+            : entry.action === 'disable'
+              ? 'action-disable'
+              : entry.action === 'transmission-vpn-set'
+                ? 'action-enable'
+                : 'action-emergency';
           tr.innerHTML =
             '<td class="audit-time">' + fmtDateTime(entry.ts) + '</td>' +
-            '<td class="' + (entry.action === 'enable' ? 'action-enable' : entry.action === 'disable' ? 'action-disable' : entry.action === 'transmission-vpn-set' ? 'action-enable' : 'action-emergency') + '">' + (entry.action || '') + '</td>' +
+            '<td class="audit-action ' + actionClass + '">' + (entry.action || '') + '</td>' +
             '<td>' + (entry.serviceId || '') + '</td>' +
             '<td class="audit-detail">' + parts.join(' · ') + '</td>';
           auditRowsEl.appendChild(tr);
