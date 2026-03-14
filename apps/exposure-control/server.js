@@ -2516,7 +2516,7 @@ function renderControlPanelHtml() {
           const statusTd = document.createElement("td");
           const badge = document.createElement("span");
           badge.className = "badge " + (svc.enabled ? "on" : "off");
-          badge.textContent = svc.enabled ? "Enabled" : "Disabled";
+          badge.textContent = svc.enabled ? "enabled" : "disabled";
           statusTd.appendChild(badge);
 
           const authTd = document.createElement("td");
@@ -2713,7 +2713,7 @@ function renderControlPanelHtml() {
             const statusTd = document.createElement("td");
             const chip = document.createElement("span");
             chip.className = "update-chip " + (item.status || "unknown");
-            chip.textContent = item.statusText || "Unknown";
+            chip.textContent = String(item.statusText || "unknown").toLowerCase();
             statusTd.appendChild(chip);
 
             const imageTd = document.createElement("td");
@@ -2988,23 +2988,24 @@ function renderCombinedCockpitHtml() {
       .nav-pill,
       .status-chip,
       .note-pill,
-      .stat-pill {
+      .stat-pill,
+      .badge,
+      .update-chip {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 4px 9px;
-        border: 1px solid var(--border);
+        padding: 3px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(255, 255, 255, 0.018);
+        text-transform: lowercase;
       }
       .env-pill {
         color: var(--text-2);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 10px;
+        letter-spacing: 0;
+        font-size: 11px;
       }
       .top-actions,
-      .hero-actions,
       .section-nav,
       .toolbar-left,
       .toolbar-right,
@@ -3023,8 +3024,8 @@ function renderCombinedCockpitHtml() {
       .nav-pill,
       .control-select,
       .search-shell {
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.018);
         color: var(--text-1);
         transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
       }
@@ -3078,11 +3079,8 @@ function renderCombinedCockpitHtml() {
         padding: 28px 24px 56px;
       }
       .hero {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        align-items: flex-end;
-        margin-bottom: 24px;
+        display: block;
+        margin-bottom: 18px;
       }
       .hero h1 {
         font-size: 34px;
@@ -3107,9 +3105,9 @@ function renderCombinedCockpitHtml() {
         max-width: 920px;
       }
       .section {
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.018);
         backdrop-filter: blur(8px);
         margin-bottom: 18px;
         overflow: hidden;
@@ -3130,10 +3128,14 @@ function renderCombinedCockpitHtml() {
         padding: 18px 22px;
         border-bottom: 1px solid var(--border);
       }
+      .section-nav {
+        margin-bottom: 18px;
+      }
       .section-heading {
         font-size: 18px;
         font-weight: 600;
         letter-spacing: -0.02em;
+        text-transform: lowercase;
       }
       .section-detail {
         color: var(--text-2);
@@ -3160,8 +3162,7 @@ function renderCombinedCockpitHtml() {
       .overview-label,
       .overview-eyebrow,
       .support-card-title,
-      .focus-card-title,
-      th {
+      .focus-card-title {
         color: var(--text-3);
         text-transform: uppercase;
         letter-spacing: 0.12em;
@@ -3248,9 +3249,9 @@ function renderCombinedCockpitHtml() {
       }
       .support-card,
       .vpn-card {
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.015);
       }
       .support-card {
         padding: 16px;
@@ -3285,7 +3286,12 @@ function renderCombinedCockpitHtml() {
       th {
         position: sticky;
         top: 0;
-        background: var(--bg-surface-soft);
+        background: rgba(15, 15, 15, 0.96);
+        color: var(--text-2);
+        text-transform: lowercase;
+        letter-spacing: 0;
+        font-size: 12px;
+        font-weight: 500;
       }
       .badge,
       .status-chip,
@@ -3307,7 +3313,7 @@ function renderCombinedCockpitHtml() {
       .status-chip {
         padding: 4px 9px;
         border-radius: 999px;
-        border: 1px solid var(--border);
+        border: 1px solid rgba(255, 255, 255, 0.05);
       }
       .badge.on,
       .status-chip.ok {
@@ -3351,15 +3357,24 @@ function renderCombinedCockpitHtml() {
       .svc-id,
       .updates-version,
       .updates-sub,
+      .auth-mode,
+      .audit-time,
+      .audit-detail {
+        font-size: 12px;
+      }
       .metric-pair,
       .usage-line,
       .workload-meta,
-      .auth-mode,
-      .audit-time,
-      .audit-detail,
       .focus-path {
-        font-family: var(--font-mono);
         font-size: 12px;
+        font-family: var(--font-sans);
+      }
+      .svc-id,
+      .updates-version,
+      .updates-sub,
+      .audit-time,
+      .audit-detail {
+        font-family: var(--font-mono);
       }
       .metric-pair {
         display: flex;
@@ -3400,8 +3415,8 @@ function renderCombinedCockpitHtml() {
         min-height: 18px;
       }
       .terminal-shell {
-        border: 1px solid var(--border);
-        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
         background: #090909;
       }
       .terminal-content {
@@ -3496,21 +3511,15 @@ function renderCombinedCockpitHtml() {
             Backends remain separate: exposure-control owns write actions, resource-advisor stays the tuning/report backend.
           </div>
         </div>
-        <div class="hero-actions">
-          <a class="top-button" data-page-link href="#tuning">Tuning</a>
-          <a class="top-button" data-page-link href="#exposure">Exposure</a>
-          <a class="top-button" data-page-link href="#transmission">Transmission</a>
-          <a class="top-button" data-page-link href="#updates">Image updates</a>
-        </div>
       </section>
 
       <nav class="section-nav" aria-label="Section navigation">
-        <a class="nav-pill" data-page-link href="#overview">Overview</a>
-        <a class="nav-pill" data-page-link href="#tuning">Tuning</a>
-        <a class="nav-pill" data-page-link href="#exposure">Exposure</a>
-        <a class="nav-pill" data-page-link href="#transmission">Transmission</a>
-        <a class="nav-pill" data-page-link href="#updates">Image updates</a>
-        <a class="nav-pill" data-page-link href="#audit">Audit</a>
+        <a class="nav-pill" data-page-link href="#overview">overview</a>
+        <a class="nav-pill" data-page-link href="#tuning">tuning</a>
+        <a class="nav-pill" data-page-link href="#exposure">exposure</a>
+        <a class="nav-pill" data-page-link href="#transmission">transmission</a>
+        <a class="nav-pill" data-page-link href="#updates">image updates</a>
+        <a class="nav-pill" data-page-link href="#audit">audit</a>
       </nav>
 
       <section id="overview" class="section">
@@ -4091,7 +4100,7 @@ function renderCombinedCockpitHtml() {
           const expiry = fmtExpiry(svc.expiresAt);
           tr.innerHTML =
             '<td><div class="svc-name">' + svc.name + '</div><div class="svc-id">' + svc.id + '</div></td>' +
-            '<td><span class="badge ' + (svc.enabled ? 'on' : 'off') + '">' + (svc.enabled ? 'Enabled' : 'Disabled') + '</span></td>' +
+            '<td><span class="badge ' + (svc.enabled ? 'on' : 'off') + '">' + (svc.enabled ? 'enabled' : 'disabled') + '</span></td>' +
             '<td><span class="auth-mode">' + (svc.authMode === 'cloudflare-access' ? 'cf-access' : svc.authMode) + '</span></td>' +
             '<td><a href="' + svc.publicUrl + '" target="_blank" rel="noreferrer">' + svc.publicHost + '</a></td>' +
             '<td><span class="expiry ' + expiry.state + '" data-expires-at="' + (svc.expiresAt || '') + '" data-enabled="' + (svc.enabled ? '1' : '0') + '">' + expiry.text + '</span></td>';
@@ -4203,7 +4212,7 @@ function renderCombinedCockpitHtml() {
               '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
               '<td class="updates-version">' + (item.currentVersion || '—') + '</td>' +
               '<td class="updates-version">' + (item.latestVersion || '—') + '</td>' +
-              '<td><span class="update-chip ' + (item.status || 'unknown') + '">' + (item.statusText || 'Unknown') + '</span></td>' +
+              '<td><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
               '<td><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>';
             updatesRowsEl.appendChild(tr);
           });
