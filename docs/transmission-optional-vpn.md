@@ -7,6 +7,49 @@ Transmission can now run in either:
 The mode is switched from `https://controlpanel.khzaw.dev` or the control panel API.
 The Gluetun sidecar is monitored and controlled through `https://torrent-vpn.khzaw.dev`.
 
+## What You Actually Need
+
+Plain-English answer:
+
+- If you leave Transmission in `direct` mode, you do **not** need to buy anything. The app already works without a VPN.
+- If you want Transmission to actually route through a VPN, you need **one real VPN endpoint**. In practice that means one of:
+  - a VPN subscription that supports `WireGuard` and gives you usable WireGuard credentials/profile details
+  - your own WireGuard server/VPS that you manage
+- Gluetun, the control panel toggle, and the Gluetun WebUI are already deployed in the cluster. Those pieces are **not** the missing part.
+- The missing part is the **real provider/server credentials** that replace the placeholder values in this repo.
+- A provider that only gives you its own desktop/mobile app, but not WireGuard connection details, is **not enough** for the current setup.
+
+### Minimum Inputs Required for `vpn` Mode to Really Work
+
+You need a real WireGuard profile or provider settings that give you:
+
+- VPN server endpoint host or IP
+- VPN server port
+- server public key
+- client private key
+- client tunnel address(es)
+- optional preshared key if your provider uses one
+
+Without those values:
+
+- you can still turn `vpn` mode on in the control panel
+- the `gluetun` container can start
+- but it will **not** connect to a real VPN successfully because the repo still contains placeholder endpoint/key values
+
+### Current Repo Status
+
+Right now this repo is in a **scaffolded but not fully activated** state:
+
+- `direct` mode is the safe working default
+- `vpn` mode wiring exists
+- Gluetun auth/UI wiring exists
+- the actual VPN provider details are still placeholders
+
+So the answer to "what do I need to have it up and running?" is:
+
+1. Nothing else, if you only want normal non-VPN Transmission.
+2. A real WireGuard-capable VPN provider or your own WireGuard endpoint, if you want actual VPN routing.
+
 ## GitOps vs Runtime State
 
 Git-managed files:
@@ -40,6 +83,7 @@ Current scaffold assumes:
 - `VPN_SERVICE_PROVIDER=custom`
 - `VPN_TYPE=wireguard`
 - Gluetun HTTP control server on `127.0.0.1:8000` with API-key auth
+- placeholder WireGuard endpoint/profile values in the HelmRelease
 
 Placeholders to replace before real VPN use:
 - non-secret endpoint/public data in `apps/transmission/helmrelease.yaml`
@@ -50,6 +94,14 @@ Placeholders to replace before real VPN use:
 - secret material in `infrastructure/secrets/default/transmission-vpn-secret.yaml`
   - `WIREGUARD_PRIVATE_KEY`
   - `WIREGUARD_PRESHARED_KEY` (only if required by provider)
+
+## What You Do Not Need
+
+- You do **not** need to deploy another Kubernetes app for the VPN toggle. That part already exists.
+- You do **not** need another WebUI; `https://torrent-vpn.khzaw.dev` is already deployed.
+- You do **not** need a VPN subscription if you are happy with `direct` mode.
+- You do **not** need to change Cloudflare, the control panel host, or the WebUI host just to activate a real VPN provider.
+- You do **not** need to store plaintext VPN credentials in Git; use the SOPS secret already in this repo.
 
 ## Gluetun WebUI
 
@@ -84,6 +136,21 @@ Recommended approach:
 5. Update non-secret provider values in the HelmRelease.
 6. Reconcile `secrets` and `transmission`.
 7. Turn on VPN mode from `controlpanel.khzaw.dev`.
+
+### Fast Checklist
+
+Use this checklist before switching to `vpn` mode:
+
+- I have a VPN subscription or my own WireGuard server.
+- I have the endpoint host/IP and port.
+- I have the server public key.
+- I have the client private key.
+- I have the client tunnel address.
+- I have updated the SOPS secret for private material.
+- I have updated the HelmRelease for public endpoint/public-key values.
+- I have reconciled `secrets` and `transmission`.
+
+If any of those are missing, stay on `direct` mode.
 
 ### If Staying on the Current `custom` WireGuard Scaffold
 

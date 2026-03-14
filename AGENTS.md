@@ -110,6 +110,7 @@ Notes:
   - credentials: `infrastructure/secrets/default/transmission-vpn-secret.yaml`
   - Gluetun control auth secret: `infrastructure/secrets/default/transmission-gluetun-control-secret.yaml`
   - current scaffold: `gluetun` + custom WireGuard placeholder values
+  - actual VPN routing requires either a real WireGuard-capable VPN subscription or your own WireGuard endpoint; `direct` mode needs neither
   - default seed mode is `direct`; switch via control panel or `POST /api/transmission-vpn`
   - `gluetun-webui` runs as a sidecar in the Transmission pod and talks to Gluetun on `127.0.0.1:8000`
   - control panel changes whether the `gluetun` container exists; the WebUI start/stop button only affects the running VPN process when VPN mode is active
