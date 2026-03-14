@@ -24,6 +24,8 @@ spec:
         kubernetes.io/hostname: talos-uua-g6r
       securityContext:
         runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
 
