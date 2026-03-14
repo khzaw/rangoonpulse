@@ -85,6 +85,9 @@ const TRANSMISSION_VPN_RUNTIME_CONFIGMAP_FALLBACK =
   process.env.TRANSMISSION_VPN_RUNTIME_CONFIGMAP || "transmission-vpn-state";
 const TRANSMISSION_VPN_WEBUI_URL =
   process.env.TRANSMISSION_VPN_WEBUI_URL || "https://torrent-vpn.khzaw.dev";
+const RESOURCE_ADVISOR_UI_URL =
+  process.env.RESOURCE_ADVISOR_UI_URL ||
+  "http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/api/ui.json";
 
 const metrics = {
   enableTotal: 0,
@@ -614,6 +617,55 @@ function requestHttps(urlString, options) {
     if (opts.body) req.write(opts.body);
     req.end();
   });
+}
+
+function requestUrl(urlString, options) {
+  const opts = options || {};
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlString);
+    const client = u.protocol === "https:" ? https : http;
+    const req = client.request(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        port: u.port || (u.protocol === "https:" ? 443 : 80),
+        path: `${u.pathname}${u.search}`,
+        method: opts.method || "GET",
+        headers: opts.headers || {},
+        ca: opts.ca,
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        res.on("end", () => {
+          resolve({
+            statusCode: res.statusCode || 0,
+            headers: res.headers || {},
+            body: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+      },
+    );
+    req.setTimeout(opts.timeoutMs || IMAGE_UPDATE_HTTP_TIMEOUT_MS, () => {
+      req.destroy(new Error("request timeout"));
+    });
+    req.on("error", reject);
+    if (opts.body) req.write(opts.body);
+    req.end();
+  });
+}
+
+async function getResourceAdvisorUi() {
+  const res = await requestUrl(RESOURCE_ADVISOR_UI_URL, {
+    headers: {
+      accept: "application/json",
+      "user-agent": "exposure-control/1.0",
+    },
+  });
+  if (res.statusCode !== 200) {
+    throw new Error(`resource advisor ui request failed (${res.statusCode})`);
+  }
+  return JSON.parse(res.body || "{}");
 }
 
 async function registryRequest(urlString, repository, tokenState, options) {
@@ -1691,6 +1743,15 @@ async function handleApi(req, res, parsedUrl) {
       parsedUrl.searchParams.get("refresh") === "1";
     try {
       const payload = await getImageUpdates(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/tuning") {
+    try {
+      const payload = await getResourceAdvisorUi();
       return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 500, { error: err.message });
@@ -2828,6 +2889,1436 @@ function renderControlPanelHtml() {
 </html>`;
 }
 
+function renderCombinedCockpitHtml() {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rangoonpulse operator cockpit</title>
+    <style>
+      :root {
+        --bg-base: #0c0c0c;
+        --bg-surface: #141414;
+        --bg-surface-soft: #121212;
+        --bg-hover: rgba(255, 255, 255, 0.028);
+        --text-1: #e8e8e8;
+        --text-2: #888888;
+        --text-3: #555555;
+        --text-dim: #6b6b6b;
+        --border: rgba(255, 255, 255, 0.07);
+        --border-strong: rgba(255, 255, 255, 0.14);
+        --accent: #79b8ff;
+        --green: #3fb950;
+        --yellow: #d29922;
+        --red: #f85149;
+        --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      html {
+        min-height: 100%;
+        background: #0b0b0b;
+      }
+      body {
+        min-height: 100vh;
+        background:
+          radial-gradient(1200px 600px at 8% -20%, rgba(121, 184, 255, 0.08), transparent 56%),
+          radial-gradient(1000px 520px at 92% -30%, rgba(63, 185, 80, 0.07), transparent 62%),
+          linear-gradient(180deg, #0b0b0b 0%, var(--bg-base) 46%, #0b0b0b 100%);
+        background-attachment: fixed, fixed, fixed;
+        color: var(--text-1);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid var(--border);
+        background: rgba(11, 11, 11, 0.9);
+        backdrop-filter: blur(8px);
+      }
+      .topbar-inner,
+      main {
+        max-width: 1360px;
+        margin: 0 auto;
+      }
+      .topbar-inner {
+        padding: 14px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+      }
+      .crumbs {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-2);
+      }
+      .brand-mark {
+        width: 22px;
+        height: 22px;
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-1);
+        font-size: 11px;
+      }
+      .env-pill,
+      .nav-pill,
+      .status-chip,
+      .note-pill,
+      .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 9px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .env-pill {
+        color: var(--text-2);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 10px;
+      }
+      .top-actions,
+      .hero-actions,
+      .section-nav,
+      .toolbar-left,
+      .toolbar-right,
+      .filter-group,
+      .controls,
+      .stat-pills,
+      .notes-cell,
+      .policy-grid {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .top-button,
+      button,
+      .nav-pill,
+      .control-select,
+      .search-shell {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-1);
+        transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+      }
+      .top-button,
+      button,
+      .nav-pill {
+        min-height: 34px;
+        padding: 0 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      button {
+        cursor: pointer;
+        border-radius: 10px;
+      }
+      .nav-pill {
+        border-radius: 999px;
+        color: var(--text-2);
+      }
+      .top-button:hover,
+      button:hover,
+      .nav-pill:hover,
+      .control-select:hover,
+      .search-shell:hover,
+      .search-shell:focus-within {
+        border-color: var(--border-strong);
+        background: var(--bg-hover);
+      }
+      button.danger {
+        color: #ffd3d0;
+        border-color: rgba(248, 81, 73, 0.28);
+      }
+      button.mode-active,
+      button.filter-btn.active {
+        border-color: rgba(121, 184, 255, 0.35);
+        background: rgba(121, 184, 255, 0.08);
+        color: #d7ebff;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      main {
+        padding: 28px 24px 56px;
+      }
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-end;
+        margin-bottom: 24px;
+      }
+      .hero h1 {
+        font-size: 34px;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+      .hero-subtitle,
+      .section-copy,
+      .muted,
+      .msg,
+      .result-count,
+      .overview-meta,
+      .workload-meta,
+      .updates-meta,
+      .support-copy,
+      .focus-inline,
+      .vpn-meta {
+        color: var(--text-2);
+      }
+      .hero-subtitle {
+        margin-top: 8px;
+        max-width: 920px;
+      }
+      .section {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(8px);
+        margin-bottom: 18px;
+        overflow: hidden;
+      }
+      .section-bar,
+      .overview-meta-row,
+      .toolbar,
+      .panel-actions,
+      .updates-toolbar,
+      .vpn-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--border);
+      }
+      .section-heading {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .section-detail {
+        color: var(--text-2);
+        text-align: right;
+      }
+      .overview-strip {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        border-bottom: 1px solid var(--border);
+      }
+      .overview-segment {
+        padding: 22px;
+        border-right: 1px solid var(--border);
+      }
+      .overview-segment:last-child {
+        border-right: none;
+      }
+      .overview-segment-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+      .overview-label,
+      .overview-eyebrow,
+      .support-card-title,
+      .focus-card-title,
+      th {
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 10px;
+      }
+      .overview-value {
+        margin-top: 12px;
+        font-size: 27px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+      .overview-subtitle {
+        margin-top: 8px;
+        min-height: 34px;
+        color: var(--text-2);
+      }
+      .overview-meter {
+        margin-top: 14px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .overview-meter-fill {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+      }
+      .overview-meter-fill.ok,
+      .overview-meter-fill.status {
+        background: var(--green);
+      }
+      .overview-meter-fill.warning {
+        background: var(--yellow);
+      }
+      .overview-meter-fill.danger {
+        background: var(--red);
+      }
+      .overview-meta-row {
+        border-bottom: none;
+        align-items: flex-start;
+      }
+      .overview-meta-cluster {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        color: var(--text-2);
+      }
+      .content-block {
+        padding: 18px 22px 22px;
+      }
+      .toolbar {
+        padding-top: 0;
+      }
+      .control-select {
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 10px;
+      }
+      .search-shell {
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .input-prefix {
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+      }
+      .search-shell input {
+        min-width: 220px;
+        border: none;
+        background: transparent;
+        color: var(--text-1);
+        outline: none;
+      }
+      .planner-grid,
+      .focus-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .support-card,
+      .vpn-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .support-card {
+        padding: 16px;
+      }
+      .focus-list {
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+      .focus-path {
+        display: block;
+        color: var(--text-1);
+        font-family: var(--font-mono);
+      }
+      .table-shell,
+      .updates-scroll,
+      .audit-scroll,
+      .terminal-shell {
+        overflow: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 12px 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        vertical-align: top;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        background: var(--bg-surface-soft);
+      }
+      .badge,
+      .status-chip,
+      .update-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .badge::before,
+      .status-chip::before,
+      .update-chip::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .badge,
+      .status-chip {
+        padding: 4px 9px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+      }
+      .badge.on,
+      .status-chip.ok {
+        color: var(--green);
+        border-color: rgba(63, 185, 80, 0.24);
+        background: rgba(63, 185, 80, 0.08);
+      }
+      .badge.off,
+      .status-chip.danger {
+        color: var(--red);
+        border-color: rgba(248, 81, 73, 0.22);
+        background: rgba(248, 81, 73, 0.08);
+      }
+      .status-chip.warning {
+        color: var(--yellow);
+        border-color: rgba(210, 153, 34, 0.24);
+        background: rgba(210, 153, 34, 0.08);
+      }
+      .note-pill.guarded,
+      .stat-pill.guarded {
+        color: var(--yellow);
+        border-color: rgba(210, 153, 34, 0.24);
+      }
+      .note-pill.excluded,
+      .stat-pill.excluded {
+        color: var(--red);
+        border-color: rgba(248, 81, 73, 0.24);
+      }
+      .stat-pill.ok {
+        color: var(--green);
+        border-color: rgba(63, 185, 80, 0.24);
+      }
+      .stat-pill strong {
+        color: var(--text-1);
+      }
+      .svc-name,
+      .vpn-title,
+      .workload {
+        font-weight: 600;
+      }
+      .svc-id,
+      .updates-version,
+      .updates-sub,
+      .metric-pair,
+      .usage-line,
+      .workload-meta,
+      .auth-mode,
+      .audit-time,
+      .audit-detail,
+      .focus-path {
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .metric-pair {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .arrow {
+        color: var(--text-dim);
+      }
+      .metric-delta.positive,
+      .action.upsize,
+      .update-chip.current {
+        color: var(--green);
+      }
+      .metric-delta.negative,
+      .action.downsize,
+      .update-chip.not-installed {
+        color: var(--red);
+      }
+      .update-chip.update {
+        color: var(--yellow);
+      }
+      .update-chip.unknown,
+      .update-chip.external {
+        color: var(--text-2);
+      }
+      .expiry.urgent {
+        color: var(--yellow);
+      }
+      .expiry.expired {
+        color: var(--red);
+      }
+      .vpn-card {
+        padding: 18px 22px 22px;
+      }
+      .msg {
+        min-height: 18px;
+      }
+      .terminal-shell {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: #090909;
+      }
+      .terminal-content {
+        padding: 18px;
+        display: grid;
+        gap: 10px;
+      }
+      .log-line {
+        display: grid;
+        grid-template-columns: 42px 44px 1fr;
+        gap: 12px;
+        font-family: var(--font-mono);
+        color: var(--text-2);
+      }
+      .log-time,
+      .log-level {
+        color: var(--text-dim);
+      }
+      .log-level.log-info {
+        color: var(--accent);
+      }
+      .empty-state {
+        padding: 28px;
+        text-align: center;
+        color: var(--text-2);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+      @media (max-width: 980px) {
+        .topbar-inner,
+        .hero,
+        .section-bar,
+        .overview-meta-row,
+        .toolbar,
+        .panel-actions,
+        .updates-toolbar,
+        .vpn-row,
+        .toolbar-left,
+        .toolbar-right,
+        .top-actions {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .overview-strip,
+        .planner-grid,
+        .focus-grid {
+          grid-template-columns: 1fr;
+        }
+        .overview-segment {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .overview-segment:last-child {
+          border-bottom: none;
+        }
+      }
+      @media (max-width: 820px) {
+        .topbar-inner {
+          padding: 12px 14px;
+        }
+        main {
+          padding: 22px 14px 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="crumbs">
+          <span class="brand-mark">A</span>
+          <span>/</span>
+          <span>rangoonpulse</span>
+          <span class="env-pill">production</span>
+        </div>
+        <div class="top-actions">
+          <button id="refreshAllBtn" type="button">Refresh all</button>
+          <button id="emergencyBtn" class="danger" type="button">Disable all exposures</button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="hero">
+        <div>
+          <h1>operator cockpit</h1>
+          <div class="hero-subtitle">
+            One operator surface for exposure controls, transmission routing, image checks, and resource tuning.
+            Backends remain separate: exposure-control owns write actions, resource-advisor stays the tuning/report backend.
+          </div>
+        </div>
+        <div class="hero-actions">
+          <a class="top-button" href="#tuning">Tuning</a>
+          <a class="top-button" href="#exposure">Exposure</a>
+          <a class="top-button" href="#transmission">Transmission</a>
+          <a class="top-button" href="#updates">Image updates</a>
+        </div>
+      </section>
+
+      <nav class="section-nav" aria-label="Section navigation">
+        <a class="nav-pill" href="#overview">Overview</a>
+        <a class="nav-pill" href="#tuning">Tuning</a>
+        <a class="nav-pill" href="#exposure">Exposure</a>
+        <a class="nav-pill" href="#transmission">Transmission</a>
+        <a class="nav-pill" href="#updates">Image updates</a>
+        <a class="nav-pill" href="#audit">Audit</a>
+      </nav>
+
+      <section id="overview" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">overview</h2>
+            <p class="section-copy">Current operator posture across both backends.</p>
+          </div>
+          <div id="loadState" class="result-count">Loading dashboard state...</div>
+        </div>
+        <div id="overviewStrip" class="overview-strip"></div>
+        <div class="overview-meta-row">
+          <div id="overviewMeta" class="overview-meta-cluster"></div>
+          <div id="overviewDetail" class="result-count"></div>
+        </div>
+      </section>
+
+      <section id="tuning" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">tuning</h2>
+            <p class="section-copy">Resource-advisor recommendations and live apply preflight, inside the shared cockpit.</p>
+          </div>
+          <div id="tuningSummary" class="section-detail">Waiting for advisor data...</div>
+        </div>
+        <div class="content-block">
+          <div id="tuningStatPills" class="stat-pills"></div>
+        </div>
+        <div class="content-block" style="padding-top:0">
+          <div id="plannerGrid" class="planner-grid"></div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="filter-group" role="tablist" aria-label="Tuning action filters">
+              <button class="filter-btn active" type="button" data-filter-action="all">all</button>
+              <button class="filter-btn" type="button" data-filter-action="upsize">upsize</button>
+              <button class="filter-btn" type="button" data-filter-action="downsize">downsize</button>
+              <button class="filter-btn" type="button" data-filter-action="no-change">no change</button>
+            </div>
+            <select id="noteFilter" class="control-select" aria-label="Tuning note filter">
+              <option value="all">all notes</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <label class="search-shell">
+              <span class="input-prefix">&gt;</span>
+              <input id="searchInput" type="search" placeholder="Filter workloads..." />
+            </label>
+            <div id="tuningCount" class="result-count">0 visible rows</div>
+          </div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>workload</th>
+                <th>action</th>
+                <th>cpu request</th>
+                <th>memory request</th>
+                <th>observed usage</th>
+                <th>restart signal</th>
+                <th>notes</th>
+              </tr>
+            </thead>
+            <tbody id="tuningRows"></tbody>
+          </table>
+          <div id="tuningEmpty" class="empty-state" hidden>No rows match the current filters.</div>
+        </div>
+        <div class="content-block">
+          <div class="section-bar" style="padding:0 0 14px;border-bottom:none">
+            <div>
+              <h3 class="section-heading">system output</h3>
+              <p class="section-copy">Recent markdown lines from the runtime-owned advisor report.</p>
+            </div>
+            <div id="tuningRuntimeMeta" class="section-detail"></div>
+          </div>
+          <div class="terminal-shell">
+            <div id="runtimeLines" class="terminal-content"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="exposure" class="section">
+        <div class="panel-actions">
+          <div>
+            <h2 class="section-heading">exposure</h2>
+            <p class="section-copy">Temporary public exposure control on ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} with ${DEFAULT_EXPIRY_HOURS}h default expiry.</p>
+          </div>
+          <div id="exposureMeta" class="section-detail"></div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>status</th>
+                <th>auth</th>
+                <th>public url</th>
+                <th>expires</th>
+                <th>controls</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="msg" class="msg"></div>
+        </div>
+      </section>
+
+      <section id="transmission" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">transmission</h2>
+            <p class="section-copy">Route Transmission directly or through the Gluetun VPN sidecar.</p>
+          </div>
+          <div id="vpnSectionMeta" class="section-detail"></div>
+        </div>
+        <div class="vpn-card">
+          <div class="vpn-row">
+            <div>
+              <div class="vpn-title">Transmission Egress</div>
+              <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
+              <div class="vpn-meta">
+                Gluetun WebUI:
+                <a href="${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
+              </div>
+            </div>
+            <div class="controls">
+              <button id="vpnDirectBtn" type="button">Route Direct</button>
+              <button id="vpnEnableBtn" type="button">Route via VPN</button>
+            </div>
+          </div>
+          <div id="vpnMsg" class="msg"></div>
+        </div>
+      </section>
+
+      <section id="updates" class="section">
+        <div class="updates-toolbar">
+          <div>
+            <h2 class="section-heading">image updates</h2>
+            <div id="updatesMeta" class="updates-meta">No update check yet.</div>
+          </div>
+          <button id="updatesRefreshBtn" type="button">Check Now</button>
+        </div>
+        <div class="updates-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>current</th>
+                <th>latest</th>
+                <th>status</th>
+                <th>image</th>
+              </tr>
+            </thead>
+            <tbody id="updatesRows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="updatesMsg" class="msg"></div>
+        </div>
+      </section>
+
+      <section id="audit" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">audit</h2>
+            <p class="section-copy">Recent exposure and transmission control actions.</p>
+          </div>
+          <div id="auditMeta" class="section-detail"></div>
+        </div>
+        <div class="audit-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>time</th>
+                <th>action</th>
+                <th>service</th>
+                <th>details</th>
+              </tr>
+            </thead>
+            <tbody id="auditRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script>
+      const loadStateEl = document.getElementById('loadState');
+      const overviewStripEl = document.getElementById('overviewStrip');
+      const overviewMetaEl = document.getElementById('overviewMeta');
+      const overviewDetailEl = document.getElementById('overviewDetail');
+      const tuningSummaryEl = document.getElementById('tuningSummary');
+      const tuningStatPillsEl = document.getElementById('tuningStatPills');
+      const plannerGridEl = document.getElementById('plannerGrid');
+      const noteFilterEl = document.getElementById('noteFilter');
+      const searchInputEl = document.getElementById('searchInput');
+      const tuningCountEl = document.getElementById('tuningCount');
+      const tuningRowsEl = document.getElementById('tuningRows');
+      const tuningEmptyEl = document.getElementById('tuningEmpty');
+      const runtimeLinesEl = document.getElementById('runtimeLines');
+      const tuningRuntimeMetaEl = document.getElementById('tuningRuntimeMeta');
+      const exposureMetaEl = document.getElementById('exposureMeta');
+      const vpnSectionMetaEl = document.getElementById('vpnSectionMeta');
+      const auditMetaEl = document.getElementById('auditMeta');
+      const rowsEl = document.getElementById('rows');
+      const auditRowsEl = document.getElementById('auditRows');
+      const updatesRowsEl = document.getElementById('updatesRows');
+      const vpnMetaEl = document.getElementById('vpnMeta');
+      const msgEl = document.getElementById('msg');
+      const vpnMsgEl = document.getElementById('vpnMsg');
+      const updatesMsgEl = document.getElementById('updatesMsg');
+      const updatesMetaEl = document.getElementById('updatesMeta');
+      const refreshAllBtn = document.getElementById('refreshAllBtn');
+      const emergencyBtn = document.getElementById('emergencyBtn');
+      const vpnDirectBtn = document.getElementById('vpnDirectBtn');
+      const vpnEnableBtn = document.getElementById('vpnEnableBtn');
+      const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
+
+      let mutationInFlight = 0;
+      let pendingExpiryRefresh = false;
+      let transmissionVpnState = null;
+      let tuningFilterAction = 'all';
+      let dashboardState = {
+        services: [],
+        audit: [],
+        vpn: null,
+        updates: null,
+        tuning: null,
+      };
+
+      function setMessage(target, text, isError) {
+        target.textContent = text || '';
+        target.style.color = isError ? 'var(--red)' : 'var(--text-2)';
+      }
+
+      function setLoadState(text, isError) {
+        setMessage(loadStateEl, text, isError);
+      }
+
+      function setMsg(text, isError) {
+        setMessage(msgEl, text, isError);
+      }
+
+      function setVpnMsg(text, isError) {
+        setMessage(vpnMsgEl, text, isError);
+      }
+
+      function setUpdatesMsg(text, isError) {
+        setMessage(updatesMsgEl, text, isError);
+      }
+
+      function fmtDateTime(value) {
+        if (!value) return 'n/a';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return 'n/a';
+        return d.toLocaleString();
+      }
+
+      function fmtExpiry(value) {
+        if (!value) return { text: '\\u2014', state: 'none' };
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return { text: 'invalid', state: 'invalid' };
+        const diff = d.getTime() - Date.now();
+        if (diff <= 0) return { text: 'expired', state: 'expired' };
+        const totalSeconds = Math.ceil(diff / 1000);
+        if (totalSeconds < 60) return { text: totalSeconds + 's remaining', state: 'urgent' };
+        const mins = Math.ceil(totalSeconds / 60);
+        if (mins < 60) return { text: mins + 'm remaining', state: mins <= 10 ? 'urgent' : 'active' };
+        const hrs = Math.floor(mins / 60);
+        const rm = mins % 60;
+        return { text: rm ? hrs + 'h ' + rm + 'm remaining' : hrs + 'h remaining', state: mins <= 120 ? 'urgent' : 'active' };
+      }
+
+      function updateExpiryNode(node) {
+        const next = fmtExpiry(node.dataset.expiresAt || '');
+        node.textContent = next.text;
+        node.classList.toggle('urgent', next.state === 'urgent');
+        node.classList.toggle('expired', next.state === 'expired');
+        return next.state;
+      }
+
+      function tickExpiryCountdowns() {
+        let shouldRefresh = false;
+        rowsEl.querySelectorAll('.expiry[data-expires-at]').forEach((node) => {
+          const state = updateExpiryNode(node);
+          if (node.dataset.enabled === '1' && state === 'expired') shouldRefresh = true;
+        });
+        if (shouldRefresh && mutationInFlight === 0 && !pendingExpiryRefresh) {
+          pendingExpiryRefresh = true;
+          setTimeout(async () => {
+            try {
+              await loadDashboard({ silent: true });
+            } finally {
+              pendingExpiryRefresh = false;
+            }
+          }, 300);
+        }
+      }
+
+      async function request(path, method, body) {
+        const res = await fetch(path, {
+          method,
+          headers: { 'content-type': 'application/json' },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'request failed');
+        return data;
+      }
+
+      function withUnitSpace(value) {
+        const text = String(value || '');
+        const match = text.match(/^([+-]?\\d+(?:\\.\\d+)?)([A-Za-z]+)$/);
+        if (!match) return text || '\\u2014';
+        return match[1] + ' ' + match[2];
+      }
+
+      function fmtSigned(value, suffix, digits) {
+        const number = Number(value || 0);
+        const fixed = number.toFixed(Number.isFinite(digits) ? digits : 1).replace(/\\.0+$/, '').replace(/(\\.\\d*?)0+$/, '$1');
+        return (number > 0 ? '+' : '') + fixed + suffix;
+      }
+
+      function noteTone(note) {
+        const value = String(note || '').toLowerCase();
+        if (value.includes('excluded')) return 'excluded';
+        if (value.includes('guard')) return 'guarded';
+        return 'neutral';
+      }
+
+      function statPill(label, value, tone) {
+        return '<span class="stat-pill ' + (tone || 'neutral') + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
+      }
+
+      function overviewSegment(label, value, subtitle, options) {
+        const eyebrow = options && options.eyebrow ? '<span class="overview-eyebrow">' + options.eyebrow + '</span>' : '';
+        const barPct = Math.max(0, Math.min(100, Number(options && options.barPct || 0)));
+        const tone = options && options.tone ? options.tone : 'neutral';
+        return (
+          '<section class="overview-segment">' +
+            '<div class="overview-segment-head"><span class="overview-label">' + label + '</span>' + eyebrow + '</div>' +
+            '<div class="overview-value">' + value + '</div>' +
+            '<div class="overview-subtitle">' + subtitle + '</div>' +
+            '<div class="overview-meter"><span class="overview-meter-fill ' + tone + '" style="width:' + barPct.toFixed(1) + '%"></span></div>' +
+          '</section>'
+        );
+      }
+
+      function renderOverview() {
+        const services = dashboardState.services || [];
+        const updates = dashboardState.updates || null;
+        const tuning = dashboardState.tuning || null;
+        const vpn = dashboardState.vpn || null;
+        const activeExposures = services.filter((svc) => svc.enabled).length;
+        const updateItems = updates && Array.isArray(updates.items) ? updates.items : [];
+        const updatesAvailable = updateItems.filter((item) => item && item.status === 'update').length;
+        const selectedNow = tuning && tuning.applyPreflight ? Number(tuning.applyPreflight.selectedCount || 0) : 0;
+        const recommendations = tuning && tuning.report ? Number(tuning.report.recommendationCount || 0) : 0;
+        const hardFitOk = tuning && tuning.applyPreflight ? Boolean(tuning.applyPreflight.hardFitOk) : false;
+        const fetchState = tuning && tuning.fetch ? tuning.fetch.state : 'degraded';
+        const fetchDetail = tuning && tuning.fetch ? tuning.fetch.detail : 'resource-advisor unavailable';
+        const desiredMode = vpn && vpn.desiredMode ? vpn.desiredMode : 'unknown';
+        const runningMode = vpn && vpn.effectiveMode ? vpn.effectiveMode : 'unknown';
+
+        overviewStripEl.innerHTML =
+          overviewSegment('exposures', String(activeExposures), services.length + ' configured share targets', {
+            eyebrow: 'temporary public',
+            barPct: services.length ? activeExposures / services.length * 100 : 0,
+            tone: activeExposures > 0 ? 'warning' : 'status',
+          }) +
+          overviewSegment('transmission', desiredMode, 'running ' + runningMode, {
+            eyebrow: 'desired route',
+            barPct: desiredMode === 'vpn' ? 100 : 35,
+            tone: desiredMode === 'vpn' ? 'warning' : 'status',
+          }) +
+          overviewSegment('planner', String(selectedNow), recommendations + ' recommendations in current report', {
+            eyebrow: 'selected now',
+            barPct: recommendations ? selectedNow / recommendations * 100 : 0,
+            tone: hardFitOk ? 'status' : 'warning',
+          }) +
+          overviewSegment('image updates', String(updatesAvailable), updateItems.length ? updateItems.length + ' tracked workloads' : 'cached report unavailable', {
+            eyebrow: 'updates available',
+            barPct: updateItems.length ? updatesAvailable / updateItems.length * 100 : 0,
+            tone: updatesAvailable > 0 ? 'warning' : 'status',
+          }) +
+          overviewSegment('advisor fetch', fetchState, fetchDetail, {
+            eyebrow: 'resource-advisor',
+            barPct: fetchState === 'live' ? 100 : 25,
+            tone: fetchState === 'live' ? 'status' : 'danger',
+          });
+
+        const meta = [];
+        if (tuning && tuning.fetch) {
+          meta.push('<span>advisor run ' + fmtDateTime(tuning.fetch.lastRunAt) + '</span>');
+          meta.push('<span>advisor mode ' + (tuning.fetch.mode || 'n/a') + '</span>');
+        }
+        if (updates && updates.checkedAt) meta.push('<span>updates checked ' + fmtDateTime(updates.checkedAt) + '</span>');
+        if (vpn) meta.push('<span>transmission desired ' + desiredMode + '</span>');
+        overviewMetaEl.innerHTML = meta.join('');
+        overviewDetailEl.textContent = fetchDetail;
+        exposureMetaEl.textContent = activeExposures + ' active exposure' + (activeExposures === 1 ? '' : 's');
+        vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
+        auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';
+      }
+
+      function renderTransmissionVpn(status) {
+        transmissionVpnState = status || null;
+        if (!status) {
+          vpnMetaEl.textContent = 'Transmission VPN status unavailable.';
+          vpnDirectBtn.disabled = true;
+          vpnEnableBtn.disabled = true;
+          vpnDirectBtn.classList.remove('mode-active');
+          vpnEnableBtn.classList.remove('mode-active');
+          return;
+        }
+        const desiredMode = status.desiredMode || 'direct';
+        const effectiveMode = status.effectiveMode || 'pending';
+        const meta = [
+          'desired: ' + desiredMode,
+          'running: ' + effectiveMode,
+          'default: ' + (status.defaultMode || 'direct'),
+          'provider: ' + (status.provider || 'custom') + '/' + (status.vpnType || 'wireguard'),
+        ];
+        if (status.podName) meta.push('pod/' + status.podName);
+        if (status.rolloutPending) meta.push('rollout pending');
+        if (status.placeholderConfig) meta.push('placeholder credentials scaffolded');
+        vpnMetaEl.textContent = meta.join(' | ');
+        vpnDirectBtn.disabled = mutationInFlight > 0 || desiredMode === 'direct';
+        vpnEnableBtn.disabled = mutationInFlight > 0 || desiredMode === 'vpn';
+        vpnDirectBtn.classList.toggle('mode-active', desiredMode === 'direct');
+        vpnEnableBtn.classList.toggle('mode-active', desiredMode === 'vpn');
+      }
+
+      function renderPlanner(tuning) {
+        if (!tuning || !tuning.applyPreflight || !tuning.report) {
+          tuningSummaryEl.textContent = 'Advisor data unavailable';
+          tuningStatPillsEl.innerHTML = '';
+          plannerGridEl.innerHTML = '<article class="support-card"><div class="support-card-title">apply preflight</div><p class="support-copy">resource-advisor data is unavailable from the exporter.</p></article>';
+          tuningRuntimeMetaEl.textContent = 'advisor unavailable';
+          runtimeLinesEl.innerHTML = '<div class="log-line"><span class="log-time">[00]</span><span class="log-level">data</span><span>no advisor markdown available.</span></div>';
+          noteFilterEl.innerHTML = '<option value="all">all notes</option>';
+          tuningRowsEl.innerHTML = '';
+          tuningEmptyEl.hidden = false;
+          tuningCountEl.textContent = '0 visible rows';
+          return;
+        }
+
+        const report = tuning.report;
+        const apply = tuning.applyPreflight;
+        const summary = report.summary || {};
+        const selected = Array.isArray(apply.selected) ? apply.selected : [];
+        const skipSummary = Array.isArray(apply.skipSummary) ? apply.skipSummary : [];
+        const budgets = apply.budgets || {};
+        const current = apply.currentRequests || {};
+        const projected = apply.projectedRequestsAfterSelected || {};
+        const noteOptions = Array.isArray(report.topNotes) ? report.topNotes : [];
+
+        tuningSummaryEl.textContent = String(report.recommendationCount || 0) + ' recommendations · ' + String(apply.selectedCount || 0) + ' selected now';
+        tuningStatPillsEl.innerHTML =
+          statPill('hard fit', apply.hardFitOk ? 'ok' : 'blocked', apply.hardFitOk ? 'ok' : 'excluded') +
+          statPill('cpu pressure', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'guarded' : 'ok') +
+          statPill('mem pressure', apply.advisoryPressure && apply.advisoryPressure.memory ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.memory ? 'guarded' : 'ok') +
+          statPill('coverage', String(report.metricsCoverageDaysEstimate || 0).replace(/\\.0$/, '') + 'd', 'neutral') +
+          statPill('upsize', String(summary.upsize_count || 0), 'ok') +
+          statPill('downsize', String(summary.downsize_count || 0), 'neutral');
+
+        const selectedMarkup = selected.slice(0, 5).map((item) => {
+          const currentReq = item && item.current && item.current.requests ? item.current.requests : {};
+          const recommendedReq = item && item.recommended && item.recommended.requests ? item.recommended.requests : {};
+          return '<li><span class="focus-path">' + (item.release || 'unknown') + '/' + (item.container || 'main') + '</span><span class="focus-inline">cpu ' + withUnitSpace(currentReq.cpu || '0m') + ' → ' + withUnitSpace(recommendedReq.cpu || '0m') + ' · mem ' + withUnitSpace(currentReq.memory || '0Mi') + ' → ' + withUnitSpace(recommendedReq.memory || '0Mi') + ' · ' + String(item.selection_reason || 'selected').replace(/_/g, ' ') + '</span></li>';
+        }).join('');
+
+        const postureMarkup = [
+          '<li><span class="focus-path">current requests</span><span class="focus-inline">cpu ' + withUnitSpace((current.cpu_m || 0) + 'm') + ' · mem ' + withUnitSpace((current.memory_mi || 0) + 'Mi') + '</span></li>',
+          '<li><span class="focus-path">projected after selection</span><span class="focus-inline">cpu ' + withUnitSpace((projected.cpu_m || 0) + 'm') + ' · mem ' + withUnitSpace((projected.memory_mi || 0) + 'Mi') + '</span></li>',
+          '<li><span class="focus-path">advisory ceilings</span><span class="focus-inline">cpu ' + withUnitSpace((budgets.cpu_m || 0) + 'm') + ' · mem ' + withUnitSpace((budgets.memory_mi || 0) + 'Mi') + '</span></li>'
+        ].join('');
+
+        const skippedMarkup = skipSummary.slice(0, 5).map((item) => {
+          return '<li><span class="focus-path">' + String(item.reason || 'unknown').replace(/_/g, ' ') + '</span><span class="focus-inline">' + String(item.count || 0) + ' row(s)</span></li>';
+        }).join('');
+
+        plannerGridEl.innerHTML =
+          '<article class="support-card"><div class="support-card-title">if apply ran now</div><ul class="focus-list">' + (selectedMarkup || '<li><span class="muted">no changes would be selected from the current report.</span></li>') + '</ul><p class="support-copy">selection uses per-service signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p></article>' +
+          '<article class="support-card"><div class="support-card-title">planner posture</div><ul class="focus-list">' + postureMarkup + '</ul><p class="support-copy">advisory pressure remains visible, but hard node-fit stays the gate.</p></article>' +
+          '<article class="support-card"><div class="support-card-title">skip summary</div><ul class="focus-list">' + (skippedMarkup || '<li><span class="muted">no skipped rows in current snapshot.</span></li>') + '</ul><p class="support-copy">current reasons rows were deferred from the live apply selection order.</p></article>';
+
+        noteFilterEl.innerHTML = '<option value="all">all notes</option>' + noteOptions.map((item) => '<option value="' + item.note + '">' + item.note + ' (' + item.count + ')</option>').join('');
+        tuningRuntimeMetaEl.textContent = 'window ' + (report.metricsWindow || 'n/a') + ' · last run ' + fmtDateTime(tuning.fetch && tuning.fetch.lastRunAt);
+        const runtimeLines = String(tuning.runtime && tuning.runtime.latestMarkdown || '').split('\\n').map((line) => line.trim()).filter(Boolean).slice(0, 18);
+        runtimeLinesEl.innerHTML = runtimeLines.length ? runtimeLines.map((line, index) => '<div class="log-line"><span class="log-time">[' + String(index + 1).padStart(2, '0') + ']</span><span class="log-level ' + (index < 4 ? 'log-info' : '') + '">' + (index < 4 ? 'info' : 'data') + '</span><span>' + line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span></div>').join('') : '<div class="log-line"><span class="log-time">[00]</span><span class="log-level">data</span><span>no advisor markdown available.</span></div>';
+      }
+
+      function renderTuningRows() {
+        const tuning = dashboardState.tuning;
+        const rows = tuning && tuning.report && Array.isArray(tuning.report.recommendations) ? tuning.report.recommendations : [];
+        tuningRowsEl.innerHTML = '';
+        const query = (searchInputEl.value || '').trim().toLowerCase();
+        const noteValue = noteFilterEl.value || 'all';
+        let visible = 0;
+
+        rows.forEach((row) => {
+          const notes = Array.isArray(row.notes) ? row.notes : [];
+          const action = String(row.action || 'unknown');
+          const currentReq = row.current && row.current.requests ? row.current.requests : {};
+          const recommendedReq = row.recommended && row.recommended.requests ? row.recommended.requests : {};
+          const searchBlob = [row.namespace, row.workload, row.container, row.release, action, notes.join(' '), currentReq.cpu, currentReq.memory, recommendedReq.cpu, recommendedReq.memory].join(' ').toLowerCase();
+          const actionMatch = tuningFilterAction === 'all' || action === tuningFilterAction;
+          const noteMatch = noteValue === 'all' || notes.includes(noteValue);
+          const searchMatch = !query || searchBlob.includes(query);
+          if (!actionMatch || !noteMatch || !searchMatch) return;
+          visible += 1;
+
+          const currentCpu = String(currentReq.cpu || '0m');
+          const currentMem = String(currentReq.memory || '0Mi');
+          const recommendedCpu = String(recommendedReq.cpu || '0m');
+          const recommendedMem = String(recommendedReq.memory || '0Mi');
+          const cpuDelta = Number(String(recommendedCpu).replace(/m$/, '')) - Number(String(currentCpu).replace(/m$/, ''));
+          const memDelta = Number(String(recommendedMem).replace(/Mi$/, '')) - Number(String(currentMem).replace(/Mi$/, ''));
+          const notesMarkup = notes.length ? notes.map((note) => '<span class="note-pill ' + noteTone(note) + '">' + note.replace(/_/g, ' ') + '</span>').join('') : '<span class="muted">—</span>';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td><div class="workload">' + (row.workload || 'unknown') + '</div><div class="workload-meta">' + (row.namespace || 'default') + ' · ' + (row.release || 'n/a') + ' · ' + (row.container || 'main') + '</div></td>' +
+            '<td><span class="action ' + action + '">' + action + '</span></td>' +
+            '<td><div class="metric-pair"><span>' + withUnitSpace(currentCpu) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedCpu) + '</span></div><div class="metric-delta ' + (cpuDelta > 0 ? 'positive' : cpuDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(cpuDelta, 'm', 0)) + '</div></td>' +
+            '<td><div class="metric-pair"><span>' + withUnitSpace(currentMem) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedMem) + '</span></div><div class="metric-delta ' + (memDelta > 0 ? 'positive' : memDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(memDelta, 'Mi', 0)) + '</div></td>' +
+            '<td><div class="usage-line">p95 ' + withUnitSpace(String(row.cpu_p95_m || 0) + 'm') + ' · ' + withUnitSpace(String(row.mem_p95_mi || 0) + 'Mi') + '</div><div class="workload-meta">' + String(row.replicas || 0) + ' replica(s)</div></td>' +
+            '<td><div class="usage-line">' + String(row.restarts_window || 0) + ' historical / 14d</div><div class="workload-meta">current live restarts: ' + String(row.current_restarts || 0) + ' on ' + String(row.matched_pods || 0) + ' pod(s)</div></td>' +
+            '<td><div class="notes-cell">' + notesMarkup + '</div></td>';
+          tuningRowsEl.appendChild(tr);
+        });
+
+        tuningCountEl.textContent = visible + ' visible row' + (visible === 1 ? '' : 's');
+        tuningEmptyEl.hidden = visible !== 0;
+      }
+
+      function renderRows(services) {
+        rowsEl.innerHTML = '';
+        if (!services.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="6" class="empty-state">No services configured.</td>';
+          rowsEl.appendChild(tr);
+          return;
+        }
+        services.forEach((svc) => {
+          const tr = document.createElement('tr');
+          if (svc.enabled) tr.classList.add('is-enabled');
+          const expiry = fmtExpiry(svc.expiresAt);
+          tr.innerHTML =
+            '<td><div class="svc-name">' + svc.name + '</div><div class="svc-id">' + svc.id + '</div></td>' +
+            '<td><span class="badge ' + (svc.enabled ? 'on' : 'off') + '">' + (svc.enabled ? 'Enabled' : 'Disabled') + '</span></td>' +
+            '<td><span class="auth-mode">' + (svc.authMode === 'cloudflare-access' ? 'cf-access' : svc.authMode) + '</span></td>' +
+            '<td><a href="' + svc.publicUrl + '" target="_blank" rel="noreferrer">' + svc.publicHost + '</a></td>' +
+            '<td><span class="expiry ' + expiry.state + '" data-expires-at="' + (svc.expiresAt || '') + '" data-enabled="' + (svc.enabled ? '1' : '0') + '">' + expiry.text + '</span></td>';
+
+          const controlsTd = document.createElement('td');
+          const controls = document.createElement('div');
+          controls.className = 'controls';
+
+          const expirySelect = document.createElement('select');
+          expirySelect.className = 'control-select';
+          [0.25, 0.5, 1, 2, 6, 12, 24].forEach((hours) => {
+            const opt = document.createElement('option');
+            opt.value = String(hours);
+            opt.textContent = hours < 1 ? Math.round(hours * 60) + 'm' : String(hours) + 'h';
+            if (hours === Number(svc.defaultExpiryHours || 1)) opt.selected = true;
+            expirySelect.appendChild(opt);
+          });
+
+          const authSelect = document.createElement('select');
+          authSelect.className = 'control-select';
+          ['none', 'cloudflare-access'].forEach((mode) => {
+            const opt = document.createElement('option');
+            opt.value = mode;
+            opt.textContent = mode === 'cloudflare-access' ? 'cf-access' : mode;
+            if (mode === svc.defaultAuthMode) opt.selected = true;
+            authSelect.appendChild(opt);
+          });
+
+          const enableBtn = document.createElement('button');
+          enableBtn.textContent = 'Enable';
+          enableBtn.onclick = async () => {
+            try {
+              mutationInFlight += 1;
+              enableBtn.disabled = true;
+              await request('/api/services/' + svc.id + '/enable', 'POST', {
+                hours: Number(expirySelect.value),
+                authMode: authSelect.value,
+              });
+              setMsg('Enabled ' + svc.id);
+              await loadDashboard({ silent: true });
+            } catch (err) {
+              setMsg(err.message, true);
+            } finally {
+              mutationInFlight = Math.max(0, mutationInFlight - 1);
+            }
+          };
+
+          const disableBtn = document.createElement('button');
+          disableBtn.textContent = 'Disable';
+          disableBtn.className = 'danger';
+          disableBtn.onclick = async () => {
+            try {
+              mutationInFlight += 1;
+              disableBtn.disabled = true;
+              await request('/api/services/' + svc.id + '/disable', 'POST');
+              setMsg('Disabled ' + svc.id);
+              await loadDashboard({ silent: true });
+            } catch (err) {
+              setMsg(err.message, true);
+            } finally {
+              mutationInFlight = Math.max(0, mutationInFlight - 1);
+            }
+          };
+
+          controls.append(expirySelect, authSelect, enableBtn, disableBtn);
+          controlsTd.appendChild(controls);
+          tr.appendChild(controlsTd);
+          rowsEl.appendChild(tr);
+        });
+        tickExpiryCountdowns();
+      }
+
+      function renderAudit(entries) {
+        auditRowsEl.innerHTML = '';
+        if (!entries.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="4" class="empty-state">No audit entries yet.</td>';
+          auditRowsEl.appendChild(tr);
+          return;
+        }
+        entries.forEach((entry) => {
+          const tr = document.createElement('tr');
+          const parts = [];
+          if (entry.hours) parts.push(entry.hours + 'h');
+          if (entry.authMode) parts.push(entry.authMode);
+          if (entry.mode) parts.push('mode: ' + entry.mode);
+          if (entry.disabled != null) parts.push('disabled: ' + entry.disabled);
+          tr.innerHTML =
+            '<td class="audit-time">' + fmtDateTime(entry.ts) + '</td>' +
+            '<td class="' + (entry.action === 'enable' ? 'action-enable' : entry.action === 'disable' ? 'action-disable' : entry.action === 'transmission-vpn-set' ? 'action-enable' : 'action-emergency') + '">' + (entry.action || '') + '</td>' +
+            '<td>' + (entry.serviceId || '') + '</td>' +
+            '<td class="audit-detail">' + parts.join(' · ') + '</td>';
+          auditRowsEl.appendChild(tr);
+        });
+      }
+
+      function renderUpdates(payload) {
+        const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        updatesRowsEl.innerHTML = '';
+        if (!items.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="5" class="empty-state">No update rows available.</td>';
+          updatesRowsEl.appendChild(tr);
+        } else {
+          items.forEach((item) => {
+            const tr = document.createElement('tr');
+            const nsPrefix = item.namespace ? item.namespace + '/' : '';
+            tr.innerHTML =
+              '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
+              '<td class="updates-version">' + (item.currentVersion || '—') + '</td>' +
+              '<td class="updates-version">' + (item.latestVersion || '—') + '</td>' +
+              '<td><span class="update-chip ' + (item.status || 'unknown') + '">' + (item.statusText || 'Unknown') + '</span></td>' +
+              '<td><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>';
+            updatesRowsEl.appendChild(tr);
+          });
+        }
+        const checkedAt = payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) : 'not checked yet';
+        const nextCheckAt = payload && payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : 'unknown';
+        const source = payload && payload.source ? payload.source : 'unknown';
+        const staleText = payload && payload.stale ? ' · stale cache' : '';
+        const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
+        updatesMetaEl.textContent = 'Checked: ' + checkedAt + ' | Next check: ' + nextCheckAt + ' | Source: ' + source + staleText + refreshingText;
+      }
+
+      async function loadUpdates(options) {
+        const force = Boolean(options && options.force);
+        if (force) setUpdatesMsg('Checking registries...');
+        try {
+          const path = force ? '/api/image-updates?force=1' : '/api/image-updates';
+          const payload = await request(path, 'GET');
+          dashboardState.updates = payload;
+          renderUpdates(payload);
+          renderOverview();
+          setUpdatesMsg(payload.stale ? 'Showing cached data while background refresh runs.' : 'Update report loaded.');
+        } catch (err) {
+          setUpdatesMsg(err.message, true);
+        }
+      }
+
+      async function loadDashboard(options) {
+        const silent = Boolean(options && options.silent);
+        if (!silent) {
+          setLoadState('Refreshing dashboard...');
+          setMsg('Refreshing...');
+          setVpnMsg('Refreshing Transmission VPN status...');
+          setUpdatesMsg('Loading cached update report...');
+        }
+
+        try {
+          const [svcData, auditData, vpnData, tuningData, updatesData] = await Promise.allSettled([
+            request('/api/services', 'GET'),
+            request('/api/audit', 'GET'),
+            request('/api/transmission-vpn', 'GET'),
+            request('/api/tuning', 'GET'),
+            request('/api/image-updates', 'GET'),
+          ]);
+
+          if (svcData.status !== 'fulfilled') throw svcData.reason;
+          dashboardState.services = svcData.value.services || [];
+          renderRows(dashboardState.services);
+          if (auditData.status === 'fulfilled') {
+            dashboardState.audit = auditData.value.entries || [];
+            renderAudit(dashboardState.audit);
+          }
+          if (vpnData.status === 'fulfilled') {
+            dashboardState.vpn = vpnData.value;
+            renderTransmissionVpn(dashboardState.vpn);
+            if (!silent) setVpnMsg('');
+          } else {
+            dashboardState.vpn = null;
+            renderTransmissionVpn(null);
+            setVpnMsg(vpnData.reason.message, true);
+          }
+          if (tuningData.status === 'fulfilled') {
+            dashboardState.tuning = tuningData.value;
+            renderPlanner(dashboardState.tuning);
+            renderTuningRows();
+          } else {
+            dashboardState.tuning = null;
+            renderPlanner(null);
+          }
+          if (updatesData.status === 'fulfilled') {
+            dashboardState.updates = updatesData.value;
+            renderUpdates(dashboardState.updates);
+            if (!silent) setUpdatesMsg('Update report loaded.');
+          } else {
+            dashboardState.updates = null;
+            renderUpdates({ items: [] });
+            setUpdatesMsg(updatesData.reason.message, true);
+          }
+
+          renderOverview();
+          setLoadState((silent ? 'Last refresh ' : 'Updated ') + new Date().toLocaleTimeString());
+          if (!silent) setMsg('Exposure state updated.');
+        } catch (err) {
+          setLoadState(err.message, true);
+          if (!silent) setMsg(err.message, true);
+        }
+      }
+
+      refreshAllBtn.onclick = () => loadDashboard();
+      updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
+
+      emergencyBtn.onclick = async () => {
+        if (!confirm('Disable ALL temporary exposures?')) return;
+        try {
+          mutationInFlight += 1;
+          emergencyBtn.disabled = true;
+          await request('/api/admin/disable-all', 'POST');
+          setMsg('All exposures disabled');
+          await loadDashboard({ silent: true });
+        } catch (err) {
+          setMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          emergencyBtn.disabled = false;
+        }
+      };
+
+      async function setTransmissionVpnMode(mode) {
+        const nextMode = mode === 'vpn' ? 'vpn' : 'direct';
+        const prompt = nextMode === 'vpn'
+          ? 'Route Transmission through the VPN sidecar?'
+          : 'Route Transmission directly through the normal network path?';
+        if (!confirm(prompt)) return;
+        try {
+          mutationInFlight += 1;
+          vpnDirectBtn.disabled = true;
+          vpnEnableBtn.disabled = true;
+          setVpnMsg('Applying ' + nextMode + ' mode...');
+          const payload = await request('/api/transmission-vpn', 'POST', { mode: nextMode });
+          renderTransmissionVpn(payload);
+          setVpnMsg('Transmission desired route set to ' + nextMode + '. Flux will roll the pod if needed.');
+          await loadDashboard({ silent: true });
+        } catch (err) {
+          setVpnMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          if (transmissionVpnState) renderTransmissionVpn(transmissionVpnState);
+        }
+      }
+
+      vpnDirectBtn.onclick = () => setTransmissionVpnMode('direct');
+      vpnEnableBtn.onclick = () => setTransmissionVpnMode('vpn');
+
+      document.querySelectorAll('[data-filter-action]').forEach((button) => {
+        button.addEventListener('click', () => {
+          tuningFilterAction = button.dataset.filterAction || 'all';
+          document.querySelectorAll('[data-filter-action]').forEach((peer) => {
+            peer.classList.toggle('active', peer === button);
+          });
+          renderTuningRows();
+        });
+      });
+      noteFilterEl.addEventListener('change', renderTuningRows);
+      searchInputEl.addEventListener('input', renderTuningRows);
+
+      setInterval(tickExpiryCountdowns, 1000);
+      loadDashboard();
+    </script>
+  </body>
+</html>`;
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     disableExpiredExposures();
@@ -2880,7 +4371,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (isControlPanelHost && parsed.pathname === "/") {
-      return sendHtml(res, 200, renderControlPanelHtml());
+      return sendHtml(res, 200, renderCombinedCockpitHtml());
     }
 
     if (isControlPanelHost && parsed.pathname === "/status") {

@@ -2,6 +2,10 @@
 
 Homepage has been decommissioned; Glance is the only dashboard in this repository.
 
+Operational note:
+- `controlpanel.khzaw.dev` is the combined operator cockpit.
+- `tuning.khzaw.dev` remains the separate resource-advisor backend/native surface and should still be monitored separately.
+
 ## Hostnames
 - Glance: `https://glance.khzaw.dev`
 - Glance alias: `https://hq.khzaw.dev` (historical shortcut)

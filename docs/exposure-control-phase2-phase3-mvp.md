@@ -50,6 +50,11 @@ Default exposure expiry:
 - mounted via Kustomize-generated ConfigMap `exposure-control-app-files`
 - Service: `default/exposure-control`
 - Control panel host: `https://controlpanel.khzaw.dev`
+- The control panel is now the combined operator cockpit:
+  - exposure control
+  - Transmission VPN routing
+  - image update tracker
+  - resource-advisor tuning view fetched from the separate `resource-advisor` backend
 - Runtime state file: `/data/state.json` (PVC-backed, `local-path`)
 - Audit log file: `/data/audit.json` (JSON Lines, append-only)
 - Audit API: `GET /api/audit` — returns last 100 entries in reverse chronological order
@@ -75,6 +80,11 @@ Default exposure expiry:
 - compares same-family non-semver numeric tags when the tag shape is clear (for example `24-alpine`, `25.07`, `4.0.16.2944-ls304`)
 - falls back to remote registry digest checks for floating or non-sortable tags (for example `latest`, `next`, `stable-alpine`, `pg16`)
 - still remains best-effort; hash-like tags may stay `Unknown` if there is no safe ordering signal
+9. Combined cockpit behavior:
+- `GET /api/tuning` proxies the structured tuning payload from the separate `resource-advisor` backend.
+- No backend logic was merged:
+  - `exposure-control` still owns control actions and cockpit rendering.
+  - `resource-advisor` still owns tuning logic, report generation, and apply-preflight data.
 
 ## Validation Checklist (Passed)
 

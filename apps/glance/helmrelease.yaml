@@ -295,10 +295,10 @@ spec:
                               - title: Uptime Kuma
                                 url: https://uptime.khzaw.dev
                                 icon: di:uptime-kuma
-                              - title: Control Panel
+                              - title: Operator Cockpit
                                 url: https://controlpanel.khzaw.dev
                                 icon: mdi:cloud-lock-outline
-                              - title: Resource Advisor
+                              - title: Tuning Backend
                                 url: https://tuning.khzaw.dev
                                 icon: mdi:tune
                               - title: Speedtest
@@ -660,7 +660,7 @@ spec:
                             url: https://glance.khzaw.dev
                             check-url: http://glance.default.svc.cluster.local:8080
                             icon: di:glance
-                          - title: Control Panel
+                          - title: Operator Cockpit
                             url: https://controlpanel.khzaw.dev
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
                             icon: mdi:cloud-lock-outline
@@ -672,7 +672,7 @@ spec:
                             url: https://adguard2.khzaw.dev
                             check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
-                          - title: Resource Advisor
+                          - title: Resource Advisor Backend
                             url: https://tuning.khzaw.dev
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
                             icon: mdi:tune
@@ -781,7 +781,7 @@ spec:
                             url: https://actual.khzaw.dev
                             check-url: http://actualbudget.default.svc.cluster.local:5006
                             icon: di:actual-budget
-                          - title: Control Panel
+                          - title: Operator Cockpit
                             url: https://controlpanel.khzaw.dev
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
                             icon: mdi:cloud-lock-outline
@@ -793,7 +793,7 @@ spec:
                             url: https://adguard2.khzaw.dev
                             check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
-                          - title: Resource Advisor
+                          - title: Resource Advisor Backend
                             url: https://tuning.khzaw.dev
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
                             icon: mdi:tune

@@ -109,6 +109,8 @@ curl -I --max-time 20 https://share-sponsorblocktv.khzaw.dev
 
 ## 6) Exposure Control (Phase 2 + 3 MVP)
 
+`controlpanel.khzaw.dev` is the combined operator cockpit. `tuning.khzaw.dev` remains the separate resource-advisor backend/native surface.
+
 ```bash
 # Backend/control panel health
 flux get kustomizations -n flux-system | rg 'exposure-control'
@@ -200,6 +202,7 @@ kubectl get cronjobs -n monitoring | rg resource-advisor
 kubectl get jobs -n monitoring | rg resource-advisor
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
 curl -I --max-time 20 https://tuning.khzaw.dev
+curl -s https://tuning.khzaw.dev/api/ui.json | jq '.fetch,.applyPreflight.selectedCount'
 curl -s https://tuning.khzaw.dev/latest.json | jq '.summary,.budget'
 curl -s https://tuning.khzaw.dev/metrics | rg '^resource_advisor_'
 

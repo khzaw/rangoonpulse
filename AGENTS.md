@@ -81,6 +81,13 @@ Notes:
 - Temporary public exposure (lean MVP + security hardening):
   - backend + UI: `apps/exposure-control/`
   - control panel host: `controlpanel.khzaw.dev`
+  - `controlpanel.khzaw.dev` is now the combined operator cockpit for exposure control, Transmission VPN, image updates,
+    and the resource-advisor tuning view
+  - backend split remains unchanged:
+    - `apps/exposure-control/` owns operator write actions and the cockpit shell
+    - `infrastructure/resource-advisor/` remains a separate backend/exporter and data source for tuning
+  - `tuning.khzaw.dev` remains the resource-advisor native surface/raw endpoints (`/latest.json`, `/latest.md`, `/metrics`,
+    `/api/ui.json`) and is still useful as a backend-specific compatibility URL
   - share hosts route through Cloudflare Tunnel -> `exposure-control` backend
   - default temporary exposure expiry: `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
   - UI auth default: `none`; backend/API default auth mode: `cloudflare-access` (configurable per enable action)
@@ -277,6 +284,8 @@ Important external-dns behavior:
   - `apps/glance/helmrelease.yaml` embeds `glance.yml` via ConfigMap and uses `envFrom: homepage-widget-secrets`
     so widgets can reference `${SONARR_API_KEY}`, `${JELLYFIN_API_KEY}`, etc.
   - Hostnames: `https://glance.khzaw.dev` and `https://hq.khzaw.dev` (alias)
+  - Operator entry link should point to `https://controlpanel.khzaw.dev` (`Operator Cockpit`).
+  - Keep a separate health monitor for the resource-advisor backend even though the tuning UI is surfaced in the cockpit.
   - When writing Glance `custom-api` templates inside HelmRelease YAML, wrap the template in `{{\` ... \`}}`
     so Helm doesn't interpret Glance's `{{ ... }}`.
 
@@ -354,7 +363,9 @@ Important external-dns behavior:
   - do not commit generated report/apply artifacts into repository
   - include decision rationale, constraints, and skipped reasons in PR description
   - apply planner uses live pod request footprint + current pod placement for node-fit simulation and blocks only on allocatable node capacity; advisory CPU/memory request ceilings remain informational and influence ordering only
-  - `tuning.khzaw.dev` now includes a live `apply preflight` section showing what the planner would select right now
+  - `controlpanel.khzaw.dev` now renders the combined tuning view for operators, using `resource-advisor` JSON from the
+    separate exporter backend
+  - `tuning.khzaw.dev` still includes a live `apply preflight` section showing what the planner would select right now
   - current auto-apply scope includes:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
