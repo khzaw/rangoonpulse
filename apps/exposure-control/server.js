@@ -3135,12 +3135,16 @@ function renderCombinedCockpitHtml() {
       .audit-time,
       .audit-detail,
       .auth-mode,
-      .overview-meta-cluster,
       .focus-inline,
       .support-copy,
-      .vpn-meta,
       .updates-meta {
         color: var(--text-3);
+      }
+      .vpn-meta a {
+        color: var(--text-2);
+      }
+      .vpn-meta a:hover {
+        color: var(--text-1);
       }
       .hero-subtitle {
         margin-top: 10px;
