@@ -86,6 +86,8 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-booklore.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: share-shelfmark.khzaw.dev
+                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-jellyfin.khzaw.dev
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: share-seerr.khzaw.dev

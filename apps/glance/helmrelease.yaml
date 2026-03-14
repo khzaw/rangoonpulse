@@ -210,6 +210,9 @@ spec:
                               - title: Audiobookshelf
                                 url: https://audiobookshelf.khzaw.dev
                                 icon: di:audiobookshelf
+                              - title: Shelfmark
+                                url: https://shelfmark.khzaw.dev
+                                icon: mdi:bookshelf
                               - title: Calibre
                                 url: https://calibre.khzaw.dev
                                 icon: di:calibre
@@ -566,6 +569,7 @@ spec:
                           - immich-app/immich
                           - jellyfin/jellyfin
                           - advplyr/audiobookshelf
+                          - calibrain/shelfmark
                           - seerr-team/seerr
                           - chrisbenincasa/tunarr
                           - actualbudget/actual
@@ -688,6 +692,10 @@ spec:
                             url: https://booklore.khzaw.dev
                             check-url: http://booklore.default.svc.cluster.local:6060
                             icon: mdi:book-open-page-variant
+                          - title: Shelfmark
+                            url: https://shelfmark.khzaw.dev
+                            check-url: http://shelfmark.default.svc.cluster.local:8084/api/health
+                            icon: mdi:bookshelf
                           - title: Anki
                             url: https://anki.khzaw.dev
                             check-url: http://anki-server.default.svc.cluster.local:8080
@@ -755,6 +763,10 @@ spec:
                             url: https://booklore.khzaw.dev
                             check-url: http://booklore.default.svc.cluster.local:6060
                             icon: mdi:book-open-page-variant
+                          - title: Shelfmark
+                            url: https://shelfmark.khzaw.dev
+                            check-url: http://shelfmark.default.svc.cluster.local:8084/api/health
+                            icon: mdi:bookshelf
                           - title: Anki
                             url: https://anki.khzaw.dev
                             check-url: http://anki-server.default.svc.cluster.local:8080

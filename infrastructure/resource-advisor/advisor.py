@@ -23,6 +23,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "booklore-mariadb": "apps/booklore-mariadb/helmrelease.yaml",
     "calibre": "apps/calibre/helmrelease.yaml",
     "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",
+    "shelfmark": "apps/shelfmark/helmrelease.yaml",
     "chartsdb": "apps/chartsdb/helmrelease.yaml",
     "ersatztv": "apps/ersatztv/helmrelease.yaml",
     "exposure-control": "apps/exposure-control/helmrelease.yaml",

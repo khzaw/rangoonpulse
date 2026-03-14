@@ -28,6 +28,7 @@ Default exposure expiry:
   - `share-speedtest.khzaw.dev`
   - `share-chartsdb.khzaw.dev`
   - `share-booklore.khzaw.dev`
+  - `share-shelfmark.khzaw.dev`
   - `share-jellyfin.khzaw.dev`
   - `share-seerr.khzaw.dev`
   - `share-audiobookshelf.khzaw.dev`

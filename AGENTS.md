@@ -245,6 +245,11 @@ Important external-dns behavior:
 - BookLore:
   - app data and MariaDB config/state on NFS (`truenas-nfs`, expandable)
   - mounts existing Calibre books data read-only for evaluation (`calibre-books-nfs`)
+- Shelfmark:
+  - config on `app-configs-pvc-nfs` (subPath `shelfmark`)
+  - shares `calibre-books-nfs` for ebook delivery
+  - shares BookLore `bookdrop` via PVC `booklore` (subPath `bookdrop`)
+  - shares Audiobookshelf media via PVC `books` (subPath `audiobooks`)
 - Tunarr:
   - config/state on NFS (`truenas-nfs`, mounted at `/root/.local/share/tunarr`)
 - ErsatzTV:
@@ -352,7 +357,7 @@ Important external-dns behavior:
   - current auto-apply scope includes:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
-      `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
+      `isponsorblock-tv`, `profilarr`, `shelfmark`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
       `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
       `uptime-kuma`, `vaultwarden`
   - excluded from auto-apply by policy (analyzed only): `actualbudget`, `immich`, `immich-postgres`, `media-postgres`,
@@ -428,6 +433,7 @@ Examples:
 - `docs/dashboards-homepage-glance.md`
 - `docs/metrics-server-operational-metrics.md`
 - `docs/study-services-livesync-anki-booklore.md`
+- `docs/shelfmark.md`
 - `docs/tv-channels-tunarr-ersatztv.md`
 - `docs/tracerr.md`
 - `docs/isponsorblocktv.md`

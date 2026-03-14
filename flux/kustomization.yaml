@@ -42,6 +42,7 @@ resources:
   - ./kustomizations/audiobookshelf.yaml
   - ./kustomizations/calibre.yaml
   - ./kustomizations/calibre-web-automated.yaml
+  - ./kustomizations/shelfmark.yaml
   - ./kustomizations/chartsdb.yaml
   - ./kustomizations/speedtest.yaml
   - ./kustomizations/exposure-control.yaml

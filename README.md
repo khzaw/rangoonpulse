@@ -115,6 +115,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **Seerr** | Media request manager |
 | **Audiobookshelf** | Audiobook & podcast server |
 | **Calibre** | E-book library management |
+| **Shelfmark** | Book and audiobook downloader |
 
 ### Media Automation
 

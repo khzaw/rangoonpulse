@@ -18,6 +18,12 @@
     "description": "BookLore"
   },
   {
+    "id": "shelfmark",
+    "name": "Shelfmark",
+    "target": "http://shelfmark.default.svc.cluster.local:8084",
+    "description": "Book and audiobook downloader"
+  },
+  {
     "id": "jellyfin",
     "name": "Jellyfin",
     "target": "http://jellyfin.default.svc.cluster.local:8096",
