@@ -47,6 +47,8 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "vaultwarden": "apps/vaultwarden/helmrelease.yaml",
 }
 
+DEFAULT_APPLY_ALLOWLIST = tuple(APP_TEMPLATE_RELEASE_FILE_MAP.keys())
+
 
 def log(message: str) -> None:
     now = dt.datetime.now(dt.timezone.utc).isoformat()
@@ -90,6 +92,14 @@ def safe_int(value: object, default: int = 1) -> int:
     except Exception:
         return default
     return parsed if parsed > 0 else default
+
+
+def count_by(items: list[dict], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        value = str(item.get(key) or "unknown")
+        counts[value] = counts.get(value, 0) + 1
+    return counts
 
 
 def parse_cpu_to_m(value: str | None) -> float:
@@ -328,6 +338,13 @@ class KubeClient:
             return []
         return payload.get("items", [])
 
+    def get_configmap_data(self, namespace: str, name: str) -> dict[str, str]:
+        status, payload = self.request_json("GET", f"/api/v1/namespaces/{namespace}/configmaps/{name}")
+        if status != 200:
+            return {}
+        data = (payload or {}).get("data", {}) or {}
+        return {str(key): str(value) for key, value in data.items()}
+
     def upsert_configmap(self, namespace: str, name: str, data: dict[str, str]) -> None:
         get_status, get_payload = self.request_json("GET", f"/api/v1/namespaces/{namespace}/configmaps/{name}")
 
@@ -520,11 +537,13 @@ def build_node_request_footprint(pods: list[dict]) -> tuple[dict[str, dict[str, 
     return per_node, total_cpu_m, total_mem_mi
 
 
-def write_outputs(report: dict, markdown: str) -> None:
+def write_outputs(report: dict, markdown: str, extras: dict[str, str] | None = None) -> None:
     output_dir = Path(os.getenv("OUTPUT_DIR", "/tmp/resource-advisor"))
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "latest.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     (output_dir / "latest.md").write_text(markdown)
+    for filename, content in (extras or {}).items():
+        (output_dir / filename).write_text(content)
     log(f"Wrote local outputs to {output_dir}")
 
 
@@ -672,7 +691,7 @@ def ensure_pull_request(
     base_branch: str,
     title: str,
     body: str,
-) -> None:
+) -> dict:
     owner, _ = repository.split("/", 1)
     pulls_url = f"https://api.github.com/repos/{repository}/pulls"
     head_query = urllib.parse.quote(f"{owner}:{head_branch}", safe="")
@@ -688,15 +707,16 @@ def ensure_pull_request(
         update_status, update_resp = github_request("PATCH", update_url, token, update_payload)
         if update_status in (200, 201):
             log(f"Updated existing PR for branch {head_branch}: {pr.get('html_url')}")
+            return {"status": "updated", "number": number, "url": pr.get("html_url")}
         else:
             log(
                 "Failed to update existing PR metadata for branch "
                 f"{head_branch}: {update_status} {update_resp}"
             )
-        return
+            return {"status": "update_failed", "number": number, "url": pr.get("html_url"), "error": update_resp}
     if existing_status != 200:
         log(f"Failed checking existing PRs: {existing_status} {existing}")
-        return
+        return {"status": "lookup_failed", "error": existing}
 
     payload = {
         "title": title,
@@ -707,9 +727,10 @@ def ensure_pull_request(
     create_status, created = github_request("POST", pulls_url, token, payload)
     if create_status not in (200, 201):
         log(f"Failed to create PR: {create_status} {created}")
-        return
+        return {"status": "create_failed", "error": created}
 
     log(f"Created PR: {created.get('html_url')}")
+    return {"status": "created", "number": created.get("number"), "url": created.get("html_url")}
 
 
 def estimate_coverage_days(prom: PromClient) -> float:
@@ -1128,7 +1149,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     min_days_upsize = env_float("MIN_DATA_DAYS_FOR_UPSIZE", 14.0)
     min_days_downsize = env_float("MIN_DATA_DAYS_FOR_DOWNSIZE", 14.0)
 
-    allowlist_default = ",".join(sorted(APP_TEMPLATE_RELEASE_FILE_MAP.keys()))
+    allowlist_default = ",".join(DEFAULT_APPLY_ALLOWLIST)
     allowlist = set(env_list("APPLY_ALLOWLIST", allowlist_default))
 
     # Phase 2 (Capacity-Aware v2):
@@ -1171,6 +1192,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     downsizes = []
     upsizes = []
     skipped = []
+    next_up: list[dict] = []
 
     def placement_counts_for(item: dict) -> dict[str, int]:
         placement = (item.get("placement") or {}) if isinstance(item.get("placement"), dict) else {}
@@ -1182,6 +1204,20 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             first = sorted(node_alloc.keys())[0]
             return {first: safe_int(item.get("replicas"), 1)}
         return {}
+
+    def queue_next_up(item: dict, reason: str) -> None:
+        if len(next_up) >= 10:
+            return
+        next_up.append(
+            {
+                "release": item.get("release"),
+                "container": item.get("container"),
+                "current": item.get("current"),
+                "recommended": item.get("recommended"),
+                "notes": list(item.get("notes") or []),
+                "queue_reason": reason,
+            }
+        )
 
     def apply_item_to_projection(
         proj_by_node: dict[str, dict[str, float]],
@@ -1405,6 +1441,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         for item in candidates:
             if len(selected) >= max_changes:
                 skipped.append({"reason": "max_changes_reached", "release": item["release"], "container": item["container"]})
+                queue_next_up(item, selection_reason)
                 continue
 
             test = apply_item_to_projection(projected_by_node, item)
@@ -1426,8 +1463,12 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
 
     projected_cpu_m, projected_mem_mi = totals_from_by_node(projected_by_node)
     final_fit_ok, final_fit = check_fit(projected_by_node)
+    selected_reason_counts = count_by(selected, "selection_reason")
+    skipped_reason_counts = count_by(skipped, "reason")
+    planning_generated_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     plan = {
+        "preflight_generated_at": planning_generated_at,
         "generated_at": report.get("generated_at"),
         "metrics_window": report.get("metrics_window"),
         "metrics_coverage_days_estimate": coverage_days,
@@ -1484,7 +1525,10 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                 for name in sorted(node_alloc.keys())
             ],
         },
+        "selected_reason_counts": selected_reason_counts,
+        "skipped_reason_counts": skipped_reason_counts,
         "selected": selected,
+        "next_up": next_up,
         "skipped": skipped,
     }
 
@@ -1495,6 +1539,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         f"- Metrics window: `{plan['metrics_window']}`",
         f"- Coverage estimate: `{coverage_days}` days",
         f"- Selected changes: **{len(selected)}**",
+        f"- Next up queue: **{len(next_up)}**",
         f"- Skipped candidates: **{len(skipped)}**",
         "",
         "## Node Constraint Gates",
@@ -1541,15 +1586,35 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         md_lines.extend(["## Selected Changes", "", "No changes selected for apply in this run."])
 
     md_lines.append("")
+    md_lines.append("## Next Up Queue")
+    md_lines.append("")
+    if next_up:
+        md_lines.extend(
+            [
+                "| Release | Container | CPU req | CPU new | Mem req | Mem new | Queue reason |",
+                "|---|---|---:|---:|---:|---:|---|",
+            ]
+        )
+        for item in next_up:
+            md_lines.append(
+                "| {release} | {container} | {cur_cpu} | {new_cpu} | {cur_mem} | {new_mem} | {reason} |".format(
+                    release=item.get("release"),
+                    container=item.get("container"),
+                    cur_cpu=(item.get("current") or {}).get("requests", {}).get("cpu"),
+                    new_cpu=(item.get("recommended") or {}).get("requests", {}).get("cpu"),
+                    cur_mem=(item.get("current") or {}).get("requests", {}).get("memory"),
+                    new_mem=(item.get("recommended") or {}).get("requests", {}).get("memory"),
+                    reason=str(item.get("queue_reason") or "").replace("_", " "),
+                )
+            )
+    else:
+        md_lines.append("No queued candidates remain after the current selection limit.")
+
+    md_lines.append("")
     md_lines.append("## Skipped Candidates")
     md_lines.append("")
-    skip_reason_counts: dict[str, int] = {}
-    for item in skipped:
-        reason = item.get("reason", "unknown")
-        skip_reason_counts[reason] = skip_reason_counts.get(reason, 0) + 1
-
-    if skip_reason_counts:
-        for reason, count in sorted(skip_reason_counts.items()):
+    if skipped_reason_counts:
+        for reason, count in sorted(skipped_reason_counts.items()):
             md_lines.append(f"- `{reason}`: {count}")
     else:
         md_lines.append("- none")
@@ -1557,6 +1622,30 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     md_lines.append("")
 
     return plan, "\n".join(md_lines) + "\n"
+
+
+def append_apply_execution_markdown(markdown: str, execution: dict | None) -> str:
+    execution = execution or {}
+    lines = [
+        markdown.rstrip(),
+        "",
+        "## Apply Execution",
+        "",
+        f"- Executed at: `{execution.get('executed_at', 'n/a')}`",
+        f"- Status: `{execution.get('status', 'unknown')}`",
+    ]
+    if execution.get("head_branch"):
+        lines.append(f"- Head branch: `{execution.get('head_branch')}`")
+    if execution.get("pr_url"):
+        lines.append(f"- Pull request: `{execution.get('pr_url')}`")
+    if execution.get("patched_paths"):
+        lines.append(
+            "- Patched paths: " + ", ".join(f"`{path}`" for path in execution.get("patched_paths") or [])
+        )
+    if execution.get("error"):
+        lines.append(f"- Error: `{execution.get('error')}`")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def describe_tune_action(item: dict) -> str:
@@ -1624,32 +1713,45 @@ def build_apply_branch_name(branch_hint: str, plan: dict) -> str:
     return branch
 
 
-def open_or_update_apply_pr(report: dict, plan: dict) -> None:
+def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
+    result = {
+        "mode": "apply-pr",
+        "status": "unknown",
+        "selected_count": len(plan.get("selected", [])),
+        "executed_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    }
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if not token:
         log("GITHUB_TOKEN is not set; skipping apply PR mode work")
-        return
+        result["status"] = "token_missing"
+        return result
 
     selected = plan.get("selected", [])
     if not selected:
         log("No selected recommendations for apply mode; skipping PR")
-        return
+        result["status"] = "no_selected_changes"
+        return result
 
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
     head_branch_hint = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
+    result.update({"repository": repository, "base_branch": base_branch})
 
     if "/" not in repository:
         log(f"Invalid GITHUB_REPOSITORY: {repository}")
-        return
+        result["status"] = "invalid_repository"
+        return result
 
     head_branch = build_apply_branch_name(head_branch_hint, plan)
     log(f"Using apply PR branch: {head_branch}")
+    result["head_branch"] = head_branch
 
     if not ensure_branch(repository, base_branch, head_branch, token):
-        return
+        result["status"] = "branch_prepare_failed"
+        return result
 
     changed = False
+    changed_paths: list[str] = []
 
     grouped: dict[str, list[dict]] = {}
     for item in selected:
@@ -1693,12 +1795,16 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
             commit_message="resource-advisor: apply safe resource tuning",
         )
         changed = file_changed or changed
+        if file_changed:
+            changed_paths.append(path)
 
     if not changed:
         log("No repository changes for apply mode; skipping PR")
-        return
+        result["status"] = "no_repo_changes"
+        return result
 
     title = build_apply_pr_title(plan)
+    result["title"] = title
     skip_reason_counts: dict[str, int] = {}
     for item in plan.get("skipped", []):
         reason = item.get("reason", "unknown")
@@ -1828,7 +1934,7 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
     ]
     body = "".join(body_parts)
 
-    ensure_pull_request(
+    pr_result = ensure_pull_request(
         repository=repository,
         token=token,
         head_branch=head_branch,
@@ -1836,6 +1942,15 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
         title=title,
         body=body,
     )
+    result["status"] = str(pr_result.get("status") or "unknown")
+    result["patched_paths"] = changed_paths
+    if pr_result.get("number") is not None:
+        result["pr_number"] = pr_result.get("number")
+    if pr_result.get("url"):
+        result["pr_url"] = pr_result.get("url")
+    if pr_result.get("error"):
+        result["error"] = pr_result.get("error")
+    return result
 
 
 def main() -> int:
@@ -1845,26 +1960,53 @@ def main() -> int:
 
     log(f"Starting resource advisor in mode={mode}")
     report, report_md = build_report()
+    apply_plan = None
+    apply_plan_md = ""
+    apply_execution = None
 
-    write_outputs(report, report_md)
+    if mode == "apply-pr":
+        apply_plan, apply_plan_md = build_apply_plan(report)
+        apply_execution = open_or_update_apply_pr(report, apply_plan)
+        apply_plan["execution"] = apply_execution
+        apply_plan_md = append_apply_execution_markdown(apply_plan_md, apply_execution)
+        write_outputs(
+            report,
+            report_md,
+            extras={
+                "apply-plan.json": json.dumps(apply_plan, indent=2, sort_keys=True) + "\n",
+                "apply-plan.md": apply_plan_md,
+            },
+        )
+    else:
+        write_outputs(report, report_md)
 
     kube = KubeClient()
-    kube.upsert_configmap(
-        namespace=configmap_namespace,
-        name=configmap_name,
-        data={
+    existing_data = kube.get_configmap_data(configmap_namespace, configmap_name)
+    data = dict(existing_data)
+    data.update(
+        {
             "latest.json": json.dumps(report, indent=2, sort_keys=True),
             "latest.md": report_md,
             "lastRunAt": report.get("generated_at", ""),
             "mode": mode,
-        },
+        }
+    )
+    if apply_plan is not None:
+        data.update(
+            {
+                "apply-plan.json": json.dumps(apply_plan, indent=2, sort_keys=True),
+                "apply-plan.md": apply_plan_md,
+                "applyLastRunAt": str((apply_execution or {}).get("executed_at") or report.get("generated_at") or ""),
+            }
+        )
+    kube.upsert_configmap(
+        namespace=configmap_namespace,
+        name=configmap_name,
+        data=data,
     )
 
     if mode == "pr":
         log("Mode=pr is disabled. Reports are published to ConfigMap only.")
-    elif mode == "apply-pr":
-        plan, _ = build_apply_plan(report)
-        open_or_update_apply_pr(report, plan)
 
     log("Resource advisor run completed")
     return 0
