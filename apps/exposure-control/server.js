@@ -3020,8 +3020,7 @@ function renderCombinedCockpitHtml() {
         color: var(--text-1);
         transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
       }
-      button,
-      .nav-pill {
+      button {
         min-height: 38px;
         padding: 0 16px;
         display: inline-flex;
@@ -3033,7 +3032,6 @@ function renderCombinedCockpitHtml() {
         border-radius: 4px;
       }
       button:hover,
-      .nav-pill:hover,
       .control-select:hover,
       .search-shell:hover,
       .search-shell:focus-within {
@@ -3041,14 +3039,21 @@ function renderCombinedCockpitHtml() {
         background: var(--bg-hover);
       }
       .nav-pill {
+        display: inline-flex;
+        align-items: center;
         min-height: auto;
         padding: 0 0 10px;
         border: none;
-        border-radius: 0;
-        background: transparent;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
         justify-content: flex-start;
         color: var(--text-2);
         position: relative;
+        line-height: 1.2;
+      }
+      .nav-pill:hover {
+        color: var(--text-1);
       }
       .nav-pill.active {
         color: var(--text-1);
