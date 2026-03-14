@@ -4,8 +4,8 @@
 This component provides policy-driven resource tuning recommendations for the homelab cluster.
 
 - Phase 1: report-only analysis (daily CronJob) published to Kubernetes ConfigMap.
-- Phase 2: capacity-aware apply planning (node-fit simulation, headroom checks, and tradeoff recommendations).
-- Phase 3: safe apply PR generation with budget and data-maturity gates (weekly CronJob).
+- Phase 2: capacity-aware apply planning (live pod footprint, hard node-fit simulation, and advisory cluster posture).
+- Phase 3: safe apply PR generation with maturity gates and hard node-capacity blocking (weekly CronJob).
 
 Report PR generation is intentionally disabled to keep the repository clean.
 
@@ -21,7 +21,7 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
   - does not create branches or PRs
 - `resource-advisor-apply-pr` (`batch/v1 CronJob`, namespace `monitoring`)
   - runs weekly (`03:30` Monday, timezone `Asia/Singapore`)
-  - computes safe, budget-aware apply plan
+  - computes safe, per-service apply plan
   - creates a unique `tune/...` branch from the latest `master`
   - opens one apply PR per run when eligible changes exist
   - applies only allowlisted HelmRelease resource changes
@@ -33,7 +33,7 @@ Apply PR cleanliness:
 - only HelmRelease resource diffs are committed
 - no generated `docs/resource-advisor/*.json` or `*.md` artifacts are committed
 - all rationale is embedded in the PR description
-- PR description includes deadband, budget/headroom, node-fit snapshot, selected changes, skipped reason summary, and tradeoff recommendations when upsizes are blocked
+- PR description includes deadband, advisory cluster posture, node-fit snapshot, selected changes, and skipped reason summary
 
 ## GitOps Paths
 - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/`
@@ -45,6 +45,7 @@ Apply PR cleanliness:
 - Served by: `monitoring/resource-advisor-exporter`
 - Purpose:
   - dense operator UI for the latest runtime-owned report,
+  - live apply preflight snapshot from the same report plus current cluster state,
   - filterable recommendation table,
   - budget posture and policy guardrails,
   - direct links to `/latest.json`, `/latest.md`, and `/metrics`
@@ -62,15 +63,14 @@ Apply PR cleanliness:
 - Current requests/limits from workload specs.
 
 ## Node Constraint Awareness
-The report and apply planner are constrained by node capacity:
+The report and apply planner are aware of cluster posture, but the hard safety gate is node capacity:
 - Uses allocatable node CPU/memory from Kubernetes API.
-- Phase 2 uses live pod request footprint (Kubernetes API) for headroom checks (includes replicas and all namespaces).
-- Phase 2 runs a node-fit simulation based on current pod placement to reduce single-node saturation risk.
-- Enforces apply budget ceilings:
+- Phase 2 uses live pod request footprint (Kubernetes API) for planner context (includes replicas and all namespaces).
+- Phase 2 runs a node-fit simulation based on current pod placement and blocks only changes that would exceed allocatable node capacity.
+- Advisory request ceilings are still computed and shown in the report/UI:
   - `MAX_REQUESTS_PERCENT_CPU` (default 60%)
   - `MAX_REQUESTS_PERCENT_MEMORY` (default 65%)
-
-This prevents unconstrained upsize drift and helps keep the cluster schedulable.
+- Advisory pressure does not hard-freeze safe right-sizing changes; it only influences selection order and operator visibility.
 
 ## Data Maturity Gates
 Prometheus can be recently deployed and data may be immature.
@@ -107,6 +107,10 @@ Operational expectation:
 - Memory downscaling is blocked when restart activity is detected.
 - High-variance workloads can be excluded from automatic downscaling.
 - Apply mode is allowlisted to app-template-backed releases only.
+- Current live apply selection order is:
+  - upsizes that do not worsen an active advisory pressure dimension
+  - safe mature downsizes
+  - remaining safe upsizes under advisory pressure
 
 ## Current Apply Scope Policy
 Auto-apply (Phase 3 PR commits) is currently enabled for:
@@ -139,6 +143,13 @@ Repository artifacts:
 - Phase 3 apply PR branch updates only:
   - selected HelmRelease resource blocks for allowlisted apps
   - no generated report/apply JSON or Markdown artifacts are committed
+
+Live exporter-only surfaces:
+- `https://tuning.khzaw.dev` computes an in-memory apply preflight snapshot on refresh.
+- Prometheus metrics include:
+  - `resource_advisor_apply_plan_selected_total`
+  - `resource_advisor_apply_advisory_cpu_pressure`
+  - `resource_advisor_apply_advisory_memory_pressure`
 
 ## Schedules
 - `resource-advisor-report`: daily at `02:30` (`Asia/Singapore`).
@@ -186,10 +197,11 @@ kubectl get jobs -n monitoring | rg resource-advisor
 
 ## Workflow After Phase 3
 1. Phase 1 keeps publishing visibility reports to `monitoring/resource-advisor-latest`.
-2. Phase 3 proposes safe, budget-constrained HelmRelease updates in a dedicated apply PR.
-3. Apply PR description contains decision rationale, constraints, and skip reasons.
-4. Operator reviews and merges the apply PR.
-5. Flux reconciles and applies.
-6. Next cycles adjust incrementally from new baseline.
+2. The exporter shows a live apply preflight view using the current report and cluster footprint.
+3. Phase 3 proposes safe, node-fit-checked HelmRelease updates in a dedicated apply PR.
+4. Apply PR description contains decision rationale, constraints, and skip reasons.
+5. Operator reviews and merges the apply PR.
+6. Flux reconciles and applies.
+7. Next cycles adjust incrementally from new baseline.
 
 This keeps tuning iterative, auditable, and bounded by node constraints.
