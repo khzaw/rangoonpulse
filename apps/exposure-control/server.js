@@ -2898,20 +2898,20 @@ function renderCombinedCockpitHtml() {
     <title>rangoonpulse operator cockpit</title>
     <style>
       :root {
-        --bg-base: #0c0c0c;
-        --bg-surface: #141414;
-        --bg-surface-soft: #121212;
-        --bg-hover: rgba(255, 255, 255, 0.028);
-        --text-1: #e8e8e8;
-        --text-2: #888888;
-        --text-3: #555555;
-        --text-dim: #6b6b6b;
-        --border: rgba(255, 255, 255, 0.07);
-        --border-strong: rgba(255, 255, 255, 0.14);
-        --accent: #79b8ff;
-        --green: #3fb950;
-        --yellow: #d29922;
-        --red: #f85149;
+        --bg-base: #060606;
+        --bg-panel: rgba(255, 255, 255, 0.018);
+        --bg-panel-strong: rgba(255, 255, 255, 0.028);
+        --bg-hover: rgba(255, 255, 255, 0.035);
+        --text-1: #ededed;
+        --text-2: #8e8e8e;
+        --text-3: #626262;
+        --text-dim: #5f5f5f;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-strong: rgba(255, 255, 255, 0.16);
+        --accent: #1f6feb;
+        --green: #34d399;
+        --yellow: #fbbf24;
+        --red: #fb7185;
         --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
       }
@@ -2924,14 +2924,17 @@ function renderCombinedCockpitHtml() {
       }
       html {
         min-height: 100%;
-        background: #0b0b0b;
+        background: #050505;
       }
       body {
         min-height: 100vh;
         background:
-          radial-gradient(1200px 600px at 8% -20%, rgba(121, 184, 255, 0.08), transparent 56%),
-          radial-gradient(1000px 520px at 92% -30%, rgba(63, 185, 80, 0.07), transparent 62%),
-          linear-gradient(180deg, #0b0b0b 0%, var(--bg-base) 46%, #0b0b0b 100%);
+          linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          radial-gradient(900px 420px at 50% -15%, rgba(31, 111, 235, 0.08), transparent 62%),
+          linear-gradient(180deg, #040404 0%, var(--bg-base) 48%, #050505 100%);
+        background-size: 148px 148px, 148px 148px, auto, auto;
+        background-position: -1px -1px, -1px -1px, center top, center;
         background-attachment: fixed, fixed, fixed;
         color: var(--text-1);
         font-family: var(--font-sans);
@@ -2952,7 +2955,7 @@ function renderCombinedCockpitHtml() {
         top: 0;
         z-index: 20;
         border-bottom: 1px solid var(--border);
-        background: rgba(11, 11, 11, 0.9);
+        background: rgba(5, 5, 5, 0.92);
         backdrop-filter: blur(8px);
       }
       .topbar-inner,
@@ -2976,7 +2979,7 @@ function renderCombinedCockpitHtml() {
       .brand-mark {
         width: 22px;
         height: 22px;
-        border: 1px solid var(--border-strong);
+        border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 999px;
         display: inline-flex;
         align-items: center;
@@ -2984,25 +2987,16 @@ function renderCombinedCockpitHtml() {
         color: var(--text-1);
         font-size: 11px;
       }
-      .env-pill,
-      .nav-pill,
-      .status-chip,
-      .note-pill,
-      .stat-pill,
-      .badge,
-      .update-chip {
+      .env-pill {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 3px 8px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        gap: 6px;
+        padding: 3px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.09);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.018);
+        background: transparent;
         text-transform: lowercase;
-      }
-      .env-pill {
         color: var(--text-2);
-        letter-spacing: 0;
         font-size: 11px;
       }
       .top-actions,
@@ -3011,7 +3005,6 @@ function renderCombinedCockpitHtml() {
       .toolbar-right,
       .filter-group,
       .controls,
-      .stat-pills,
       .notes-cell,
       .policy-grid {
         display: flex;
@@ -3019,34 +3012,26 @@ function renderCombinedCockpitHtml() {
         align-items: center;
         flex-wrap: wrap;
       }
-      .top-button,
       button,
-      .nav-pill,
       .control-select,
       .search-shell {
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        background: rgba(255, 255, 255, 0.018);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.01);
         color: var(--text-1);
         transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
       }
-      .top-button,
       button,
       .nav-pill {
-        min-height: 34px;
-        padding: 0 14px;
+        min-height: 38px;
+        padding: 0 16px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
       }
       button {
         cursor: pointer;
-        border-radius: 10px;
+        border-radius: 4px;
       }
-      .nav-pill {
-        border-radius: 999px;
-        color: var(--text-2);
-      }
-      .top-button:hover,
       button:hover,
       .nav-pill:hover,
       .control-select:hover,
@@ -3055,21 +3040,40 @@ function renderCombinedCockpitHtml() {
         border-color: var(--border-strong);
         background: var(--bg-hover);
       }
-      .top-button.active,
+      .nav-pill {
+        min-height: auto;
+        padding: 0 0 10px;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        justify-content: flex-start;
+        color: var(--text-2);
+        position: relative;
+      }
       .nav-pill.active {
-        border-color: rgba(121, 184, 255, 0.35);
-        background: rgba(121, 184, 255, 0.08);
-        color: #d7ebff;
+        color: var(--text-1);
+      }
+      .nav-pill::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 1px;
+        background: transparent;
+      }
+      .nav-pill.active::after {
+        background: var(--accent);
       }
       button.danger {
-        color: #ffd3d0;
-        border-color: rgba(248, 81, 73, 0.28);
+        color: #ffd5dc;
+        border-color: rgba(251, 113, 133, 0.22);
       }
       button.mode-active,
       button.filter-btn.active {
-        border-color: rgba(121, 184, 255, 0.35);
-        background: rgba(121, 184, 255, 0.08);
-        color: #d7ebff;
+        border-color: rgba(31, 111, 235, 0.45);
+        background: rgba(31, 111, 235, 0.08);
+        color: var(--text-1);
       }
       button:disabled {
         opacity: 0.5;
@@ -3080,12 +3084,13 @@ function renderCombinedCockpitHtml() {
       }
       .hero {
         display: block;
-        margin-bottom: 18px;
+        margin-bottom: 30px;
       }
       .hero h1 {
-        font-size: 34px;
+        font-size: 38px;
         letter-spacing: -0.04em;
         line-height: 1;
+        font-weight: 500;
       }
       .hero-subtitle,
       .section-copy,
@@ -3101,16 +3106,14 @@ function renderCombinedCockpitHtml() {
         color: var(--text-2);
       }
       .hero-subtitle {
-        margin-top: 8px;
-        max-width: 920px;
+        margin-top: 10px;
+        max-width: 760px;
       }
       .section {
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.018);
-        backdrop-filter: blur(8px);
-        margin-bottom: 18px;
-        overflow: hidden;
+        background: transparent;
+        border: none;
+        margin-bottom: 40px;
+        overflow: visible;
       }
       .section[hidden] {
         display: none;
@@ -3125,15 +3128,18 @@ function renderCombinedCockpitHtml() {
         justify-content: space-between;
         gap: 14px;
         align-items: center;
-        padding: 18px 22px;
+        padding: 0 0 16px;
         border-bottom: 1px solid var(--border);
       }
       .section-nav {
-        margin-bottom: 18px;
+        gap: 18px;
+        margin-bottom: 34px;
+        padding-bottom: 2px;
+        border-bottom: 1px solid var(--border);
       }
       .section-heading {
         font-size: 18px;
-        font-weight: 600;
+        font-weight: 500;
         letter-spacing: -0.02em;
         text-transform: lowercase;
       }
@@ -3144,11 +3150,15 @@ function renderCombinedCockpitHtml() {
       .overview-strip {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        border-bottom: 1px solid var(--border);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-panel);
+        overflow: hidden;
       }
       .overview-segment {
-        padding: 22px;
+        padding: 26px 28px;
         border-right: 1px solid var(--border);
+        min-height: 186px;
       }
       .overview-segment:last-child {
         border-right: none;
@@ -3165,25 +3175,26 @@ function renderCombinedCockpitHtml() {
       .focus-card-title {
         color: var(--text-3);
         text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-size: 10px;
+        letter-spacing: 0.16em;
+        font-size: 11px;
+        font-family: var(--font-mono);
       }
       .overview-value {
-        margin-top: 12px;
-        font-size: 27px;
+        margin-top: 18px;
+        font-size: 40px;
         line-height: 1;
         letter-spacing: -0.04em;
+        font-weight: 300;
       }
       .overview-subtitle {
-        margin-top: 8px;
-        min-height: 34px;
+        margin-top: 12px;
+        min-height: 40px;
         color: var(--text-2);
       }
       .overview-meter {
-        margin-top: 14px;
-        height: 3px;
+        margin-top: 28px;
+        height: 1px;
         background: rgba(255, 255, 255, 0.06);
-        border-radius: 999px;
         overflow: hidden;
       }
       .overview-meter-fill {
@@ -3204,6 +3215,7 @@ function renderCombinedCockpitHtml() {
       .overview-meta-row {
         border-bottom: none;
         align-items: flex-start;
+        padding: 16px 0 0;
       }
       .overview-meta-cluster {
         display: flex;
@@ -3212,20 +3224,20 @@ function renderCombinedCockpitHtml() {
         color: var(--text-2);
       }
       .content-block {
-        padding: 18px 22px 22px;
+        padding: 18px 0 22px;
       }
       .toolbar {
-        padding-top: 0;
+        padding-top: 18px;
       }
       .control-select {
-        min-height: 36px;
+        min-height: 38px;
         padding: 0 12px;
-        border-radius: 10px;
+        border-radius: 4px;
       }
       .search-shell {
-        min-height: 36px;
+        min-height: 38px;
         padding: 0 12px;
-        border-radius: 10px;
+        border-radius: 4px;
         display: inline-flex;
         align-items: center;
         gap: 10px;
@@ -3245,16 +3257,24 @@ function renderCombinedCockpitHtml() {
       .focus-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-panel);
+        overflow: hidden;
       }
       .support-card,
       .vpn-card {
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.015);
+        border: none;
+        border-radius: 0;
+        background: transparent;
       }
       .support-card {
-        padding: 16px;
+        padding: 20px 24px;
+        border-right: 1px solid var(--border);
+      }
+      .support-card:last-child {
+        border-right: none;
       }
       .focus-list {
         list-style: none;
@@ -3271,6 +3291,9 @@ function renderCombinedCockpitHtml() {
       .audit-scroll,
       .terminal-shell {
         overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-panel);
       }
       table {
         width: 100%;
@@ -3286,12 +3309,13 @@ function renderCombinedCockpitHtml() {
       th {
         position: sticky;
         top: 0;
-        background: rgba(15, 15, 15, 0.96);
+        background: rgba(8, 8, 8, 0.98);
         color: var(--text-2);
-        text-transform: lowercase;
-        letter-spacing: 0;
-        font-size: 12px;
-        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 11px;
+        font-weight: 400;
+        font-family: var(--font-mono);
       }
       .badge,
       .status-chip,
@@ -3299,55 +3323,63 @@ function renderCombinedCockpitHtml() {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        font-weight: 500;
       }
       .badge::before,
       .status-chip::before,
       .update-chip::before {
         content: "";
-        width: 7px;
-        height: 7px;
+        width: 8px;
+        height: 8px;
         border-radius: 999px;
         background: currentColor;
-      }
-      .badge,
-      .status-chip {
-        padding: 4px 9px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.02);
       }
       .badge.on,
       .status-chip.ok {
         color: var(--green);
-        border-color: rgba(63, 185, 80, 0.24);
-        background: rgba(63, 185, 80, 0.08);
       }
       .badge.off,
       .status-chip.danger {
         color: var(--red);
-        border-color: rgba(248, 81, 73, 0.22);
-        background: rgba(248, 81, 73, 0.08);
       }
       .status-chip.warning {
         color: var(--yellow);
-        border-color: rgba(210, 153, 34, 0.24);
-        background: rgba(210, 153, 34, 0.08);
+      }
+      .stat-pills {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .note-pill,
+      .stat-pill {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--text-2);
+        text-transform: lowercase;
       }
       .note-pill.guarded,
       .stat-pill.guarded {
         color: var(--yellow);
-        border-color: rgba(210, 153, 34, 0.24);
       }
       .note-pill.excluded,
       .stat-pill.excluded {
         color: var(--red);
-        border-color: rgba(248, 81, 73, 0.24);
       }
       .stat-pill.ok {
         color: var(--green);
-        border-color: rgba(63, 185, 80, 0.24);
       }
       .stat-pill strong {
         color: var(--text-1);
+        font-weight: 500;
       }
       .svc-name,
       .vpn-title,
@@ -3409,20 +3441,21 @@ function renderCombinedCockpitHtml() {
         color: var(--red);
       }
       .vpn-card {
-        padding: 18px 22px 22px;
+        padding: 20px 0 0;
       }
       .msg {
         min-height: 18px;
       }
       .terminal-shell {
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 10px;
         background: #090909;
       }
       .terminal-content {
         padding: 18px;
         display: grid;
         gap: 10px;
+      }
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.014);
       }
       .log-line {
         display: grid;
@@ -3474,6 +3507,13 @@ function renderCombinedCockpitHtml() {
           border-bottom: 1px solid var(--border);
         }
         .overview-segment:last-child {
+          border-bottom: none;
+        }
+        .support-card {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .support-card:last-child {
           border-bottom: none;
         }
       }
