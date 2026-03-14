@@ -47,6 +47,7 @@ class State:
         self.latest_md: str = ""
         self.mode: str = ""
         self.last_run_at: str = ""
+        self.live_restart_stats: dict[str, dict[str, Any]] = {}
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
@@ -59,10 +60,83 @@ class State:
                 "latest_md": self.latest_md,
                 "mode": self.mode,
                 "last_run_at": self.last_run_at,
+                "live_restart_stats": self.live_restart_stats,
             }
 
 
 STATE = State()
+
+
+def _rec_key(namespace: str, workload: str, container: str) -> str:
+    return f"{namespace}/{workload}/{container}"
+
+
+def _collect_live_restart_stats(kube: advisor.KubeClient, report: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    if not report:
+        return {}
+
+    recommendations = [rec for rec in (report.get("recommendations") or []) if isinstance(rec, dict)]
+    namespaces = sorted({str(rec.get("namespace") or "") for rec in recommendations if rec.get("namespace")})
+    if not namespaces:
+        return {}
+
+    pods_by_namespace: dict[str, list[dict[str, Any]]] = {}
+    for namespace in namespaces:
+        status, payload = kube.request_json("GET", f"/api/v1/namespaces/{namespace}/pods")
+        if status != 200:
+            pods_by_namespace[namespace] = []
+            continue
+        pods_by_namespace[namespace] = list((payload or {}).get("items") or [])
+
+    stats: dict[str, dict[str, Any]] = {}
+    for rec in recommendations:
+        namespace = str(rec.get("namespace") or "")
+        workload = str(rec.get("workload") or "")
+        container = str(rec.get("container") or "")
+        kind = str(rec.get("kind") or "deployment").strip().lower()
+        if not namespace or not workload or not container:
+            continue
+
+        key = _rec_key(namespace, workload, container)
+        if key in stats:
+            continue
+
+        kind_plural = "statefulsets" if kind == "statefulset" else "deployments"
+        pod_name_re = re.compile(f"^{advisor.pod_regex_for_workload(workload, kind_plural)}$")
+
+        current_restarts = 0
+        matched_pods = 0
+        newest_start_ts = 0.0
+
+        for pod in pods_by_namespace.get(namespace, []):
+            metadata = (pod.get("metadata") or {}) if isinstance(pod, dict) else {}
+            status = (pod.get("status") or {}) if isinstance(pod, dict) else {}
+            pod_name = str(metadata.get("name") or "")
+            phase = str(status.get("phase") or "")
+            if phase in ("Succeeded", "Failed"):
+                continue
+            if not pod_name_re.match(pod_name):
+                continue
+
+            matched_pods += 1
+            start_ts = _utc_ts(str(status.get("startTime") or metadata.get("creationTimestamp") or ""))
+            if start_ts:
+                newest_start_ts = max(newest_start_ts, start_ts)
+
+            for container_status in status.get("containerStatuses") or []:
+                if not isinstance(container_status, dict):
+                    continue
+                if str(container_status.get("name") or "") != container:
+                    continue
+                current_restarts += int(container_status.get("restartCount") or 0)
+
+        stats[key] = {
+            "current_restarts": current_restarts,
+            "matched_pods": matched_pods,
+            "latest_start_ts": newest_start_ts,
+        }
+
+    return stats
 
 
 def fetch_configmap_once() -> None:
@@ -71,28 +145,35 @@ def fetch_configmap_once() -> None:
     kube = advisor.KubeClient()
 
     status, payload = kube.request_json("GET", f"/api/v1/namespaces/{namespace}/configmaps/{name}")
-    with STATE.lock:
-        STATE.last_fetch_at = time.time()
-        if status != 200:
+    fetched_at = time.time()
+    if status != 200:
+        with STATE.lock:
+            STATE.last_fetch_at = fetched_at
             STATE.last_fetch_ok = False
             STATE.last_error = f"GET configmap {namespace}/{name} failed: {status} {payload}"
-            return
+        return
 
-        data = (payload or {}).get("data", {}) or {}
-        latest_json = str(data.get("latest.json") or "")
-        latest_md = str(data.get("latest.md") or "")
-        mode = str(data.get("mode") or "")
-        last_run_at = str(data.get("lastRunAt") or "")
+    data = (payload or {}).get("data", {}) or {}
+    latest_json = str(data.get("latest.json") or "")
+    latest_md = str(data.get("latest.md") or "")
+    mode = str(data.get("mode") or "")
+    last_run_at = str(data.get("lastRunAt") or "")
 
-        report: dict[str, Any] | None = None
-        if latest_json:
-            try:
-                report = json.loads(latest_json)
-            except Exception as exc:
+    report: dict[str, Any] | None = None
+    if latest_json:
+        try:
+            report = json.loads(latest_json)
+        except Exception as exc:
+            with STATE.lock:
+                STATE.last_fetch_at = fetched_at
                 STATE.last_fetch_ok = False
                 STATE.last_error = f"Failed to parse latest.json: {exc}"
-                return
+            return
 
+    live_restart_stats = _collect_live_restart_stats(kube, report)
+
+    with STATE.lock:
+        STATE.last_fetch_at = fetched_at
         STATE.last_fetch_ok = True
         STATE.last_error = ""
         STATE.report = report
@@ -100,6 +181,7 @@ def fetch_configmap_once() -> None:
         STATE.latest_md = latest_md
         STATE.mode = mode
         STATE.last_run_at = last_run_at
+        STATE.live_restart_stats = live_restart_stats
 
 
 def refresher_loop() -> None:
@@ -302,6 +384,7 @@ def _render_note_pill(note: str, count: int | None = None) -> str:
 def build_index_html() -> str:
     snap = STATE.snapshot()
     report = snap["report"] or {}
+    live_restart_stats = snap.get("live_restart_stats") or {}
     title = "rangoonpulse tuning"
     last_run = str(report.get("generated_at") or snap.get("last_run_at") or "")
     mode = str(report.get("mode") or snap.get("mode") or "")
@@ -386,14 +469,14 @@ def build_index_html() -> str:
     restart_guard_items = []
     for rec in restart_guarded:
         restarts = _fmt_decimal(rec.get("restarts_window") or 0.0, 2)
-        restart_guard_items.append(f"{focus_line(rec, restarts + ' restarts / window')}")
+        restart_guard_items.append(f"{focus_line(rec, restarts + ' historical restarts / 14d')}")
 
     restart_volume_items = []
     for rec in largest_restarts:
         restarts = float(rec.get("restarts_window") or 0.0)
         if restarts <= 0:
             continue
-        restart_volume_items.append(f"{focus_line(rec, _fmt_decimal(restarts, 2) + ' restarts / window')}")
+        restart_volume_items.append(f"{focus_line(rec, _fmt_decimal(restarts, 2) + ' historical restarts / 14d')}")
 
     table_rows: list[str] = []
     for index, rec in enumerate(valid_recs):
@@ -421,6 +504,9 @@ def build_index_html() -> str:
         mem_p95 = _fmt_decimal(rec.get("mem_p95_mi") or 0.0)
         restarts_window = float(rec.get("restarts_window") or 0.0)
         replicas = int(rec.get("replicas") or 0)
+        live_restart = live_restart_stats.get(_rec_key(namespace, workload, container)) or {}
+        current_restarts = int(live_restart.get("current_restarts") or 0)
+        matched_pods = int(live_restart.get("matched_pods") or 0)
 
         search_blob = " ".join(
             [
@@ -474,7 +560,8 @@ def build_index_html() -> str:
               </td>
               <td>
                 <div class="usage-line">{html.escape(_fmt_decimal(restarts_window, 2))}</div>
-                <div class="workload-meta">restart count over advisor window</div>
+                <div class="workload-meta">historical increase over {html.escape(window or 'advisor window')}</div>
+                <div class="workload-meta">current live restarts: {html.escape(str(current_restarts))} on {html.escape(str(matched_pods))} pod(s)</div>
               </td>
               <td><div class="notes-cell">{notes_markup}</div></td>
             </tr>
@@ -1295,7 +1382,7 @@ def build_index_html() -> str:
         <div class="section-bar">
           <div>
             <h2 class="section-heading">recommendation set</h2>
-            <p class="section-copy">filterable live view from the current configmap report.</p>
+            <p class="section-copy">filterable live view from the current configmap report, with live pod restart counts beside historical 14d restart activity.</p>
           </div>
           <a class="primary-button" href="/latest.json">open report</a>
         </div>
@@ -1332,7 +1419,7 @@ def build_index_html() -> str:
                 <th>memory request</th>
                 <th>observed usage</th>
                 <th>basis</th>
-                <th>restarts</th>
+                <th>restart signal</th>
                 <th>notes</th>
               </tr>
             </thead>
@@ -1354,8 +1441,8 @@ def build_index_html() -> str:
         </div>
         <div class="focus-grid">
           {_build_focus_card("largest memory shifts", "absolute request-memory deltas across all recommendations.", biggest_mem_items)}
-          {_build_focus_card("restart-guarded items", "rows where restart activity is directly influencing the advice.", restart_guard_items)}
-          {_build_focus_card("highest restart volume", "most restart-heavy rows in the current advisor window.", restart_volume_items)}
+          {_build_focus_card("restart-guarded items", "rows where historical restart activity is directly influencing the advice.", restart_guard_items)}
+          {_build_focus_card("highest restart volume", "most restart-heavy rows in the historical 14d advisor window.", restart_volume_items)}
         </div>
       </section>
 
