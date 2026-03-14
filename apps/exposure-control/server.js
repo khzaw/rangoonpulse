@@ -2993,6 +2993,7 @@ function renderCombinedCockpitHtml() {
       }
       .top-actions,
       .section-nav,
+      .utility-links,
       .toolbar-left,
       .toolbar-right,
       .filter-group,
@@ -3061,6 +3062,27 @@ function renderCombinedCockpitHtml() {
       }
       .nav-pill.active::after {
         background: var(--accent);
+      }
+      .top-button,
+      .primary-button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-2);
+        text-decoration: none;
+        transition: border-color 120ms ease, background 120ms ease, color 120ms ease, transform 140ms ease;
+      }
+      .top-button:hover,
+      .primary-button:hover {
+        border-color: var(--border-strong);
+        background: var(--bg-hover);
+        color: var(--text-1);
+        transform: translateY(-1px);
+      }
+      .primary-button {
+        color: var(--text-1);
       }
       button.danger {
         color: #ffd5dc;
@@ -3236,6 +3258,9 @@ function renderCombinedCockpitHtml() {
         background: var(--bg-panel);
         overflow: hidden;
       }
+      .overview-strip.tuning-strip {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
       .overview-segment {
         padding: 26px 28px;
         border-right: 1px solid var(--border);
@@ -3344,28 +3369,79 @@ function renderCombinedCockpitHtml() {
         background: var(--bg-panel);
         overflow: hidden;
       }
+      .support-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-panel);
+        overflow: hidden;
+      }
       .support-card,
+      .focus-card,
       .vpn-card {
         border: none;
         border-radius: 0;
         background: transparent;
       }
-      .support-card {
+      .support-card,
+      .focus-card {
         padding: 20px 24px;
         border-right: 1px solid var(--border);
       }
-      .support-card:last-child {
+      .support-card:last-child,
+      .focus-card:last-child {
         border-right: none;
+      }
+      .focus-card-body {
+        display: grid;
+        gap: 10px;
+      }
+      .focus-subtitle {
+        color: var(--text-3);
+        font-size: 12px;
+        line-height: 1.5;
       }
       .focus-list {
         list-style: none;
         display: grid;
         gap: 10px;
       }
+      .focus-list li {
+        display: grid;
+        gap: 2px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .focus-list li:first-child {
+        padding-top: 0;
+        border-top: none;
+      }
       .focus-path {
         display: block;
         color: var(--text-1);
         font-family: var(--font-mono);
+      }
+      .token {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 4px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        color: var(--text-2);
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .token strong {
+        color: var(--text-1);
+        font-weight: 500;
+      }
+      .planner-lead {
+        margin-bottom: 14px;
+      }
+      .planner-lead .policy-grid {
+        margin-top: 14px;
       }
       .table-shell,
       .updates-scroll,
@@ -3649,8 +3725,10 @@ function renderCombinedCockpitHtml() {
           align-items: flex-start;
         }
         .overview-strip,
+        .overview-strip.tuning-strip,
         .planner-grid,
-        .focus-grid {
+        .focus-grid,
+        .support-grid {
           grid-template-columns: 1fr;
         }
         .overview-segment {
@@ -3665,6 +3743,13 @@ function renderCombinedCockpitHtml() {
           border-bottom: 1px solid var(--border);
         }
         .support-card:last-child {
+          border-bottom: none;
+        }
+        .focus-card {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .focus-card:last-child {
           border-bottom: none;
         }
       }
@@ -3734,11 +3819,59 @@ function renderCombinedCockpitHtml() {
           </div>
           <div id="tuningSummary" class="section-detail">Waiting for advisor data...</div>
         </div>
-        <div class="content-block">
-          <div id="tuningStatPills" class="stat-pills"></div>
+        <div class="content-block" style="padding-bottom:0">
+          <div class="section-bar" style="padding:0 0 14px">
+            <div class="utility-links">
+              <a class="top-button" href="https://tuning.khzaw.dev/latest.json" target="_blank" rel="noreferrer">json</a>
+              <a class="top-button" href="https://tuning.khzaw.dev/latest.md" target="_blank" rel="noreferrer">markdown</a>
+              <a class="top-button" href="https://tuning.khzaw.dev/metrics" target="_blank" rel="noreferrer">metrics</a>
+            </div>
+            <a class="primary-button" href="https://tuning.khzaw.dev/latest.json" target="_blank" rel="noreferrer">open report</a>
+          </div>
         </div>
-        <div class="content-block" style="padding-top:0">
+        <div class="content-block">
+          <div id="tuningOverviewStrip" class="overview-strip tuning-strip"></div>
+          <div class="overview-meta-row">
+            <div id="tuningOverviewMeta" class="overview-meta-cluster"></div>
+            <div id="tuningOverviewDetail" class="result-count"></div>
+          </div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">apply preflight</h3>
+            <p class="section-copy">Live selection preview for the weekly apply job, using hard node-fit blocking and advisory cluster pressure ordering.</p>
+          </div>
+          <div id="plannerMeta" class="section-detail">planner unavailable</div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
           <div id="plannerGrid" class="planner-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">recommendation focus</h3>
+            <p class="section-copy">Highest-signal slices from the current advisor window.</p>
+          </div>
+          <div id="tuningFocusMeta" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div id="tuningFocusGrid" class="focus-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">control notes</h3>
+            <p class="section-copy">Planner bounds and recurring note patterns behind the current recommendation set.</p>
+          </div>
+          <div id="tuningControlMeta" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div id="tuningControlGrid" class="support-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">recommendation set</h3>
+            <p class="section-copy">Filterable live view from the current configmap report, with live pod restart counts beside historical 14d restart activity.</p>
+          </div>
+          <div id="tuningTableMeta" class="section-detail"></div>
         </div>
         <div class="toolbar">
           <div class="toolbar-left">
@@ -3769,6 +3902,7 @@ function renderCombinedCockpitHtml() {
                 <th>cpu request</th>
                 <th>memory request</th>
                 <th>observed usage</th>
+                <th>basis</th>
                 <th>restart signal</th>
                 <th>notes</th>
               </tr>
@@ -3902,8 +4036,16 @@ function renderCombinedCockpitHtml() {
       const overviewMetaEl = document.getElementById('overviewMeta');
       const overviewDetailEl = document.getElementById('overviewDetail');
       const tuningSummaryEl = document.getElementById('tuningSummary');
-      const tuningStatPillsEl = document.getElementById('tuningStatPills');
+      const tuningOverviewStripEl = document.getElementById('tuningOverviewStrip');
+      const tuningOverviewMetaEl = document.getElementById('tuningOverviewMeta');
+      const tuningOverviewDetailEl = document.getElementById('tuningOverviewDetail');
+      const plannerMetaEl = document.getElementById('plannerMeta');
       const plannerGridEl = document.getElementById('plannerGrid');
+      const tuningFocusMetaEl = document.getElementById('tuningFocusMeta');
+      const tuningFocusGridEl = document.getElementById('tuningFocusGrid');
+      const tuningControlMetaEl = document.getElementById('tuningControlMeta');
+      const tuningControlGridEl = document.getElementById('tuningControlGrid');
+      const tuningTableMetaEl = document.getElementById('tuningTableMeta');
       const noteFilterEl = document.getElementById('noteFilter');
       const searchInputEl = document.getElementById('searchInput');
       const tuningCountEl = document.getElementById('tuningCount');
@@ -4063,6 +4205,28 @@ function renderCombinedCockpitHtml() {
         return (number > 0 ? '+' : '') + fixed + suffix;
       }
 
+      function parseCpuToM(value) {
+        const text = String(value || '0').trim().toLowerCase();
+        if (!text) return 0;
+        if (text.endsWith('m')) return Number(text.slice(0, -1)) || 0;
+        return (Number(text) || 0) * 1000;
+      }
+
+      function parseMemToMi(value) {
+        const text = String(value || '0').trim();
+        const match = text.match(/^([+-]?\\d+(?:\\.\\d+)?)([A-Za-z]+)?$/);
+        if (!match) return 0;
+        const amount = Number(match[1]) || 0;
+        const unit = String(match[2] || 'Mi');
+        const scale = {
+          Ki: 1 / 1024,
+          Mi: 1,
+          Gi: 1024,
+          Ti: 1024 * 1024,
+        };
+        return amount * (scale[unit] || 1);
+      }
+
       function noteTone(note) {
         const value = String(note || '').toLowerCase();
         if (value.includes('excluded')) return 'excluded';
@@ -4072,6 +4236,23 @@ function renderCombinedCockpitHtml() {
 
       function statPill(label, value, tone) {
         return '<span class="stat-pill ' + (tone || 'neutral') + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
+      }
+
+      function tokenPill(label, value) {
+        return '<span class="token"><span>' + label + '</span><strong>' + value + '</strong></span>';
+      }
+
+      function buildFocusCard(title, subtitle, items) {
+        const rows = Array.isArray(items) && items.length
+          ? items.map((item) => '<li>' + item + '</li>').join('')
+          : '<li><span class="muted">no items in the current snapshot.</span></li>';
+        return (
+          '<article class="focus-card"><div class="focus-card-body">' +
+            '<div class="focus-card-title">' + title + '</div>' +
+            '<div class="focus-subtitle">' + subtitle + '</div>' +
+            '<ul class="focus-list">' + rows + '</ul>' +
+          '</div></article>'
+        );
       }
 
       function overviewSegment(label, value, subtitle, options) {
@@ -4176,8 +4357,18 @@ function renderCombinedCockpitHtml() {
       function renderPlanner(tuning) {
         if (!tuning || !tuning.applyPreflight || !tuning.report) {
           tuningSummaryEl.textContent = 'Advisor data unavailable';
-          tuningStatPillsEl.innerHTML = '';
+          tuningOverviewStripEl.innerHTML = '';
+          tuningOverviewMetaEl.innerHTML = '';
+          tuningOverviewDetailEl.textContent = 'advisor unavailable';
+          plannerMetaEl.textContent = 'planner unavailable';
           plannerGridEl.innerHTML = '<article class="support-card"><div class="support-card-title">apply preflight</div><p class="support-copy">resource-advisor data is unavailable from the exporter.</p></article>';
+          tuningFocusMetaEl.textContent = 'advisor unavailable';
+          tuningFocusGridEl.innerHTML = buildFocusCard('largest memory shifts', 'absolute request-memory deltas across all recommendations.', []);
+          tuningControlMetaEl.textContent = 'advisor unavailable';
+          tuningControlGridEl.innerHTML =
+            '<article class="support-card"><div class="support-card-title">policy guardrails</div><p class="support-copy">no policy data available.</p></article>' +
+            '<article class="support-card"><div class="support-card-title">common notes</div><p class="support-copy">no note data available.</p></article>';
+          tuningTableMetaEl.textContent = '0 recommendations';
           tuningRuntimeMetaEl.textContent = 'advisor unavailable';
           runtimeLinesEl.innerHTML = '<div class="log-line"><span class="log-time">[00]</span><span class="log-level">data</span><span>no advisor markdown available.</span></div>';
           noteFilterEl.innerHTML = '<option value="all">all notes</option>';
@@ -4196,15 +4387,53 @@ function renderCombinedCockpitHtml() {
         const current = apply.currentRequests || {};
         const projected = apply.projectedRequestsAfterSelected || {};
         const noteOptions = Array.isArray(report.topNotes) ? report.topNotes : [];
+        const policy = report.policy || {};
+        const budget = report.budget || {};
+        const currentPct = budget.current_requests_percent_of_allocatable || {};
+        const allocatable = budget.allocatable || {};
+        const coverageDays = Number(report.metricsCoverageDaysEstimate || 0);
+        const metricsWindow = report.metricsWindow || 'advisor window';
+        const selectedCount = Number(apply.selectedCount || 0);
+        const recommendationCount = Number(report.recommendationCount || 0);
+        const summaryWindowLabel = metricsWindow.replace(/^\\s+|\\s+$/g, '');
+        const summaryData = report.summary || {};
+        const currentCpuM = Number(summaryData.total_current_requests_cpu_m || 0);
+        const recommendedCpuM = Number(summaryData.total_recommended_requests_cpu_m || 0);
+        const currentMemMi = Number(summaryData.total_current_requests_memory_mi || 0);
+        const recommendedMemMi = Number(summaryData.total_recommended_requests_memory_mi || 0);
 
-        tuningSummaryEl.textContent = String(report.recommendationCount || 0) + ' recommendations · ' + String(apply.selectedCount || 0) + ' selected now';
-        tuningStatPillsEl.innerHTML =
-          statPill('hard fit', apply.hardFitOk ? 'ok' : 'blocked', apply.hardFitOk ? 'ok' : 'excluded') +
-          statPill('cpu pressure', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'guarded' : 'ok') +
-          statPill('mem pressure', apply.advisoryPressure && apply.advisoryPressure.memory ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.memory ? 'guarded' : 'ok') +
-          statPill('coverage', String(report.metricsCoverageDaysEstimate || 0).replace(/\\.0$/, '') + 'd', 'neutral') +
-          statPill('upsize', String(summary.upsize_count || 0), 'ok') +
-          statPill('downsize', String(summary.downsize_count || 0), 'neutral');
+        tuningSummaryEl.textContent = String(recommendationCount) + ' recommendations · ' + String(selectedCount) + ' selected now';
+        tuningOverviewStripEl.innerHTML =
+          overviewSegment('recommendations', String(recommendationCount), String(summary.upsize_count || 0) + ' upsize, ' + String(summary.downsize_count || 0) + ' downsize, ' + String(summary.no_change_count || 0) + ' steady', {
+            eyebrow: String(summary.containers_with_metrics || 0) + '/' + String(summary.containers_analyzed || 0) + ' with metrics',
+            barPct: Number(summary.containers_analyzed || 0) ? Number(summary.containers_with_metrics || 0) / Number(summary.containers_analyzed || 0) * 100 : 0,
+            tone: 'neutral',
+          }) +
+          overviewSegment('cpu request posture', withUnitSpace(String(Math.round(currentCpuM)) + 'm'), String(currentPct.cpu || 0).replace(/\\.0$/, '') + '% of ' + withUnitSpace(String(allocatable.cpu || 'n/a')) + ' allocatable', {
+            eyebrow: withUnitSpace(fmtSigned(recommendedCpuM - currentCpuM, 'm', 0)),
+            barPct: Number(currentPct.cpu || 0),
+            tone: 'warning',
+          }) +
+          overviewSegment('memory request posture', withUnitSpace(String(Math.round(currentMemMi)) + 'Mi'), String(currentPct.memory || 0).replace(/\\.0$/, '') + '% of ' + withUnitSpace(String(allocatable.memory || 'n/a')) + ' allocatable', {
+            eyebrow: withUnitSpace(fmtSigned(recommendedMemMi - currentMemMi, 'Mi', 0)),
+            barPct: Number(currentPct.memory || 0),
+            tone: 'danger',
+          }) +
+          overviewSegment('planner', selectedCount + ' selected', 'hard fit ' + (apply.hardFitOk ? 'ok' : 'blocked') + ' · cpu pressure ' + (apply.advisoryPressure && apply.advisoryPressure.cpu ? 'on' : 'off'), {
+            eyebrow: 'apply preflight',
+            barPct: recommendationCount ? selectedCount / recommendationCount * 100 : 0,
+            tone: apply.hardFitOk ? 'status' : 'warning',
+          });
+        tuningOverviewMetaEl.innerHTML =
+          '<span>last run ' + fmtDateTime(tuning.fetch && tuning.fetch.lastRunAt) + '</span>' +
+          '<span>browser tz ' + Intl.DateTimeFormat().resolvedOptions().timeZone + '</span>' +
+          '<span>mode ' + (tuning.fetch && tuning.fetch.mode ? tuning.fetch.mode : 'n/a') + '</span>' +
+          '<span>allocatable <strong>' + withUnitSpace(String(allocatable.cpu || 'n/a')) + '</strong> cpu <strong>' + withUnitSpace(String(allocatable.memory || 'n/a')) + '</strong> memory</span>';
+        tuningOverviewDetailEl.textContent = tuning.fetch && tuning.fetch.detail ? tuning.fetch.detail : 'advisor unavailable';
+        plannerMetaEl.textContent = String(selectedCount) + ' selected right now';
+        tuningFocusMetaEl.textContent = withUnitSpace(String(coverageDays).replace(/\\.0$/, '') + 'd') + ' of metrics coverage';
+        tuningControlMetaEl.textContent = String(recommendationCount) + ' total recommendations';
+        tuningTableMetaEl.textContent = String(recommendationCount) + ' visible in current report';
 
         const selectedMarkup = selected.slice(0, 5).map((item) => {
           const currentReq = item && item.current && item.current.requests ? item.current.requests : {};
@@ -4223,9 +4452,58 @@ function renderCombinedCockpitHtml() {
         }).join('');
 
         plannerGridEl.innerHTML =
-          '<article class="support-card"><div class="support-card-title">if apply ran now</div><ul class="focus-list">' + (selectedMarkup || '<li><span class="muted">no changes would be selected from the current report.</span></li>') + '</ul><p class="support-copy">selection uses per-service signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p></article>' +
+          '<article class="support-card"><div class="support-card-title">if apply ran now</div><div class="planner-lead"><div class="policy-grid">' +
+            statPill('hard fit', apply.hardFitOk ? 'ok' : 'blocked', apply.hardFitOk ? 'ok' : 'excluded') +
+            statPill('cpu pressure', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'guarded' : 'ok') +
+            statPill('mem pressure', apply.advisoryPressure && apply.advisoryPressure.memory ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.memory ? 'guarded' : 'ok') +
+          '</div></div><ul class="focus-list">' + (selectedMarkup || '<li><span class="muted">no changes would be selected from the current report.</span></li>') + '</ul><p class="support-copy">selection uses per-service tuning signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p></article>' +
           '<article class="support-card"><div class="support-card-title">planner posture</div><ul class="focus-list">' + postureMarkup + '</ul><p class="support-copy">advisory pressure remains visible, but hard node-fit stays the gate.</p></article>' +
           '<article class="support-card"><div class="support-card-title">skip summary</div><ul class="focus-list">' + (skippedMarkup || '<li><span class="muted">no skipped rows in current snapshot.</span></li>') + '</ul><p class="support-copy">current reasons rows were deferred from the live apply selection order.</p></article>';
+
+        const recommendations = Array.isArray(report.recommendations) ? report.recommendations.slice() : [];
+        const biggestMem = recommendations
+          .slice()
+          .sort((left, right) => {
+            const leftCurrent = left.current && left.current.requests ? left.current.requests : {};
+            const leftRecommended = left.recommended && left.recommended.requests ? left.recommended.requests : {};
+            const rightCurrent = right.current && right.current.requests ? right.current.requests : {};
+            const rightRecommended = right.recommended && right.recommended.requests ? right.recommended.requests : {};
+            return Math.abs(parseMemToMi(rightRecommended.memory) - parseMemToMi(rightCurrent.memory)) - Math.abs(parseMemToMi(leftRecommended.memory) - parseMemToMi(leftCurrent.memory));
+          })
+          .slice(0, 4)
+          .map((row) => {
+            const currentReq = row.current && row.current.requests ? row.current.requests : {};
+            const recommendedReq = row.recommended && row.recommended.requests ? row.recommended.requests : {};
+            const deltaMem = parseMemToMi(recommendedReq.memory) - parseMemToMi(currentReq.memory);
+            return '<span class="focus-path">' + (row.namespace || 'default') + '/' + (row.workload || 'unknown') + '</span><span class="focus-inline">' + (row.container || 'main') + ' · ' + withUnitSpace(fmtSigned(deltaMem, 'Mi', 0)) + ' memory shift</span>';
+          });
+        const restartGuarded = recommendations
+          .filter((row) => Array.isArray(row.notes) && row.notes.includes('restart_guard'))
+          .slice(0, 4)
+          .map((row) => '<span class="focus-path">' + (row.namespace || 'default') + '/' + (row.workload || 'unknown') + '</span><span class="focus-inline">' + (row.container || 'main') + ' · ' + String(row.restarts_window || 0) + ' historical restarts / ' + summaryWindowLabel + '</span>');
+        const highestRestarts = recommendations
+          .slice()
+          .sort((left, right) => Number(right.restarts_window || 0) - Number(left.restarts_window || 0))
+          .slice(0, 4)
+          .map((row) => '<span class="focus-path">' + (row.namespace || 'default') + '/' + (row.workload || 'unknown') + '</span><span class="focus-inline">' + (row.container || 'main') + ' · ' + String(row.restarts_window || 0) + ' historical restarts / ' + summaryWindowLabel + '</span>');
+        tuningFocusGridEl.innerHTML =
+          buildFocusCard('largest memory shifts', 'absolute request-memory deltas across all recommendations.', biggestMem) +
+          buildFocusCard('restart-guarded items', 'rows where historical restart activity is directly influencing the advice.', restartGuarded) +
+          buildFocusCard('highest restart volume', 'most restart-heavy rows in the historical advisor window.', highestRestarts);
+
+        const noteMarkup = noteOptions.length
+          ? noteOptions.map((item) => '<span class="note-pill ' + noteTone(item.note) + '">' + item.note.replace(/_/g, ' ') + ' <strong>' + item.count + '</strong></span>').join('')
+          : '<span class="muted">no recurring notes in the current snapshot.</span>';
+        tuningControlGridEl.innerHTML =
+          '<article class="support-card"><div class="support-card-title">policy guardrails</div><div class="policy-grid">' +
+            tokenPill('step', String(policy.max_step_percent || 0).replace(/\\.0$/, '') + '%') +
+            tokenPill('req buffer', String(policy.request_buffer_percent || 0).replace(/\\.0$/, '') + '%') +
+            tokenPill('limit buffer', String(policy.limit_buffer_percent || 0).replace(/\\.0$/, '') + '%') +
+            tokenPill('deadband', String(policy.deadband_percent || 0).replace(/\\.0$/, '') + '%') +
+            tokenPill('cpu floor', withUnitSpace(String(policy.deadband_cpu_m || 0) + 'm')) +
+            tokenPill('mem floor', withUnitSpace(String(policy.deadband_mem_mi || 0) + 'Mi')) +
+          '</div><p class="support-copy">active tuning bounds applied to each report and apply pass.</p></article>' +
+          '<article class="support-card"><div class="support-card-title">common notes</div><div class="policy-grid">' + noteMarkup + '</div><p class="support-copy">most common skip reasons and advisory annotations in the current window.</p></article>';
 
         noteFilterEl.innerHTML = '<option value="all">all notes</option>' + noteOptions.map((item) => '<option value="' + item.note + '">' + item.note + ' (' + item.count + ')</option>').join('');
         tuningRuntimeMetaEl.textContent = 'window ' + (report.metricsWindow || 'n/a') + ' · last run ' + fmtDateTime(tuning.fetch && tuning.fetch.lastRunAt);
@@ -4268,6 +4546,7 @@ function renderCombinedCockpitHtml() {
             '<td><div class="metric-pair"><span>' + withUnitSpace(currentCpu) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedCpu) + '</span></div><div class="metric-delta ' + (cpuDelta > 0 ? 'positive' : cpuDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(cpuDelta, 'm', 0)) + '</div></td>' +
             '<td><div class="metric-pair"><span>' + withUnitSpace(currentMem) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedMem) + '</span></div><div class="metric-delta ' + (memDelta > 0 ? 'positive' : memDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(memDelta, 'Mi', 0)) + '</div></td>' +
             '<td><div class="usage-line">p95 ' + withUnitSpace(String(row.cpu_p95_m || 0) + 'm') + ' · ' + withUnitSpace(String(row.mem_p95_mi || 0) + 'Mi') + '</div><div class="workload-meta">' + String(row.replicas || 0) + ' replica(s)</div></td>' +
+            '<td><div class="usage-line">' + withUnitSpace(String((tuning.report && tuning.report.metricsCoverageDaysEstimate) || 0).replace(/\\.0$/, '') + 'd') + '</div><div class="workload-meta">' + ((tuning.report && tuning.report.metricsWindow) || 'advisor window') + '</div></td>' +
             '<td><div class="usage-line">' + String(row.restarts_window || 0) + ' historical / 14d</div><div class="workload-meta">current live restarts: ' + String(row.current_restarts || 0) + ' on ' + String(row.matched_pods || 0) + ' pod(s)</div></td>' +
             '<td><div class="notes-cell">' + notesMarkup + '</div></td>';
           tuningRowsEl.appendChild(tr);
