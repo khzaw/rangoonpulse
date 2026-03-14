@@ -16,6 +16,12 @@ spec:
   install: {remediation: {retries: 3}}
   upgrade: {remediation: {retries: 3}}
   values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
     controllers:
       main:
         strategy: Recreate
@@ -52,6 +58,12 @@ spec:
               limits:
                 cpu: "100m"
                 memory: "40Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: false
     service:
       main:
         ports:
