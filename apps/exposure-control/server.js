@@ -4599,7 +4599,7 @@ function renderCombinedCockpitHtml() {
             const opt = document.createElement('option');
             opt.value = mode;
             opt.textContent = mode === 'cloudflare-access' ? 'cf-access' : mode;
-            if (mode === svc.defaultAuthMode) opt.selected = true;
+            if (mode === 'none') opt.selected = true;
             authSelect.appendChild(opt);
           });
 
