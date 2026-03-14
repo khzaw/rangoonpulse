@@ -2899,9 +2899,9 @@ function renderCombinedCockpitHtml() {
     <style>
       :root {
         --bg-base: #060606;
-        --bg-panel: rgba(255, 255, 255, 0.018);
-        --bg-panel-strong: rgba(255, 255, 255, 0.028);
-        --bg-hover: rgba(255, 255, 255, 0.035);
+        --bg-panel: #0d0d0d;
+        --bg-panel-strong: #111111;
+        --bg-hover: #141414;
         --text-1: #ededed;
         --text-2: #8e8e8e;
         --text-3: #626262;
@@ -2928,14 +2928,7 @@ function renderCombinedCockpitHtml() {
       }
       body {
         min-height: 100vh;
-        background:
-          linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-          radial-gradient(900px 420px at 50% -15%, rgba(31, 111, 235, 0.08), transparent 62%),
-          linear-gradient(180deg, #040404 0%, var(--bg-base) 48%, #050505 100%);
-        background-size: 148px 148px, 148px 148px, auto, auto;
-        background-position: -1px -1px, -1px -1px, center top, center;
-        background-attachment: fixed, fixed, fixed;
+        background: var(--bg-base);
         color: var(--text-1);
         font-family: var(--font-sans);
         font-size: 13px;
@@ -2955,8 +2948,7 @@ function renderCombinedCockpitHtml() {
         top: 0;
         z-index: 20;
         border-bottom: 1px solid var(--border);
-        background: rgba(5, 5, 5, 0.92);
-        backdrop-filter: blur(8px);
+        background: #050505;
       }
       .topbar-inner,
       main {
@@ -3016,7 +3008,7 @@ function renderCombinedCockpitHtml() {
       .control-select,
       .search-shell {
         border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(255, 255, 255, 0.01);
+        background: #0f0f0f;
         color: var(--text-1);
         transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
       }
@@ -3314,7 +3306,7 @@ function renderCombinedCockpitHtml() {
       th {
         position: sticky;
         top: 0;
-        background: rgba(8, 8, 8, 0.98);
+        background: #080808;
         color: var(--text-2);
         text-transform: uppercase;
         letter-spacing: 0.16em;
@@ -3452,7 +3444,7 @@ function renderCombinedCockpitHtml() {
         min-height: 18px;
       }
       .terminal-shell {
-        background: #090909;
+        background: #0a0a0a;
       }
       .terminal-content {
         padding: 18px;
