@@ -22,6 +22,7 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
 - `resource-advisor-apply-pr` (`batch/v1 CronJob`, namespace `monitoring`)
   - runs weekly (`03:30` Monday, timezone `Asia/Singapore`)
   - computes safe, per-service apply plan
+  - persists `apply-plan.json`, `apply-plan.md`, and `applyLastRunAt` into ConfigMap `monitoring/resource-advisor-latest`
   - creates a unique `tune/...` branch from the latest `master`
   - opens one apply PR per run when eligible changes exist
   - applies only allowlisted HelmRelease resource changes
@@ -48,6 +49,8 @@ Apply PR cleanliness:
   - provide tuning data for the combined operator cockpit,
   - power the combined operator cockpit without merging backends,
   - expose live apply preflight snapshot data from the same report plus current cluster state,
+  - expose the most recent persisted apply execution alongside the live preflight,
+  - expose next-up candidates and next scheduled apply timing,
   - expose raw/report endpoints through the cockpit:
     - `https://controlpanel.khzaw.dev/api/tuning/latest.json`
     - `https://controlpanel.khzaw.dev/api/tuning/latest.md`
@@ -74,6 +77,9 @@ The report and apply planner are aware of cluster posture, but the hard safety g
   - `MAX_REQUESTS_PERCENT_CPU` (default 60%)
   - `MAX_REQUESTS_PERCENT_MEMORY` (default 65%)
 - Advisory pressure does not hard-freeze safe right-sizing changes; it only influences selection order and operator visibility.
+- Report posture and live apply footprint are intentionally shown as separate scopes:
+  - report scope = recommendation-scoped totals from the current advisor snapshot
+  - apply scope = live whole-cluster pod requests + current placement used for preflight simulation
 
 ## Data Maturity Gates
 Prometheus can be recently deployed and data may be immature.
@@ -110,6 +116,8 @@ Operational expectation:
 - Memory downscaling is blocked when restart activity is detected.
 - High-variance workloads can be excluded from automatic downscaling.
 - Apply mode is allowlisted to app-template-backed releases only.
+- The auto-apply allowlist defaults to `APP_TEMPLATE_RELEASE_FILE_MAP` in `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/advisor.py`.
+  - `APPLY_ALLOWLIST` can still override it, but the default source of truth is now the advisor mapping itself.
 - Current live apply selection order is:
   - upsizes that do not worsen an active advisory pressure dimension
   - safe mature downsizes
@@ -136,6 +144,9 @@ The latest report is written to ConfigMap:
   - `latest.md`
   - `lastRunAt`
   - `mode`
+  - `apply-plan.json`
+  - `apply-plan.md`
+  - `applyLastRunAt`
 
 Important:
 - `resource-advisor-latest` is runtime state owned by the CronJobs. It should not be reconciled by Flux, or it will
@@ -149,11 +160,20 @@ Repository artifacts:
 
 Live exporter-only surfaces:
 - `resource-advisor-exporter.monitoring.svc.cluster.local:8081` computes an in-memory apply preflight snapshot on refresh.
+- The same exporter also serves persisted apply artifacts directly:
+  - `/apply-plan.json`
+  - `/apply-plan.md`
 - `https://controlpanel.khzaw.dev/api/tuning` exposes the structured tuning payload consumed by the cockpit UI.
 - Prometheus metrics include:
   - `resource_advisor_apply_plan_selected_total`
   - `resource_advisor_apply_advisory_cpu_pressure`
   - `resource_advisor_apply_advisory_memory_pressure`
+  - `resource_advisor_apply_preflight_generated_timestamp_seconds`
+  - `resource_advisor_apply_preflight_selected_by_reason`
+  - `resource_advisor_apply_preflight_skipped_by_reason`
+  - `resource_advisor_apply_preflight_next_up_total`
+  - `resource_advisor_apply_next_run_timestamp_seconds`
+  - `resource_advisor_apply_last_run_selected_total`
 
 ## Schedules
 - `resource-advisor-report`: daily at `02:30` (`Asia/Singapore`).
@@ -190,9 +210,12 @@ kubectl get prometheus -n monitoring kube-prometheus-stack-prometheus -o yaml | 
 # Inspect latest report in-cluster
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
 
+# Confirm exporter can read the apply CronJob schedule
+kubectl auth can-i get cronjobs.batch -n monitoring --as=system:serviceaccount:monitoring:resource-advisor
+
 # Open the UI / raw surfaces
 curl -I --max-time 20 https://controlpanel.khzaw.dev#tuning
-curl -s https://controlpanel.khzaw.dev/api/tuning | jq '.fetch,.applyPreflight.selectedCount'
+curl -s https://controlpanel.khzaw.dev/api/tuning | jq '.fetch,.applyPreflight.selectedCount,.lastApply.status,.schedule.nextRunAt'
 curl -s https://controlpanel.khzaw.dev/api/tuning/latest.json | jq '.summary,.budget'
 curl -s https://controlpanel.khzaw.dev/api/tuning/metrics | rg '^resource_advisor_'
 

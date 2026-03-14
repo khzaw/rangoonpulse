@@ -367,6 +367,7 @@ Important external-dns behavior:
   - `resource-advisor-apply-pr`:
     - weekly run at `03:30` Monday (`Asia/Singapore`)
     - apply-PR mode with data-maturity guards, hard node-fit blocking, and advisory cluster posture ordering
+    - persists `apply-plan.json`, `apply-plan.md`, and `applyLastRunAt` into the same runtime ConfigMap
     - creates unique `tune/...` branches from latest `master`
     - supports multiple simultaneous recommendation branches/PRs
 - Report PR flow is disabled by design.
@@ -377,7 +378,14 @@ Important external-dns behavior:
   - apply planner uses live pod request footprint + current pod placement for node-fit simulation and blocks only on allocatable node capacity; advisory CPU/memory request ceilings remain informational and influence ordering only
   - `controlpanel.khzaw.dev` now renders the combined tuning view for operators, using `resource-advisor` JSON from the
     separate exporter backend
+  - the operator UI separates:
+    - live preflight = current report + live cluster footprint
+    - last real apply run = persisted apply artifact from the weekly CronJob
+  - the exporter also publishes next-up candidates, selected/skipped reason counts, and the next scheduled apply time
   - the public `tuning.khzaw.dev` hostname has been removed; use cockpit proxies for raw report endpoints when needed
+  - default auto-apply allowlist is derived from `APP_TEMPLATE_RELEASE_FILE_MAP` in
+    `infrastructure/resource-advisor/advisor.py`; only override with `APPLY_ALLOWLIST` when intentionally narrowing or
+    widening the default scope
   - current auto-apply scope includes:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
@@ -396,6 +404,7 @@ Important external-dns behavior:
 - Troubleshooting sequence:
   - `flux get kustomizations`
   - `kubectl get cronjobs -n monitoring | rg resource-advisor`
+  - `kubectl auth can-i get cronjobs.batch -n monitoring --as=system:serviceaccount:monitoring:resource-advisor`
   - `kubectl get jobs -n monitoring | rg resource-advisor`
   - `kubectl logs -n monitoring job/<job-name>`
   - `kubectl get configmap resource-advisor-latest -n monitoring -o yaml`
