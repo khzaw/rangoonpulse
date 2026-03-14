@@ -48,6 +48,7 @@ class State:
         self.mode: str = ""
         self.last_run_at: str = ""
         self.live_restart_stats: dict[str, dict[str, Any]] = {}
+        self.apply_plan: dict[str, Any] | None = None
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
@@ -61,6 +62,7 @@ class State:
                 "mode": self.mode,
                 "last_run_at": self.last_run_at,
                 "live_restart_stats": self.live_restart_stats,
+                "apply_plan": self.apply_plan,
             }
 
 
@@ -171,6 +173,12 @@ def fetch_configmap_once() -> None:
             return
 
     live_restart_stats = _collect_live_restart_stats(kube, report)
+    apply_plan: dict[str, Any] | None = None
+    if report:
+        try:
+            apply_plan, _ = advisor.build_apply_plan(report)
+        except Exception as exc:
+            advisor.log(f"Exporter failed to build apply plan snapshot: {exc}")
 
     with STATE.lock:
         STATE.last_fetch_at = fetched_at
@@ -182,6 +190,7 @@ def fetch_configmap_once() -> None:
         STATE.mode = mode
         STATE.last_run_at = last_run_at
         STATE.live_restart_stats = live_restart_stats
+        STATE.apply_plan = apply_plan
 
 
 def refresher_loop() -> None:
@@ -213,6 +222,7 @@ def _prom_line(name: str, labels: dict[str, str] | None, value: float) -> str:
 def build_metrics() -> str:
     snap = STATE.snapshot()
     report = snap["report"] or {}
+    apply_plan = snap.get("apply_plan") or {}
 
     metrics: list[str] = []
     metrics.append("# HELP resource_advisor_exporter_up Exporter process is running.\n")
@@ -247,6 +257,21 @@ def build_metrics() -> str:
     metrics.append("# HELP resource_advisor_recommendations_total Total recommendations in the latest report.\n")
     metrics.append("# TYPE resource_advisor_recommendations_total gauge\n")
     metrics.append(_prom_line("resource_advisor_recommendations_total", None, recs_len))
+
+    selected = apply_plan.get("selected") if isinstance(apply_plan, dict) else None
+    if isinstance(selected, list):
+        metrics.append("# HELP resource_advisor_apply_plan_selected_total Changes the planner would select right now.\n")
+        metrics.append("# TYPE resource_advisor_apply_plan_selected_total gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_plan_selected_total", None, float(len(selected))))
+
+    advisory_pressure = apply_plan.get("advisory_pressure") if isinstance(apply_plan, dict) else None
+    if isinstance(advisory_pressure, dict):
+        metrics.append("# HELP resource_advisor_apply_advisory_cpu_pressure Whether advisory CPU pressure is currently active.\n")
+        metrics.append("# TYPE resource_advisor_apply_advisory_cpu_pressure gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_advisory_cpu_pressure", None, 1.0 if advisory_pressure.get("cpu") else 0.0))
+        metrics.append("# HELP resource_advisor_apply_advisory_memory_pressure Whether advisory memory pressure is currently active.\n")
+        metrics.append("# TYPE resource_advisor_apply_advisory_memory_pressure gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_advisory_memory_pressure", None, 1.0 if advisory_pressure.get("memory") else 0.0))
 
     by_action: dict[str, int] = {}
     for r in recs:
@@ -366,6 +391,13 @@ def _build_focus_card(title: str, subtitle: str, items: list[str]) -> str:
     """
 
 
+def _build_stat_pill(label: str, value: str, tone: str = "neutral") -> str:
+    return (
+        f'<span class="stat-pill {html.escape(tone)}"><span>{html.escape(label)}</span>'
+        f"<strong>{html.escape(value)}</strong></span>"
+    )
+
+
 def _note_kind(note: str) -> str:
     normalized = note.strip().lower()
     if "excluded" in normalized:
@@ -385,6 +417,7 @@ def build_index_html() -> str:
     snap = STATE.snapshot()
     report = snap["report"] or {}
     live_restart_stats = snap.get("live_restart_stats") or {}
+    apply_plan = snap.get("apply_plan") or {}
     title = "rangoonpulse tuning"
     last_run = str(report.get("generated_at") or snap.get("last_run_at") or "")
     mode = str(report.get("mode") or snap.get("mode") or "")
@@ -417,6 +450,22 @@ def build_index_html() -> str:
     alloc = budget.get("allocatable") or {}
     cur_pct = budget.get("current_requests_percent_of_allocatable") or {}
     rec_pct = budget.get("recommended_requests_percent_of_allocatable") or {}
+    plan_selected = [item for item in (apply_plan.get("selected") or []) if isinstance(item, dict)]
+    plan_skipped = [item for item in (apply_plan.get("skipped") or []) if isinstance(item, dict)]
+    plan_budgets = apply_plan.get("budgets") or {}
+    plan_current = apply_plan.get("current_requests") or {}
+    plan_projected = apply_plan.get("projected_requests_after_selected") or {}
+    advisory_pressure = apply_plan.get("advisory_pressure") or {}
+    node_fit = apply_plan.get("node_fit") or {}
+    selected_count = len(plan_selected)
+    hard_fit_ok = bool(node_fit.get("hard_fit_ok")) if isinstance(node_fit, dict) else False
+    pressure_cpu = bool(advisory_pressure.get("cpu")) if isinstance(advisory_pressure, dict) else False
+    pressure_mem = bool(advisory_pressure.get("memory")) if isinstance(advisory_pressure, dict) else False
+
+    skip_reason_counts: dict[str, int] = {}
+    for item in plan_skipped:
+        reason = str(item.get("reason") or "unknown")
+        skip_reason_counts[reason] = skip_reason_counts.get(reason, 0) + 1
 
     note_counts: dict[str, int] = {}
     for rec in recs:
@@ -582,6 +631,48 @@ def build_index_html() -> str:
 
     note_html = "".join(_render_note_pill(note, count) for note, count in top_notes) or '<span class="muted">no note annotations in current report.</span>'
 
+    def planner_line(item: dict[str, Any]) -> str:
+        release = str(item.get("release") or "unknown")
+        container = str(item.get("container") or "main")
+        current_req = (item.get("current") or {}).get("requests") or {}
+        recommended_req = (item.get("recommended") or {}).get("requests") or {}
+        cpu_line = f"{_with_unit_space(current_req.get('cpu') or '0m')} → {_with_unit_space(recommended_req.get('cpu') or '0m')}"
+        mem_line = f"{_with_unit_space(current_req.get('memory') or '0Mi')} → {_with_unit_space(recommended_req.get('memory') or '0Mi')}"
+        reason = str(item.get("selection_reason") or "selected")
+        return (
+            f"<span class=\"focus-path\">{html.escape(release)}/{html.escape(container)}</span>"
+            f"<span class=\"focus-inline\">cpu {html.escape(cpu_line)} · mem {html.escape(mem_line)} · {html.escape(reason.replace('_', ' '))}</span>"
+        )
+
+    planner_selected_items = [planner_line(item) for item in plan_selected[:5]]
+
+    pressure_pills = "".join(
+        [
+            _build_stat_pill("selected now", str(selected_count), "neutral"),
+            _build_stat_pill("hard fit", "ok" if hard_fit_ok else "blocked", "ok" if hard_fit_ok else "excluded"),
+            _build_stat_pill("cpu pressure", "on" if pressure_cpu else "off", "guarded" if pressure_cpu else "ok"),
+            _build_stat_pill("mem pressure", "on" if pressure_mem else "off", "guarded" if pressure_mem else "ok"),
+        ]
+    )
+
+    current_plan_cpu = _with_unit_space(f"{_fmt_decimal(plan_current.get('cpu_m'))}m")
+    current_plan_mem = _with_unit_space(f"{_fmt_decimal(plan_current.get('memory_mi'))}Mi")
+    projected_plan_cpu = _with_unit_space(f"{_fmt_decimal(plan_projected.get('cpu_m'))}m")
+    projected_plan_mem = _with_unit_space(f"{_fmt_decimal(plan_projected.get('memory_mi'))}Mi")
+    advisory_plan_cpu = _with_unit_space(f"{_fmt_decimal(plan_budgets.get('cpu_m'))}m")
+    advisory_plan_mem = _with_unit_space(f"{_fmt_decimal(plan_budgets.get('memory_mi'))}Mi")
+
+    posture_items = [
+        f"<span class=\"focus-path\">current requests</span><span class=\"focus-inline\">cpu {html.escape(current_plan_cpu)} · mem {html.escape(current_plan_mem)}</span>",
+        f"<span class=\"focus-path\">projected after selection</span><span class=\"focus-inline\">cpu {html.escape(projected_plan_cpu)} · mem {html.escape(projected_plan_mem)}</span>",
+        f"<span class=\"focus-path\">advisory ceilings</span><span class=\"focus-inline\">cpu {html.escape(advisory_plan_cpu)} · mem {html.escape(advisory_plan_mem)}</span>",
+    ] if apply_plan else []
+
+    skip_summary_items = [
+        f"<span class=\"focus-path\">{html.escape(reason.replace('_', ' '))}</span><span class=\"focus-inline\">{count} row(s)</span>"
+        for reason, count in sorted(skip_reason_counts.items(), key=lambda item: (-item[1], item[0]))[:5]
+    ]
+
     try:
         window_days = float(str(window).rstrip("d")) if str(window).endswith("d") else 0.0
     except Exception:
@@ -615,21 +706,45 @@ def build_index_html() -> str:
                 tone="memory",
             ),
             _build_overview_segment(
-                "fetcher",
-                "healthy" if fetch_state == "live" else "degraded",
-                f"window {window or 'n/a'} · coverage {_with_unit_space(f'{_fmt_decimal(coverage_days)}d')}",
-                eyebrow=(mode or "report").replace("-", " "),
-                bar_pct=100.0 if fetch_state == "live" else coverage_pct,
-                tone="status" if fetch_state == "live" else "warning",
+                "planner",
+                f"{selected_count} selected" if apply_plan else "pending",
+                (
+                    f"hard fit {'ok' if hard_fit_ok else 'blocked'} · "
+                    f"cpu pressure {'on' if pressure_cpu else 'off'}"
+                    if apply_plan
+                    else "waiting for planner snapshot"
+                ),
+                eyebrow="apply preflight",
+                bar_pct=(selected_count / max(1, rec_count) * 100.0) if apply_plan else (100.0 if fetch_state == "live" else coverage_pct),
+                tone="status" if apply_plan and hard_fit_ok else "warning" if apply_plan else ("status" if fetch_state == "live" else "warning"),
             ),
         ]
     )
+
+    planner_cards = f"""
+      <article class="support-card">
+        <div class="support-card-title">if apply ran now</div>
+        <div class="policy-grid">{pressure_pills}</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in planner_selected_items) if planner_selected_items else '<li><span class="muted">no changes would be selected from the current report.</span></li>'}</ul>
+        <p class="support-copy">selection uses per-service tuning signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p>
+      </article>
+      <article class="support-card">
+        <div class="support-card-title">planner posture</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in posture_items) if posture_items else '<li><span class="muted">planner snapshot unavailable.</span></li>'}</ul>
+        <p class="support-copy">global cpu and memory remain visible as advisory ceilings, but they no longer hard-freeze safe right-sizing changes.</p>
+      </article>
+      <article class="support-card">
+        <div class="support-card-title">skip summary</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in skip_summary_items) if skip_summary_items else '<li><span class="muted">no skipped rows in current planner snapshot.</span></li>'}</ul>
+        <p class="support-copy">current reasons rows were deferred from the live apply selection order.</p>
+      </article>
+    """
 
     support_cards = f"""
       <article class="support-card">
         <div class="support-card-title">policy guardrails</div>
         <div class="policy-grid">{policy_html}</div>
-        <p class="support-copy">active planner bounds applied to each report and apply pass.</p>
+        <p class="support-copy">active tuning bounds applied to each report and apply pass.</p>
       </article>
       <article class="support-card">
         <div class="support-card-title">common notes</div>
@@ -639,7 +754,7 @@ def build_index_html() -> str:
     """
 
     status_copy = (
-        "Budget-aware recommendation view from the runtime-owned advisor report."
+        "Per-service tuning view from the runtime-owned advisor report, with hard node-fit blocking and advisory cluster posture."
         if report
         else "No parsed report is currently available from the runtime ConfigMap."
     )
@@ -1156,6 +1271,11 @@ def build_index_html() -> str:
       .support-grid {{
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }}
+      .planner-grid {{
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }}
       .focus-card-body,
       .support-card,
       .terminal-shell {{
@@ -1198,6 +1318,37 @@ def build_index_html() -> str:
         flex-wrap: wrap;
         gap: 10px 14px;
         margin-top: 12px;
+      }}
+      .stat-pill {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border-active);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }}
+      .stat-pill strong {{
+        color: var(--text-primary);
+        font-weight: 500;
+      }}
+      .stat-pill.ok {{
+        color: var(--success);
+        border-color: rgba(63, 185, 80, 0.28);
+        background: rgba(63, 185, 80, 0.08);
+      }}
+      .stat-pill.guarded {{
+        color: var(--warn);
+        border-color: rgba(210, 153, 34, 0.28);
+        background: rgba(210, 153, 34, 0.08);
+      }}
+      .stat-pill.excluded {{
+        color: var(--danger);
+        border-color: rgba(248, 81, 73, 0.28);
+        background: rgba(248, 81, 73, 0.08);
       }}
       .token {{
         color: var(--text-secondary);
@@ -1243,6 +1394,9 @@ def build_index_html() -> str:
       .support-copy {{
         margin-top: 12px;
       }}
+      .planner-list {{
+        margin-top: 14px;
+      }}
       .terminal-content {{
         display: flex;
         flex-direction: column;
@@ -1287,6 +1441,7 @@ def build_index_html() -> str:
       @media (max-width: 1024px) {{
         .overview-strip,
         .focus-grid,
+        .planner-grid,
         .support-grid {{
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }}
@@ -1314,6 +1469,7 @@ def build_index_html() -> str:
       @media (max-width: 700px) {{
         .overview-strip,
         .focus-grid,
+        .planner-grid,
         .support-grid {{
           grid-template-columns: 1fr;
         }}
@@ -1375,6 +1531,19 @@ def build_index_html() -> str:
             <span>allocatable <strong>{html.escape(_with_unit_space(alloc.get('cpu') or 'n/a'))}</strong> cpu <strong>{html.escape(_with_unit_space(alloc.get('memory') or 'n/a'))}</strong> memory</span>
           </div>
           <div class="result-count">{html.escape(fetch_detail)}</div>
+        </div>
+      </section>
+
+      <section id="apply-preflight" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">apply preflight</h2>
+            <p class="section-copy">live selection preview for the weekly apply job, using hard node-fit blocking and advisory cluster pressure ordering.</p>
+          </div>
+          <div class="section-detail">{selected_count} selected right now</div>
+        </div>
+        <div class="planner-grid">
+          {planner_cards}
         </div>
       </section>
 
