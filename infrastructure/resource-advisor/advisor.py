@@ -1165,6 +1165,9 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         name: node_alloc[name]["mem_mi"] * (mem_budget_pct / 100.0) for name in node_alloc
     }
 
+    advisory_cpu_pressure = current_cpu_m > cpu_budget_m + 0.01
+    advisory_mem_pressure = current_mem_mi > mem_budget_mi + 0.01
+
     downsizes = []
     upsizes = []
     skipped = []
@@ -1207,27 +1210,34 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         details = {
             "total_cpu_m": round(total_cpu, 1),
             "total_mem_mi": round(total_mem, 1),
-            "cpu_budget_m": round(cpu_budget_m, 1),
-            "mem_budget_mi": round(mem_budget_mi, 1),
-            "over_total_cpu_m": round(max(0.0, total_cpu - cpu_budget_m), 1),
-            "over_total_mem_mi": round(max(0.0, total_mem - mem_budget_mi), 1),
-            "over_by_node": {},
+            "advisory_cpu_budget_m": round(cpu_budget_m, 1),
+            "advisory_mem_budget_mi": round(mem_budget_mi, 1),
+            "over_advisory_cpu_m": round(max(0.0, total_cpu - cpu_budget_m), 1),
+            "over_advisory_mem_mi": round(max(0.0, total_mem - mem_budget_mi), 1),
+            "hard_over_by_node": {},
+            "advisory_over_by_node": {},
         }
 
         ok = True
-        if total_cpu > cpu_budget_m + 0.01 or total_mem > mem_budget_mi + 0.01:
-            ok = False
 
         for name in node_alloc:
             cpu = float((by_node.get(name) or {}).get("cpu_m", 0.0) or 0.0)
             mem = float((by_node.get(name) or {}).get("mem_mi", 0.0) or 0.0)
-            over_cpu = max(0.0, cpu - node_cpu_budget.get(name, 0.0))
-            over_mem = max(0.0, mem - node_mem_budget.get(name, 0.0))
-            if over_cpu > 0.01 or over_mem > 0.01:
+            hard_over_cpu = max(0.0, cpu - node_alloc.get(name, {}).get("cpu_m", 0.0))
+            hard_over_mem = max(0.0, mem - node_alloc.get(name, {}).get("mem_mi", 0.0))
+            advisory_over_cpu = max(0.0, cpu - node_cpu_budget.get(name, 0.0))
+            advisory_over_mem = max(0.0, mem - node_mem_budget.get(name, 0.0))
+
+            if hard_over_cpu > 0.01 or hard_over_mem > 0.01:
                 ok = False
-                details["over_by_node"][name] = {
-                    "over_cpu_m": round(over_cpu, 1),
-                    "over_mem_mi": round(over_mem, 1),
+                details["hard_over_by_node"][name] = {
+                    "over_cpu_m": round(hard_over_cpu, 1),
+                    "over_mem_mi": round(hard_over_mem, 1),
+                }
+            if advisory_over_cpu > 0.01 or advisory_over_mem > 0.01:
+                details["advisory_over_by_node"][name] = {
+                    "over_cpu_m": round(advisory_over_cpu, 1),
+                    "over_mem_mi": round(advisory_over_mem, 1),
                 }
 
         return ok, details
@@ -1304,11 +1314,13 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                 "requests_cpu_m_total": round(delta_cpu * float(replicas_estimate), 1),
                 "requests_memory_mi_total": round(delta_mem * float(replicas_estimate), 1),
             },
-            "priority": (
-                1 if "restart_guard" in notes else 0,
-                rec.get("restarts_window", 0),
-                abs(delta_mem * float(replicas_estimate)) + abs((delta_cpu * float(replicas_estimate)) / 10.0),
-            ),
+            "priority": {
+                "restart_guard": 1 if "restart_guard" in notes else 0,
+                "restarts_window": float(rec.get("restarts_window", 0.0) or 0.0),
+                "impact_score": abs(delta_mem * float(replicas_estimate)) + abs((delta_cpu * float(replicas_estimate)) / 10.0),
+                "cpu_non_increasing": 1 if delta_cpu <= 0.0 else 0,
+                "mem_non_increasing": 1 if delta_mem <= 0.0 else 0,
+            },
         }
 
         is_upsize = delta_cpu > 0 or delta_mem > 0
@@ -1345,12 +1357,24 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         downsizes.append(item)
 
     downsizes.sort(
-        key=lambda x: -(
-            abs(x["delta"].get("requests_memory_mi_total", 0.0))
-            + abs(x["delta"].get("requests_cpu_m_total", 0.0) / 10.0)
+        key=lambda x: (
+            -max(0.0, -(x["delta"].get("requests_cpu_m_total", 0.0) or 0.0)) if advisory_cpu_pressure else 0.0,
+            -max(0.0, -(x["delta"].get("requests_memory_mi_total", 0.0) or 0.0)) if advisory_mem_pressure else 0.0,
+            -(
+                abs(x["delta"].get("requests_memory_mi_total", 0.0))
+                + abs(x["delta"].get("requests_cpu_m_total", 0.0) / 10.0)
+            ),
         )
     )
-    upsizes.sort(key=lambda x: (-x["priority"][0], -x["priority"][1], -x["priority"][2]))
+    upsizes.sort(
+        key=lambda x: (
+            -x["priority"]["restart_guard"],
+            -x["priority"]["cpu_non_increasing"] if advisory_cpu_pressure else 0,
+            -x["priority"]["mem_non_increasing"] if advisory_mem_pressure else 0,
+            -x["priority"]["restarts_window"],
+            -x["priority"]["impact_score"],
+        )
+    )
 
     # Start projected state from live pod request footprint (node-aware).
     projected_by_node = {name: {"cpu_m": 0.0, "mem_mi": 0.0} for name in node_alloc}
@@ -1360,123 +1384,48 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
 
     selected: list[dict] = []
 
-    def tradeoff_score(down: dict, over: dict) -> float:
-        # Higher score means this downsize reduces the current overages more effectively.
-        cpu_save = max(0.0, -(float(down.get("delta", {}).get("requests_cpu_m_total", 0.0) or 0.0)))
-        mem_save = max(0.0, -(float(down.get("delta", {}).get("requests_memory_mi_total", 0.0) or 0.0)))
-        score = 0.0
-
-        over_cpu = float(over.get("over_total_cpu_m", 0.0) or 0.0)
-        over_mem = float(over.get("over_total_mem_mi", 0.0) or 0.0)
-        if over_cpu > 0.0:
-            score += min(cpu_save, over_cpu) / over_cpu
-        if over_mem > 0.0:
-            score += min(mem_save, over_mem) / over_mem
-
-        # Bonus for targeting node-level overages where the downsize actually runs.
-        by_node = over.get("over_by_node", {}) or {}
-        placement = placement_counts_for(down)
-        delta_cpu_per = float(down.get("delta", {}).get("requests_cpu_m", 0.0) or 0.0)
-        delta_mem_per = float(down.get("delta", {}).get("requests_memory_mi", 0.0) or 0.0)
-        for node, node_over in by_node.items():
-            if node not in placement:
-                continue
-            node_over_cpu = float((node_over or {}).get("over_cpu_m", 0.0) or 0.0)
-            node_over_mem = float((node_over or {}).get("over_mem_mi", 0.0) or 0.0)
-            cpu_save_node = max(0.0, -(delta_cpu_per * float(placement[node])))
-            mem_save_node = max(0.0, -(delta_mem_per * float(placement[node])))
-            if node_over_cpu > 0.0:
-                score += min(cpu_save_node, node_over_cpu) / max(1.0, node_over_cpu)
-            if node_over_mem > 0.0:
-                score += min(mem_save_node, node_over_mem) / max(1.0, node_over_mem)
-
-        return score
-
-    # Tradeoff-first planner:
-    # 1) Try to select highest priority upsizes.
-    # 2) If an upsize doesn't fit, attempt to add a minimal set of downsizes to make it fit.
-    # 3) Fill remaining slots with biggest safe downsizes.
-    remaining_downsizes = list(downsizes)
-
+    pressure_friendly_upsizes: list[dict] = []
+    deferred_upsizes: list[dict] = []
     for up in upsizes:
-        if len(selected) >= max_changes:
-            skipped.append({"reason": "max_changes_reached", "release": up["release"], "container": up["container"]})
-            continue
+        delta = up.get("delta", {})
+        grows_cpu = float(delta.get("requests_cpu_m_total", 0.0) or 0.0) > 0.0
+        grows_mem = float(delta.get("requests_memory_mi_total", 0.0) or 0.0) > 0.0
+        if (advisory_cpu_pressure and grows_cpu) or (advisory_mem_pressure and grows_mem):
+            deferred_upsizes.append(up)
+        else:
+            pressure_friendly_upsizes.append(up)
 
-        test_with_up = apply_item_to_projection(projected_by_node, up)
-        ok, over = check_fit(test_with_up)
-        if ok:
-            projected_by_node = test_with_up
-            up["selection_reason"] = "upsize_within_budget_and_node_fit"
-            selected.append(up)
-            continue
+    selection_order = [
+        ("upsize_with_node_fit", pressure_friendly_upsizes),
+        ("downsize_with_mature_data", downsizes),
+        ("upsize_with_node_fit_under_advisory_pressure", deferred_upsizes),
+    ]
 
-        # Try to pick tradeoff downsizes that reduce the current overages until the upsize fits.
-        tradeoff_selected: list[dict] = []
-        test_base = {k: {"cpu_m": v["cpu_m"], "mem_mi": v["mem_mi"]} for k, v in projected_by_node.items()}
-        candidates = [d for d in remaining_downsizes]
-        remaining_slots_for_tradeoff = max_changes - len(selected) - 1
+    for selection_reason, candidates in selection_order:
+        for item in candidates:
+            if len(selected) >= max_changes:
+                skipped.append({"reason": "max_changes_reached", "release": item["release"], "container": item["container"]})
+                continue
 
-        while candidates and remaining_slots_for_tradeoff > 0:
-            candidates.sort(key=lambda d: tradeoff_score(d, over), reverse=True)
-            best = candidates[0]
-            best_score = tradeoff_score(best, over)
-            if best_score <= 0.0:
-                break
+            test = apply_item_to_projection(projected_by_node, item)
+            ok, fit = check_fit(test)
+            if not ok:
+                skipped.append(
+                    {
+                        "reason": "node_capacity_block",
+                        "release": item["release"],
+                        "container": item["container"],
+                        "fit": fit,
+                    }
+                )
+                continue
 
-            test_base = apply_item_to_projection(test_base, best)
-            remaining_slots_for_tradeoff -= 1
-            tradeoff_selected.append(best)
-            candidates = [d for d in candidates if not (d["release"] == best["release"] and d["container"] == best["container"])]
-
-            test_with_up = apply_item_to_projection(test_base, up)
-            ok, over = check_fit(test_with_up)
-            if ok:
-                break
-
-        if ok:
-            for d in tradeoff_selected:
-                d["selection_reason"] = f"tradeoff_downsize_to_enable_{up['release']}"
-                selected.append(d)
-                remaining_downsizes = [x for x in remaining_downsizes if not (x["release"] == d["release"] and x["container"] == d["container"])]
-            projected_by_node = test_with_up
-            up["selection_reason"] = "upsize_enabled_by_tradeoff_downsizes"
-            selected.append(up)
-            continue
-
-        # Skip this upsize, but include actionable tradeoff suggestions.
-        candidates = [d for d in remaining_downsizes]
-        candidates.sort(key=lambda d: tradeoff_score(d, over), reverse=True)
-        suggestions = []
-        for d in candidates[:5]:
-            suggestions.append(f"{d['release']}/{d['container']} ({d['delta']['requests_cpu_m_total']}m, {d['delta']['requests_memory_mi_total']}Mi)")
-
-        skipped.append(
-            {
-                "reason": "budget_or_node_fit_block",
-                "release": up["release"],
-                "container": up["container"],
-                "over": over,
-                "tradeoff_suggestions": suggestions,
-            }
-        )
-
-    # Fill remaining slots with largest downsizes after upsizes are handled.
-    for down in list(remaining_downsizes):
-        if len(selected) >= max_changes:
-            skipped.append({"reason": "max_changes_reached", "release": down["release"], "container": down["container"]})
-            continue
-        test = apply_item_to_projection(projected_by_node, down)
-        ok, _over = check_fit(test)
-        # Downsizing should always improve fit, but keep the check for consistency.
-        if not ok:
-            skipped.append({"reason": "unexpected_fit_regression_on_downsize", "release": down["release"], "container": down["container"]})
-            continue
-        projected_by_node = test
-        down["selection_reason"] = "downsize_with_mature_data"
-        selected.append(down)
+            projected_by_node = test
+            item["selection_reason"] = selection_reason
+            selected.append(item)
 
     projected_cpu_m, projected_mem_mi = totals_from_by_node(projected_by_node)
+    final_fit_ok, final_fit = check_fit(projected_by_node)
 
     plan = {
         "generated_at": report.get("generated_at"),
@@ -1504,8 +1453,14 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             "cpu_m": round(cpu_budget_m, 1),
             "memory_mi": round(mem_budget_mi, 1),
         },
+        "advisory_pressure": {
+            "cpu": advisory_cpu_pressure,
+            "memory": advisory_mem_pressure,
+        },
         "node_fit": {
-            "assumptions": "Node-fit simulation is based on current pod placement (by label app.kubernetes.io/instance) and current replica counts. Scaling or rescheduling may change the footprint.",
+            "assumptions": "Node-fit simulation is based on current pod placement (by label app.kubernetes.io/instance) and current replica counts. Hard blocking uses allocatable node capacity; soft request budgets remain advisory posture signals only.",
+            "hard_fit_ok": final_fit_ok,
+            "projected_overages": final_fit,
             "nodes": [
                 {
                     "name": name,
@@ -1513,7 +1468,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                         "cpu_m": round(node_alloc[name]["cpu_m"], 1),
                         "memory_mi": round(node_alloc[name]["mem_mi"], 1),
                     },
-                    "budget": {
+                    "advisory_budget": {
                         "cpu_m": round(node_cpu_budget.get(name, 0.0), 1),
                         "memory_mi": round(node_mem_budget.get(name, 0.0), 1),
                     },
@@ -1550,12 +1505,14 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             f"`>= {plan['constraints']['deadband_cpu_m']}m` or Memory delta "
             f"`>= {plan['constraints']['deadband_mem_mi']}Mi`"
         ),
-        f"- CPU budget (`requests`): `{plan['budgets']['cpu_m']}m`",
-        f"- Memory budget (`requests`): `{plan['budgets']['memory_mi']}Mi`",
+        f"- Advisory CPU request ceiling: `{plan['budgets']['cpu_m']}m`",
+        f"- Advisory memory request ceiling: `{plan['budgets']['memory_mi']}Mi`",
         f"- Current CPU requests: `{plan['current_requests']['cpu_m']}m`",
         f"- Current Memory requests: `{plan['current_requests']['memory_mi']}Mi`",
         f"- Projected CPU requests: `{plan['projected_requests_after_selected']['cpu_m']}m`",
         f"- Projected Memory requests: `{plan['projected_requests_after_selected']['memory_mi']}Mi`",
+        f"- Advisory CPU pressure active: `{plan['advisory_pressure']['cpu']}`",
+        f"- Advisory memory pressure active: `{plan['advisory_pressure']['memory']}`",
         "",
     ]
 
@@ -1785,49 +1742,47 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
     for node in node_fit.get("nodes", []) or []:
         name = node.get("name", "unknown")
         alloc = node.get("allocatable", {}) or {}
-        budget = node.get("budget", {}) or {}
+        advisory_budget = node.get("advisory_budget", {}) or {}
         cur = node.get("current_requests", {}) or {}
         proj = node.get("projected_requests", {}) or {}
         node_rows.append(
-            "| {name} | {alloc_cpu} | {budget_cpu} | {cur_cpu} | {proj_cpu} | {alloc_mem} | {budget_mem} | {cur_mem} | {proj_mem} |".format(
+            "| {name} | {alloc_cpu} | {advisory_cpu} | {cur_cpu} | {proj_cpu} | {alloc_mem} | {advisory_mem} | {cur_mem} | {proj_mem} |".format(
                 name=name,
                 alloc_cpu=fmt_cpu_m(float(alloc.get("cpu_m", 0.0) or 0.0)),
-                budget_cpu=fmt_cpu_m(float(budget.get("cpu_m", 0.0) or 0.0)),
+                advisory_cpu=fmt_cpu_m(float(advisory_budget.get("cpu_m", 0.0) or 0.0)),
                 cur_cpu=fmt_cpu_m(float(cur.get("cpu_m", 0.0) or 0.0)),
                 proj_cpu=fmt_cpu_m(float(proj.get("cpu_m", 0.0) or 0.0)),
                 alloc_mem=fmt_mem_mi(float(alloc.get("memory_mi", 0.0) or 0.0)),
-                budget_mem=fmt_mem_mi(float(budget.get("memory_mi", 0.0) or 0.0)),
+                advisory_mem=fmt_mem_mi(float(advisory_budget.get("memory_mi", 0.0) or 0.0)),
                 cur_mem=fmt_mem_mi(float(cur.get("memory_mi", 0.0) or 0.0)),
                 proj_mem=fmt_mem_mi(float(proj.get("memory_mi", 0.0) or 0.0)),
             )
         )
 
-    tradeoff_lines = []
+    node_block_lines = []
     for item in plan.get("skipped", []) or []:
-        if item.get("reason") != "budget_or_node_fit_block":
+        if item.get("reason") != "node_capacity_block":
             continue
         release = item.get("release")
         container = item.get("container")
-        over = item.get("over", {}) or {}
-        suggestions = item.get("tradeoff_suggestions") or []
-        over_total_cpu = over.get("over_total_cpu_m")
-        over_total_mem = over.get("over_total_mem_mi")
-        over_nodes = over.get("over_by_node", {}) or {}
+        fit = item.get("fit", {}) or {}
+        over_total_cpu = fit.get("over_advisory_cpu_m")
+        over_total_mem = fit.get("over_advisory_mem_mi")
+        over_nodes = fit.get("hard_over_by_node", {}) or {}
         node_bits = []
         for n, v in over_nodes.items():
             node_bits.append(f"{n}: +{v.get('over_cpu_m', 0)}m, +{v.get('over_mem_mi', 0)}Mi")
-        tradeoff_lines.append(
-            "- `{}/{}:` blocked by budget/node-fit (over: CPU `{}m`, Mem `{}Mi`; nodes: {}). Suggested downsizes: {}".format(
+        node_block_lines.append(
+            "- `{}/{}:` blocked by hard node capacity (advisory overage: CPU `{}m`, Mem `{}Mi`; hard node overage: {}).".format(
                 release,
                 container,
                 over_total_cpu if over_total_cpu is not None else "n/a",
                 over_total_mem if over_total_mem is not None else "n/a",
                 "; ".join(node_bits) if node_bits else "n/a",
-                ", ".join(suggestions) if suggestions else "n/a",
             )
         )
-    if not tradeoff_lines:
-        tradeoff_lines.append("- none")
+    if not node_block_lines:
+        node_block_lines.append("- none")
 
     body_parts = [
         "Automated safe resource apply proposal.\n\n",
@@ -1839,8 +1794,8 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
             f"or CPU delta `>= {report.get('policy', {}).get('deadband_cpu_m')}m` "
             f"or Memory delta `>= {report.get('policy', {}).get('deadband_mem_mi')}Mi`\n"
         ),
-        f"- CPU request budget: `{plan.get('budgets', {}).get('cpu_m')}m`\n",
-        f"- Memory request budget: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n",
+        f"- Advisory CPU request ceiling: `{plan.get('budgets', {}).get('cpu_m')}m`\n",
+        f"- Advisory memory request ceiling: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n",
         (
             f"- Current requests: CPU `{plan.get('current_requests', {}).get('cpu_m')}m`, "
             f"Memory `{plan.get('current_requests', {}).get('memory_mi')}Mi`\n"
@@ -1850,18 +1805,23 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> None:
             f"`{plan.get('projected_requests_after_selected', {}).get('cpu_m')}m`, Memory "
             f"`{plan.get('projected_requests_after_selected', {}).get('memory_mi')}Mi`\n\n"
         ),
+        (
+            f"- Advisory pressure: CPU `{plan.get('advisory_pressure', {}).get('cpu')}`, "
+            f"Memory `{plan.get('advisory_pressure', {}).get('memory')}`\n\n"
+        ),
         "## Node Fit Simulation\n",
         f"- Assumptions: {node_fit_assumptions or 'n/a'}\n",
-        "- Policy: node-level budgets are derived from the same percent gates as the cluster budget.\n\n",
-        "| Node | Alloc CPU | Budget CPU | Current CPU | Projected CPU | Alloc Mem | Budget Mem | Current Mem | Projected Mem |\n",
+        f"- Hard fit ok after selected changes: `{node_fit.get('hard_fit_ok')}`\n",
+        "- Policy: hard blocking uses allocatable node capacity; advisory request ceilings are retained for operator context and planner ordering.\n\n",
+        "| Node | Alloc CPU | Advisory CPU | Current CPU | Projected CPU | Alloc Mem | Advisory Mem | Current Mem | Projected Mem |\n",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|\n",
         ("\n".join(node_rows) + "\n\n" if node_rows else "_No node data available._\n\n"),
         "## Selected Changes\n",
         "\n".join(selected_lines) + "\n",
         "\n## Skipped Candidates (Reason Summary)\n",
         "\n".join(skipped_lines) + "\n",
-        "\n## Tradeoff Recommendations (When Upsizes Were Blocked)\n",
-        "\n".join(tradeoff_lines) + "\n",
+        "\n## Hard Node Capacity Blocks\n",
+        "\n".join(node_block_lines) + "\n",
         "\n## Report Source\n",
         "- Latest machine-readable report is in ConfigMap `monitoring/resource-advisor-latest`.\n",
         "- This PR intentionally includes HelmRelease resource changes only.\n",
