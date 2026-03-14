@@ -2903,9 +2903,9 @@ function renderCombinedCockpitHtml() {
         --bg-panel-strong: #111111;
         --bg-hover: #141414;
         --text-1: #ededed;
-        --text-2: #717171;
-        --text-3: #4f4f4f;
-        --text-dim: #3e3e3e;
+        --text-2: #5e5e5e;
+        --text-3: #3b3b3b;
+        --text-dim: #2d2d2d;
         --border: rgba(255, 255, 255, 0.08);
         --border-strong: rgba(255, 255, 255, 0.16);
         --accent: #1f6feb;
@@ -3368,7 +3368,7 @@ function renderCombinedCockpitHtml() {
         position: sticky;
         top: 0;
         background: #080808;
-        color: var(--text-2);
+        color: var(--text-3);
         text-transform: uppercase;
         letter-spacing: 0.16em;
         font-size: 11px;
@@ -3856,7 +3856,7 @@ function renderCombinedCockpitHtml() {
 
       function setMessage(target, text, isError) {
         target.textContent = text || '';
-        target.style.color = isError ? 'var(--red)' : 'var(--text-2)';
+        target.style.color = isError ? 'var(--red)' : 'var(--text-3)';
       }
 
       function setLoadState(text, isError) {
