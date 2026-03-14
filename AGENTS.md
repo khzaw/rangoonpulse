@@ -14,7 +14,7 @@ continue work without re-discovery.
 - DNS automation model: external-dns (Cloudflare); tofu/terraform controller path is not active
 - LAN recursive DNS/filtering: AdGuard Home (`Service/adguard-dns`, `10.0.0.233:53`) with secondary resolver
   (`Service/adguard-secondary-dns`, `10.0.0.234:53`)
-- Remote access: Tailscale operator + subnet router (`Connector`)
+- Remote access: Tailscale operator + combined subnet router / exit node (`Connector`)
 - Storage mix: `local-path`, TrueNAS NFS classes (`truenas-*`), democratic-csi present
 - Operational metrics: `metrics-server` in `kube-system` (`kubectl top`, HPA inputs)
 - Timezone standard: `Asia/Singapore`
@@ -65,15 +65,19 @@ continue work without re-discovery.
 The cluster uses a simplified unified path:
 - LAN path: user -> `10.0.0.231` (MetalLB ingress IP)
 - Remote path: user on Tailscale -> routed to `10.0.0.231` via subnet router
+- Travel full-tunnel path: user on Tailscale -> internet egress via the same home Connector acting as an exit node
 - Public internet pilot path: Cloudflare Tunnel via `infrastructure/public-edge/` (dedicated share hostnames only)
 
 Implemented via:
 - `infrastructure/tailscale-subnet-router/connector.yaml`
+  - acts as both subnet router and exit node
   - advertises routes:
     - `10.0.0.197/32` (Talos node / Kubernetes API)
+    - `10.0.0.38/32` (utility node)
     - `10.0.0.231/32` (ingress)
     - `10.0.0.210/32` (NAS)
     - `10.0.0.1/32` (router)
+  - remote clients can use the same Connector as a Tailscale exit node while still reaching the homelab over the advertised `/32` routes
 - `infrastructure/lan-gateway/` for NAS/router hostname access through ingress
   - `nas.khzaw.dev` -> service/endpoints -> `10.0.0.210:80`
   - `router.khzaw.dev` -> service/endpoints -> `10.0.0.1:80`

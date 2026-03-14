@@ -5,6 +5,7 @@ kind: Connector
 metadata:
   name: homelab-subnet-router
 spec:
+  exitNode: true
   hostname: homelab-subnet-router
   subnetRouter:
     advertiseRoutes:

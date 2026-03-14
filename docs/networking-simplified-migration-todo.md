@@ -8,6 +8,8 @@ The repository baseline is now the unified destination model:
   selectorless `Service` + `Endpoints` (`infrastructure/lan-gateway/`) so TLS terminates at ingress.
 - Remote tailnet clients reach the same `10.0.0.x` destinations via the Tailscale `Connector` subnet router
   (`infrastructure/tailscale-subnet-router/connector.yaml`).
+- The same Connector also acts as a Tailscale exit node for optional full-tunnel travel use; this does not replace the
+  private `/32` route model.
 
 ## Phase 0 - Preflight and Safety
 - [x] Confirm non-negotiables:
@@ -22,6 +24,7 @@ The repository baseline is now the unified destination model:
 
 ## Phase 1 - Introduce Subnet Routing (No Traffic Cutover Yet)
 - [x] Use Kubernetes Tailscale `Connector` as the subnet router (selected approach).
+- [x] Keep the same Connector available as a Tailscale exit node for optional full-tunnel home egress.
 - [x] Advertise host routes first (not full `/24`):
   - [x] `10.0.0.197/32` (Talos node / Kubernetes API)
   - [x] `10.0.0.231/32` (k8s ingress)

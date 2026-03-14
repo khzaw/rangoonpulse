@@ -24,14 +24,17 @@ This repository now uses a unified destination model:
   - LAN devices use the same destination IPs
 - Tailscale:
   - Tailscale operator is deployed in the cluster
-  - Subnet routing is implemented via `tailscale.com/v1alpha1 Connector`:
+  - Private access and optional full-tunnel travel egress are implemented via one `tailscale.com/v1alpha1 Connector`:
     - `infrastructure/tailscale-subnet-router/connector.yaml`
+    - `exitNode: true`
     - advertises `/32` host routes:
+      - `10.0.0.38/32` (utility node)
       - `10.0.0.197/32` (Talos node / Kubernetes API)
       - `10.0.0.231/32` (ingress VIP)
       - `10.0.0.210/32` (NAS)
       - `10.0.0.1/32` (router)
   - Remote tailnet clients reach the same `10.0.0.x` destinations via subnet routing
+  - Travel devices can also select that same Connector as a Tailscale exit node so internet traffic egresses through home without changing the private access model
 - LAN devices behind ingress (NAS/router):
   - `infrastructure/lan-gateway/` creates selectorless `Service` + `Endpoints` that point to LAN IPs
   - `Ingress` terminates TLS with cert-manager and routes to those Services
@@ -52,8 +55,9 @@ This repository now uses a unified destination model:
 - Primary + secondary LAN recursive resolvers/filters for client DNS queries.
 - Forwards upstream while preserving the same app destination IP model.
 
-5. Tailscale subnet router (`Connector`)
+5. Tailscale subnet router + exit node (`Connector`)
 - Enables tailnet clients to reach `10.0.0.x` LAN destinations without a separate ingress proxy.
+- Also provides optional full-tunnel home egress for travel devices while keeping the same private destination model.
 
 6. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
 - Allows `nas.khzaw.dev` / `router.khzaw.dev` to terminate trusted TLS at ingress while proxying to LAN IPs.
@@ -123,6 +127,7 @@ sequenceDiagram
 
 ## Guardrails / Known Failure Modes
 - Keep host routes (`/32`) unless you explicitly want the blast radius of advertising the full LAN subnet.
+- Keep the exit-node role on the same Connector only if you want the simplest single-device remote path. Split it later only if you need separate failure domains or policy boundaries.
 - AdGuard details (router config, web-port gotcha, validation):
   - `docs/adguard-dns-stack-overview.md`
 - TrueNAS + Tailscale:

@@ -43,7 +43,7 @@
 | Feature | Description |
 |---------|-------------|
 | **GitOps-First** | Everything reconciles via Flux — `Kustomization` + `HelmRelease` |
-| **Unified Access** | Single ingress VIP (`10.0.0.231`) for LAN + Tailscale clients |
+| **Unified Access** | Single ingress VIP (`10.0.0.231`) for LAN + Tailscale clients, plus optional home-exit-node egress for travel devices |
 | **Smart Storage** | NAS-backed PVCs by default; `local-path` for DBs & hot caches |
 | **Auto Tuning** | Resource Advisor CronJobs generate safe, budgeted resource PRs |
 | **Node Pinning** | Userland apps pinned to primary node; ARM allowlist for Pi |

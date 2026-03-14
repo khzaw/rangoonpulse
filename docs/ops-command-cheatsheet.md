@@ -61,6 +61,20 @@ kubectl get certificate -A
 kubectl get certificaterequest -A
 ```
 
+## 3a) Tailscale Connector Checks
+
+```bash
+# Connector health and roles
+kubectl get connector
+kubectl get connector homelab-subnet-router -o yaml
+kubectl describe connector homelab-subnet-router
+```
+
+Expected signals:
+- `ISEXITNODE=true`
+- `SUBNETROUTES` includes the expected `/32` host routes
+- `status.conditions[type=ConnectorReady].status=True`
+
 ## 4) SOPS (Repo-Local, No Home Directory Keys)
 
 ```bash
