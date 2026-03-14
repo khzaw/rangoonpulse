@@ -3054,6 +3054,12 @@ function renderCombinedCockpitHtml() {
         border-color: var(--border-strong);
         background: var(--bg-hover);
       }
+      .top-button.active,
+      .nav-pill.active {
+        border-color: rgba(121, 184, 255, 0.35);
+        background: rgba(121, 184, 255, 0.08);
+        color: #d7ebff;
+      }
       button.danger {
         color: #ffd3d0;
         border-color: rgba(248, 81, 73, 0.28);
@@ -3107,6 +3113,9 @@ function renderCombinedCockpitHtml() {
         backdrop-filter: blur(8px);
         margin-bottom: 18px;
         overflow: hidden;
+      }
+      .section[hidden] {
+        display: none;
       }
       .section-bar,
       .overview-meta-row,
@@ -3488,20 +3497,20 @@ function renderCombinedCockpitHtml() {
           </div>
         </div>
         <div class="hero-actions">
-          <a class="top-button" href="#tuning">Tuning</a>
-          <a class="top-button" href="#exposure">Exposure</a>
-          <a class="top-button" href="#transmission">Transmission</a>
-          <a class="top-button" href="#updates">Image updates</a>
+          <a class="top-button" data-page-link href="#tuning">Tuning</a>
+          <a class="top-button" data-page-link href="#exposure">Exposure</a>
+          <a class="top-button" data-page-link href="#transmission">Transmission</a>
+          <a class="top-button" data-page-link href="#updates">Image updates</a>
         </div>
       </section>
 
       <nav class="section-nav" aria-label="Section navigation">
-        <a class="nav-pill" href="#overview">Overview</a>
-        <a class="nav-pill" href="#tuning">Tuning</a>
-        <a class="nav-pill" href="#exposure">Exposure</a>
-        <a class="nav-pill" href="#transmission">Transmission</a>
-        <a class="nav-pill" href="#updates">Image updates</a>
-        <a class="nav-pill" href="#audit">Audit</a>
+        <a class="nav-pill" data-page-link href="#overview">Overview</a>
+        <a class="nav-pill" data-page-link href="#tuning">Tuning</a>
+        <a class="nav-pill" data-page-link href="#exposure">Exposure</a>
+        <a class="nav-pill" data-page-link href="#transmission">Transmission</a>
+        <a class="nav-pill" data-page-link href="#updates">Image updates</a>
+        <a class="nav-pill" data-page-link href="#audit">Audit</a>
       </nav>
 
       <section id="overview" class="section">
@@ -3720,6 +3729,8 @@ function renderCombinedCockpitHtml() {
       const vpnDirectBtn = document.getElementById('vpnDirectBtn');
       const vpnEnableBtn = document.getElementById('vpnEnableBtn');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
+      const pageSections = Array.from(document.querySelectorAll('main > section.section'));
+      const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
 
       let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
@@ -3752,6 +3763,32 @@ function renderCombinedCockpitHtml() {
 
       function setUpdatesMsg(text, isError) {
         setMessage(updatesMsgEl, text, isError);
+      }
+
+      function normalizePage(value) {
+        const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
+        const knownPages = new Set(['overview', 'tuning', 'exposure', 'transmission', 'updates', 'audit']);
+        if (knownPages.has(candidate)) return candidate;
+        return 'overview';
+      }
+
+      function setActivePage(page, options) {
+        const nextPage = normalizePage(page);
+        const replace = Boolean(options && options.replace);
+        pageSections.forEach((section) => {
+          section.hidden = section.id !== nextPage;
+        });
+        pageLinks.forEach((link) => {
+          const target = normalizePage(link.getAttribute('href'));
+          link.classList.toggle('active', target === nextPage);
+        });
+        const nextHash = '#' + nextPage;
+        if (replace) {
+          history.replaceState(null, '', nextHash);
+        } else if (window.location.hash !== nextHash) {
+          history.pushState(null, '', nextHash);
+        }
+        window.scrollTo({ top: 0, behavior: 'auto' });
       }
 
       function fmtDateTime(value) {
@@ -4300,6 +4337,15 @@ function renderCombinedCockpitHtml() {
       vpnDirectBtn.onclick = () => setTransmissionVpnMode('direct');
       vpnEnableBtn.onclick = () => setTransmissionVpnMode('vpn');
 
+      pageLinks.forEach((link) => {
+        link.addEventListener('click', (event) => {
+          const target = normalizePage(link.getAttribute('href'));
+          if (!target) return;
+          event.preventDefault();
+          setActivePage(target);
+        });
+      });
+
       document.querySelectorAll('[data-filter-action]').forEach((button) => {
         button.addEventListener('click', () => {
           tuningFilterAction = button.dataset.filterAction || 'all';
@@ -4311,8 +4357,12 @@ function renderCombinedCockpitHtml() {
       });
       noteFilterEl.addEventListener('change', renderTuningRows);
       searchInputEl.addEventListener('input', renderTuningRows);
+      window.addEventListener('hashchange', () => {
+        setActivePage(window.location.hash, { replace: true });
+      });
 
       setInterval(tickExpiryCountdowns, 1000);
+      setActivePage(window.location.hash || '#overview', { replace: true });
       loadDashboard();
     </script>
   </body>
