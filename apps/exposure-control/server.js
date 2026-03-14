@@ -3034,7 +3034,7 @@ function renderCombinedCockpitHtml() {
         display: inline-flex;
         align-items: center;
         min-height: auto;
-        padding: 0 0 10px;
+        padding: 0 0 12px;
         border: none;
         border-radius: 0 !important;
         background: transparent !important;
@@ -3055,8 +3055,8 @@ function renderCombinedCockpitHtml() {
         position: absolute;
         left: 0;
         right: 0;
-        bottom: 0;
-        height: 1px;
+        bottom: -1px;
+        height: 2px;
         background: transparent;
       }
       .nav-pill.active::after {
@@ -3181,7 +3181,8 @@ function renderCombinedCockpitHtml() {
       .section-nav {
         gap: 18px;
         margin-bottom: 34px;
-        padding-bottom: 2px;
+        align-items: flex-end;
+        padding-bottom: 0;
         border-bottom: 1px solid var(--border);
       }
       .section-heading {
