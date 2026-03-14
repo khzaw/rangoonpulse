@@ -18,6 +18,14 @@ spec:
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
   values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
     controllers:
       main:
         pod:
@@ -49,6 +57,12 @@ spec:
               limits:
                 cpu: "300m"
                 memory: "384Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: false
 
     service:
       main:

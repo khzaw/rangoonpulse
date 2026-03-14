@@ -206,6 +206,13 @@ Important external-dns behavior:
   - `flux/kustomizations/<name>.yaml`
   - add entry in `flux/kustomization.yaml`
 - Most apps use `bjw-s-charts/app-template` chart.
+- For ordinary userland workloads, prefer the `restricted` PodSecurity baseline:
+  - pod `runAsNonRoot: true`
+  - pod `seccompProfile.type: RuntimeDefault`
+  - container `allowPrivilegeEscalation: false`
+  - container `capabilities.drop: ["ALL"]`
+  - use `fsGroup` only when the app needs writable PVC access
+- Do not force this baseline blindly onto networking/storage/system daemons (for example CNI, CSI, kube-proxy, MetalLB speaker, Tailscale router) without verifying capability needs first.
 - `apps/flaresolverr/helmrelease.yaml` currently tracks the forked image
   `alexfozor/flaresolverr:pr-1300` and remains pinned to the Raspberry Pi node (`talos-uua-g6r`).
 - Keep resources explicit (requests and limits) for homelab capacity control.
