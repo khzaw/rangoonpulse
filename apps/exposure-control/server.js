@@ -382,7 +382,9 @@ function readJsonFile(filePath) {
 
 function writeJsonFile(filePath, value) {
   ensureDataDir();
-  fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
+  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tempPath, JSON.stringify(value, null, 2));
+  fs.renameSync(tempPath, filePath);
 }
 
 function parseImageReference(image) {
