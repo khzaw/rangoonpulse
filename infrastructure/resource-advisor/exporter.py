@@ -413,6 +413,114 @@ def _render_note_pill(note: str, count: int | None = None) -> str:
     return f'<span class="note-pill {_note_kind(note)}">{html.escape(label)}{count_html}</span>'
 
 
+def build_ui_payload() -> dict[str, Any]:
+    snap = STATE.snapshot()
+    report = snap["report"] or {}
+    live_restart_stats = snap.get("live_restart_stats") or {}
+    apply_plan = snap.get("apply_plan") or {}
+    summary = report.get("summary") or {}
+    policy = report.get("policy") or {}
+    budget = report.get("budget") or {}
+    recs = report.get("recommendations") or []
+
+    fetch_state = "live" if snap.get("last_fetch_ok") else "degraded"
+    fetch_detail = "ConfigMap fetch healthy" if snap.get("last_fetch_ok") else snap.get("last_error") or "fetch failed"
+
+    plan_selected = [item for item in (apply_plan.get("selected") or []) if isinstance(item, dict)]
+    plan_skipped = [item for item in (apply_plan.get("skipped") or []) if isinstance(item, dict)]
+    advisory_pressure = apply_plan.get("advisory_pressure") or {}
+    node_fit = apply_plan.get("node_fit") or {}
+
+    skip_reason_counts: dict[str, int] = {}
+    note_counts: dict[str, int] = {}
+    rows: list[dict[str, Any]] = []
+    valid_recs = [rec for rec in recs if isinstance(rec, dict)]
+
+    for rec in valid_recs:
+        namespace = str(rec.get("namespace") or "")
+        workload = str(rec.get("workload") or "")
+        container = str(rec.get("container") or "")
+        notes = [str(note) for note in rec.get("notes") or []]
+        for note in notes:
+            note_counts[note] = note_counts.get(note, 0) + 1
+
+        live_restart = live_restart_stats.get(_rec_key(namespace, workload, container)) or {}
+        rows.append(
+            {
+                "namespace": namespace,
+                "workload": workload,
+                "container": container,
+                "release": str(rec.get("release") or ""),
+                "kind": str(rec.get("kind") or ""),
+                "action": str(rec.get("action") or "unknown"),
+                "notes": notes,
+                "replicas": int(rec.get("replicas") or 0),
+                "current": rec.get("current") or {},
+                "recommended": rec.get("recommended") or {},
+                "cpu_p95_m": float(rec.get("cpu_p95_m") or 0.0),
+                "mem_p95_mi": float(rec.get("mem_p95_mi") or 0.0),
+                "restarts_window": float(rec.get("restarts_window") or 0.0),
+                "current_restarts": int(live_restart.get("current_restarts") or 0),
+                "matched_pods": int(live_restart.get("matched_pods") or 0),
+                "latest_start_ts": float(live_restart.get("latest_start_ts") or 0.0),
+            }
+        )
+
+    for item in plan_skipped:
+        reason = str(item.get("reason") or "unknown")
+        skip_reason_counts[reason] = skip_reason_counts.get(reason, 0) + 1
+
+    rows.sort(key=lambda row: (row["namespace"], row["workload"], row["container"]))
+    top_notes = [
+        {"note": note, "count": count}
+        for note, count in sorted(note_counts.items(), key=lambda item: (-item[1], item[0]))[:8]
+    ]
+    skip_summary = [
+        {"reason": reason, "count": count}
+        for reason, count in sorted(skip_reason_counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    return {
+        "title": "rangoonpulse tuning",
+        "fetch": {
+            "state": fetch_state,
+            "detail": fetch_detail,
+            "lastFetchAt": snap.get("last_fetch_at") or 0.0,
+            "lastFetchOk": bool(snap.get("last_fetch_ok")),
+            "lastRunAt": str(report.get("generated_at") or snap.get("last_run_at") or ""),
+            "mode": str(report.get("mode") or snap.get("mode") or ""),
+        },
+        "report": {
+            "metricsWindow": str(report.get("metrics_window") or ""),
+            "metricsCoverageDaysEstimate": float(report.get("metrics_coverage_days_estimate") or 0.0),
+            "summary": summary,
+            "policy": policy,
+            "budget": budget,
+            "recommendationCount": len(valid_recs),
+            "topNotes": top_notes,
+            "recommendations": rows,
+        },
+        "applyPreflight": {
+            "selectedCount": len(plan_selected),
+            "selected": plan_selected,
+            "skipped": plan_skipped,
+            "skipSummary": skip_summary,
+            "advisoryPressure": {
+                "cpu": bool(advisory_pressure.get("cpu")),
+                "memory": bool(advisory_pressure.get("memory")),
+            },
+            "nodeFit": node_fit,
+            "hardFitOk": bool(node_fit.get("hard_fit_ok")) if isinstance(node_fit, dict) else False,
+            "budgets": apply_plan.get("budgets") or {},
+            "currentRequests": apply_plan.get("current_requests") or {},
+            "projectedRequestsAfterSelected": apply_plan.get("projected_requests_after_selected") or {},
+        },
+        "runtime": {
+            "latestMarkdown": snap.get("latest_md") or "",
+        },
+    }
+
+
 def build_index_html() -> str:
     snap = STATE.snapshot()
     report = snap["report"] or {}
@@ -1742,6 +1850,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/metrics":
             out = build_metrics().encode("utf-8")
             return 200, "text/plain; version=0.0.4; charset=utf-8", out
+        if path == "/api/ui.json":
+            body = json.dumps(build_ui_payload(), separators=(",", ":")).encode("utf-8")
+            return 200, "application/json; charset=utf-8", body
         if path == "/latest.json":
             snap = STATE.snapshot()
             body = (snap.get("latest_json") or "{}").encode("utf-8")
