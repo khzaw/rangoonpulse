@@ -20,6 +20,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import advisor
 
@@ -36,6 +37,163 @@ def _utc_ts(s: str | None) -> float | None:
         return None
 
 
+def _utc_iso(value: object) -> str:
+    try:
+        ts = float(value)
+    except Exception:
+        return ""
+    return dt.datetime.fromtimestamp(ts, dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _load_json_object(text: str, *, label: str) -> tuple[dict[str, Any] | None, str]:
+    if not text:
+        return None, ""
+    try:
+        data = json.loads(text)
+    except Exception as exc:
+        return None, f"Failed to parse {label}: {exc}"
+    if not isinstance(data, dict):
+        return None, f"{label} did not decode to a JSON object"
+    return data, ""
+
+
+def _parse_cron_field(field: str, minimum: int, maximum: int, *, sunday_wrap: bool = False) -> tuple[set[int], bool] | None:
+    field = field.strip()
+    if not field:
+        return None
+    wildcard = field == "*"
+    values: set[int] = set()
+    for segment in field.split(","):
+        segment = segment.strip()
+        if not segment:
+            return None
+        if "/" in segment:
+            base, step_text = segment.split("/", 1)
+            step = int(step_text)
+        else:
+            base = segment
+            step = 1
+        if step <= 0:
+            return None
+        if base == "*":
+            start = minimum
+            end = maximum
+        elif "-" in base:
+            start_text, end_text = base.split("-", 1)
+            start = int(start_text)
+            end = int(end_text)
+        else:
+            start = int(base)
+            end = int(base)
+        if sunday_wrap:
+            if start == 7:
+                start = 0
+            if end == 7:
+                end = 0
+        if start < minimum or start > maximum or end < minimum or end > maximum:
+            return None
+        if sunday_wrap and start > end:
+            values.update(range(start, maximum + 1, step))
+            values.update(range(minimum, end + 1, step))
+            continue
+        for number in range(start, end + 1, step):
+            values.add(number)
+    return values, wildcard
+
+
+def _parse_cron_schedule(schedule: str) -> dict[str, tuple[set[int], bool]] | None:
+    parts = schedule.split()
+    if len(parts) != 5:
+        return None
+    minute = _parse_cron_field(parts[0], 0, 59)
+    hour = _parse_cron_field(parts[1], 0, 23)
+    day = _parse_cron_field(parts[2], 1, 31)
+    month = _parse_cron_field(parts[3], 1, 12)
+    weekday = _parse_cron_field(parts[4], 0, 6, sunday_wrap=True)
+    if not minute or not hour or not day or not month or not weekday:
+        return None
+    return {
+        "minute": minute,
+        "hour": hour,
+        "day": day,
+        "month": month,
+        "weekday": weekday,
+    }
+
+
+def _cron_matches(parsed: dict[str, tuple[set[int], bool]] | None, when: dt.datetime) -> bool:
+    if not parsed:
+        return False
+    minute_values, _ = parsed["minute"]
+    hour_values, _ = parsed["hour"]
+    day_values, day_wild = parsed["day"]
+    month_values, _ = parsed["month"]
+    weekday_values, weekday_wild = parsed["weekday"]
+
+    if when.minute not in minute_values or when.hour not in hour_values or when.month not in month_values:
+        return False
+
+    cron_weekday = (when.weekday() + 1) % 7
+    day_match = when.day in day_values
+    weekday_match = cron_weekday in weekday_values
+
+    if not day_wild and not weekday_wild:
+        return day_match or weekday_match
+    if not day_wild:
+        return day_match
+    if not weekday_wild:
+        return weekday_match
+    return True
+
+
+def _next_cron_occurrence(schedule: str, timezone_name: str, *, now: dt.datetime | None = None) -> str:
+    parsed = _parse_cron_schedule(schedule)
+    if not parsed:
+        return ""
+    try:
+        zone = ZoneInfo(timezone_name)
+    except Exception:
+        zone = dt.timezone.utc
+    cursor = (now or dt.datetime.now(zone)).astimezone(zone).replace(second=0, microsecond=0) + dt.timedelta(minutes=1)
+    for _ in range(32 * 24 * 60):
+        if _cron_matches(parsed, cursor):
+            return cursor.astimezone(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        cursor += dt.timedelta(minutes=1)
+    return ""
+
+
+def _fetch_apply_schedule(kube: advisor.KubeClient, namespace: str) -> dict[str, Any]:
+    cron_namespace = os.getenv("APPLY_CRONJOB_NAMESPACE", namespace).strip() or namespace
+    cron_name = os.getenv("APPLY_CRONJOB_NAME", "resource-advisor-apply-pr").strip() or "resource-advisor-apply-pr"
+    try:
+        status, payload = kube.request_json("GET", f"/apis/batch/v1/namespaces/{cron_namespace}/cronjobs/{cron_name}")
+    except Exception as exc:
+        return {
+            "namespace": cron_namespace,
+            "name": cron_name,
+            "error": f"cronjob lookup failed: {exc}",
+        }
+    if status != 200:
+        return {
+            "namespace": cron_namespace,
+            "name": cron_name,
+            "error": f"GET cronjob {cron_namespace}/{cron_name} failed: {status}",
+        }
+
+    spec = (payload or {}).get("spec", {}) or {}
+    cron_status = (payload or {}).get("status", {}) or {}
+    schedule = str(spec.get("schedule") or "")
+    timezone_name = str(spec.get("timeZone") or "UTC")
+    return {
+        "namespace": cron_namespace,
+        "name": cron_name,
+        "schedule": schedule,
+        "time_zone": timezone_name,
+        "last_scheduled_at": str(cron_status.get("lastScheduleTime") or ""),
+        "next_run_at": _next_cron_occurrence(schedule, timezone_name) if schedule else "",
+    }
+
+
 class State:
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -49,6 +207,11 @@ class State:
         self.last_run_at: str = ""
         self.live_restart_stats: dict[str, dict[str, Any]] = {}
         self.apply_plan: dict[str, Any] | None = None
+        self.apply_plan_built_at: float = 0.0
+        self.last_apply_plan: dict[str, Any] | None = None
+        self.last_apply_md: str = ""
+        self.last_apply_run_at: str = ""
+        self.apply_schedule: dict[str, Any] = {}
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
@@ -63,6 +226,11 @@ class State:
                 "last_run_at": self.last_run_at,
                 "live_restart_stats": self.live_restart_stats,
                 "apply_plan": self.apply_plan,
+                "apply_plan_built_at": self.apply_plan_built_at,
+                "last_apply_plan": self.last_apply_plan,
+                "last_apply_md": self.last_apply_md,
+                "last_apply_run_at": self.last_apply_run_at,
+                "apply_schedule": self.apply_schedule,
             }
 
 
@@ -145,6 +313,7 @@ def fetch_configmap_once() -> None:
     namespace = os.getenv("CONFIGMAP_NAMESPACE", "monitoring").strip() or "monitoring"
     name = os.getenv("CONFIGMAP_NAME", "resource-advisor-latest").strip() or "resource-advisor-latest"
     kube = advisor.KubeClient()
+    apply_schedule = _fetch_apply_schedule(kube, namespace)
 
     status, payload = kube.request_json("GET", f"/api/v1/namespaces/{namespace}/configmaps/{name}")
     fetched_at = time.time()
@@ -153,24 +322,20 @@ def fetch_configmap_once() -> None:
             STATE.last_fetch_at = fetched_at
             STATE.last_fetch_ok = False
             STATE.last_error = f"GET configmap {namespace}/{name} failed: {status} {payload}"
+            STATE.apply_schedule = apply_schedule
         return
 
     data = (payload or {}).get("data", {}) or {}
     latest_json = str(data.get("latest.json") or "")
     latest_md = str(data.get("latest.md") or "")
+    apply_plan_json = str(data.get("apply-plan.json") or "")
+    apply_plan_md = str(data.get("apply-plan.md") or "")
+    apply_last_run_at = str(data.get("applyLastRunAt") or "")
     mode = str(data.get("mode") or "")
     last_run_at = str(data.get("lastRunAt") or "")
 
-    report: dict[str, Any] | None = None
-    if latest_json:
-        try:
-            report = json.loads(latest_json)
-        except Exception as exc:
-            with STATE.lock:
-                STATE.last_fetch_at = fetched_at
-                STATE.last_fetch_ok = False
-                STATE.last_error = f"Failed to parse latest.json: {exc}"
-            return
+    report, report_error = _load_json_object(latest_json, label="latest.json")
+    last_apply_plan, apply_error = _load_json_object(apply_plan_json, label="apply-plan.json")
 
     live_restart_stats = _collect_live_restart_stats(kube, report)
     apply_plan: dict[str, Any] | None = None
@@ -180,10 +345,16 @@ def fetch_configmap_once() -> None:
         except Exception as exc:
             advisor.log(f"Exporter failed to build apply plan snapshot: {exc}")
 
+    apply_plan_built_at = _utc_ts(str((apply_plan or {}).get("preflight_generated_at") or "")) or fetched_at
+    last_apply_execution = (last_apply_plan or {}).get("execution") if isinstance(last_apply_plan, dict) else {}
+    if not apply_last_run_at and isinstance(last_apply_execution, dict):
+        apply_last_run_at = str(last_apply_execution.get("executed_at") or "")
+    parse_errors = [msg for msg in (report_error, apply_error) if msg]
+
     with STATE.lock:
         STATE.last_fetch_at = fetched_at
-        STATE.last_fetch_ok = True
-        STATE.last_error = ""
+        STATE.last_fetch_ok = len(parse_errors) == 0
+        STATE.last_error = "; ".join(parse_errors)
         STATE.report = report
         STATE.latest_json = latest_json
         STATE.latest_md = latest_md
@@ -191,6 +362,11 @@ def fetch_configmap_once() -> None:
         STATE.last_run_at = last_run_at
         STATE.live_restart_stats = live_restart_stats
         STATE.apply_plan = apply_plan
+        STATE.apply_plan_built_at = apply_plan_built_at
+        STATE.last_apply_plan = last_apply_plan
+        STATE.last_apply_md = apply_plan_md
+        STATE.last_apply_run_at = apply_last_run_at
+        STATE.apply_schedule = apply_schedule
 
 
 def refresher_loop() -> None:
@@ -223,6 +399,8 @@ def build_metrics() -> str:
     snap = STATE.snapshot()
     report = snap["report"] or {}
     apply_plan = snap.get("apply_plan") or {}
+    last_apply_plan = snap.get("last_apply_plan") or {}
+    apply_schedule = snap.get("apply_schedule") or {}
 
     metrics: list[str] = []
     metrics.append("# HELP resource_advisor_exporter_up Exporter process is running.\n")
@@ -263,6 +441,15 @@ def build_metrics() -> str:
         metrics.append("# HELP resource_advisor_apply_plan_selected_total Changes the planner would select right now.\n")
         metrics.append("# TYPE resource_advisor_apply_plan_selected_total gauge\n")
         metrics.append(_prom_line("resource_advisor_apply_plan_selected_total", None, float(len(selected))))
+        metrics.append("# HELP resource_advisor_apply_preflight_selected_total Changes the live preflight would select right now.\n")
+        metrics.append("# TYPE resource_advisor_apply_preflight_selected_total gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_preflight_selected_total", None, float(len(selected))))
+
+    preflight_built_at = float(snap.get("apply_plan_built_at") or 0.0)
+    if preflight_built_at > 0.0:
+        metrics.append("# HELP resource_advisor_apply_preflight_generated_timestamp_seconds Unix timestamp when the live preflight snapshot was built.\n")
+        metrics.append("# TYPE resource_advisor_apply_preflight_generated_timestamp_seconds gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_preflight_generated_timestamp_seconds", None, preflight_built_at))
 
     advisory_pressure = apply_plan.get("advisory_pressure") if isinstance(apply_plan, dict) else None
     if isinstance(advisory_pressure, dict):
@@ -272,6 +459,57 @@ def build_metrics() -> str:
         metrics.append("# HELP resource_advisor_apply_advisory_memory_pressure Whether advisory memory pressure is currently active.\n")
         metrics.append("# TYPE resource_advisor_apply_advisory_memory_pressure gauge\n")
         metrics.append(_prom_line("resource_advisor_apply_advisory_memory_pressure", None, 1.0 if advisory_pressure.get("memory") else 0.0))
+
+    next_up = apply_plan.get("next_up") if isinstance(apply_plan, dict) else None
+    if isinstance(next_up, list):
+        metrics.append("# HELP resource_advisor_apply_preflight_next_up_total Deferred candidates queued immediately after the current live selection.\n")
+        metrics.append("# TYPE resource_advisor_apply_preflight_next_up_total gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_preflight_next_up_total", None, float(len(next_up))))
+
+    if isinstance(apply_plan, dict):
+        metrics.append("# HELP resource_advisor_apply_preflight_selected_by_reason Selected live-preflight candidates grouped by selection reason.\n")
+        metrics.append("# TYPE resource_advisor_apply_preflight_selected_by_reason gauge\n")
+        for reason, count in sorted((apply_plan.get("selected_reason_counts") or {}).items()):
+            metrics.append(_prom_line("resource_advisor_apply_preflight_selected_by_reason", {"reason": str(reason)}, float(count)))
+
+        metrics.append("# HELP resource_advisor_apply_preflight_skipped_by_reason Skipped live-preflight candidates grouped by skip reason.\n")
+        metrics.append("# TYPE resource_advisor_apply_preflight_skipped_by_reason gauge\n")
+        for reason, count in sorted((apply_plan.get("skipped_reason_counts") or {}).items()):
+            metrics.append(_prom_line("resource_advisor_apply_preflight_skipped_by_reason", {"reason": str(reason)}, float(count)))
+
+        metrics.append("# HELP resource_advisor_apply_preflight_node_capacity_block_total Candidates blocked by hard node allocatable capacity.\n")
+        metrics.append("# TYPE resource_advisor_apply_preflight_node_capacity_block_total gauge\n")
+        metrics.append(
+            _prom_line(
+                "resource_advisor_apply_preflight_node_capacity_block_total",
+                None,
+                float((apply_plan.get("skipped_reason_counts") or {}).get("node_capacity_block") or 0.0),
+            )
+        )
+
+    last_apply_run_at = _utc_ts(str(snap.get("last_apply_run_at") or ((last_apply_plan.get("execution") or {}).get("executed_at") if isinstance(last_apply_plan, dict) else "") or ""))
+    if last_apply_run_at is not None:
+        metrics.append("# HELP resource_advisor_apply_last_run_timestamp_seconds Unix timestamp of the most recent persisted apply execution.\n")
+        metrics.append("# TYPE resource_advisor_apply_last_run_timestamp_seconds gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_last_run_timestamp_seconds", None, float(last_apply_run_at)))
+
+    next_apply_run_at = _utc_ts(str(apply_schedule.get("next_run_at") or ""))
+    if next_apply_run_at is not None:
+        metrics.append("# HELP resource_advisor_apply_next_run_timestamp_seconds Unix timestamp of the next scheduled apply cronjob run.\n")
+        metrics.append("# TYPE resource_advisor_apply_next_run_timestamp_seconds gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_next_run_timestamp_seconds", None, float(next_apply_run_at)))
+
+    if isinstance(last_apply_plan, dict):
+        metrics.append("# HELP resource_advisor_apply_last_run_selected_total Changes selected in the most recent persisted apply execution.\n")
+        metrics.append("# TYPE resource_advisor_apply_last_run_selected_total gauge\n")
+        metrics.append(_prom_line("resource_advisor_apply_last_run_selected_total", None, float(len(last_apply_plan.get("selected") or []))))
+
+        execution = (last_apply_plan.get("execution") or {}) if isinstance(last_apply_plan.get("execution"), dict) else {}
+        status = str(execution.get("status") or "")
+        if status:
+            metrics.append("# HELP resource_advisor_apply_last_run_status Last persisted apply execution status as a one-hot label.\n")
+            metrics.append("# TYPE resource_advisor_apply_last_run_status gauge\n")
+            metrics.append(_prom_line("resource_advisor_apply_last_run_status", {"status": status}, 1.0))
 
     by_action: dict[str, int] = {}
     for r in recs:
@@ -418,6 +656,8 @@ def build_ui_payload() -> dict[str, Any]:
     report = snap["report"] or {}
     live_restart_stats = snap.get("live_restart_stats") or {}
     apply_plan = snap.get("apply_plan") or {}
+    last_apply_plan = snap.get("last_apply_plan") or {}
+    apply_schedule = snap.get("apply_schedule") or {}
     summary = report.get("summary") or {}
     policy = report.get("policy") or {}
     budget = report.get("budget") or {}
@@ -428,8 +668,12 @@ def build_ui_payload() -> dict[str, Any]:
 
     plan_selected = [item for item in (apply_plan.get("selected") or []) if isinstance(item, dict)]
     plan_skipped = [item for item in (apply_plan.get("skipped") or []) if isinstance(item, dict)]
+    plan_next_up = [item for item in (apply_plan.get("next_up") or []) if isinstance(item, dict)]
     advisory_pressure = apply_plan.get("advisory_pressure") or {}
     node_fit = apply_plan.get("node_fit") or {}
+    last_apply_execution = (last_apply_plan.get("execution") or {}) if isinstance(last_apply_plan, dict) else {}
+    last_apply_selected = [item for item in (last_apply_plan.get("selected") or []) if isinstance(item, dict)]
+    last_apply_skipped = [item for item in (last_apply_plan.get("skipped") or []) if isinstance(item, dict)]
 
     skip_reason_counts: dict[str, int] = {}
     note_counts: dict[str, int] = {}
@@ -490,6 +734,10 @@ def build_ui_payload() -> dict[str, Any]:
             "lastRunAt": str(report.get("generated_at") or snap.get("last_run_at") or ""),
             "mode": str(report.get("mode") or snap.get("mode") or ""),
         },
+        "scope": {
+            "report": "recommendation-scoped posture from the current advisor report",
+            "apply": "live whole-cluster pod request footprint and current placement for apply preflight",
+        },
         "report": {
             "metricsWindow": str(report.get("metrics_window") or ""),
             "metricsCoverageDaysEstimate": float(report.get("metrics_coverage_days_estimate") or 0.0),
@@ -501,10 +749,14 @@ def build_ui_payload() -> dict[str, Any]:
             "recommendations": rows,
         },
         "applyPreflight": {
+            "builtAt": _utc_iso(snap.get("apply_plan_built_at") or 0.0),
             "selectedCount": len(plan_selected),
             "selected": plan_selected,
+            "nextUp": plan_next_up,
             "skipped": plan_skipped,
             "skipSummary": skip_summary,
+            "selectedReasonCounts": apply_plan.get("selected_reason_counts") or {},
+            "skippedReasonCounts": apply_plan.get("skipped_reason_counts") or {},
             "advisoryPressure": {
                 "cpu": bool(advisory_pressure.get("cpu")),
                 "memory": bool(advisory_pressure.get("memory")),
@@ -514,6 +766,21 @@ def build_ui_payload() -> dict[str, Any]:
             "budgets": apply_plan.get("budgets") or {},
             "currentRequests": apply_plan.get("current_requests") or {},
             "projectedRequestsAfterSelected": apply_plan.get("projected_requests_after_selected") or {},
+        },
+        "lastApply": {
+            "runAt": str(snap.get("last_apply_run_at") or ""),
+            "status": str(last_apply_execution.get("status") or ""),
+            "selectedCount": len(last_apply_selected),
+            "selected": last_apply_selected,
+            "skippedCount": len(last_apply_skipped),
+            "execution": last_apply_execution,
+            "markdown": snap.get("last_apply_md") or "",
+        },
+        "schedule": {
+            "schedule": str(apply_schedule.get("schedule") or ""),
+            "timeZone": str(apply_schedule.get("time_zone") or ""),
+            "lastScheduledAt": str(apply_schedule.get("last_scheduled_at") or ""),
+            "nextRunAt": str(apply_schedule.get("next_run_at") or ""),
         },
         "runtime": {
             "latestMarkdown": snap.get("latest_md") or "",
@@ -526,6 +793,8 @@ def build_index_html() -> str:
     report = snap["report"] or {}
     live_restart_stats = snap.get("live_restart_stats") or {}
     apply_plan = snap.get("apply_plan") or {}
+    last_apply_plan = snap.get("last_apply_plan") or {}
+    apply_schedule = snap.get("apply_schedule") or {}
     title = "rangoonpulse tuning"
     last_run = str(report.get("generated_at") or snap.get("last_run_at") or "")
     mode = str(report.get("mode") or snap.get("mode") or "")
@@ -542,6 +811,8 @@ def build_index_html() -> str:
 
     fetch_state = "live" if snap.get("last_fetch_ok") else "degraded"
     fetch_detail = "ConfigMap fetch healthy" if snap.get("last_fetch_ok") else snap.get("last_error") or "fetch failed"
+    report_scope_copy = "report-scoped posture from recommendation totals in the latest advisor snapshot."
+    apply_scope_copy = "live apply footprint from current pod placement and whole-cluster request totals."
 
     rec_count = len(recs) if isinstance(recs, list) else 0
     upsize_count = int(summary.get("upsize_count") or 0)
@@ -560,6 +831,7 @@ def build_index_html() -> str:
     rec_pct = budget.get("recommended_requests_percent_of_allocatable") or {}
     plan_selected = [item for item in (apply_plan.get("selected") or []) if isinstance(item, dict)]
     plan_skipped = [item for item in (apply_plan.get("skipped") or []) if isinstance(item, dict)]
+    plan_next_up = [item for item in (apply_plan.get("next_up") or []) if isinstance(item, dict)]
     plan_budgets = apply_plan.get("budgets") or {}
     plan_current = apply_plan.get("current_requests") or {}
     plan_projected = apply_plan.get("projected_requests_after_selected") or {}
@@ -569,6 +841,17 @@ def build_index_html() -> str:
     hard_fit_ok = bool(node_fit.get("hard_fit_ok")) if isinstance(node_fit, dict) else False
     pressure_cpu = bool(advisory_pressure.get("cpu")) if isinstance(advisory_pressure, dict) else False
     pressure_mem = bool(advisory_pressure.get("memory")) if isinstance(advisory_pressure, dict) else False
+    preflight_generated_at = str(apply_plan.get("preflight_generated_at") or _utc_iso(snap.get("apply_plan_built_at") or 0.0) or "")
+    selected_reason_counts = apply_plan.get("selected_reason_counts") or {}
+
+    last_apply_execution = (last_apply_plan.get("execution") or {}) if isinstance(last_apply_plan, dict) else {}
+    last_apply_selected = [item for item in (last_apply_plan.get("selected") or []) if isinstance(item, dict)]
+    last_apply_status = str(last_apply_execution.get("status") or "")
+    last_apply_run = str(snap.get("last_apply_run_at") or last_apply_execution.get("executed_at") or "")
+    last_apply_selected_count = len(last_apply_selected)
+    next_apply_run = str(apply_schedule.get("next_run_at") or "")
+    apply_schedule_label = str(apply_schedule.get("schedule") or "")
+    apply_schedule_tz = str(apply_schedule.get("time_zone") or "")
 
     skip_reason_counts: dict[str, int] = {}
     for item in plan_skipped:
@@ -739,20 +1022,22 @@ def build_index_html() -> str:
 
     note_html = "".join(_render_note_pill(note, count) for note, count in top_notes) or '<span class="muted">no note annotations in current report.</span>'
 
-    def planner_line(item: dict[str, Any]) -> str:
+    def planner_line(item: dict[str, Any], *, reason_key: str = "selection_reason") -> str:
         release = str(item.get("release") or "unknown")
         container = str(item.get("container") or "main")
         current_req = (item.get("current") or {}).get("requests") or {}
         recommended_req = (item.get("recommended") or {}).get("requests") or {}
         cpu_line = f"{_with_unit_space(current_req.get('cpu') or '0m')} → {_with_unit_space(recommended_req.get('cpu') or '0m')}"
         mem_line = f"{_with_unit_space(current_req.get('memory') or '0Mi')} → {_with_unit_space(recommended_req.get('memory') or '0Mi')}"
-        reason = str(item.get("selection_reason") or "selected")
+        reason = str(item.get(reason_key) or "selected")
         return (
             f"<span class=\"focus-path\">{html.escape(release)}/{html.escape(container)}</span>"
             f"<span class=\"focus-inline\">cpu {html.escape(cpu_line)} · mem {html.escape(mem_line)} · {html.escape(reason.replace('_', ' '))}</span>"
         )
 
     planner_selected_items = [planner_line(item) for item in plan_selected[:5]]
+    next_up_items = [planner_line(item, reason_key="queue_reason") for item in plan_next_up[:5]]
+    last_apply_items = [planner_line(item) for item in last_apply_selected[:5]]
 
     pressure_pills = "".join(
         [
@@ -760,6 +1045,13 @@ def build_index_html() -> str:
             _build_stat_pill("hard fit", "ok" if hard_fit_ok else "blocked", "ok" if hard_fit_ok else "excluded"),
             _build_stat_pill("cpu pressure", "on" if pressure_cpu else "off", "guarded" if pressure_cpu else "ok"),
             _build_stat_pill("mem pressure", "on" if pressure_mem else "off", "guarded" if pressure_mem else "ok"),
+        ]
+    )
+    last_apply_pills = "".join(
+        [
+            _build_stat_pill("status", last_apply_status.replace("_", " ") or "no run", "ok" if last_apply_status in {"created", "updated", "no_selected_changes", "no_repo_changes"} else "guarded" if last_apply_status else "neutral"),
+            _build_stat_pill("selected", str(last_apply_selected_count), "neutral"),
+            _build_stat_pill("next run", "scheduled" if next_apply_run else "unknown", "ok" if next_apply_run else "guarded"),
         ]
     )
 
@@ -775,6 +1067,15 @@ def build_index_html() -> str:
         f"<span class=\"focus-path\">projected after selection</span><span class=\"focus-inline\">cpu {html.escape(projected_plan_cpu)} · mem {html.escape(projected_plan_mem)}</span>",
         f"<span class=\"focus-path\">advisory ceilings</span><span class=\"focus-inline\">cpu {html.escape(advisory_plan_cpu)} · mem {html.escape(advisory_plan_mem)}</span>",
     ] if apply_plan else []
+    report_posture_items = [
+        f"<span class=\"focus-path\">current report posture</span><span class=\"focus-inline\">cpu {html.escape(_fmt_decimal(cur_pct.get('cpu')))}% · mem {html.escape(_fmt_decimal(cur_pct.get('memory')))}% of allocatable</span>",
+        f"<span class=\"focus-path\">recommended report posture</span><span class=\"focus-inline\">cpu {html.escape(_fmt_decimal(rec_pct.get('cpu')))}% · mem {html.escape(_fmt_decimal(rec_pct.get('memory')))}% of allocatable</span>",
+        f"<span class=\"focus-path\">coverage maturity</span><span class=\"focus-inline\">{html.escape(_with_unit_space(f'{_fmt_decimal(coverage_days)}d'))} over {html.escape(window or 'advisor window')}</span>",
+    ]
+    selected_reason_items = [
+        f"<span class=\"focus-path\">{html.escape(reason.replace('_', ' '))}</span><span class=\"focus-inline\">{count} row(s)</span>"
+        for reason, count in sorted(selected_reason_counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
 
     skip_summary_items = [
         f"<span class=\"focus-path\">{html.escape(reason.replace('_', ' '))}</span><span class=\"focus-inline\">{count} row(s)</span>"
@@ -793,12 +1094,12 @@ def build_index_html() -> str:
                 "recommendations",
                 str(rec_count),
                 f"{upsize_count} upsize, {downsize_count} downsize, {no_change_count} steady",
-                eyebrow=f"{with_metrics}/{analyzed} with metrics" if analyzed else "",
+                eyebrow="report scope",
                 bar_pct=(with_metrics / analyzed * 100.0) if analyzed else 0.0,
                 tone="neutral",
             ),
             _build_overview_segment(
-                "cpu request posture",
+                "report cpu posture",
                 _with_unit_space(f"{_fmt_decimal(current_cpu_m)}m"),
                 f"{_fmt_decimal(cur_pct.get('cpu'))}% of {_with_unit_space(alloc.get('cpu') or 'n/a')} allocatable",
                 eyebrow=_with_unit_space(_fmt_signed(recommended_cpu_m - current_cpu_m, "m", 0)),
@@ -806,7 +1107,7 @@ def build_index_html() -> str:
                 tone="cpu",
             ),
             _build_overview_segment(
-                "memory request posture",
+                "report memory posture",
                 _with_unit_space(f"{_fmt_decimal(current_mem_mi)}Mi"),
                 f"{_fmt_decimal(cur_pct.get('memory'))}% of {_with_unit_space(alloc.get('memory') or 'n/a')} allocatable",
                 eyebrow=_with_unit_space(_fmt_signed(recommended_mem_mi - current_mem_mi, "Mi", 0)),
@@ -814,7 +1115,7 @@ def build_index_html() -> str:
                 tone="memory",
             ),
             _build_overview_segment(
-                "planner",
+                "live apply preflight",
                 f"{selected_count} selected" if apply_plan else "pending",
                 (
                     f"hard fit {'ok' if hard_fit_ok else 'blocked'} · "
@@ -822,7 +1123,7 @@ def build_index_html() -> str:
                     if apply_plan
                     else "waiting for planner snapshot"
                 ),
-                eyebrow="apply preflight",
+                eyebrow="apply scope",
                 bar_pct=(selected_count / max(1, rec_count) * 100.0) if apply_plan else (100.0 if fetch_state == "live" else coverage_pct),
                 tone="status" if apply_plan and hard_fit_ok else "warning" if apply_plan else ("status" if fetch_state == "live" else "warning"),
             ),
@@ -831,15 +1132,26 @@ def build_index_html() -> str:
 
     planner_cards = f"""
       <article class="support-card">
-        <div class="support-card-title">if apply ran now</div>
+        <div class="support-card-title">live preflight</div>
         <div class="policy-grid">{pressure_pills}</div>
         <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in planner_selected_items) if planner_selected_items else '<li><span class="muted">no changes would be selected from the current report.</span></li>'}</ul>
-        <p class="support-copy">selection uses per-service tuning signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p>
+        <p class="support-copy">built <span class="time-local" data-utc="{_escape_attr(preflight_generated_at)}">{html.escape(preflight_generated_at or 'n/a')}</span>. selection uses per-service tuning signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p>
       </article>
       <article class="support-card">
-        <div class="support-card-title">planner posture</div>
+        <div class="support-card-title">live apply footprint</div>
         <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in posture_items) if posture_items else '<li><span class="muted">planner snapshot unavailable.</span></li>'}</ul>
-        <p class="support-copy">global cpu and memory remain visible as advisory ceilings, but they no longer hard-freeze safe right-sizing changes.</p>
+        <p class="support-copy">{html.escape(apply_scope_copy)}</p>
+      </article>
+      <article class="support-card">
+        <div class="support-card-title">next up queue</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in next_up_items) if next_up_items else '<li><span class="muted">no deferred candidates are waiting behind the current change limit.</span></li>'}</ul>
+        <p class="support-copy">the next candidates that would be considered if more apply slots were allowed in the current live preflight.</p>
+      </article>
+      <article class="support-card">
+        <div class="support-card-title">last real apply run</div>
+        <div class="policy-grid">{last_apply_pills}</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in last_apply_items) if last_apply_items else '<li><span class="muted">no persisted apply execution has been recorded yet.</span></li>'}</ul>
+        <p class="support-copy">last run <span class="time-local" data-utc="{_escape_attr(last_apply_run)}">{html.escape(last_apply_run or 'n/a')}</span>{' · pr <a href="' + _escape_attr(last_apply_execution.get('pr_url') or '') + '">' + html.escape(str(last_apply_execution.get('pr_url') or 'open')) + '</a>' if last_apply_execution.get('pr_url') else ''}. next scheduled apply <span class="time-local" data-utc="{_escape_attr(next_apply_run)}">{html.escape(next_apply_run or 'n/a')}</span>.</p>
       </article>
       <article class="support-card">
         <div class="support-card-title">skip summary</div>
@@ -850,6 +1162,11 @@ def build_index_html() -> str:
 
     support_cards = f"""
       <article class="support-card">
+        <div class="support-card-title">report-scoped posture</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in report_posture_items)}</ul>
+        <p class="support-copy">{html.escape(report_scope_copy)}</p>
+      </article>
+      <article class="support-card">
         <div class="support-card-title">policy guardrails</div>
         <div class="policy-grid">{policy_html}</div>
         <p class="support-copy">active tuning bounds applied to each report and apply pass.</p>
@@ -859,10 +1176,15 @@ def build_index_html() -> str:
         <div class="policy-grid">{note_html}</div>
         <p class="support-copy">most common skip reasons and advisory annotations in the current window.</p>
       </article>
+      <article class="support-card">
+        <div class="support-card-title">selection reasons</div>
+        <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in selected_reason_items) if selected_reason_items else '<li><span class="muted">no live preflight selections in the current snapshot.</span></li>'}</ul>
+        <p class="support-copy">why the current live preflight chose the rows it did.</p>
+      </article>
     """
 
     status_copy = (
-        "Per-service tuning view from the runtime-owned advisor report, with hard node-fit blocking and advisory cluster posture."
+        "Per-service tuning view with report-scoped advisor posture, live apply preflight footprint, and persisted apply execution artifacts."
         if report
         else "No parsed report is currently available from the runtime ConfigMap."
     )
@@ -1370,18 +1692,19 @@ def build_index_html() -> str:
         font-family: var(--font-mono);
         font-size: 12px;
       }}
-      .focus-grid,
-      .support-grid {{
+      .focus-grid {{
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 16px;
       }}
       .support-grid {{
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
       }}
       .planner-grid {{
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
       }}
       .focus-card-body,
@@ -1610,8 +1933,10 @@ def build_index_html() -> str:
           <span class="env-pill">production</span>
         </div>
         <div class="top-actions">
-          <a class="top-button" href="/latest.json">json</a>
-          <a class="top-button" href="/latest.md">markdown</a>
+          <a class="top-button" href="/latest.json">report json</a>
+          <a class="top-button" href="/latest.md">report markdown</a>
+          <a class="top-button" href="/apply-plan.json">apply json</a>
+          <a class="top-button" href="/apply-plan.md">apply markdown</a>
           <a class="top-button" href="/metrics">metrics</a>
         </div>
       </div>
@@ -1634,11 +1959,13 @@ def build_index_html() -> str:
         <div class="overview-meta-row">
           <div class="overview-meta-cluster">
             <span>last run <strong id="last-run-local" data-utc="{_escape_attr(last_run)}">{html.escape(last_run or 'n/a')}</strong></span>
+            <span>last apply <strong class="time-local" data-utc="{_escape_attr(last_apply_run)}">{html.escape(last_apply_run or 'n/a')}</strong></span>
+            <span>next apply <strong class="time-local" data-utc="{_escape_attr(next_apply_run)}">{html.escape(next_apply_run or 'n/a')}</strong></span>
             <span>browser tz <strong id="browser-tz">browser local</strong></span>
             <span>mode <strong>{html.escape(mode or 'n/a')}</strong></span>
             <span>allocatable <strong>{html.escape(_with_unit_space(alloc.get('cpu') or 'n/a'))}</strong> cpu <strong>{html.escape(_with_unit_space(alloc.get('memory') or 'n/a'))}</strong> memory</span>
           </div>
-          <div class="result-count">{html.escape(fetch_detail)}</div>
+          <div class="result-count">{html.escape(fetch_detail)} · report scope and live apply scope are split below.</div>
         </div>
       </section>
 
@@ -1646,9 +1973,9 @@ def build_index_html() -> str:
         <div class="section-bar">
           <div>
             <h2 class="section-heading">apply preflight</h2>
-            <p class="section-copy">live selection preview for the weekly apply job, using hard node-fit blocking and advisory cluster pressure ordering.</p>
+            <p class="section-copy">live selection preview for the weekly apply job. this section keeps live preflight, next-up candidates, and the persisted last real apply run separate.</p>
           </div>
-          <div class="section-detail">{selected_count} selected right now</div>
+          <div class="section-detail">schedule {html.escape(apply_schedule_label or 'n/a')} {html.escape(apply_schedule_tz or '')}</div>
         </div>
         <div class="planner-grid">
           {planner_cards}
@@ -1727,7 +2054,7 @@ def build_index_html() -> str:
         <div class="section-bar">
           <div>
             <h2 class="section-heading">control notes</h2>
-            <p class="section-copy">planner bounds and recurring note patterns behind the current recommendation set.</p>
+            <p class="section-copy">report-scoped posture, planner bounds, and recurring note patterns behind the current recommendation set.</p>
           </div>
           <div class="section-detail">{rec_count} total recommendations</div>
         </div>
@@ -1754,7 +2081,7 @@ def build_index_html() -> str:
     <script>
       (function () {{
         const tzNode = document.getElementById("browser-tz");
-        const tsNode = document.getElementById("last-run-local");
+        const tsNodes = Array.from(document.querySelectorAll("[data-utc]"));
         const rows = Array.from(document.querySelectorAll("[data-rec-row]"));
         const buttons = Array.from(document.querySelectorAll("[data-filter-action]"));
         const searchInput = document.getElementById("searchInput");
@@ -1769,23 +2096,21 @@ def build_index_html() -> str:
           }}
         }} catch (e) {{}}
 
-        if (tsNode) {{
+        for (const tsNode of tsNodes) {{
           const raw = tsNode.getAttribute("data-utc");
-          if (raw) {{
-            const d = new Date(raw);
-            if (!Number.isNaN(d.getTime())) {{
-              tsNode.textContent = d.toLocaleString(undefined, {{
-                year: "numeric",
-                month: "short",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                timeZoneName: "short"
-              }});
-              tsNode.title = "UTC: " + raw;
-            }}
-          }}
+          if (!raw) continue;
+          const d = new Date(raw);
+          if (Number.isNaN(d.getTime())) continue;
+          tsNode.textContent = d.toLocaleString(undefined, {{
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            timeZoneName: "short"
+          }});
+          tsNode.title = "UTC: " + raw;
         }}
 
         function applyFilters() {{
@@ -1860,6 +2185,14 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/latest.md":
             snap = STATE.snapshot()
             body = (snap.get("latest_md") or "").encode("utf-8")
+            return 200, "text/markdown; charset=utf-8", body
+        if path == "/apply-plan.json":
+            snap = STATE.snapshot()
+            body = json.dumps(snap.get("last_apply_plan") or {}, separators=(",", ":")).encode("utf-8")
+            return 200, "application/json; charset=utf-8", body
+        if path == "/apply-plan.md":
+            snap = STATE.snapshot()
+            body = (snap.get("last_apply_md") or "").encode("utf-8")
             return 200, "text/markdown; charset=utf-8", body
         if path == "/" or path == "":
             body = build_index_html().encode("utf-8")
