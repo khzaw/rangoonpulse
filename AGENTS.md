@@ -86,8 +86,12 @@ Notes:
   - backend split remains unchanged:
     - `apps/exposure-control/` owns operator write actions and the cockpit shell
     - `infrastructure/resource-advisor/` remains a separate backend/exporter and data source for tuning
-  - `tuning.khzaw.dev` remains the resource-advisor native surface/raw endpoints (`/latest.json`, `/latest.md`, `/metrics`,
-    `/api/ui.json`) and is still useful as a backend-specific compatibility URL
+  - `tuning.khzaw.dev` has been retired as a public hostname
+  - raw tuning artifacts are exposed through the cockpit:
+    - `https://controlpanel.khzaw.dev/api/tuning/latest.json`
+    - `https://controlpanel.khzaw.dev/api/tuning/latest.md`
+    - `https://controlpanel.khzaw.dev/api/tuning/metrics`
+  - `resource-advisor` still serves `/api/ui.json`, `/latest.json`, `/latest.md`, and `/metrics` on its cluster-local Service
   - share hosts route through Cloudflare Tunnel -> `exposure-control` backend
   - default temporary exposure expiry: `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
   - UI auth default: `none`; backend/API default auth mode: `cloudflare-access` (configurable per enable action)
@@ -365,7 +369,7 @@ Important external-dns behavior:
   - apply planner uses live pod request footprint + current pod placement for node-fit simulation and blocks only on allocatable node capacity; advisory CPU/memory request ceilings remain informational and influence ordering only
   - `controlpanel.khzaw.dev` now renders the combined tuning view for operators, using `resource-advisor` JSON from the
     separate exporter backend
-  - `tuning.khzaw.dev` still includes a live `apply preflight` section showing what the planner would select right now
+  - the public `tuning.khzaw.dev` hostname has been removed; use cockpit proxies for raw report endpoints when needed
   - current auto-apply scope includes:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,

@@ -109,7 +109,7 @@ curl -I --max-time 20 https://share-sponsorblocktv.khzaw.dev
 
 ## 6) Exposure Control (Phase 2 + 3 MVP)
 
-`controlpanel.khzaw.dev` is the combined operator cockpit. `tuning.khzaw.dev` remains the separate resource-advisor backend/native surface.
+`controlpanel.khzaw.dev` is the combined operator cockpit. The public `tuning.khzaw.dev` hostname has been retired.
 
 ```bash
 # Backend/control panel health
@@ -201,10 +201,10 @@ curl -I https://mmcal.khzaw.dev/manifest.webmanifest
 kubectl get cronjobs -n monitoring | rg resource-advisor
 kubectl get jobs -n monitoring | rg resource-advisor
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
-curl -I --max-time 20 https://tuning.khzaw.dev
-curl -s https://tuning.khzaw.dev/api/ui.json | jq '.fetch,.applyPreflight.selectedCount'
-curl -s https://tuning.khzaw.dev/latest.json | jq '.summary,.budget'
-curl -s https://tuning.khzaw.dev/metrics | rg '^resource_advisor_'
+curl -I --max-time 20 https://controlpanel.khzaw.dev#tuning
+curl -s https://controlpanel.khzaw.dev/api/tuning | jq '.fetch,.applyPreflight.selectedCount'
+curl -s https://controlpanel.khzaw.dev/api/tuning/latest.json | jq '.summary,.budget'
+curl -s https://controlpanel.khzaw.dev/api/tuning/metrics | rg '^resource_advisor_'
 
 # If exporter.py changed in Git, restart the pod after reconcile to pick up the new mounted script
 kubectl rollout restart deployment/resource-advisor-exporter -n monitoring

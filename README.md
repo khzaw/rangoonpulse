@@ -135,7 +135,7 @@ Current cluster status: both nodes are functional and schedulable.
 
 *Transmission can run direct or through a Gluetun sidecar, with the control toggle on `controlpanel.khzaw.dev` and the Gluetun WebUI at `torrent-vpn.khzaw.dev`.*
 
-*`controlpanel.khzaw.dev` is the combined operator cockpit for exposure control, Transmission routing, image updates, and the resource-advisor tuning view. `tuning.khzaw.dev` remains the separate resource-advisor backend/native surface.*
+*`controlpanel.khzaw.dev` is the combined operator cockpit for exposure control, Transmission routing, image updates, and the resource-advisor tuning view. The resource-advisor backend remains separate, but its public tuning hostname has been retired.*
 
 *Flaresolverr currently tracks `alexfozor/flaresolverr:pr-1300` on the Raspberry Pi utility node.*
 

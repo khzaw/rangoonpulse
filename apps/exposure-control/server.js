@@ -329,6 +329,14 @@ function sendText(res, statusCode, body) {
   res.end(body);
 }
 
+function sendBody(res, statusCode, body, contentType) {
+  res.writeHead(statusCode, {
+    "content-type": contentType || "application/octet-stream",
+    "cache-control": "no-store",
+  });
+  res.end(body);
+}
+
 function sendHtml(res, statusCode, body) {
   res.writeHead(statusCode, {
     "content-type": "text/html; charset=utf-8",
@@ -666,6 +674,28 @@ async function getResourceAdvisorUi() {
     throw new Error(`resource advisor ui request failed (${res.statusCode})`);
   }
   return JSON.parse(res.body || "{}");
+}
+
+function resourceAdvisorArtifactUrl(pathname) {
+  const target = new URL(RESOURCE_ADVISOR_UI_URL);
+  target.pathname = pathname;
+  target.search = "";
+  return target.toString();
+}
+
+async function getResourceAdvisorArtifact(pathname, acceptHeader) {
+  const res = await requestUrl(resourceAdvisorArtifactUrl(pathname), {
+    headers: {
+      accept: acceptHeader || "*/*",
+      "user-agent": "exposure-control/1.0",
+    },
+  });
+  if (res.statusCode !== 200) {
+    throw new Error(
+      `resource advisor artifact request failed (${res.statusCode})`,
+    );
+  }
+  return res;
 }
 
 async function registryRequest(urlString, repository, tokenState, options) {
@@ -1753,6 +1783,47 @@ async function handleApi(req, res, parsedUrl) {
     try {
       const payload = await getResourceAdvisorUi();
       return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/tuning/latest.json") {
+    try {
+      const payload = await getResourceAdvisorArtifact(
+        "/latest.json",
+        "application/json",
+      );
+      return sendBody(
+        res,
+        200,
+        payload.body,
+        "application/json; charset=utf-8",
+      );
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/tuning/latest.md") {
+    try {
+      const payload = await getResourceAdvisorArtifact(
+        "/latest.md",
+        "text/markdown, text/plain",
+      );
+      return sendBody(res, 200, payload.body, "text/markdown; charset=utf-8");
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/tuning/metrics") {
+    try {
+      const payload = await getResourceAdvisorArtifact(
+        "/metrics",
+        "text/plain",
+      );
+      return sendBody(res, 200, payload.body, "text/plain; charset=utf-8");
     } catch (err) {
       return sendJson(res, 500, { error: err.message });
     }
@@ -3924,11 +3995,11 @@ function renderCombinedCockpitHtml() {
         <div class="content-block" style="padding-bottom:0">
           <div class="section-bar" style="padding:0 0 14px">
             <div class="utility-links">
-              <a class="top-button" href="https://tuning.khzaw.dev/latest.json" target="_blank" rel="noreferrer">json</a>
-              <a class="top-button" href="https://tuning.khzaw.dev/latest.md" target="_blank" rel="noreferrer">markdown</a>
-              <a class="top-button" href="https://tuning.khzaw.dev/metrics" target="_blank" rel="noreferrer">metrics</a>
+              <a class="top-button" href="/api/tuning/latest.json" target="_blank" rel="noreferrer">json</a>
+              <a class="top-button" href="/api/tuning/latest.md" target="_blank" rel="noreferrer">markdown</a>
+              <a class="top-button" href="/api/tuning/metrics" target="_blank" rel="noreferrer">metrics</a>
             </div>
-            <a class="primary-button" href="https://tuning.khzaw.dev/latest.json" target="_blank" rel="noreferrer">open report</a>
+            <a class="primary-button" href="/api/tuning/latest.json" target="_blank" rel="noreferrer">open report</a>
           </div>
         </div>
         <div class="content-block">

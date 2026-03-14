@@ -13,7 +13,6 @@ resources:
   - cronjob-apply-pr.yaml
   - deployment-exporter.yaml
   - service-exporter.yaml
-  - ingress-exporter.yaml
   - servicemonitor-exporter.yaml
   - grafana-dashboard-resource-advisor.yaml
 configMapGenerator:

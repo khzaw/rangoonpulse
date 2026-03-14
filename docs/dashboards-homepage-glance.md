@@ -4,7 +4,8 @@ Homepage has been decommissioned; Glance is the only dashboard in this repositor
 
 Operational note:
 - `controlpanel.khzaw.dev` is the combined operator cockpit.
-- `tuning.khzaw.dev` remains the separate resource-advisor backend/native surface and should still be monitored separately.
+- `resource-advisor-exporter` remains a separate backend and should still be monitored separately, even though the public
+  tuning hostname has been retired.
 
 ## Hostnames
 - Glance: `https://glance.khzaw.dev`

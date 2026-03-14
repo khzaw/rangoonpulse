@@ -51,7 +51,7 @@ data:
           "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
           "options": {
             "mode": "markdown",
-            "content": "Latest report viewer: https://tuning.khzaw.dev\\n\\nThis dashboard tracks the resource-advisor CronJobs and exposes report summaries via the exporter metrics."
+            "content": "Latest report viewer: https://controlpanel.khzaw.dev#tuning\\n\\nThis dashboard tracks the resource-advisor CronJobs and exposes report summaries via the exporter metrics."
           }
         },
         {
@@ -230,4 +230,3 @@ data:
         }
       ]
     }
-

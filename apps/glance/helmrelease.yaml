@@ -298,8 +298,8 @@ spec:
                               - title: Operator Cockpit
                                 url: https://controlpanel.khzaw.dev
                                 icon: mdi:cloud-lock-outline
-                              - title: Tuning Backend
-                                url: https://tuning.khzaw.dev
+                              - title: Tuning
+                                url: https://controlpanel.khzaw.dev#tuning
                                 icon: mdi:tune
                               - title: Speedtest
                                 url: https://speedtest.khzaw.dev
@@ -672,8 +672,8 @@ spec:
                             url: https://adguard2.khzaw.dev
                             check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
-                          - title: Resource Advisor Backend
-                            url: https://tuning.khzaw.dev
+                          - title: Tuning
+                            url: https://controlpanel.khzaw.dev#tuning
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
                             icon: mdi:tune
                           - title: Tracerr
@@ -793,8 +793,8 @@ spec:
                             url: https://adguard2.khzaw.dev
                             check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
-                          - title: Resource Advisor Backend
-                            url: https://tuning.khzaw.dev
+                          - title: Tuning
+                            url: https://controlpanel.khzaw.dev#tuning
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
                             icon: mdi:tune
                           - title: Transmission

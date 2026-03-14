@@ -42,20 +42,19 @@ Apply PR cleanliness:
 
 ## Operator UI Surface
 - Canonical operator cockpit: `https://controlpanel.khzaw.dev` (`Tuning` section)
-- Backend-native resource-advisor surface: `https://tuning.khzaw.dev`
+- Public backend-native hostname: retired
 - Served by: `monitoring/resource-advisor-exporter`
 - Purpose:
-  - provide tuning data and a backend-native UI for the latest runtime-owned report,
+  - provide tuning data for the combined operator cockpit,
   - power the combined operator cockpit without merging backends,
   - expose live apply preflight snapshot data from the same report plus current cluster state,
-  - expose raw/report endpoints:
-    - `/latest.json`
-    - `/latest.md`
-    - `/metrics`
-    - `/api/ui.json`
+  - expose raw/report endpoints through the cockpit:
+    - `https://controlpanel.khzaw.dev/api/tuning/latest.json`
+    - `https://controlpanel.khzaw.dev/api/tuning/latest.md`
+    - `https://controlpanel.khzaw.dev/api/tuning/metrics`
+    - `https://controlpanel.khzaw.dev/api/tuning`
 - Source files:
   - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/exporter.py`
-  - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/ingress-exporter.yaml`
 - Operational note:
   - `exporter.py` is mounted from a ConfigMap; after a Git change to the exporter code, reconcile alone updates the file but does not restart the running Python process.
   - Run `kubectl rollout restart deployment/resource-advisor-exporter -n monitoring` after the reconcile when you need the new code live immediately.
@@ -149,8 +148,8 @@ Repository artifacts:
   - no generated report/apply JSON or Markdown artifacts are committed
 
 Live exporter-only surfaces:
-- `https://tuning.khzaw.dev` computes an in-memory apply preflight snapshot on refresh.
-- `https://tuning.khzaw.dev/api/ui.json` exposes the structured tuning payload consumed by `controlpanel.khzaw.dev`.
+- `resource-advisor-exporter.monitoring.svc.cluster.local:8081` computes an in-memory apply preflight snapshot on refresh.
+- `https://controlpanel.khzaw.dev/api/tuning` exposes the structured tuning payload consumed by the cockpit UI.
 - Prometheus metrics include:
   - `resource_advisor_apply_plan_selected_total`
   - `resource_advisor_apply_advisory_cpu_pressure`
@@ -192,10 +191,10 @@ kubectl get prometheus -n monitoring kube-prometheus-stack-prometheus -o yaml | 
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
 
 # Open the UI / raw surfaces
-curl -I --max-time 20 https://tuning.khzaw.dev
-curl -s https://tuning.khzaw.dev/api/ui.json | jq '.fetch,.applyPreflight.selectedCount'
-curl -s https://tuning.khzaw.dev/latest.json | jq '.summary,.budget'
-curl -s https://tuning.khzaw.dev/metrics | rg '^resource_advisor_'
+curl -I --max-time 20 https://controlpanel.khzaw.dev#tuning
+curl -s https://controlpanel.khzaw.dev/api/tuning | jq '.fetch,.applyPreflight.selectedCount'
+curl -s https://controlpanel.khzaw.dev/api/tuning/latest.json | jq '.summary,.budget'
+curl -s https://controlpanel.khzaw.dev/api/tuning/metrics | rg '^resource_advisor_'
 
 # Inspect recent jobs
 kubectl get jobs -n monitoring | rg resource-advisor
