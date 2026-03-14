@@ -3567,11 +3567,11 @@ function renderCombinedCockpitHtml() {
       }
       .action::before {
         content: "";
-        width: 12px;
-        height: 12px;
+        width: 8px;
+        height: 8px;
         border-radius: 999px;
         background: currentColor;
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.02);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.02);
         animation: statusPulse 1.9s ease-out infinite;
       }
       .svc-name,
@@ -3790,10 +3790,9 @@ function renderCombinedCockpitHtml() {
       </section>
 
       <nav class="section-nav" aria-label="Section navigation">
-        <a class="nav-pill" data-page-link href="#tuning">tuning</a>
-        <a class="nav-pill" data-page-link href="#exposure">exposure</a>
-        <a class="nav-pill" data-page-link href="#transmission">transmission</a>
         <a class="nav-pill" data-page-link href="#updates">image updates</a>
+        <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
+        <a class="nav-pill" data-page-link href="#tuning">tuning</a>
       </nav>
 
       <section id="overviewPanel" class="section overview-shared">
@@ -3808,6 +3807,109 @@ function renderCombinedCockpitHtml() {
         <div class="overview-meta-row">
           <div id="overviewMeta" class="overview-meta-cluster"></div>
           <div id="overviewDetail" class="result-count"></div>
+        </div>
+      </section>
+
+      <section id="exposure" class="section" data-page-section>
+        <div class="panel-actions">
+          <div>
+            <h2 class="section-heading">exposure control</h2>
+            <p class="section-copy">Temporary public exposure control on ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} with ${DEFAULT_EXPIRY_HOURS}h default expiry.</p>
+          </div>
+          <div id="exposureMeta" class="section-detail"></div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>status</th>
+                <th>auth</th>
+                <th>public url</th>
+                <th>expires</th>
+                <th>controls</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="msg" class="msg"></div>
+        </div>
+        <div class="content-block" style="padding-top:0">
+          <div id="transmissionPanel" class="subsection-bar">
+            <div>
+              <div class="subsection-label">transmission</div>
+              <p class="section-copy">Route Transmission directly or through the Gluetun VPN sidecar.</p>
+            </div>
+            <div id="vpnSectionMeta" class="section-detail"></div>
+          </div>
+          <div class="vpn-card">
+            <div class="vpn-row">
+              <div>
+                <div class="vpn-title">Transmission Egress</div>
+                <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
+                <div class="vpn-meta">
+                  Gluetun WebUI:
+                  <a href="${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
+                </div>
+              </div>
+              <div class="controls">
+                <button id="vpnDirectBtn" type="button">Route Direct</button>
+                <button id="vpnEnableBtn" type="button">Route via VPN</button>
+              </div>
+            </div>
+            <div id="vpnMsg" class="msg"></div>
+          </div>
+        </div>
+        <div class="content-block" style="padding-top:0">
+          <div class="subsection-bar">
+            <div>
+              <div class="subsection-label">audit</div>
+              <p class="section-copy">Recent exposure and transmission control actions.</p>
+            </div>
+            <div id="auditMeta" class="section-detail"></div>
+          </div>
+          <div class="audit-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>time</th>
+                  <th>action</th>
+                  <th>service</th>
+                  <th>details</th>
+                </tr>
+              </thead>
+              <tbody id="auditRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="updates" class="section" data-page-section>
+        <div class="updates-toolbar">
+          <div>
+            <h2 class="section-heading">image updates</h2>
+            <div id="updatesMeta" class="updates-meta">No update check yet.</div>
+          </div>
+          <button id="updatesRefreshBtn" type="button">Check Now</button>
+        </div>
+        <div class="updates-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>current</th>
+                <th>latest</th>
+                <th>status</th>
+                <th>image</th>
+              </tr>
+            </thead>
+            <tbody id="updatesRows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="updatesMsg" class="msg"></div>
         </div>
       </section>
 
@@ -3925,110 +4027,6 @@ function renderCombinedCockpitHtml() {
         </div>
       </section>
 
-      <section id="exposure" class="section" data-page-section>
-        <div class="panel-actions">
-          <div>
-            <h2 class="section-heading">exposure</h2>
-            <p class="section-copy">Temporary public exposure control on ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} with ${DEFAULT_EXPIRY_HOURS}h default expiry.</p>
-          </div>
-          <div id="exposureMeta" class="section-detail"></div>
-        </div>
-        <div class="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>service</th>
-                <th>status</th>
-                <th>auth</th>
-                <th>public url</th>
-                <th>expires</th>
-                <th>controls</th>
-              </tr>
-            </thead>
-            <tbody id="rows"></tbody>
-          </table>
-        </div>
-        <div class="content-block">
-          <div id="msg" class="msg"></div>
-        </div>
-        <div class="content-block" style="padding-top:0">
-          <div class="subsection-bar">
-            <div>
-              <div class="subsection-label">audit</div>
-              <p class="section-copy">Recent exposure and transmission control actions.</p>
-            </div>
-            <div id="auditMeta" class="section-detail"></div>
-          </div>
-          <div class="audit-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>time</th>
-                  <th>action</th>
-                  <th>service</th>
-                  <th>details</th>
-                </tr>
-              </thead>
-              <tbody id="auditRows"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section id="transmission" class="section" data-page-section>
-        <div class="section-bar">
-          <div>
-            <h2 class="section-heading">transmission</h2>
-            <p class="section-copy">Route Transmission directly or through the Gluetun VPN sidecar.</p>
-          </div>
-          <div id="vpnSectionMeta" class="section-detail"></div>
-        </div>
-        <div class="vpn-card">
-          <div class="vpn-row">
-            <div>
-              <div class="vpn-title">Transmission Egress</div>
-              <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
-              <div class="vpn-meta">
-                Gluetun WebUI:
-                <a href="${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
-              </div>
-            </div>
-            <div class="controls">
-              <button id="vpnDirectBtn" type="button">Route Direct</button>
-              <button id="vpnEnableBtn" type="button">Route via VPN</button>
-            </div>
-          </div>
-          <div id="vpnMsg" class="msg"></div>
-        </div>
-      </section>
-
-      <section id="updates" class="section" data-page-section>
-        <div class="updates-toolbar">
-          <div>
-            <h2 class="section-heading">image updates</h2>
-            <div id="updatesMeta" class="updates-meta">No update check yet.</div>
-          </div>
-          <button id="updatesRefreshBtn" type="button">Check Now</button>
-        </div>
-        <div class="updates-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>service</th>
-                <th>current</th>
-                <th>latest</th>
-                <th>status</th>
-                <th>image</th>
-              </tr>
-            </thead>
-            <tbody id="updatesRows"></tbody>
-          </table>
-        </div>
-        <div class="content-block">
-          <div id="updatesMsg" class="msg"></div>
-        </div>
-      </section>
-
     </main>
     <script>
       const loadStateEl = document.getElementById('loadState');
@@ -4060,6 +4058,7 @@ function renderCombinedCockpitHtml() {
       const auditRowsEl = document.getElementById('auditRows');
       const updatesRowsEl = document.getElementById('updatesRows');
       const vpnMetaEl = document.getElementById('vpnMeta');
+      const transmissionPanelEl = document.getElementById('transmissionPanel');
       const msgEl = document.getElementById('msg');
       const vpnMsgEl = document.getElementById('vpnMsg');
       const updatesMsgEl = document.getElementById('updatesMsg');
@@ -4107,13 +4106,14 @@ function renderCombinedCockpitHtml() {
 
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
-        if (candidate === 'overview' || candidate === 'audit') return 'exposure';
-        const knownPages = new Set(['tuning', 'exposure', 'transmission', 'updates']);
+        if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
+        const knownPages = new Set(['updates', 'exposure', 'tuning']);
         if (knownPages.has(candidate)) return candidate;
-        return 'exposure';
+        return 'updates';
       }
 
       function setActivePage(page, options) {
+        const requestedPage = String(page || '').replace(/^#/, '').trim().toLowerCase();
         const nextPage = normalizePage(page);
         const replace = Boolean(options && options.replace);
         pageSections.forEach((section) => {
@@ -4129,6 +4129,10 @@ function renderCombinedCockpitHtml() {
           history.replaceState(null, '', nextHash);
         } else if (window.location.hash !== nextHash) {
           history.pushState(null, '', nextHash);
+        }
+        if (requestedPage === 'transmission' && nextPage === 'exposure' && transmissionPanelEl) {
+          transmissionPanelEl.scrollIntoView({ block: 'start', behavior: 'auto' });
+          return;
         }
         window.scrollTo({ top: 0, behavior: 'auto' });
       }
@@ -4848,7 +4852,7 @@ function renderCombinedCockpitHtml() {
       });
 
       setInterval(tickExpiryCountdowns, 1000);
-      setActivePage(window.location.hash || '#exposure', { replace: true });
+      setActivePage(window.location.hash || '#updates', { replace: true });
       loadDashboard();
     </script>
   </body>
