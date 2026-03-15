@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-uua-g6r
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
     controllers:
       main:
@@ -34,7 +34,7 @@ spec:
               - name: DISABLE_ANALYTICS
                 value: "false"
               - name: TZ
-                value: "Asia/Singapore"
+                value: "${TIMEZONE}"
             resources:
               requests:
                 cpu: "25m"

@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -31,7 +31,7 @@ spec:
               repository: lscr.io/linuxserver/sabnzbd
               tag: 4.5.5-ls245
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               PUID: "1000"
               PGID: "1000"
               SABNZBD__HOST_WHITELIST: "sabnzbd.khzaw.dev"

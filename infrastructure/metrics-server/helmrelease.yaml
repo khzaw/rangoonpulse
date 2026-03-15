@@ -27,4 +27,4 @@ spec:
     args:
       - --kubelet-insecure-tls
     nodeSelector:
-      kubernetes.io/hostname: talos-7nf-osf
+      kubernetes.io/hostname: ${PRIMARY_NODE_NAME}

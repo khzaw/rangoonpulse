@@ -36,7 +36,7 @@ readinessProbe:
   failureThreshold: 6
 
 nodeSelector:
-  kubernetes.io/hostname: talos-uua-g6r
+  kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
 ingress:
   enabled: true

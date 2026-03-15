@@ -25,7 +25,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -35,7 +35,7 @@ spec:
               repository: couchdb
               tag: "3.5.1"
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               COUCHDB_USER:
                 valueFrom:
                   secretKeyRef:

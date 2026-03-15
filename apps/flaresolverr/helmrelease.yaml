@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-uua-g6r
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -37,7 +37,7 @@ spec:
               repository: alexfozor/flaresolverr
               tag: pr-1300
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               LOG_LEVEL: "debug"
               LOG_HTML: "true"
             resources:

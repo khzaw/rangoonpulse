@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -34,7 +34,7 @@ spec:
               repository: ghcr.io/calibrain/shelfmark
               tag: v1.2.0 # {"$imagepolicy": "flux-system:shelfmark:tag"}
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               PUID: "1000"
               PGID: "1000"
               SESSION_COOKIE_SECURE: "true"

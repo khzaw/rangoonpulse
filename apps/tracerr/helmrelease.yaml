@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -38,7 +38,7 @@ spec:
               # - tracerr-app-secret (JWT_SECRET, COOKIE_SECRET)
               # - tracerr-db-secret (POSTGRES_PASSWORD, DATABASE_URL)
               - name: TZ
-                value: "Asia/Singapore"
+                value: "${TIMEZONE}"
               - name: NODE_ENV
                 value: production
               - name: HOST

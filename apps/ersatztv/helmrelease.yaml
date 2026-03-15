@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -33,7 +33,7 @@ spec:
               repository: ghcr.io/ersatztv/ersatztv
               tag: v26.3.0
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
             resources:
               requests:
                 cpu: 100m

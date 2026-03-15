@@ -3,7 +3,7 @@
 defaultPodOptionsStrategy: merge
 defaultPodOptions:
   nodeSelector:
-    kubernetes.io/hostname: talos-7nf-osf
+    kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
 controllers:
   main:
@@ -15,7 +15,7 @@ controllers:
           repository: lscr.io/linuxserver/calibre
           tag: "v9.3.1-ls387"
         env:
-          TZ: 'Asia/Singapore'
+          TZ: '${TIMEZONE}'
           PUID: "1000"
           PGID: "1000"
         resources:

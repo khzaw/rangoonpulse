@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -83,7 +83,7 @@ spec:
                   sleep 60
                 done
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
             resources:
               requests:
                 cpu: "50m"

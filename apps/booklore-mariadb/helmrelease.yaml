@@ -25,7 +25,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -35,7 +35,7 @@ spec:
               repository: lscr.io/linuxserver/mariadb
               tag: "11.4.9-r0-ls208"
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               PUID: "1000"
               PGID: "1000"
               MYSQL_ROOT_PASSWORD:

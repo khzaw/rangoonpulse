@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -32,7 +32,7 @@ spec:
               repository: vaultwarden/server
               tag: "1.35.4"
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               DOMAIN: "https://passwords.khzaw.dev"
               SIGNUPS_ALLOWED: "true"
               DATABASE_URL:

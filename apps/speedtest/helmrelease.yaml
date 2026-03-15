@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-uua-g6r
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
     controllers:
       main:
@@ -31,7 +31,7 @@ spec:
               repository: lscr.io/linuxserver/librespeed
               tag: v5.5.1-ls262
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
             resources:
               requests:
                 cpu: "25m"

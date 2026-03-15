@@ -21,7 +21,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -38,7 +38,7 @@ spec:
               repository: lscr.io/linuxserver/jellyfin
               tag: 10.11.6ubu2404-ls23
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               PUID: "1000"
               GUID: "1000"
               JELLYFIN_PublishedServerUrl: "https://jellyfin.khzaw.dev"

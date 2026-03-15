@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -40,7 +40,7 @@ spec:
               repository: ghcr.io/technomancer702/nodecast-tv
               tag: sha-0e26a90
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               NODE_ENV: production
             resources:
               requests:

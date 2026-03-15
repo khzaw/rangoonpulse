@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-uua-g6r
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
     controllers:
       main:
@@ -39,7 +39,7 @@ spec:
               repository: ghcr.io/autobrr/autobrr
               tag: v1.74.0
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
             resources:
               requests:
                 cpu: "50m"

@@ -32,7 +32,7 @@ spec:
         replicas: 1
         pod:
           nodeSelector:
-            kubernetes.io/hostname: talos-7nf-osf
+            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
         containers:
           main:
             image:

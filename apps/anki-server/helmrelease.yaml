@@ -25,7 +25,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-uua-g6r
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
     controllers:
       main:
@@ -35,7 +35,7 @@ spec:
               repository: jeankhawand/anki-sync-server
               tag: "25.07"
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               SYNC_USER1:
                 valueFrom:
                   secretKeyRef:

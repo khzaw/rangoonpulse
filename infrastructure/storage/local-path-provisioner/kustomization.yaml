@@ -16,7 +16,7 @@ patches:
         {
                 "nodePathMap":[
                 {
-                        "node":"talos-uua-g6r",
+                        "node":"${UTILITY_NODE_NAME}",
                         "paths":["/var/lib/local-path-provisioner"]
                 },
                 {

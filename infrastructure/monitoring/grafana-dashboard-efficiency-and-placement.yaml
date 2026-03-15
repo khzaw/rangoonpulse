@@ -656,7 +656,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "topk(10, sum by(namespace, workload) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=\"talos-uua-g6r\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})))",
+              "expr": "topk(10, sum by(namespace, workload) (cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=\"${UTILITY_NODE_NAME}\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})))",
               "instant": true,
               "legendFormat": "{{namespace}}/{{workload}}",
               "datasource": {
@@ -695,7 +695,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "topk(10, sum by(namespace, workload) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=\"talos-uua-g6r\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})))",
+              "expr": "topk(10, sum by(namespace, workload) (cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{namespace=~\"$namespace\",node=\"${UTILITY_NODE_NAME}\"} * on(namespace, pod) group_left(workload) max by(namespace, pod, workload) (namespace_workload_pod:kube_pod_owner:relabel{namespace=~\"$namespace\",workload=~\"$workload\"})))",
               "instant": true,
               "legendFormat": "{{namespace}}/{{workload}}",
               "datasource": {

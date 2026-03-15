@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-uua-g6r
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -45,7 +45,7 @@ spec:
               - node
               - /app/server.js
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               PORT: "8080"
               DATA_DIR: /data
               SERVICES_FILE: /app/services.json

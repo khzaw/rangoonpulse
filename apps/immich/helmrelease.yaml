@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -32,7 +32,7 @@ spec:
               repository: pgvector/pgvector
               tag: pg16
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               POSTGRES_USER: "immich"
               POSTGRES_DB: "immich"
               POSTGRES_PASSWORD:
@@ -92,14 +92,14 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
         containers:
           main:
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               DB_HOSTNAME: immich-postgres
               DB_PORT: "5432"
               DB_USERNAME: immich

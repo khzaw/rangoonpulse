@@ -24,14 +24,14 @@ spec:
         strategy: Recreate
         pod:
           nodeSelector:
-            kubernetes.io/hostname: talos-uua-g6r
+            kubernetes.io/hostname: ${UTILITY_NODE_NAME}
         containers:
           main:
             image:
               repository: santiagosayshey/profilarr
               tag: v1.1.4
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
             resources:
               requests:
                 cpu: "50m"

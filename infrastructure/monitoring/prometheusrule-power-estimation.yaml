@@ -48,15 +48,15 @@ spec:
         # Tune these constants when hardware or node roles change.
         - record: homelab:node_idle_power_watts
           expr: >
-            max by (node) (0 * kube_node_info{node="talos-7nf-osf"} + 20)
+            max by (node) (0 * kube_node_info{node="${PRIMARY_NODE_NAME}"} + 20)
             or
-            max by (node) (0 * kube_node_info{node="talos-uua-g6r"} + 4)
+            max by (node) (0 * kube_node_info{node="${UTILITY_NODE_NAME}"} + 4)
 
         - record: homelab:node_max_power_watts
           expr: >
-            max by (node) (0 * kube_node_info{node="talos-7nf-osf"} + 75)
+            max by (node) (0 * kube_node_info{node="${PRIMARY_NODE_NAME}"} + 75)
             or
-            max by (node) (0 * kube_node_info{node="talos-uua-g6r"} + 12)
+            max by (node) (0 * kube_node_info{node="${UTILITY_NODE_NAME}"} + 12)
 
         - record: homelab:node_estimated_power_watts
           expr: >

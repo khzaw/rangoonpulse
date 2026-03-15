@@ -30,7 +30,7 @@ spec:
       main:
         pod:
           nodeSelector:
-            kubernetes.io/hostname: talos-uua-g6r
+            kubernetes.io/hostname: ${UTILITY_NODE_NAME}
           dnsConfig:
             options:
               - name: ndots
@@ -45,7 +45,7 @@ spec:
               repository: glanceapp/glance
               tag: v0.8.4
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
             envFrom:
               - secretRef:
                   name: homepage-widget-secrets
@@ -150,7 +150,7 @@ spec:
                       - type: clock
                         hour-format: 24h
                         timezones:
-                          - timezone: Asia/Singapore
+                          - timezone: ${TIMEZONE}
                             label: Local
                           - timezone: Europe/Berlin
                             label: Berlin
@@ -609,25 +609,25 @@ spec:
                         url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=vector(1)"
                         subrequests:
                           p_cpu_alloc:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22${PRIMARY_NODE_NAME}%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D"
                           p_mem_alloc:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22${PRIMARY_NODE_NAME}%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D"
                           p_cpu_req:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D%29"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22${PRIMARY_NODE_NAME}%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D%29"
                           p_mem_req:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-7nf-osf%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D%29"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22${PRIMARY_NODE_NAME}%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D%29"
                           p_pods:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_info%7Bnode%3D%22talos-7nf-osf%22%7D%29"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_info%7Bnode%3D%22${PRIMARY_NODE_NAME}%22%7D%29"
                           u_cpu_alloc:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22${UTILITY_NODE_NAME}%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D"
                           u_mem_alloc:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=kube_node_status_allocatable%7Bnode%3D%22${UTILITY_NODE_NAME}%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D"
                           u_cpu_req:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D%29"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22${UTILITY_NODE_NAME}%22%2Cresource%3D%22cpu%22%2Cunit%3D%22core%22%7D%29"
                           u_mem_req:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22talos-uua-g6r%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D%29"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_container_resource_requests%7Bnode%3D%22${UTILITY_NODE_NAME}%22%2Cresource%3D%22memory%22%2Cunit%3D%22byte%22%7D%29"
                           u_pods:
-                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_info%7Bnode%3D%22talos-uua-g6r%22%7D%29"
+                            url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=sum%28kube_pod_info%7Bnode%3D%22${UTILITY_NODE_NAME}%22%7D%29"
                         template: |
                           {{`{{ $pCpuAlloc := (.Subrequest "p_cpu_alloc").JSON.Float "data.result.0.value.1" }}
                           {{ $pMemAlloc := (.Subrequest "p_mem_alloc").JSON.Float "data.result.0.value.1" }}

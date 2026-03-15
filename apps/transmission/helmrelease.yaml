@@ -26,7 +26,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -37,7 +37,7 @@ spec:
               repository: lscr.io/linuxserver/transmission
               tag: 4.1.1-r1-ls333
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               PUID: "1000"
               GUID: "1000"
             resources:
@@ -53,7 +53,7 @@ spec:
               repository: qmcgaw/gluetun
               tag: v3.40.0
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               VPN_SERVICE_PROVIDER: custom
               VPN_TYPE: wireguard
               HTTP_CONTROL_SERVER_ADDRESS: ":8000"

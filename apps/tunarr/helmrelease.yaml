@@ -22,7 +22,7 @@ spec:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
-        kubernetes.io/hostname: talos-7nf-osf
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
     controllers:
       main:
@@ -40,7 +40,7 @@ spec:
               repository: ghcr.io/chrisbenincasa/tunarr
               tag: "1.2.1"
             env:
-              TZ: "Asia/Singapore"
+              TZ: "${TIMEZONE}"
               # Force the modern Intel driver
               LIBVA_DRIVER_NAME: "iHD"
               LIBVA_DRIVERS_PATH: "/usr/local/lib/x86_64-linux-gnu/dri"

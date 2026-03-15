@@ -37,7 +37,7 @@ spec:
         walCompression: true
         scrapeInterval: 60s
         nodeSelector:
-          kubernetes.io/hostname: talos-7nf-osf
+          kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
         resources:
           requests:
             cpu: 50m
