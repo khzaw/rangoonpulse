@@ -12,8 +12,8 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/upstream-vhost: "10.0.0.1"
-    nginx.ingress.kubernetes.io/proxy-redirect-from: "http://10.0.0.1"
+    nginx.ingress.kubernetes.io/upstream-vhost: "${ROUTER_IP}"
+    nginx.ingress.kubernetes.io/proxy-redirect-from: "http://${ROUTER_IP}"
     nginx.ingress.kubernetes.io/proxy-redirect-to: "https://router.${BASE_DOMAIN}"
 spec:
   ingressClassName: nginx

@@ -3,8 +3,9 @@
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 
-PRIMARY_NODE := 10.0.0.197
-PI_NODE := 10.0.0.38
+CLUSTER_SETTINGS_FILE ?= flux/cluster-settings.yaml
+PRIMARY_NODE := $(shell awk '/^  PRIMARY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))
+PI_NODE := $(shell awk '/^  UTILITY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
