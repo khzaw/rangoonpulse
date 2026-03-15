@@ -1,0 +1,6 @@
+interface:
+  display_name: "Rangoonpulse Upgrade"
+  short_description: "Upgrade rangoonpulse services safely"
+  default_prompt: "Use $upgrade when I ask to upgrade or bump a service in /Users/khz/Code/rangoonpulse. Check controlpanel image updates first, analyze docs and state risk, and only proceed automatically when the upgrade is straightforward."
+policy:
+  allow_implicit_invocation: true
