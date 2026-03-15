@@ -51,7 +51,7 @@ spec:
               DATA_DIR: /data
               SERVICES_FILE: /app-files/services.json
               PUBLIC_DOMAIN: ${BASE_DOMAIN}
-              SHARE_HOST_PREFIX: share-
+              SHARE_HOST_PREFIX: ${SHARE_HOST_PREFIX}
               CONTROL_PANEL_HOST: controlpanel.${BASE_DOMAIN}
               DEFAULT_EXPIRY_HOURS: "1"
               RECONCILE_INTERVAL_SECONDS: "30"
