@@ -10,4 +10,8 @@ spec:
   path: ./infrastructure/namespaces
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
   timeout: 1m

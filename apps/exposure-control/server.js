@@ -164,7 +164,7 @@ function loadServices() {
     const authMode = normalizeAuthMode(svc.authMode);
     if (svc.authMode && !authMode) {
       throw new Error(
-        `invalid authMode for service ${svc.id}: ${svc.authMode}`,
+        `invalid authMode for service $${svc.id}: $${svc.authMode}`,
       );
     }
   }
@@ -212,7 +212,7 @@ function loadState(services) {
     // Remove stale services no longer in services.json
     for (const id of Object.keys(parsed.exposures)) {
       if (!knownIds.has(id)) {
-        console.log(`state: pruning stale service entry "${id}"`);
+        console.log(`state: pruning stale service entry "$${id}"`);
         delete parsed.exposures[id];
       }
     }
@@ -265,7 +265,7 @@ function effectiveEnabled(exposure) {
 }
 
 function servicePublicHost(service) {
-  return `${SHARE_HOST_PREFIX}${service.id}.${PUBLIC_DOMAIN}`;
+  return `$${SHARE_HOST_PREFIX}$${service.id}.$${PUBLIC_DOMAIN}`;
 }
 
 function serviceDefaultAuthMode(service) {
@@ -296,7 +296,7 @@ function getClientIp(req) {
 
 function checkShareRateLimit(req, serviceId) {
   const now = Date.now();
-  const key = `${serviceId}:${getClientIp(req)}`;
+  const key = `$${serviceId}:$${getClientIp(req)}`;
   const windowMs = SHARE_RATE_LIMIT_WINDOW_SECONDS * 1000;
   const existing = rateLimits.get(key);
 
@@ -382,7 +382,7 @@ function readJsonFile(filePath) {
 
 function writeJsonFile(filePath, value) {
   ensureDataDir();
-  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  const tempPath = `$${filePath}.tmp-$${process.pid}-$${Date.now()}`;
   fs.writeFileSync(tempPath, JSON.stringify(value, null, 2));
   fs.renameSync(tempPath, filePath);
 }
@@ -413,7 +413,7 @@ function parseImageReference(image) {
     : imagePath;
   if (!repository) return null;
   if ((registry === "docker.io" || registry === "index.docker.io") && !repository.includes("/")) {
-    repository = `library/${repository}`;
+    repository = `library/$${repository}`;
   }
   if (registry === "index.docker.io") registry = "docker.io";
   return { raw, registry, repository, tag };
@@ -531,7 +531,7 @@ function extractImageDigest(imageId) {
 function shortDigest(digest) {
   const value = String(digest || "");
   if (!value) return "";
-  return value.length <= 19 ? value : `${value.slice(0, 19)}...`;
+  return value.length <= 19 ? value : `$${value.slice(0, 19)}...`;
 }
 
 function contentTypeBase(value) {
@@ -603,7 +603,7 @@ function requestHttps(urlString, options) {
         protocol: u.protocol,
         hostname: u.hostname,
         port: u.port || 443,
-        path: `${u.pathname}${u.search}`,
+        path: `$${u.pathname}$${u.search}`,
         method: opts.method || "GET",
         headers: opts.headers || {},
         ca: opts.ca,
@@ -639,7 +639,7 @@ function requestUrl(urlString, options) {
         protocol: u.protocol,
         hostname: u.hostname,
         port: u.port || (u.protocol === "https:" ? 443 : 80),
-        path: `${u.pathname}${u.search}`,
+        path: `$${u.pathname}$${u.search}`,
         method: opts.method || "GET",
         headers: opts.headers || {},
         ca: opts.ca,
@@ -673,7 +673,7 @@ async function getResourceAdvisorUi() {
     },
   });
   if (res.statusCode !== 200) {
-    throw new Error(`resource advisor ui request failed (${res.statusCode})`);
+    throw new Error(`resource advisor ui request failed ($${res.statusCode})`);
   }
   return JSON.parse(res.body || "{}");
 }
@@ -694,7 +694,7 @@ async function getResourceAdvisorArtifact(pathname, acceptHeader) {
   });
   if (res.statusCode !== 200) {
     throw new Error(
-      `resource advisor artifact request failed (${res.statusCode})`,
+      `resource advisor artifact request failed ($${res.statusCode})`,
     );
   }
   return res;
@@ -709,7 +709,7 @@ async function registryRequest(urlString, repository, tokenState, options) {
       ...(opts.headers || {}),
     };
     if (tokenState && tokenState.token) {
-      headers.authorization = `Bearer ${tokenState.token}`;
+      headers.authorization = `Bearer $${tokenState.token}`;
     }
 
     const res = await requestHttps(urlString, {
@@ -746,7 +746,7 @@ async function fetchRegistryBearerToken(challenge, repository) {
   }
   tokenUrl.searchParams.set(
     "scope",
-    challenge.params.scope || `repository:${repository}:pull`,
+    challenge.params.scope || `repository:$${repository}:pull`,
   );
   const res = await requestHttps(tokenUrl.toString(), {
     headers: {
@@ -755,7 +755,7 @@ async function fetchRegistryBearerToken(challenge, repository) {
     },
   });
   if (res.statusCode !== 200) {
-    throw new Error(`token request failed (${res.statusCode})`);
+    throw new Error(`token request failed ($${res.statusCode})`);
   }
   const parsed = JSON.parse(res.body || "{}");
   const token = parsed.token || parsed.access_token || "";
@@ -764,7 +764,7 @@ async function fetchRegistryBearerToken(challenge, repository) {
 }
 
 async function listRegistryTags(imageRef) {
-  const cacheKey = `${imageRef.registry}/${imageRef.repository}`;
+  const cacheKey = `$${imageRef.registry}/$${imageRef.repository}`;
   const cached = registryTagCache.get(cacheKey);
   const now = Date.now();
   if (cached && now - cached.ts < 6 * 60 * 60 * 1000) return cached.tags;
@@ -773,8 +773,8 @@ async function listRegistryTags(imageRef) {
     imageRef.registry === "docker.io"
       ? "registry-1.docker.io"
       : imageRef.registry;
-  const base = `https://${apiHost}`;
-  let nextUrl = `${base}/v2/${imageRef.repository}/tags/list?n=200`;
+  const base = `https://$${apiHost}`;
+  let nextUrl = `$${base}/v2/$${imageRef.repository}/tags/list?n=200`;
   const tokenState = { token: "" };
   const tags = [];
   const seen = new Set();
@@ -789,7 +789,7 @@ async function listRegistryTags(imageRef) {
       {},
     );
     if (res.statusCode !== 200) {
-      throw new Error(`tags request failed (${res.statusCode})`);
+      throw new Error(`tags request failed ($${res.statusCode})`);
     }
 
     const payload = JSON.parse(res.body || "{}");
@@ -813,7 +813,7 @@ async function getNodePlatform(nodeName) {
   if (!key) return { os: "linux", architecture: "" };
   if (kubeNodePlatformCache.has(key)) return kubeNodePlatformCache.get(key);
 
-  const node = await kubeGetJson(`/api/v1/nodes/${key}`);
+  const node = await kubeGetJson(`/api/v1/nodes/$${key}`);
   const labels = (node && node.metadata && node.metadata.labels) || {};
   const platform = {
     os: String(labels["kubernetes.io/os"] || "linux").toLowerCase(),
@@ -824,7 +824,7 @@ async function getNodePlatform(nodeName) {
 }
 
 async function fetchRegistryManifestDigest(imageRef, tag, platform) {
-  const cacheKey = `${imageRef.registry}/${imageRef.repository}:${tag}:${(platform && platform.os) || "linux"}:${(platform && platform.architecture) || ""}`;
+  const cacheKey = `$${imageRef.registry}/$${imageRef.repository}:$${tag}:$${(platform && platform.os) || "linux"}:$${(platform && platform.architecture) || ""}`;
   const cached = registryManifestCache.get(cacheKey);
   const now = Date.now();
   if (cached && now - cached.ts < 6 * 60 * 60 * 1000) return cached.value;
@@ -833,7 +833,7 @@ async function fetchRegistryManifestDigest(imageRef, tag, platform) {
     imageRef.registry === "docker.io"
       ? "registry-1.docker.io"
       : imageRef.registry;
-  const url = `https://${apiHost}/v2/${imageRef.repository}/manifests/${encodeURIComponent(tag)}`;
+  const url = `https://$${apiHost}/v2/$${imageRef.repository}/manifests/$${encodeURIComponent(tag)}`;
   const tokenState = { token: "" };
   const res = await registryRequest(url, imageRef.repository, tokenState, {
     headers: {
@@ -847,7 +847,7 @@ async function fetchRegistryManifestDigest(imageRef, tag, platform) {
     },
   });
   if (res.statusCode !== 200) {
-    throw new Error(`manifest request failed (${res.statusCode})`);
+    throw new Error(`manifest request failed ($${res.statusCode})`);
   }
 
   const headerDigest = extractImageDigest(
@@ -883,7 +883,7 @@ async function kubeGetJson(pathname) {
   const res = await kubeRequest(pathname);
   if (res.statusCode === 404) return null;
   if (res.statusCode !== 200) {
-    throw new Error(`kubernetes api request failed (${res.statusCode})`);
+    throw new Error(`kubernetes api request failed ($${res.statusCode})`);
   }
   return JSON.parse(res.body || "{}");
 }
@@ -892,14 +892,14 @@ async function kubeRequest(pathname, options) {
   if (!kubeApiAvailable()) throw new Error("kubernetes api unavailable");
   const auth = kubeAuthContext();
   const opts = options || {};
-  const url = `https://${KUBE_SERVICE_HOST}:${KUBE_SERVICE_PORT}${pathname}`;
+  const url = `https://$${KUBE_SERVICE_HOST}:$${KUBE_SERVICE_PORT}$${pathname}`;
   const res = await requestHttps(url, {
     ca: auth.ca,
     method: opts.method || "GET",
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     headers: {
       accept: "application/json",
-      authorization: `Bearer ${auth.token}`,
+      authorization: `Bearer $${auth.token}`,
       "content-type": opts.contentType || "application/json",
       "user-agent": "exposure-control/1.0",
       ...(opts.headers || {}),
@@ -910,7 +910,7 @@ async function kubeRequest(pathname, options) {
 
 async function kubeUpsertConfigMap(namespace, name, data, labels) {
   const existing = await kubeGetJson(
-    `/api/v1/namespaces/${namespace}/configmaps/${name}`,
+    `/api/v1/namespaces/$${namespace}/configmaps/$${name}`,
   );
   const mergedLabels = {
     ...((existing && existing.metadata && existing.metadata.labels) || {}),
@@ -928,12 +928,12 @@ async function kubeUpsertConfigMap(namespace, name, data, labels) {
   };
 
   if (!existing) {
-    const created = await kubeRequest(`/api/v1/namespaces/${namespace}/configmaps`, {
+    const created = await kubeRequest(`/api/v1/namespaces/$${namespace}/configmaps`, {
       method: "POST",
       body: payload,
     });
     if (created.statusCode !== 201) {
-      throw new Error(`failed to create configmap ${name} (${created.statusCode})`);
+      throw new Error(`failed to create configmap $${name} ($${created.statusCode})`);
     }
     return JSON.parse(created.body || "{}");
   }
@@ -944,23 +944,23 @@ async function kubeUpsertConfigMap(namespace, name, data, labels) {
     payload.metadata.annotations = existing.metadata.annotations;
   }
   const updated = await kubeRequest(
-    `/api/v1/namespaces/${namespace}/configmaps/${name}`,
+    `/api/v1/namespaces/$${namespace}/configmaps/$${name}`,
     {
       method: "PUT",
       body: payload,
     },
   );
   if (updated.statusCode !== 200) {
-    throw new Error(`failed to update configmap ${name} (${updated.statusCode})`);
+    throw new Error(`failed to update configmap $${name} ($${updated.statusCode})`);
   }
   return JSON.parse(updated.body || "{}");
 }
 
 async function listNamespacePods(namespace) {
-  const key = `${namespace}|running`;
+  const key = `$${namespace}|running`;
   if (kubePodsCache.has(key)) return kubePodsCache.get(key);
-  const qs = `?fieldSelector=${encodeURIComponent("status.phase=Running")}`;
-  const list = await kubeGetJson(`/api/v1/namespaces/${namespace}/pods${qs}`);
+  const qs = `?fieldSelector=$${encodeURIComponent("status.phase=Running")}`;
+  const list = await kubeGetJson(`/api/v1/namespaces/$${namespace}/pods$${qs}`);
   const items = Array.isArray(list && list.items) ? list.items : [];
   kubePodsCache.set(key, items);
   return items;
@@ -1099,7 +1099,7 @@ async function buildImageUpdateSnapshot() {
       if (!workloadId) continue;
       const workloadKey = workloadId.toLowerCase();
       if (IMAGE_UPDATE_EXCLUDED_WORKLOADS.has(workloadKey)) continue;
-      const key = `${namespace}/${workloadId}`;
+      const key = `$${namespace}/$${workloadId}`;
       const existing = selectedPods.get(key);
       if (isBetterPod(pod, existing)) {
         selectedPods.set(key, pod);
@@ -1163,7 +1163,7 @@ async function buildImageUpdateSnapshot() {
     const row = {
       ...base,
       image: container.image,
-      imageRepo: `${imageRef.registry}/${imageRef.repository}`,
+      imageRepo: `$${imageRef.registry}/$${imageRef.repository}`,
       currentVersion: imageRef.tag || null,
     };
     items.push(row);
@@ -1213,7 +1213,7 @@ async function buildImageUpdateSnapshot() {
             ? "Update available"
             : "Up to date";
           task.row.detail = latest.updateAvailable
-            ? `New version ${latest.latestTag} available.`
+            ? `New version $${latest.latestTag} available.`
             : "Running latest known stable version.";
           return;
         }
@@ -1229,7 +1229,7 @@ async function buildImageUpdateSnapshot() {
               ? "Update available"
               : "Up to date";
             task.row.detail = latest.updateAvailable
-              ? `New matching tag ${latest.latestTag} available.`
+              ? `New matching tag $${latest.latestTag} available.`
               : "Running latest known matching tag.";
             return;
           }
@@ -1238,7 +1238,7 @@ async function buildImageUpdateSnapshot() {
         if (!task.currentDigest) {
           task.row.status = "unknown";
           task.row.statusText = "Unknown";
-          task.row.detail = `Current tag '${task.imageRef.tag}' is not version-sortable and pod image digest is unavailable.`;
+          task.row.detail = `Current tag '$${task.imageRef.tag}' is not version-sortable and pod image digest is unavailable.`;
           return;
         }
 
@@ -1253,7 +1253,7 @@ async function buildImageUpdateSnapshot() {
         if (!remoteDigest) {
           task.row.status = "unknown";
           task.row.statusText = "Unknown";
-          task.row.detail = `Current tag '${task.imageRef.tag}' could not be compared against a registry digest.`;
+          task.row.detail = `Current tag '$${task.imageRef.tag}' could not be compared against a registry digest.`;
           return;
         }
 
@@ -1264,8 +1264,8 @@ async function buildImageUpdateSnapshot() {
           ? "Update available"
           : "Up to date";
         task.row.detail = task.row.updateAvailable
-          ? `Tag '${task.imageRef.tag}' now points to ${shortDigest(remoteDigest)}.`
-          : `Registry digest matches running tag '${task.imageRef.tag}'.`;
+          ? `Tag '$${task.imageRef.tag}' now points to $${shortDigest(remoteDigest)}.`
+          : `Registry digest matches running tag '$${task.imageRef.tag}'.`;
       } catch (err) {
         task.row.status = "unknown";
         task.row.statusText = "Registry error";
@@ -1349,7 +1349,7 @@ async function getImageUpdates(forceRefresh) {
 
 async function getTransmissionVpnControlConfig() {
   const cm = await kubeGetJson(
-    `/api/v1/namespaces/${TRANSMISSION_VPN_NAMESPACE}/configmaps/${TRANSMISSION_VPN_CONTROL_CONFIGMAP}`,
+    `/api/v1/namespaces/$${TRANSMISSION_VPN_NAMESPACE}/configmaps/$${TRANSMISSION_VPN_CONTROL_CONFIGMAP}`,
   );
   if (!cm || !cm.data) {
     throw new Error("transmission vpn control configmap not found");
@@ -1393,7 +1393,7 @@ function transmissionVpnValuesForMode(config, mode) {
 
 async function ensureTransmissionVpnState() {
   const config = await getTransmissionVpnControlConfig();
-  const path = `/api/v1/namespaces/${config.namespace}/configmaps/${config.runtimeConfigMap}`;
+  const path = `/api/v1/namespaces/$${config.namespace}/configmaps/$${config.runtimeConfigMap}`;
   let cm = await kubeGetJson(path);
   if (!cm || !cm.data) {
     cm = await kubeUpsertConfigMap(
@@ -1483,7 +1483,7 @@ async function setTransmissionVpnMode(mode) {
     },
     transmissionVpnConfigMapLabels(),
   );
-  kubePodsCache.delete(`${config.namespace}|running`);
+  kubePodsCache.delete(`$${config.namespace}|running`);
   appendAuditEntry({
     action: "transmission-vpn-set",
     serviceId: "transmission",
@@ -1523,7 +1523,7 @@ const state = loadState(services);
   }
   if (expiredCount > 0) saveState(state);
   console.log(
-    `state: recovered ${services.length} services, ${activeCount} active, ${expiredCount} expired on startup`,
+    `state: recovered $${services.length} services, $${activeCount} active, $${expiredCount} expired on startup`,
   );
 })();
 
@@ -1531,7 +1531,7 @@ if (kubeApiAvailable()) {
   getTransmissionVpnStatus()
     .then((status) => {
       console.log(
-        `transmission-vpn: desired=${status.desiredMode} default=${status.defaultMode}`,
+        `transmission-vpn: desired=$${status.desiredMode} default=$${status.defaultMode}`,
       );
     })
     .catch((err) => {
@@ -1549,7 +1549,7 @@ function snapshotServices() {
       description: svc.description || "",
       target: svc.target,
       publicHost: servicePublicHost(svc),
-      publicUrl: `https://${servicePublicHost(svc)}`,
+      publicUrl: `https://$${servicePublicHost(svc)}`,
       enabled: effectiveEnabled(exposure),
       desiredEnabled: Boolean(exposure && exposure.enabled),
       expiresAt: exposure ? exposure.expiresAt : null,
@@ -1611,37 +1611,37 @@ function renderMetrics() {
   return [
     "# HELP exposure_control_active_exposures Number of currently active temporary public exposures.",
     "# TYPE exposure_control_active_exposures gauge",
-    `exposure_control_active_exposures ${activeExposureCount()}`,
+    `exposure_control_active_exposures $${activeExposureCount()}`,
     "# HELP exposure_control_enable_total Number of manual enable operations.",
     "# TYPE exposure_control_enable_total counter",
-    `exposure_control_enable_total ${metrics.enableTotal}`,
+    `exposure_control_enable_total $${metrics.enableTotal}`,
     "# HELP exposure_control_disable_total Number of manual disable operations.",
     "# TYPE exposure_control_disable_total counter",
-    `exposure_control_disable_total ${metrics.disableTotal}`,
+    `exposure_control_disable_total $${metrics.disableTotal}`,
     "# HELP exposure_control_emergency_disable_total Number of exposures disabled via emergency shutdown.",
     "# TYPE exposure_control_emergency_disable_total counter",
-    `exposure_control_emergency_disable_total ${metrics.emergencyDisableTotal}`,
+    `exposure_control_emergency_disable_total $${metrics.emergencyDisableTotal}`,
     "# HELP exposure_control_expired_disable_total Number of exposures auto-disabled due to expiry.",
     "# TYPE exposure_control_expired_disable_total counter",
-    `exposure_control_expired_disable_total ${metrics.expiredDisableTotal}`,
+    `exposure_control_expired_disable_total $${metrics.expiredDisableTotal}`,
     "# HELP exposure_control_share_allowed_total Number of share requests forwarded to upstreams.",
     "# TYPE exposure_control_share_allowed_total counter",
-    `exposure_control_share_allowed_total ${metrics.shareAllowedTotal}`,
+    `exposure_control_share_allowed_total $${metrics.shareAllowedTotal}`,
     "# HELP exposure_control_share_denied_disabled_total Number of share requests denied because exposure was disabled.",
     "# TYPE exposure_control_share_denied_disabled_total counter",
-    `exposure_control_share_denied_disabled_total ${metrics.shareDeniedDisabledTotal}`,
+    `exposure_control_share_denied_disabled_total $${metrics.shareDeniedDisabledTotal}`,
     "# HELP exposure_control_share_denied_auth_total Number of share requests denied due to missing Cloudflare Access token.",
     "# TYPE exposure_control_share_denied_auth_total counter",
-    `exposure_control_share_denied_auth_total ${metrics.shareDeniedAuthTotal}`,
+    `exposure_control_share_denied_auth_total $${metrics.shareDeniedAuthTotal}`,
     "# HELP exposure_control_share_denied_rate_limited_total Number of share requests denied by rate limit.",
     "# TYPE exposure_control_share_denied_rate_limited_total counter",
-    `exposure_control_share_denied_rate_limited_total ${metrics.shareDeniedRateLimitedTotal}`,
+    `exposure_control_share_denied_rate_limited_total $${metrics.shareDeniedRateLimitedTotal}`,
     "# HELP exposure_control_reconcile_errors_total Number of errors in expiry reconciliation.",
     "# TYPE exposure_control_reconcile_errors_total counter",
-    `exposure_control_reconcile_errors_total ${metrics.reconcileErrorsTotal}`,
+    `exposure_control_reconcile_errors_total $${metrics.reconcileErrorsTotal}`,
     "# HELP exposure_control_last_reconcile_timestamp_seconds Unix timestamp of the last successful reconciliation loop.",
     "# TYPE exposure_control_last_reconcile_timestamp_seconds gauge",
-    `exposure_control_last_reconcile_timestamp_seconds ${metrics.lastReconcileTimestampSeconds}`,
+    `exposure_control_last_reconcile_timestamp_seconds $${metrics.lastReconcileTimestampSeconds}`,
     "",
   ].join("\n");
 }
@@ -1856,7 +1856,7 @@ function proxyRequest(req, res, target) {
   );
 
   upstream.on("error", (err) => {
-    sendText(res, 502, `upstream error: ${err.message}`);
+    sendText(res, 502, `upstream error: $${err.message}`);
   });
 
   req.pipe(upstream);
@@ -2307,7 +2307,7 @@ function renderControlPanelHtml() {
       <div class="header">
         <div>
           <h1>rangoonpulse control panel</h1>
-          <div class="subtitle">transmission vpn + exposure controls + image update tracker · ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} · ${DEFAULT_EXPIRY_HOURS}h default · weekly checks</div>
+          <div class="subtitle">transmission vpn + exposure controls + image update tracker · $${SHARE_HOST_PREFIX}&lt;id&gt;.$${PUBLIC_DOMAIN} · $${DEFAULT_EXPIRY_HOURS}h default · weekly checks</div>
         </div>
       </div>
 
@@ -2330,7 +2330,7 @@ function renderControlPanelHtml() {
               <div class="vpn-title">Transmission Egress</div>
               <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
               <div class="vpn-meta">
-                Gluetun WebUI: <a href="${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
+                Gluetun WebUI: <a href="$${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
               </div>
             </div>
             <div class="controls">
@@ -2636,7 +2636,7 @@ function renderControlPanelHtml() {
             const opt = document.createElement("option");
             opt.value = String(item.value);
             opt.textContent = item.label;
-            if (item.value === (svc.defaultExpiryHours || ${DEFAULT_EXPIRY_HOURS})) opt.selected = true;
+            if (item.value === (svc.defaultExpiryHours || $${DEFAULT_EXPIRY_HOURS})) opt.selected = true;
             expirySelect.appendChild(opt);
           });
 
@@ -3887,7 +3887,7 @@ function renderCombinedCockpitHtml() {
         <div class="panel-actions">
           <div>
             <h2 class="section-heading">exposure control</h2>
-            <p class="section-copy">Temporary public exposure control on ${SHARE_HOST_PREFIX}&lt;id&gt;.${PUBLIC_DOMAIN} with ${DEFAULT_EXPIRY_HOURS}h default expiry.</p>
+            <p class="section-copy">Temporary public exposure control on $${SHARE_HOST_PREFIX}&lt;id&gt;.$${PUBLIC_DOMAIN} with $${DEFAULT_EXPIRY_HOURS}h default expiry.</p>
           </div>
           <div id="exposureMeta" class="section-detail"></div>
         </div>
@@ -3924,7 +3924,7 @@ function renderCombinedCockpitHtml() {
                 <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
                 <div class="vpn-meta">
                   Gluetun WebUI:
-                  <a href="${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
+                  <a href="$${escapeHtml(TRANSMISSION_VPN_WEBUI_URL)}" target="_blank" rel="noreferrer">open dashboard</a>
                 </div>
               </div>
               <div class="controls">
@@ -4959,7 +4959,7 @@ const server = http.createServer(async (req, res) => {
   try {
     disableExpiredExposures();
     const host = getHost(req);
-    const parsed = new URL(req.url || "/", `http://${host || "localhost"}`);
+    const parsed = new URL(req.url || "/", `http://$${host || "localhost"}`);
     const isControlPanelHost =
       host === CONTROL_PANEL_HOST ||
       host === "localhost" ||
@@ -5026,5 +5026,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`exposure-control backend listening on :${PORT}`);
+  console.log(`exposure-control backend listening on :$${PORT}`);
 });

@@ -10,6 +10,10 @@ spec:
   path: ./infrastructure/cert-manager/config # Path to ClusterIssuer Kustomization
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
   timeout: 2m
   dependsOn:
     - name: cert-manager

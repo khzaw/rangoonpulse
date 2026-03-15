@@ -11,6 +11,10 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
   timeout: 15m
   healthChecks: # wait for webhook deployments to be ready
    - apiVersion: apps/v1

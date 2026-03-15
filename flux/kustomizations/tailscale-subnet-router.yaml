@@ -10,6 +10,10 @@ spec:
   path: ./infrastructure/tailscale-subnet-router
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
   timeout: 5m
   dependsOn:
     - name: tailscale-operator

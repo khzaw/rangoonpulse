@@ -84,7 +84,7 @@ spec:
 
               # Role: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then
-                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE tracearr LOGIN PASSWORD '${TRACERR_DB_PASSWORD}'"
+                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE tracearr LOGIN PASSWORD '$${TRACERR_DB_PASSWORD}'"
               fi
               # DB: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='tracearr'" | grep -q 1; then

@@ -10,6 +10,10 @@ spec:
   path: ./infrastructure/tailscale-operator
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
   timeout: 15m
   healthChecks:
     - apiVersion: apps/v1

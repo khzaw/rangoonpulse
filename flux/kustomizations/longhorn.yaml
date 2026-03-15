@@ -11,6 +11,10 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
   targetNamespace: longhorn-system # Target NS for the HelmRelease obj
   timeout: 15m # Allow longer for storage system install/upgrade
   dependsOn:

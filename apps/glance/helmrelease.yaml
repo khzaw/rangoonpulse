@@ -333,12 +333,12 @@ spec:
                             cache: 2m
                             url: "http://sonarr.default.svc.cluster.local:8989/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
                             headers:
-                              X-Api-Key: ${SONARR_API_KEY}
+                              X-Api-Key: $${SONARR_API_KEY}
                             subrequests:
                               queue:
                                 url: http://sonarr.default.svc.cluster.local:8989/api/v3/queue/status
                                 headers:
-                                  X-Api-Key: ${SONARR_API_KEY}
+                                  X-Api-Key: $${SONARR_API_KEY}
                             template: |
                               {{`{{ $queue := .Subrequest "queue" }}
                               <div class="flex justify-between text-center">
@@ -360,12 +360,12 @@ spec:
                             cache: 2m
                             url: "http://radarr.default.svc.cluster.local:7878/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
                             headers:
-                              X-Api-Key: ${RADARR_API_KEY}
+                              X-Api-Key: $${RADARR_API_KEY}
                             subrequests:
                               queue:
                                 url: http://radarr.default.svc.cluster.local:7878/api/v3/queue/status
                                 headers:
-                                  X-Api-Key: ${RADARR_API_KEY}
+                                  X-Api-Key: $${RADARR_API_KEY}
                             template: |
                               {{`{{ $queue := .Subrequest "queue" }}
                               <div class="flex justify-between text-center">
@@ -387,16 +387,16 @@ spec:
                             cache: 5m
                             url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexer
                             headers:
-                              X-Api-Key: ${PROWLARR_API_KEY}
+                              X-Api-Key: $${PROWLARR_API_KEY}
                             subrequests:
                               status:
                                 url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexerstatus
                                 headers:
-                                  X-Api-Key: ${PROWLARR_API_KEY}
+                                  X-Api-Key: $${PROWLARR_API_KEY}
                               health:
                                 url: http://prowlarr.default.svc.cluster.local:9696/api/v1/health
                                 headers:
-                                  X-Api-Key: ${PROWLARR_API_KEY}
+                                  X-Api-Key: $${PROWLARR_API_KEY}
                             template: |
                               {{`{{ $indexers := .JSON.Array "" }}
                               {{ $status := (.Subrequest "status").JSON.Array "" }}
@@ -420,7 +420,7 @@ spec:
                             cache: 5m
                             url: http://bazarr.default.svc.cluster.local:6767/api/badges
                             headers:
-                              X-Api-Key: ${BAZARR_API_KEY}
+                              X-Api-Key: $${BAZARR_API_KEY}
                             template: |
                               {{`<div class="flex justify-between text-center">
                                 <div>
@@ -439,7 +439,7 @@ spec:
                           - type: custom-api
                             title: Jellyfin
                             cache: 5m
-                            url: "http://jellyfin.default.svc.cluster.local:8096/Items/Counts?api_key=${JELLYFIN_API_KEY}"
+                            url: "http://jellyfin.default.svc.cluster.local:8096/Items/Counts?api_key=$${JELLYFIN_API_KEY}"
                             template: |
                               {{`<div class="flex justify-between text-center">
                                 <div>
@@ -458,7 +458,7 @@ spec:
                           - type: custom-api
                             title: Jellyfin Now Playing
                             cache: 15s
-                            url: "http://jellyfin.default.svc.cluster.local:8096/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
+                            url: "http://jellyfin.default.svc.cluster.local:8096/Sessions?api_key=$${JELLYFIN_API_KEY}&activeWithinSeconds=300"
                             template: |
                               {{`{{ $sessions := .JSON.Array "" }}
                               {{ $active := 0.0 }}
@@ -509,7 +509,7 @@ spec:
                             cache: 5m
                             url: http://immich-server.default.svc.cluster.local:2283/api/server/statistics
                             headers:
-                              x-api-key: ${IMMICH_API_KEY}
+                              x-api-key: $${IMMICH_API_KEY}
                               Accept: application/json
                             template: |
                               {{`<div class="flex justify-between text-center">
@@ -872,7 +872,7 @@ spec:
                       - type: custom-api
                         title: Jellyfin Now Playing
                         cache: 15s
-                        url: "http://jellyfin.default.svc.cluster.local:8096/Sessions?api_key=${JELLYFIN_API_KEY}&activeWithinSeconds=300"
+                        url: "http://jellyfin.default.svc.cluster.local:8096/Sessions?api_key=$${JELLYFIN_API_KEY}&activeWithinSeconds=300"
                         template: |
                           {{`{{ $sessions := .JSON.Array "" }}
                           {{ $active := 0.0 }}
@@ -906,7 +906,7 @@ spec:
 
                           {{ $itemId := .String "NowPlayingItem.Id" }}
                           {{ $img := "" }}
-                          {{ if ne $itemId "" }}{{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=220&quality=90&api_key=%s" $itemId "${JELLYFIN_API_KEY}" }}{{ end }}
+                          {{ if ne $itemId "" }}{{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=220&quality=90&api_key=%s" $itemId "$${JELLYFIN_API_KEY}" }}{{ end }}
 
                           <div class="flex" style="gap: 12px; align-items: stretch;">
                             {{ if ne $img "" }}
@@ -930,7 +930,7 @@ spec:
                       - type: custom-api
                         title: Jellyfin Recently Added
                         cache: 2m
-                        url: "http://jellyfin.default.svc.cluster.local:8096/Users?api_key=${JELLYFIN_API_KEY}"
+                        url: "http://jellyfin.default.svc.cluster.local:8096/Users?api_key=$${JELLYFIN_API_KEY}"
                         template: |
                           {{`{{ $users := .JSON.Array "" }}
                           {{ $userId := "" }}
@@ -947,7 +947,7 @@ spec:
                           <div class="size-h6">No Jellyfin users available for Recently Added.</div>
                           {{ else }}
                           {{ $latestURL := printf "http://jellyfin.default.svc.cluster.local:8096/Users/%s/Items/Latest" $userId }}
-                          {{ $resp := newRequest $latestURL | withParameter "api_key" "${JELLYFIN_API_KEY}" | withParameter "Limit" "30" | withParameter "IncludeItemTypes" "Movie,Episode" | getResponse }}
+                          {{ $resp := newRequest $latestURL | withParameter "api_key" "$${JELLYFIN_API_KEY}" | withParameter "Limit" "30" | withParameter "IncludeItemTypes" "Movie,Episode" | getResponse }}
                           {{ $items := $resp.JSON.Array "" }}
                           {{ if eq (len $items) 0 }}
                           <div class="size-h6">No recent items.</div>
@@ -964,7 +964,7 @@ spec:
                             {{ $title := $name }}
                             {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
                             {{ $img := "" }}
-                            {{ if ne $id "" }}{{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=180&quality=90&api_key=%s" $id "${JELLYFIN_API_KEY}" }}{{ end }}
+                            {{ if ne $id "" }}{{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=180&quality=90&api_key=%s" $id "$${JELLYFIN_API_KEY}" }}{{ end }}
                             <div style="width: 112px;">
                               {{ if ne $img "" }}
                               <img src="{{ $img }}" style="width: 112px; height: 168px; object-fit: cover; border-radius: 10px; background: rgba(255,255,255,.06);" />
@@ -990,7 +990,7 @@ spec:
                             cache: 10m
                             url: "http://sonarr.default.svc.cluster.local:8989/api/v3/wanted/missing?page=1&pageSize=16&sortKey=airDateUtc&sortDirection=descending"
                             headers:
-                              X-Api-Key: ${SONARR_API_KEY}
+                              X-Api-Key: $${SONARR_API_KEY}
                             template: |
                               {{`{{ $items := .JSON.Array "records" }}
                               {{ if eq (len $items) 0 }}
@@ -1005,7 +1005,7 @@ spec:
                                 {{ $episode := .Int "episodeNumber" }}
                                 {{ $air := .String "airDateUtc" }}
                                 {{ $poster := "" }}
-                                {{ if gt $seriesId 0 }}{{ $poster = printf "https://sonarr.khzaw.dev/MediaCover/%d/poster.jpg?apikey=%s" $seriesId "${SONARR_API_KEY}" }}{{ end }}
+                                {{ if gt $seriesId 0 }}{{ $poster = printf "https://sonarr.khzaw.dev/MediaCover/%d/poster.jpg?apikey=%s" $seriesId "$${SONARR_API_KEY}" }}{{ end }}
                                 {{ if eq $poster "" }}{{ $poster = .String "series.images.0.remoteUrl" }}{{ end }}
                                 <div style="width: 112px;">
                                   {{ if ne $poster "" }}
@@ -1028,7 +1028,7 @@ spec:
                             cache: 10m
                             url: "http://radarr.default.svc.cluster.local:7878/api/v3/wanted/missing?page=1&pageSize=20&sortKey=added&sortDirection=descending"
                             headers:
-                              X-Api-Key: ${RADARR_API_KEY}
+                              X-Api-Key: $${RADARR_API_KEY}
                             template: |
                               {{`{{ $items := .JSON.Array "records" }}
                               {{ if eq (len $items) 0 }}
@@ -1041,7 +1041,7 @@ spec:
                                 {{ $year := .Int "year" }}
                                 {{ $added := .String "added" }}
                                 {{ $poster := "" }}
-                                {{ if gt $id 0 }}{{ $poster = printf "https://radarr.khzaw.dev/MediaCover/%d/poster.jpg?apikey=%s" $id "${RADARR_API_KEY}" }}{{ end }}
+                                {{ if gt $id 0 }}{{ $poster = printf "https://radarr.khzaw.dev/MediaCover/%d/poster.jpg?apikey=%s" $id "$${RADARR_API_KEY}" }}{{ end }}
                                 {{ if eq $poster "" }}{{ $poster = .String "images.0.remoteUrl" }}{{ end }}
                                 <div style="width: 112px;">
                                   {{ if ne $poster "" }}
@@ -1066,12 +1066,12 @@ spec:
                             cache: 2m
                             url: "http://sonarr.default.svc.cluster.local:8989/api/v3/wanted/missing?page=1&pageSize=1&sortKey=episodes.airDateUtc&sortDirection=descending"
                             headers:
-                              X-Api-Key: ${SONARR_API_KEY}
+                              X-Api-Key: $${SONARR_API_KEY}
                             subrequests:
                               queue:
                                 url: http://sonarr.default.svc.cluster.local:8989/api/v3/queue/status
                                 headers:
-                                  X-Api-Key: ${SONARR_API_KEY}
+                                  X-Api-Key: $${SONARR_API_KEY}
                             template: |
                               {{`{{ $queue := .Subrequest "queue" }}
                               <div class="flex justify-between text-center">
@@ -1093,12 +1093,12 @@ spec:
                             cache: 2m
                             url: "http://radarr.default.svc.cluster.local:7878/api/v3/wanted/missing?page=1&pageSize=1&sortKey=movieMetadata.sortTitle&sortDirection=descending"
                             headers:
-                              X-Api-Key: ${RADARR_API_KEY}
+                              X-Api-Key: $${RADARR_API_KEY}
                             subrequests:
                               queue:
                                 url: http://radarr.default.svc.cluster.local:7878/api/v3/queue/status
                                 headers:
-                                  X-Api-Key: ${RADARR_API_KEY}
+                                  X-Api-Key: $${RADARR_API_KEY}
                             template: |
                               {{`{{ $queue := .Subrequest "queue" }}
                               <div class="flex justify-between text-center">
@@ -1120,16 +1120,16 @@ spec:
                             cache: 5m
                             url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexer
                             headers:
-                              X-Api-Key: ${PROWLARR_API_KEY}
+                              X-Api-Key: $${PROWLARR_API_KEY}
                             subrequests:
                               status:
                                 url: http://prowlarr.default.svc.cluster.local:9696/api/v1/indexerstatus
                                 headers:
-                                  X-Api-Key: ${PROWLARR_API_KEY}
+                                  X-Api-Key: $${PROWLARR_API_KEY}
                               health:
                                 url: http://prowlarr.default.svc.cluster.local:9696/api/v1/health
                                 headers:
-                                  X-Api-Key: ${PROWLARR_API_KEY}
+                                  X-Api-Key: $${PROWLARR_API_KEY}
                             template: |
                               {{`{{ $indexers := .JSON.Array "" }}
                               {{ $status := (.Subrequest "status").JSON.Array "" }}
@@ -1153,7 +1153,7 @@ spec:
                             cache: 5m
                             url: http://bazarr.default.svc.cluster.local:6767/api/badges
                             headers:
-                              X-Api-Key: ${BAZARR_API_KEY}
+                              X-Api-Key: $${BAZARR_API_KEY}
                             template: |
                               {{`<div class="flex justify-between text-center">
                                 <div>
@@ -1172,7 +1172,7 @@ spec:
                           - type: custom-api
                             title: Jellyfin
                             cache: 5m
-                            url: "http://jellyfin.default.svc.cluster.local:8096/Items/Counts?api_key=${JELLYFIN_API_KEY}"
+                            url: "http://jellyfin.default.svc.cluster.local:8096/Items/Counts?api_key=$${JELLYFIN_API_KEY}"
                             template: |
                               {{`<div class="flex justify-between text-center">
                                 <div>
