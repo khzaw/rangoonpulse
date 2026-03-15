@@ -159,8 +159,8 @@ kubectl describe ingress -n default adguard
 kubectl describe ingress -n default adguard-secondary
 
 # DNS resolution through AdGuard
-dig @10.0.0.233 hq.khzaw.dev +short
-dig @10.0.0.234 hq.khzaw.dev +short
+dig @10.0.0.233 rangoonpulse.khzaw.dev +short
+dig @10.0.0.234 rangoonpulse.khzaw.dev +short
 dig @10.0.0.233 google.com +short
 dig @10.0.0.234 google.com +short
 

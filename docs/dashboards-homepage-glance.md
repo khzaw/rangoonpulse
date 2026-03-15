@@ -8,8 +8,8 @@ Operational note:
   tuning hostname has been retired.
 
 ## Hostnames
-- Glance: `https://glance.khzaw.dev`
-- Glance alias: `https://hq.khzaw.dev` (historical shortcut)
+- Glance: `https://rangoonpulse.khzaw.dev`
+- Glance alias: `https://glance.khzaw.dev` (`CNAME` to the canonical hostname)
 
 ## Glance
 GitOps source of truth:

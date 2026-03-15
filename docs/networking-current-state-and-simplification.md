@@ -73,7 +73,7 @@ sequenceDiagram
     participant N as ingress-nginx-controller
     participant A as Target App Service
 
-    U->>D: Resolve hq.khzaw.dev
+    U->>D: Resolve rangoonpulse.khzaw.dev
     D-->>U: 10.0.0.231
     U->>I: HTTPS request
     I->>N: Route by Host header
@@ -91,7 +91,7 @@ sequenceDiagram
     participant N as ingress-nginx-controller
     participant A as Target App Service
 
-    U->>D: Resolve hq.khzaw.dev
+    U->>D: Resolve rangoonpulse.khzaw.dev
     D-->>U: 10.0.0.231
     U->>T: Send to 10.0.0.231 via advertised routes
     T->>I: Deliver packets into home LAN

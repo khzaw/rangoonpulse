@@ -44,7 +44,7 @@ The repository baseline is now the unified destination model:
 
 ## Phase 3 - Validation Before Decommissioning Old Path
 - [x] LAN tests:
-  - [x] `https://hq.khzaw.dev`
+  - [x] `https://rangoonpulse.khzaw.dev`
   - [x] `https://photos.khzaw.dev`
   - [x] `https://jellyfin.khzaw.dev`
   - [x] `https://nas.khzaw.dev`

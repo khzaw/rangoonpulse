@@ -312,7 +312,7 @@ Important external-dns behavior:
 - Glance:
   - `apps/glance/helmrelease.yaml` embeds `glance.yml` via ConfigMap and uses `envFrom: homepage-widget-secrets`
     so widgets can reference `${SONARR_API_KEY}`, `${JELLYFIN_API_KEY}`, etc.
-  - Hostnames: `https://glance.khzaw.dev` and `https://hq.khzaw.dev` (alias)
+  - Hostnames: `https://rangoonpulse.khzaw.dev` and `https://glance.khzaw.dev` (alias via `ExternalName` Service)
   - Operator entry link should point to `https://controlpanel.khzaw.dev` (`Operator Cockpit`).
   - Keep a separate health monitor for the resource-advisor backend even though the tuning UI is surfaced in the cockpit.
   - When writing Glance `custom-api` templates inside HelmRelease YAML, wrap the template in `{{\` ... \`}}`

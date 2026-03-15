@@ -75,14 +75,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: glance.${BASE_DOMAIN}
-            paths:
-              - path: /
-                pathType: Prefix
-                service:
-                  identifier: main
-                  port: http
-          - host: hq.${BASE_DOMAIN}
+          - host: rangoonpulse.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -91,15 +84,14 @@ spec:
                   port: http
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: glance.${BASE_DOMAIN},hq.${BASE_DOMAIN}
+          external-dns.alpha.kubernetes.io/hostname: rangoonpulse.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
           - secretName: glance-tls
             hosts:
-              - glance.${BASE_DOMAIN}
-              - hq.${BASE_DOMAIN}
+              - rangoonpulse.${BASE_DOMAIN}
 
     configMaps:
       config:
@@ -674,7 +666,7 @@ spec:
                         style: compact
                         sites:
                           - title: Glance
-                            url: https://glance.${BASE_DOMAIN}
+                            url: https://rangoonpulse.${BASE_DOMAIN}
                             check-url: http://glance.default.svc.cluster.local:8080
                             icon: di:glance
                           - title: Operator Cockpit
