@@ -92,37 +92,37 @@ spec:
                 service: http://mmcal.default.svc.cluster.local:8080
               - hostname: rangoonmapper.${BASE_DOMAIN}
                 service: http://rangoon-mapper.default.svc.cluster.local:8080
-              - hostname: share-speedtest.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}speedtest.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-chartsdb.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}chartsdb.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-booklore.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}booklore.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-shelfmark.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}shelfmark.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-jellyfin.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}jellyfin.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-seerr.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}seerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-audiobookshelf.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}audiobookshelf.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-uptime.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}uptime.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-sonarr.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}sonarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-radarr.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}radarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-tracerr.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}tracerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-tunarr.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}tunarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-vaultwarden.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}vaultwarden.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-immich.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}immich.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-calibre.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}calibre.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-calibre-manage.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}calibre-manage.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - service: http_status:404
 
