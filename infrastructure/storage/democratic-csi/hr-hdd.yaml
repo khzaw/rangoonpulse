@@ -62,7 +62,7 @@ spec:
         instance_id: "truenas-nfs-hdd"
         httpConnection:
           protocol: http
-          host: 10.0.0.210
+          host: ${NAS_IP}
           port: 80
           allowInsecure: true
           apiVersion: 2
@@ -77,7 +77,7 @@ spec:
           datasetProperties:
             "org.freenas:description": "{{ parameters.[csi.storage.k8s.io/pvc/namespace] }}/{{ parameters.[csi.storage.k8s.io/pvc/name] }}"
         nfs:
-          shareHost: 10.0.0.210
+          shareHost: ${NAS_IP}
           shareAllowedNetworks: ["10.0.0.0/8"]
           shareMaprootUser: ""
           shareMaprootGroup: ""

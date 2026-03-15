@@ -9,8 +9,8 @@ spec:
   hostname: homelab-subnet-router
   subnetRouter:
     advertiseRoutes:
-      - 10.0.0.1/32
-      - 10.0.0.38/32
-      - 10.0.0.197/32
-      - 10.0.0.210/32
-      - 10.0.0.231/32
+      - ${ROUTER_IP}/32
+      - ${UTILITY_NODE_IP}/32
+      - ${PRIMARY_NODE_IP}/32
+      - ${NAS_IP}/32
+      - ${INGRESS_VIP}/32

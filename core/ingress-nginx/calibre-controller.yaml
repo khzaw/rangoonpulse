@@ -130,7 +130,7 @@ metadata:
     metallb.universe.tf/allow-shared-ip: ingress-nginx-shared-vip
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.0.0.231
+  loadBalancerIP: ${INGRESS_VIP}
   ipFamilies:
     - IPv4
   ipFamilyPolicy: SingleStack

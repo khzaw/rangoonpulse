@@ -19,7 +19,7 @@ metadata:
   namespace: default
 subsets:
   - addresses:
-      - ip: 10.0.0.1
+      - ip: ${ROUTER_IP}
     ports:
       - name: http
         port: 80
