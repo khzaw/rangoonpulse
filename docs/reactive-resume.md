@@ -12,9 +12,9 @@ Reactive Resume runs as a single `app-template` release with:
 - `main`: the web app (`ghcr.io/amruthpillai/reactive-resume:v5.0.11`)
 - `printer`: a sidecar Chromium worker (`ghcr.io/browserless/chromium:v2.43.0`)
 
-Current placement target is the primary node (`talos-7nf-osf`). Both images publish `arm64` manifests, but the first GHCR pull on the
-Raspberry Pi utility node was too slow for a predictable rollout and the Chromium sidecar is still a better fit on the larger node.
-Because the app data PVC is on NFS, moving the release back to `talos-uua-g6r` later is a manifest-only change if you want to retry it.
+Current placement target is the Raspberry Pi utility node (`talos-uua-g6r`). Both images publish `arm64` manifests and the utility node
+has materially more schedulable CPU headroom than the primary node right now, so this is the safer placement for the current cluster
+state. Because the app data PVC is on NFS, moving the release to `talos-7nf-osf` later is still a manifest-only change if capacity shifts.
 
 ## Storage
 - App uploads/runtime files: `truenas-nfs` PVC mounted at `/app/data`

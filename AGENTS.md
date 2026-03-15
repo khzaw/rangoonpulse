@@ -159,6 +159,7 @@ Notes:
   - `apps/uptime-kuma`
   - `apps/speedtest`
   - `apps/actualbudget`
+  - `apps/reactive-resume`
   - `apps/anki-server`
   - `apps/autobrr`
   - `apps/prowlarr`
