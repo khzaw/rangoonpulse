@@ -114,7 +114,7 @@
       }
 
       function fmtExpiry(value) {
-        if (!value) return { text: '\\u2014', state: 'none' };
+        if (!value) return { text: '—', state: 'none' };
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return { text: 'invalid', state: 'invalid' };
         const diff = d.getTime() - Date.now();
