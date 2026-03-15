@@ -27,6 +27,7 @@ Then pick the smallest focused set of docs below before planning or editing.
 - [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS and Flux DNS hardening.
 - [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) and [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for Cloudflare Tunnel and share-host exposure.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) when public share-host auth changes.
+- [`docs/travel-center.md`](./travel-center.md) when changing the control panel's travel readiness and remote-life workflow.
 - [`docs/router-dns-rebind-private-a-records.md`](./router-dns-rebind-private-a-records.md) when private `A` records or router DNS behavior are involved.
 - [`docs/transmission-optional-vpn.md`](./transmission-optional-vpn.md) when touching Transmission routing or Gluetun control.
 

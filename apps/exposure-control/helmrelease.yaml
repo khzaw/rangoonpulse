@@ -50,6 +50,7 @@ spec:
               PORT: "8080"
               DATA_DIR: /data
               SERVICES_FILE: /app-files/services.json
+              TRAVEL_CONFIG_FILE: /app-files/travel.json
               PUBLIC_DOMAIN: ${BASE_DOMAIN}
               SHARE_HOST_PREFIX: ${SHARE_HOST_PREFIX}
               CONTROL_PANEL_HOST: controlpanel.${BASE_DOMAIN}
@@ -61,6 +62,8 @@ spec:
               IMAGE_UPDATE_CACHE_TTL_HOURS: "168"
               IMAGE_UPDATE_HTTP_TIMEOUT_MS: "6000"
               IMAGE_UPDATE_EXCLUDED_WORKLOADS: blog,mmcal,rangoon-mapper
+              TRAVEL_CACHE_TTL_SECONDS: "30"
+              TRAVEL_HTTP_TIMEOUT_MS: "4000"
               TRANSMISSION_VPN_NAMESPACE: default
               TRANSMISSION_VPN_CONTROL_CONFIGMAP: transmission-vpn-control
               TRANSMISSION_VPN_RUNTIME_CONFIGMAP: transmission-vpn-state

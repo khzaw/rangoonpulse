@@ -353,7 +353,7 @@
       }
       .overview-strip {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         border: 1px solid var(--border);
         border-radius: 6px;
         background: var(--bg-panel);
@@ -361,6 +361,96 @@
       }
       .overview-strip.tuning-strip {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .travel-grid,
+      .travel-support-grid {
+        display: grid;
+        gap: 14px;
+      }
+      .travel-grid {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+      .travel-support-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      }
+      .travel-card,
+      .travel-support-card {
+        min-height: 100%;
+      }
+      .travel-card-head,
+      .travel-target-head,
+      .travel-actions,
+      .travel-action-group,
+      .travel-note-item,
+      .travel-share-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .travel-actions {
+        flex-wrap: wrap;
+      }
+      .travel-action-group {
+        flex-wrap: wrap;
+      }
+      .travel-target-list,
+      .travel-notes {
+        display: grid;
+        gap: 12px;
+      }
+      .travel-target-list {
+        list-style: none;
+        margin-top: 16px;
+      }
+      .travel-target-item {
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      .travel-target-item:first-child {
+        padding-top: 0;
+        border-top: none;
+      }
+      .travel-target-meta,
+      .travel-share-meta {
+        color: var(--text-2);
+        font-size: 12px;
+      }
+      .travel-state-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 74px;
+        min-height: 26px;
+        padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 11px;
+        text-transform: lowercase;
+      }
+      .travel-state-pill.status {
+        border-color: rgba(52, 211, 153, 0.28);
+        color: var(--green);
+      }
+      .travel-state-pill.warning {
+        border-color: rgba(251, 191, 36, 0.28);
+        color: var(--yellow);
+      }
+      .travel-state-pill.danger {
+        border-color: rgba(251, 113, 133, 0.28);
+        color: var(--red);
+      }
+      .travel-note-item,
+      .travel-share-item {
+        align-items: flex-start;
+      }
+      .travel-share-item + .travel-share-item {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+      }
+      .travel-strip .overview-segment {
+        min-height: 148px;
       }
       .overview-segment {
         padding: 26px 28px;

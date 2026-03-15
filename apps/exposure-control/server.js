@@ -15,12 +15,25 @@ function expandBaseDomainTokens(value) {
     .replace(/\$\{base_domain\}/g, replacement);
 }
 
+function expandBaseDomainTokensDeep(value) {
+  if (typeof value === "string") return expandBaseDomainTokens(value);
+  if (Array.isArray(value)) return value.map((item) => expandBaseDomainTokensDeep(item));
+  if (!value || typeof value !== "object") return value;
+  const expanded = {};
+  for (const [key, item] of Object.entries(value)) {
+    expanded[key] = expandBaseDomainTokensDeep(item);
+  }
+  return expanded;
+}
+
 const PORT = Number(process.env.PORT || "8080");
 const APP_DIR = process.env.APP_DIR || "/app";
 const DATA_DIR = process.env.DATA_DIR || "/data";
 const STATE_FILE = path.join(DATA_DIR, "state.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit.json");
 const SERVICES_FILE = process.env.SERVICES_FILE || path.join(APP_DIR, "services.json");
+const TRAVEL_CONFIG_FILE =
+  process.env.TRAVEL_CONFIG_FILE || path.join(APP_DIR, "travel.json");
 const PUBLIC_DOMAIN = expandBaseDomainTokens(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "${BASE_DOMAIN}",
 ).toLowerCase();
@@ -59,6 +72,18 @@ const IMAGE_UPDATE_HTTP_TIMEOUT_MS = clampInt(
   process.env.IMAGE_UPDATE_HTTP_TIMEOUT_MS,
   6000,
   2000,
+  15000,
+);
+const TRAVEL_CACHE_TTL_SECONDS = clampInt(
+  process.env.TRAVEL_CACHE_TTL_SECONDS,
+  30,
+  5,
+  600,
+);
+const TRAVEL_HTTP_TIMEOUT_MS = clampInt(
+  process.env.TRAVEL_HTTP_TIMEOUT_MS,
+  4000,
+  1500,
   15000,
 );
 const IMAGE_UPDATE_NAMESPACES = String(
@@ -115,6 +140,10 @@ const metrics = {
   shareDeniedRateLimitedTotal: 0,
   reconcileErrorsTotal: 0,
   lastReconcileTimestampSeconds: Math.floor(Date.now() / 1000),
+  travelLastSnapshotTimestampSeconds: 0,
+  travelSummaryState: "unknown",
+  travelConnectorReady: 0,
+  travelConnectorRoutesOk: 0,
 };
 
 const rateLimits = new Map();
@@ -122,6 +151,11 @@ const kubePodsCache = new Map();
 const kubeNodePlatformCache = new Map();
 const registryTagCache = new Map();
 const registryManifestCache = new Map();
+const travelSnapshotCache = {
+  promise: null,
+  snapshot: null,
+  ts: 0,
+};
 let imageUpdateRefreshPromise = null;
 const MOVING_TAG_FAMILY_TOKENS = new Set(["ls", "r", "rev", "build"]);
 
@@ -187,6 +221,37 @@ function loadServices() {
     ...svc,
     target: expandBaseDomainTokens(svc.target),
   }));
+}
+
+function loadTravelConfig() {
+  const raw = fs.readFileSync(TRAVEL_CONFIG_FILE, "utf8");
+  const parsed = expandBaseDomainTokensDeep(JSON.parse(raw));
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("travel.json must be an object");
+  }
+  if (!Array.isArray(parsed.bundles)) {
+    throw new Error("travel.json bundles must be an array");
+  }
+  if (!Array.isArray(parsed.targets)) {
+    throw new Error("travel.json targets must be an array");
+  }
+  return {
+    connector: parsed.connector && typeof parsed.connector === "object" ? parsed.connector : {},
+    bundles: parsed.bundles.map((bundle) => ({
+      id: String(bundle.id || "").trim(),
+      name: String(bundle.name || bundle.id || "").trim(),
+      description: String(bundle.description || "").trim(),
+    })).filter((bundle) => bundle.id),
+    targets: parsed.targets.map((target) => ({
+      id: String(target.id || "").trim(),
+      name: String(target.name || target.id || "").trim(),
+      url: expandBaseDomainTokens(String(target.url || "").trim()),
+      access: String(target.access || "tailnet-private").trim(),
+      bundle: String(target.bundle || "essentials").trim(),
+      priority: Number(target.priority || 0),
+      probe: target.probe && typeof target.probe === "object" ? target.probe : {},
+    })).filter((target) => target.id && target.url),
+  };
 }
 
 function defaultState(services) {
@@ -681,6 +746,192 @@ function requestUrl(urlString, options) {
     if (opts.body) req.write(opts.body);
     req.end();
   });
+}
+
+function normalizeTravelState(value) {
+  const state = String(value || "").trim().toLowerCase();
+  if (state === "ready" || state === "degraded" || state === "blocked") return state;
+  return "unknown";
+}
+
+function travelStateRank(value) {
+  const state = normalizeTravelState(value);
+  if (state === "blocked") return 3;
+  if (state === "degraded") return 2;
+  if (state === "unknown") return 1;
+  return 0;
+}
+
+function worstTravelState(values) {
+  let worst = "ready";
+  for (const value of values || []) {
+    if (travelStateRank(value) > travelStateRank(worst)) worst = normalizeTravelState(value);
+  }
+  return worst;
+}
+
+function travelHeadline(state, connector, exposures, transmission) {
+  const activeShares = Array.isArray(exposures) ? exposures.length : 0;
+  const shareText = activeShares === 0 ? "no active public shares" : String(activeShares) + " active public share" + (activeShares === 1 ? "" : "s");
+  const transmissionText =
+    transmission && transmission.desiredMode
+      ? "Transmission " + transmission.desiredMode
+      : "Transmission status unavailable";
+  if (state === "ready") {
+    return "Private remote path healthy; exit-node capable; " + transmissionText + "; " + shareText + ".";
+  }
+  if (state === "degraded") {
+    return "Travel posture is degraded; review connector, key links, or Transmission routing before relying on it.";
+  }
+  if (state === "blocked") {
+    return "Travel path is blocked; private remote access is not ready.";
+  }
+  return "Travel readiness is unknown; check the connector and target probes.";
+}
+
+async function getTravelConnectorStatus(config) {
+  const connectorName = String((config && config.connector && config.connector.name) || "").trim();
+  const expectedRoutes = Array.isArray(config && config.connector && config.connector.expectedRoutes)
+    ? config.connector.expectedRoutes.map((route) => String(route || "").trim()).filter(Boolean)
+    : [];
+  const expectsExitNode = Boolean(config && config.connector && config.connector.expectsExitNode);
+  if (!connectorName) {
+    return {
+      name: "",
+      ready: false,
+      exitNode: false,
+      expectedRoutesOk: false,
+      advertisedRoutes: [],
+      missingRoutes: expectedRoutes,
+      state: "unknown",
+      detail: "Travel connector is not configured.",
+    };
+  }
+  if (!kubeApiAvailable()) {
+    return {
+      name: connectorName,
+      ready: false,
+      exitNode: false,
+      expectedRoutesOk: false,
+      advertisedRoutes: [],
+      missingRoutes: expectedRoutes,
+      state: "unknown",
+      detail: "Kubernetes API unavailable from control panel.",
+    };
+  }
+
+  let connector = null;
+  try {
+    connector = await kubeGetJson(
+      "/apis/tailscale.com/v1alpha1/connectors/" + encodeURIComponent(connectorName),
+    );
+  } catch (err) {
+    return {
+      name: connectorName,
+      ready: false,
+      exitNode: false,
+      expectedRoutesOk: false,
+      advertisedRoutes: [],
+      missingRoutes: expectedRoutes,
+      state: "unknown",
+      detail: "Connector check failed: " + err.message,
+    };
+  }
+  if (!connector) {
+    return {
+      name: connectorName,
+      ready: false,
+      exitNode: false,
+      expectedRoutesOk: false,
+      advertisedRoutes: [],
+      missingRoutes: expectedRoutes,
+      state: "blocked",
+      detail: "Connector " + connectorName + " not found.",
+    };
+  }
+
+  const spec = connector.spec || {};
+  const status = connector.status || {};
+  const conditions = Array.isArray(status.conditions) ? status.conditions : [];
+  const readyCondition = conditions.find((condition) =>
+    String(condition && condition.type || "").toLowerCase() === "connectorready",
+  );
+  const ready = String(readyCondition && readyCondition.status || "").toLowerCase() === "true";
+  const advertisedRoutes = Array.isArray(spec.subnetRouter && spec.subnetRouter.advertiseRoutes)
+    ? spec.subnetRouter.advertiseRoutes.map((route) => String(route || "").trim()).filter(Boolean)
+    : [];
+  const exitNode = Boolean(spec.exitNode);
+  const missingRoutes = expectedRoutes.filter((route) => !advertisedRoutes.includes(route));
+  const expectedRoutesOk = missingRoutes.length === 0;
+  const state = !ready
+    ? "blocked"
+    : !expectedRoutesOk || (expectsExitNode && !exitNode)
+      ? "degraded"
+      : "ready";
+  const detailParts = [];
+  detailParts.push(ready ? "Connector ready." : "Connector not ready.");
+  if (!expectedRoutesOk) detailParts.push("Missing expected routes: " + missingRoutes.join(", "));
+  if (expectsExitNode && !exitNode) detailParts.push("Exit-node role missing.");
+  if (readyCondition && readyCondition.message) detailParts.push(String(readyCondition.message));
+
+  return {
+    name: connectorName,
+    ready,
+    exitNode,
+    expectsExitNode,
+    expectedRoutesOk,
+    advertisedRoutes,
+    missingRoutes,
+    state,
+    detail: detailParts.join(" ").trim(),
+  };
+}
+
+async function probeTravelTarget(target) {
+  const expectedStatuses = Array.isArray(target && target.probe && target.probe.expectStatus)
+    ? target.probe.expectStatus.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    : [200];
+  const timeoutMs = clampInt(target && target.probe && target.probe.timeoutMs, TRAVEL_HTTP_TIMEOUT_MS, 500, 15000);
+  try {
+    const response = await requestUrl(target.url, {
+      method: "GET",
+      timeoutMs,
+      headers: {
+        accept: "text/html,application/json;q=0.9,*/*;q=0.8",
+        "user-agent": "exposure-control/1.0",
+      },
+    });
+    const statusCode = Number(response.statusCode || 0);
+    const ok = expectedStatuses.includes(statusCode);
+    return {
+      ...target,
+      statusCode,
+      state: ok ? "ready" : "degraded",
+      detail: ok
+        ? "HTTP " + statusCode + " matched expected response."
+        : "HTTP " + statusCode + " did not match expected response.",
+    };
+  } catch (err) {
+    return {
+      ...target,
+      statusCode: 0,
+      state: "blocked",
+      detail: err.message,
+    };
+  }
+}
+
+function summarizeTravelTargets(targets) {
+  const summary = {
+    ready: 0,
+    degraded: 0,
+    blocked: 0,
+    unknown: 0,
+  };
+  for (const target of targets || []) {
+    summary[normalizeTravelState(target.state)] += 1;
+  }
+  return summary;
 }
 
 async function getResourceAdvisorUi() {
@@ -1523,11 +1774,172 @@ async function setTransmissionVpnMode(mode) {
 }
 
 const services = loadServices();
+const travelConfig = loadTravelConfig();
 const serviceById = new Map(services.map((svc) => [svc.id, svc]));
 const serviceByHost = new Map(
   services.map((svc) => [servicePublicHost(svc), svc]),
 );
 const state = loadState(services);
+
+async function buildTravelSnapshot() {
+  const connector = await getTravelConnectorStatus(travelConfig);
+  const transmission = await getTransmissionVpnStatus().catch((err) => ({
+    desiredMode: null,
+    effectiveMode: null,
+    rolloutPending: true,
+    error: err.message,
+    placeholderConfig: false,
+  }));
+  const probedTargets = await Promise.all(
+    travelConfig.targets
+      .slice()
+      .sort((left, right) => Number(left.priority || 0) - Number(right.priority || 0))
+      .map((target) => probeTravelTarget(target)),
+  );
+  const bundles = travelConfig.bundles.map((bundle) => {
+    const targets = probedTargets.filter((target) => target.bundle === bundle.id);
+    return {
+      ...bundle,
+      state: worstTravelState(targets.map((target) => target.state)),
+      targets,
+    };
+  });
+  const activeShares = snapshotServices()
+    .filter((item) => item.enabled)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      publicUrl: item.publicUrl,
+      authMode: item.authMode,
+      expiresAt: item.expiresAt,
+    }));
+  const privateTargets = probedTargets.filter((target) => target.access === "tailnet-private");
+  const privateProbeState = worstTravelState(privateTargets.map((target) => target.state));
+  const privateAccessState =
+    connector.state === "blocked"
+      ? "blocked"
+      : worstTravelState([connector.state, privateProbeState]);
+  const exitNodeState = !connector.ready
+    ? "blocked"
+    : connector.expectsExitNode && !connector.exitNode
+      ? "degraded"
+      : "ready";
+  const shareState = activeShares.length > 0 ? "degraded" : "ready";
+  const transmissionState =
+    transmission && transmission.rolloutPending
+      ? "degraded"
+      : transmission && transmission.placeholderConfig && transmission.desiredMode === "vpn"
+        ? "degraded"
+        : transmission && transmission.desiredMode
+          ? "ready"
+          : "unknown";
+  const summaryState = worstTravelState([
+    privateAccessState,
+    exitNodeState,
+    shareState,
+    transmissionState,
+  ]);
+  const notes = [
+    {
+      level: "info",
+      code: "client-tailnet-required",
+      message: "Private hostnames require a Tailscale-connected client device.",
+    },
+    {
+      level: "info",
+      code: "client-exit-node-required",
+      message: "Exit-node use is selected on the client device, not by the control panel.",
+    },
+  ];
+  if (transmission && transmission.placeholderConfig) {
+    notes.push({
+      level: transmission.desiredMode === "vpn" ? "warn" : "info",
+      code: "transmission-placeholder-vpn",
+      message:
+        "Transmission VPN wiring exists, but the current repo still uses placeholder WireGuard values until real provider credentials are added.",
+    });
+  }
+  if (activeShares.length > 0) {
+    notes.push({
+      level: "warn",
+      code: "active-public-shares",
+      message:
+        String(activeShares.length) +
+        " temporary public share" +
+        (activeShares.length === 1 ? " is" : "s are") +
+        " active.",
+    });
+  }
+  if (connector.state !== "ready") {
+    notes.push({
+      level: "warn",
+      code: "connector-degraded",
+      message:
+        "If remote access is unstable, verify ConnectorReady and re-check the advertised /32 routes in Tailscale.",
+    });
+  }
+
+  metrics.travelLastSnapshotTimestampSeconds = Math.floor(Date.now() / 1000);
+  metrics.travelSummaryState = summaryState;
+  metrics.travelConnectorReady = connector.ready ? 1 : 0;
+  metrics.travelConnectorRoutesOk = connector.expectedRoutesOk ? 1 : 0;
+
+  return {
+    checkedAt: nowIso(),
+    summary: {
+      state: summaryState,
+      headline: travelHeadline(summaryState, connector, activeShares, transmission),
+    },
+    connector,
+    privateAccess: {
+      state: privateAccessState,
+      ...summarizeTravelTargets(privateTargets),
+    },
+    exitNode: {
+      state: exitNodeState,
+      detail: connector.ready
+        ? connector.exitNode
+          ? "Connector is configured as an exit node."
+          : "Connector is healthy, but exit-node mode is not enabled."
+        : "Connector is not ready, so exit-node travel egress is not available.",
+    },
+    transmission: {
+      ...transmission,
+      state: transmissionState,
+      webUiUrl: TRANSMISSION_VPN_WEBUI_URL,
+    },
+    exposures: {
+      state: shareState,
+      activeCount: activeShares.length,
+      items: activeShares,
+    },
+    bundles,
+    notes,
+  };
+}
+
+async function getTravelSnapshot(forceRefresh) {
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    travelSnapshotCache.snapshot &&
+    now - travelSnapshotCache.ts < TRAVEL_CACHE_TTL_SECONDS * 1000
+  ) {
+    return travelSnapshotCache.snapshot;
+  }
+  if (!travelSnapshotCache.promise) {
+    travelSnapshotCache.promise = buildTravelSnapshot()
+      .then((snapshot) => {
+        travelSnapshotCache.snapshot = snapshot;
+        travelSnapshotCache.ts = Date.now();
+        return snapshot;
+      })
+      .finally(() => {
+        travelSnapshotCache.promise = null;
+      });
+  }
+  return travelSnapshotCache.promise;
+}
 
 // Startup reconciliation: expire stale exposures and log recovered state
 (function startupReconcile() {
@@ -1672,6 +2084,21 @@ function renderMetrics() {
     "# HELP exposure_control_last_reconcile_timestamp_seconds Unix timestamp of the last successful reconciliation loop.",
     "# TYPE exposure_control_last_reconcile_timestamp_seconds gauge",
     "exposure_control_last_reconcile_timestamp_seconds " + metrics.lastReconcileTimestampSeconds,
+    "# HELP exposure_control_travel_last_snapshot_timestamp_seconds Unix timestamp of the last travel snapshot.",
+    "# TYPE exposure_control_travel_last_snapshot_timestamp_seconds gauge",
+    "exposure_control_travel_last_snapshot_timestamp_seconds " + metrics.travelLastSnapshotTimestampSeconds,
+    "# HELP exposure_control_travel_connector_ready Whether the travel connector is ready in the last snapshot.",
+    "# TYPE exposure_control_travel_connector_ready gauge",
+    "exposure_control_travel_connector_ready " + metrics.travelConnectorReady,
+    "# HELP exposure_control_travel_connector_routes_ok Whether expected travel routes matched in the last snapshot.",
+    "# TYPE exposure_control_travel_connector_routes_ok gauge",
+    "exposure_control_travel_connector_routes_ok " + metrics.travelConnectorRoutesOk,
+    "# HELP exposure_control_travel_summary_state Travel summary state from the last snapshot.",
+    "# TYPE exposure_control_travel_summary_state gauge",
+    'exposure_control_travel_summary_state{state="ready"} ' + (metrics.travelSummaryState === "ready" ? 1 : 0),
+    'exposure_control_travel_summary_state{state="degraded"} ' + (metrics.travelSummaryState === "degraded" ? 1 : 0),
+    'exposure_control_travel_summary_state{state="blocked"} ' + (metrics.travelSummaryState === "blocked" ? 1 : 0),
+    'exposure_control_travel_summary_state{state="unknown"} ' + (metrics.travelSummaryState === "unknown" ? 1 : 0),
     "",
   ].join("\n");
 }
@@ -1805,6 +2232,18 @@ async function handleApi(req, res, parsedUrl) {
       parsedUrl.searchParams.get("refresh") === "1";
     try {
       const payload = await getImageUpdates(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/travel") {
+    const force =
+      parsedUrl.searchParams.get("force") === "1" ||
+      parsedUrl.searchParams.get("refresh") === "1";
+    try {
+      const payload = await getTravelSnapshot(force);
       return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 500, { error: err.message });

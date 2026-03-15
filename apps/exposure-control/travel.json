@@ -1,0 +1,142 @@
+{
+  "connector": {
+    "name": "homelab-subnet-router",
+    "expectedRoutes": [
+      "${ROUTER_IP}/32",
+      "${UTILITY_NODE_IP}/32",
+      "${PRIMARY_NODE_IP}/32",
+      "${NAS_IP}/32",
+      "${INGRESS_VIP}/32"
+    ],
+    "expectsExitNode": true
+  },
+  "bundles": [
+    {
+      "id": "essentials",
+      "name": "Essentials",
+      "description": "Core home surfaces to reach from the road."
+    },
+    {
+      "id": "media",
+      "name": "Media",
+      "description": "Streaming, downloads, and library tools."
+    },
+    {
+      "id": "life",
+      "name": "Life",
+      "description": "Photos, passwords, and personal apps."
+    }
+  ],
+  "targets": [
+    {
+      "id": "hq",
+      "name": "HQ",
+      "url": "https://hq.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "essentials",
+      "priority": 10,
+      "probe": {
+        "expectStatus": [200]
+      }
+    },
+    {
+      "id": "controlpanel",
+      "name": "Control Panel",
+      "url": "https://controlpanel.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "essentials",
+      "priority": 20,
+      "probe": {
+        "expectStatus": [200]
+      }
+    },
+    {
+      "id": "nas",
+      "name": "NAS",
+      "url": "https://nas.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "essentials",
+      "priority": 30,
+      "probe": {
+        "expectStatus": [200, 302, 401]
+      }
+    },
+    {
+      "id": "router",
+      "name": "Router",
+      "url": "https://router.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "essentials",
+      "priority": 40,
+      "probe": {
+        "expectStatus": [200, 302, 401]
+      }
+    },
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "url": "https://jellyfin.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "media",
+      "priority": 50,
+      "probe": {
+        "expectStatus": [200, 302]
+      }
+    },
+    {
+      "id": "torrent",
+      "name": "Transmission",
+      "url": "https://torrent.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "media",
+      "priority": 60,
+      "probe": {
+        "expectStatus": [200, 302]
+      }
+    },
+    {
+      "id": "torrent-vpn",
+      "name": "Torrent VPN UI",
+      "url": "https://torrent-vpn.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "media",
+      "priority": 70,
+      "probe": {
+        "expectStatus": [200, 302, 503]
+      }
+    },
+    {
+      "id": "photos",
+      "name": "Immich",
+      "url": "https://photos.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "life",
+      "priority": 80,
+      "probe": {
+        "expectStatus": [200, 302]
+      }
+    },
+    {
+      "id": "vaultwarden",
+      "name": "Vaultwarden",
+      "url": "https://vaultwarden.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "life",
+      "priority": 90,
+      "probe": {
+        "expectStatus": [200, 302]
+      }
+    },
+    {
+      "id": "booklore",
+      "name": "BookLore",
+      "url": "https://booklore.${BASE_DOMAIN}",
+      "access": "tailnet-private",
+      "bundle": "life",
+      "priority": 100,
+      "probe": {
+        "expectStatus": [200, 302]
+      }
+    }
+  ]
+}

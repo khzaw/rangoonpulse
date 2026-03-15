@@ -2,6 +2,16 @@
       const overviewStripEl = document.getElementById('overviewStrip');
       const overviewMetaEl = document.getElementById('overviewMeta');
       const overviewDetailEl = document.getElementById('overviewDetail');
+      const travelSummaryEl = document.getElementById('travelSummary');
+      const travelOverviewStripEl = document.getElementById('travelOverviewStrip');
+      const travelOverviewMetaEl = document.getElementById('travelOverviewMeta');
+      const travelOverviewDetailEl = document.getElementById('travelOverviewDetail');
+      const travelBundlesMetaEl = document.getElementById('travelBundlesMeta');
+      const travelBundlesEl = document.getElementById('travelBundles');
+      const travelActionStateEl = document.getElementById('travelActionState');
+      const travelNotesMetaEl = document.getElementById('travelNotesMeta');
+      const travelSharesEl = document.getElementById('travelShares');
+      const travelNotesEl = document.getElementById('travelNotes');
       const tuningSummaryEl = document.getElementById('tuningSummary');
       const tuningOverviewStripEl = document.getElementById('tuningOverviewStrip');
       const tuningOverviewMetaEl = document.getElementById('tuningOverviewMeta');
@@ -32,10 +42,15 @@
       const vpnMsgEl = document.getElementById('vpnMsg');
       const updatesMsgEl = document.getElementById('updatesMsg');
       const updatesMetaEl = document.getElementById('updatesMeta');
+      const travelMsgEl = document.getElementById('travelMsg');
       const refreshAllBtn = document.getElementById('refreshAllBtn');
       const emergencyBtn = document.getElementById('emergencyBtn');
       const vpnDirectBtn = document.getElementById('vpnDirectBtn');
       const vpnEnableBtn = document.getElementById('vpnEnableBtn');
+      const travelDirectBtn = document.getElementById('travelDirectBtn');
+      const travelVpnBtn = document.getElementById('travelVpnBtn');
+      const travelDisableSharesBtn = document.getElementById('travelDisableSharesBtn');
+      const travelExposureLink = document.getElementById('travelExposureLink');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
       const pageSections = Array.from(document.querySelectorAll('[data-page-section]'));
       const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
@@ -49,6 +64,7 @@
         audit: [],
         vpn: null,
         updates: null,
+        travel: null,
         tuning: null,
       };
 
@@ -73,10 +89,14 @@
         setMessage(updatesMsgEl, text, isError);
       }
 
+      function setTravelMsg(text, isError) {
+        setMessage(travelMsgEl, text, isError);
+      }
+
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
         if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['updates', 'exposure', 'tuning']);
+        const knownPages = new Set(['updates', 'travel', 'exposure', 'tuning']);
         if (knownPages.has(candidate)) return candidate;
         return 'updates';
       }
@@ -337,9 +357,28 @@
         );
       }
 
+      function travelTone(state) {
+        const normalized = String(state || '').toLowerCase();
+        if (normalized === 'ready') return 'status';
+        if (normalized === 'degraded') return 'warning';
+        if (normalized === 'blocked') return 'danger';
+        return 'neutral';
+      }
+
+      function travelStateLabel(state) {
+        const normalized = String(state || '').toLowerCase();
+        if (!normalized) return 'unknown';
+        return normalized;
+      }
+
+      function travelStatusPill(state) {
+        return '<span class="travel-state-pill ' + escapeHtml(travelTone(state)) + '">' + escapeHtml(travelStateLabel(state)) + '</span>';
+      }
+
       function renderOverview() {
         const services = dashboardState.services || [];
         const updates = dashboardState.updates || null;
+        const travel = dashboardState.travel || null;
         const tuning = dashboardState.tuning || null;
         const vpn = dashboardState.vpn || null;
         const activeExposures = services.filter((svc) => svc.enabled).length;
@@ -352,6 +391,8 @@
         const fetchDetail = tuning && tuning.fetch ? tuning.fetch.detail : 'resource-advisor unavailable';
         const desiredMode = vpn && vpn.desiredMode ? vpn.desiredMode : 'unknown';
         const runningMode = vpn && vpn.effectiveMode ? vpn.effectiveMode : 'unknown';
+        const travelState = travel && travel.summary ? travel.summary.state : 'unknown';
+        const travelHeadline = travel && travel.summary ? travel.summary.headline : 'travel snapshot unavailable';
 
         overviewStripEl.innerHTML =
           overviewSegment('exposures', String(activeExposures), services.length + ' configured share targets', {
@@ -374,6 +415,11 @@
             barPct: updateItems.length ? updatesAvailable / updateItems.length * 100 : 0,
             tone: updatesAvailable > 0 ? 'warning' : 'status',
           }) +
+          overviewSegment('travel', travelState, travelHeadline, {
+            eyebrow: 'remote posture',
+            barPct: travelState === 'ready' ? 100 : travelState === 'degraded' ? 55 : travelState === 'blocked' ? 15 : 30,
+            tone: travelTone(travelState),
+          }) +
           overviewSegment('advisor fetch', fetchState, fetchDetail, {
             eyebrow: 'resource-advisor',
             barPct: fetchState === 'live' ? 100 : 25,
@@ -387,11 +433,126 @@
         }
         if (updates && updates.checkedAt) meta.push('<span>updates checked ' + fmtDateTime(updates.checkedAt) + '</span>');
         if (vpn) meta.push('<span>transmission desired ' + desiredMode + '</span>');
+        if (travel && travel.checkedAt) meta.push('<span>travel checked ' + fmtDateTime(travel.checkedAt) + '</span>');
         overviewMetaEl.innerHTML = meta.join('');
         overviewDetailEl.textContent = fetchDetail;
         exposureMetaEl.textContent = activeExposures + ' active exposure' + (activeExposures === 1 ? '' : 's');
         vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
         auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';
+      }
+
+      function renderTravel(travel) {
+        const travelData = travel || null;
+        const activeServices = (dashboardState.services || []).filter((svc) => svc.enabled);
+        if (!travelData) {
+          travelSummaryEl.textContent = 'Travel data unavailable';
+          travelOverviewStripEl.innerHTML = '';
+          travelOverviewMetaEl.innerHTML = '';
+          travelOverviewDetailEl.textContent = 'travel snapshot unavailable';
+          travelBundlesMetaEl.textContent = '0 bundles';
+          travelBundlesEl.innerHTML =
+            '<article class="support-card travel-card"><div class="support-card-title">travel status</div><p class="support-copy">Travel snapshot unavailable from the control panel backend.</p></article>';
+          travelActionStateEl.textContent = 'status unavailable';
+          travelNotesMetaEl.textContent = '0 notes';
+          travelSharesEl.innerHTML = '<p class="support-copy">No travel share data available.</p>';
+          travelNotesEl.innerHTML = '<p class="support-copy">Travel notes unavailable.</p>';
+          if (travelDirectBtn) travelDirectBtn.disabled = true;
+          if (travelVpnBtn) travelVpnBtn.disabled = true;
+          if (travelDisableSharesBtn) travelDisableSharesBtn.disabled = true;
+          return;
+        }
+
+        const connector = travelData.connector || {};
+        const privateAccess = travelData.privateAccess || {};
+        const exitNode = travelData.exitNode || {};
+        const transmission = travelData.transmission || {};
+        const exposures = travelData.exposures || { activeCount: 0, items: [] };
+        const bundles = Array.isArray(travelData.bundles) ? travelData.bundles : [];
+        const notes = Array.isArray(travelData.notes) ? travelData.notes : [];
+        const activeShareCount = Number(exposures.activeCount || 0);
+
+        travelSummaryEl.textContent = travelData.summary && travelData.summary.headline
+          ? travelData.summary.headline
+          : 'Travel snapshot loaded.';
+        travelOverviewStripEl.innerHTML =
+          overviewSegment('private path', travelStateLabel(privateAccess.state), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', {
+            eyebrow: 'tailnet/private',
+            barPct: privateAccess.state === 'ready' ? 100 : privateAccess.state === 'degraded' ? 55 : privateAccess.state === 'blocked' ? 15 : 30,
+            tone: travelTone(privateAccess.state),
+          }) +
+          overviewSegment('exit node', travelStateLabel(exitNode.state), connector.name || 'connector', {
+            eyebrow: 'home egress',
+            barPct: exitNode.state === 'ready' ? 100 : exitNode.state === 'degraded' ? 55 : exitNode.state === 'blocked' ? 15 : 30,
+            tone: travelTone(exitNode.state),
+          }) +
+          overviewSegment('transmission', transmission.desiredMode || 'unknown', 'running ' + (transmission.effectiveMode || 'unknown'), {
+            eyebrow: transmission.placeholderConfig ? 'placeholder vpn config' : 'download path',
+            barPct: transmission.desiredMode === 'vpn' ? 100 : 42,
+            tone: transmission.rolloutPending ? 'warning' : transmission.desiredMode === 'vpn' ? 'warning' : 'status',
+          }) +
+          overviewSegment('public shares', String(activeShareCount), activeShareCount ? 'disable if not needed' : 'private-only posture', {
+            eyebrow: 'share hosts',
+            barPct: activeShareCount > 0 ? Math.min(100, activeShareCount * 18) : 0,
+            tone: activeShareCount > 0 ? 'warning' : 'status',
+          });
+        travelOverviewMetaEl.innerHTML =
+          '<span>checked ' + fmtDateTime(travelData.checkedAt) + '</span>' +
+          '<span>connector ' + escapeHtml(connector.name || 'n/a') + '</span>' +
+          '<span>' + String((connector.advertisedRoutes || []).length) + ' advertised route(s)</span>';
+        travelOverviewDetailEl.textContent = connector.detail || 'travel snapshot loaded';
+        travelBundlesMetaEl.textContent = bundles.length + ' bundle' + (bundles.length === 1 ? '' : 's');
+        travelBundlesEl.innerHTML = bundles.map((bundle) => {
+          const targets = Array.isArray(bundle.targets) ? bundle.targets : [];
+          const items = targets.length
+            ? targets.map((target) =>
+              '<li class="travel-target-item">' +
+                '<div class="travel-target-head">' +
+                  '<a href="' + escapeHtml(target.url || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(target.name || target.id || 'target') + '</a>' +
+                  travelStatusPill(target.state) +
+                '</div>' +
+                '<div class="travel-target-meta">' + escapeHtml(String(target.access || 'tailnet-private').replace(/-/g, ' ')) + ' · ' + escapeHtml(target.detail || 'no probe detail') + '</div>' +
+              '</li>'
+            ).join('')
+            : '<li class="travel-target-item travel-target-empty"><span class="muted">no targets in this bundle.</span></li>';
+          return (
+            '<article class="support-card travel-card">' +
+              '<div class="travel-card-head"><div class="support-card-title">' + escapeHtml(bundle.name || bundle.id || 'bundle') + '</div>' + travelStatusPill(bundle.state) + '</div>' +
+              '<p class="support-copy">' + escapeHtml(bundle.description || 'No description.') + '</p>' +
+              '<ul class="travel-target-list">' + items + '</ul>' +
+            '</article>'
+          );
+        }).join('');
+
+        travelActionStateEl.textContent =
+          'transmission ' + (transmission.desiredMode || 'unknown') +
+          ' · ' + activeShareCount + ' active share' + (activeShareCount === 1 ? '' : 's');
+        travelNotesMetaEl.textContent = notes.length + ' note' + (notes.length === 1 ? '' : 's');
+        travelSharesEl.innerHTML = activeServices.length
+          ? activeServices.map((svc) =>
+            '<div class="travel-share-item">' +
+              '<a href="' + escapeHtml(svc.publicUrl || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(svc.name || svc.id || 'service') + '</a>' +
+              '<span class="travel-share-meta">' + escapeHtml(svc.authMode || 'none') + ' · ' + escapeHtml(fmtExpiry(svc.expiresAt).text) + '</span>' +
+            '</div>'
+          ).join('')
+          : '<p class="support-copy">No temporary public shares are active.</p>';
+        travelNotesEl.innerHTML = notes.length
+          ? notes.map((note) =>
+            '<div class="travel-note-item">' + travelStatusPill(note.level === 'warn' ? 'degraded' : 'ready') +
+              '<span>' + escapeHtml(note.message || '') + '</span></div>'
+          ).join('')
+          : '<p class="support-copy">No additional travel notes right now.</p>';
+
+        if (travelDirectBtn) {
+          travelDirectBtn.disabled = mutationInFlight > 0 || transmission.desiredMode === 'direct';
+          travelDirectBtn.classList.toggle('mode-active', transmission.desiredMode === 'direct');
+        }
+        if (travelVpnBtn) {
+          travelVpnBtn.disabled = mutationInFlight > 0 || transmission.desiredMode === 'vpn';
+          travelVpnBtn.classList.toggle('mode-active', transmission.desiredMode === 'vpn');
+        }
+        if (travelDisableSharesBtn) {
+          travelDisableSharesBtn.disabled = mutationInFlight > 0 || activeShareCount === 0;
+        }
       }
 
       function renderTransmissionVpn(status) {
@@ -420,6 +581,10 @@
         vpnEnableBtn.disabled = mutationInFlight > 0 || desiredMode === 'vpn';
         vpnDirectBtn.classList.toggle('mode-active', desiredMode === 'direct');
         vpnEnableBtn.classList.toggle('mode-active', desiredMode === 'vpn');
+        if (dashboardState.travel && dashboardState.travel.transmission) {
+          dashboardState.travel.transmission = { ...dashboardState.travel.transmission, ...status };
+          renderTravel(dashboardState.travel);
+        }
       }
 
       function renderPlanner(tuning) {
@@ -851,15 +1016,17 @@
           setMsg('Refreshing...');
           setVpnMsg('Refreshing Transmission VPN status...');
           setUpdatesMsg('Loading cached update report...');
+          setTravelMsg('Refreshing travel readiness...');
         }
 
         try {
-          const [svcData, auditData, vpnData, tuningData, updatesData] = await Promise.allSettled([
+          const [svcData, auditData, vpnData, tuningData, updatesData, travelData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
             request('/api/transmission-vpn', 'GET'),
             request('/api/tuning', 'GET'),
             request('/api/image-updates', 'GET'),
+            request('/api/travel', 'GET'),
           ]);
 
           if (svcData.status !== 'fulfilled') throw svcData.reason;
@@ -894,6 +1061,15 @@
             dashboardState.updates = null;
             renderUpdates({ items: [] });
             setUpdatesMsg(updatesData.reason.message, true);
+          }
+          if (travelData && travelData.status === 'fulfilled') {
+            dashboardState.travel = travelData.value;
+            renderTravel(dashboardState.travel);
+            if (!silent) setTravelMsg('');
+          } else {
+            dashboardState.travel = null;
+            renderTravel(null);
+            if (travelData && !silent) setTravelMsg(travelData.reason.message, true);
           }
 
           renderOverview();
@@ -949,6 +1125,35 @@
 
       vpnDirectBtn.onclick = () => setTransmissionVpnMode('direct');
       vpnEnableBtn.onclick = () => setTransmissionVpnMode('vpn');
+      if (travelDirectBtn) travelDirectBtn.onclick = () => setTransmissionVpnMode('direct');
+      if (travelVpnBtn) travelVpnBtn.onclick = () => setTransmissionVpnMode('vpn');
+
+      if (travelDisableSharesBtn) {
+        travelDisableSharesBtn.onclick = async () => {
+          if (!confirm('Disable ALL temporary exposures?')) return;
+          try {
+            mutationInFlight += 1;
+            travelDisableSharesBtn.disabled = true;
+            emergencyBtn.disabled = true;
+            await request('/api/admin/disable-all', 'POST');
+            setTravelMsg('All exposures disabled');
+            setMsg('All exposures disabled');
+            await loadDashboard({ silent: true });
+          } catch (err) {
+            setTravelMsg(err.message, true);
+          } finally {
+            mutationInFlight = Math.max(0, mutationInFlight - 1);
+            emergencyBtn.disabled = false;
+          }
+        };
+      }
+
+      if (travelExposureLink) {
+        travelExposureLink.addEventListener('click', (event) => {
+          event.preventDefault();
+          setActivePage('exposure');
+        });
+      }
 
       pageLinks.forEach((link) => {
         link.addEventListener('click', (event) => {
@@ -977,4 +1182,3 @@
       setInterval(tickExpiryCountdowns, 1000);
       setActivePage(window.location.hash || '#updates', { replace: true });
       loadDashboard();
-    

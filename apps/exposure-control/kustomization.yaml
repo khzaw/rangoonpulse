@@ -14,5 +14,6 @@ configMapGenerator:
       - server.js
       - services.json
       - styles.css
+      - travel.json
 generatorOptions:
   disableNameSuffixHash: true

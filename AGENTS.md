@@ -98,7 +98,7 @@ Notes:
   - backend + UI: `apps/exposure-control/`
   - control panel host: `controlpanel.khzaw.dev`
   - `controlpanel.khzaw.dev` is now the combined operator cockpit for exposure control, Transmission VPN, image updates,
-    and the resource-advisor tuning view
+    Travel readiness, and the resource-advisor tuning view
   - backend split remains unchanged:
     - `apps/exposure-control/` owns operator write actions and the cockpit shell
     - `infrastructure/resource-advisor/` remains a separate backend/exporter and data source for tuning
@@ -495,6 +495,7 @@ Examples:
 - `docs/backup-plan.md`
 - `docs/blog-static-site-gitops-deployment-plan.md`
 - `docs/public-exposure-control-panel-plan.md`
+- `docs/travel-center.md`
 - `docs/public-edge-phase1-bootstrap.md`
 - `docs/ops-command-cheatsheet.md`
 - `docs/power-estimation-dashboard.md`

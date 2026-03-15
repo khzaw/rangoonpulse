@@ -27,7 +27,7 @@
         <div>
           <h1>operator cockpit</h1>
           <div class="hero-subtitle">
-            One operator surface for exposure controls, transmission routing, image checks, and resource tuning.
+            One operator surface for travel readiness, exposure controls, transmission routing, image checks, and resource tuning.
             Backends remain separate: exposure-control owns write actions, resource-advisor stays the tuning/report backend.
           </div>
         </div>
@@ -35,6 +35,7 @@
 
       <nav class="section-nav" aria-label="Section navigation">
         <a class="nav-pill" data-page-link href="#updates">image updates</a>
+        <a class="nav-pill" data-page-link href="#travel">travel</a>
         <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
         <a class="nav-pill" data-page-link href="#tuning">tuning</a>
       </nav>
@@ -154,6 +155,72 @@
         </div>
         <div class="content-block">
           <div id="updatesMsg" class="msg"></div>
+        </div>
+      </section>
+
+      <section id="travel" class="section" data-page-section>
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">travel</h2>
+            <p class="section-copy">Remote-life readiness across the Tailscale connector, key hostnames, public-share posture, and Transmission routing.</p>
+          </div>
+          <div id="travelSummary" class="section-detail">Checking travel readiness...</div>
+        </div>
+        <div class="content-block">
+          <div id="travelOverviewStrip" class="overview-strip travel-strip"></div>
+          <div class="overview-meta-row">
+            <div id="travelOverviewMeta" class="overview-meta-cluster"></div>
+            <div id="travelOverviewDetail" class="result-count"></div>
+          </div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">bundles</h3>
+            <p class="section-copy">Curated links grouped by how you actually use the homelab while away.</p>
+          </div>
+          <div id="travelBundlesMeta" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div id="travelBundles" class="travel-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">actions</h3>
+            <p class="section-copy">Cluster-side actions you can still take while the client-side Tailscale path stays manual.</p>
+          </div>
+          <div id="travelActionState" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div class="travel-actions">
+            <div class="travel-action-group">
+              <button id="travelDirectBtn" type="button">Transmission Direct</button>
+              <button id="travelVpnBtn" type="button">Transmission via VPN</button>
+            </div>
+            <div class="travel-action-group">
+              <button id="travelDisableSharesBtn" class="danger" type="button">Disable all shares</button>
+              <a id="travelExposureLink" class="top-button" href="#exposure">open exposure control</a>
+            </div>
+          </div>
+          <div id="travelMsg" class="msg"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">posture</h3>
+            <p class="section-copy">Current public-share surface and the practical caveats to keep in mind when you are remote.</p>
+          </div>
+          <div id="travelNotesMeta" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div class="travel-support-grid">
+            <article class="support-card travel-support-card">
+              <div class="support-card-title">active shares</div>
+              <div id="travelShares" class="travel-shares"></div>
+            </article>
+            <article class="support-card travel-support-card">
+              <div class="support-card-title">travel notes</div>
+              <div id="travelNotes" class="travel-notes"></div>
+            </article>
+          </div>
         </div>
       </section>
 
