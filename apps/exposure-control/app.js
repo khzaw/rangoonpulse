@@ -172,6 +172,101 @@
         return match[1] + ' ' + match[2];
       }
 
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderInlineMarkdown(value) {
+        return escapeHtml(value)
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      }
+
+      function isMarkdownTableDelimiter(line) {
+        return /^\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?$/.test(String(line || '').trim());
+      }
+
+      function parseMarkdownTableRow(line) {
+        const trimmed = String(line || '').trim().replace(/^\|/, '').replace(/\|$/, '');
+        return trimmed.split('|').map((cell) => renderInlineMarkdown(cell.trim()));
+      }
+
+      function renderRuntimeMarkdown(markdown) {
+        const source = String(markdown || '').replace(/\r\n/g, '\n').trim();
+        if (!source) return '<p class="md-paragraph">no advisor markdown available.</p>';
+
+        const lines = source.split('\n');
+        const blocks = [];
+
+        for (let index = 0; index < lines.length; ) {
+          const line = lines[index];
+          const trimmed = line.trim();
+
+          if (!trimmed) {
+            index += 1;
+            continue;
+          }
+
+          const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
+          if (headingMatch) {
+            const level = headingMatch[1].length;
+            blocks.push('<h4 class="md-heading level-' + level + '">' + renderInlineMarkdown(headingMatch[2]) + '</h4>');
+            index += 1;
+            continue;
+          }
+
+          if (/^- /.test(trimmed)) {
+            const items = [];
+            while (index < lines.length && /^- /.test(lines[index].trim())) {
+              items.push('<li>' + renderInlineMarkdown(lines[index].trim().slice(2)) + '</li>');
+              index += 1;
+            }
+            blocks.push('<ul class="md-list">' + items.join('') + '</ul>');
+            continue;
+          }
+
+          if (trimmed.includes('|') && index + 1 < lines.length && isMarkdownTableDelimiter(lines[index + 1])) {
+            const header = parseMarkdownTableRow(trimmed);
+            const rows = [];
+            index += 2;
+            while (index < lines.length) {
+              const rowLine = lines[index].trim();
+              if (!rowLine || !rowLine.includes('|')) break;
+              rows.push(parseMarkdownTableRow(rowLine));
+              index += 1;
+            }
+            blocks.push(
+              '<div class="md-table-shell"><table class="md-table"><thead><tr>' +
+                header.map((cell) => '<th>' + cell + '</th>').join('') +
+              '</tr></thead><tbody>' +
+                rows.map((cells) => '<tr>' + cells.map((cell) => '<td>' + cell + '</td>').join('') + '</tr>').join('') +
+              '</tbody></table></div>'
+            );
+            continue;
+          }
+
+          const paragraphLines = [];
+          while (index < lines.length) {
+            const current = lines[index].trim();
+            const next = index + 1 < lines.length ? lines[index + 1].trim() : '';
+            if (!current) break;
+            if (/^(#{1,3})\s+/.test(current)) break;
+            if (/^- /.test(current)) break;
+            if (current.includes('|') && next && isMarkdownTableDelimiter(next)) break;
+            paragraphLines.push(current);
+            index += 1;
+          }
+          blocks.push('<p class="md-paragraph">' + renderInlineMarkdown(paragraphLines.join(' ')) + '</p>');
+        }
+
+        return blocks.join('');
+      }
+
       function fmtSigned(value, suffix, digits) {
         const number = Number(value || 0);
         const fixed = number.toFixed(Number.isFinite(digits) ? digits : 1).replace(/\\.0+$/, '').replace(/(\\.\\d*?)0+$/, '$1');
@@ -343,7 +438,7 @@
             '<article class="support-card"><div class="support-card-title">common notes</div><p class="support-copy">no note data available.</p></article>';
           tuningTableMetaEl.textContent = '0 recommendations';
           tuningRuntimeMetaEl.textContent = 'advisor unavailable';
-          runtimeLinesEl.innerHTML = '<div class="log-line"><span class="log-time">[00]</span><span class="log-level">data</span><span>no advisor markdown available.</span></div>';
+          runtimeLinesEl.innerHTML = renderRuntimeMarkdown('');
           noteFilterEl.innerHTML = '<option value="all">all notes</option>';
           tuningRowsEl.innerHTML = '';
           tuningEmptyEl.hidden = false;
@@ -480,8 +575,7 @@
 
         noteFilterEl.innerHTML = '<option value="all">all notes</option>' + noteOptions.map((item) => '<option value="' + item.note + '">' + item.note + ' (' + item.count + ')</option>').join('');
         tuningRuntimeMetaEl.textContent = 'window ' + (report.metricsWindow || 'n/a') + ' · last run ' + fmtDateTime(tuning.fetch && tuning.fetch.lastRunAt);
-        const runtimeLines = String(tuning.runtime && tuning.runtime.latestMarkdown || '').split('\\n').map((line) => line.trim()).filter(Boolean).slice(0, 18);
-        runtimeLinesEl.innerHTML = runtimeLines.length ? runtimeLines.map((line, index) => '<div class="log-line"><span class="log-time">[' + String(index + 1).padStart(2, '0') + ']</span><span class="log-level ' + (index < 4 ? 'log-info' : '') + '">' + (index < 4 ? 'info' : 'data') + '</span><span>' + line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span></div>').join('') : '<div class="log-line"><span class="log-time">[00]</span><span class="log-level">data</span><span>no advisor markdown available.</span></div>';
+        runtimeLinesEl.innerHTML = renderRuntimeMarkdown(tuning.runtime && tuning.runtime.latestMarkdown);
       }
 
       function renderTuningRows() {

@@ -770,10 +770,81 @@
       .terminal-shell {
         background: #0a0a0a;
       }
-      .terminal-content {
-        padding: 18px;
+      .runtime-markdown {
+        padding: 20px;
         display: grid;
-        gap: 10px;
+        gap: 14px;
+        color: var(--text-1);
+      }
+      .runtime-markdown code {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .runtime-markdown strong {
+        font-weight: 600;
+      }
+      .md-heading {
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .md-heading.level-1 {
+        font-size: 18px;
+      }
+      .md-heading.level-2 {
+        margin-top: 8px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .md-heading.level-3 {
+        font-size: 13px;
+        color: var(--text-2);
+      }
+      .md-paragraph {
+        color: var(--text-2);
+        line-height: 1.65;
+      }
+      .md-list {
+        display: grid;
+        gap: 8px;
+        padding-left: 18px;
+        color: var(--text-2);
+      }
+      .md-list li {
+        line-height: 1.55;
+      }
+      .md-table-shell {
+        overflow: auto;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+      }
+      .md-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .md-table th,
+      .md-table td {
+        padding: 10px 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        vertical-align: top;
+      }
+      .md-table th {
+        position: sticky;
+        top: 0;
+        background: #080808;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 10px;
+        font-weight: 500;
+        font-family: var(--font-mono);
+      }
+      .md-table td {
+        color: var(--text-2);
       }
       tr:hover td {
         background: rgba(255, 255, 255, 0.014);
@@ -784,20 +855,6 @@
       .audit-scroll table td:first-child,
       .audit-scroll table td:nth-child(2) {
         white-space: nowrap;
-      }
-      .log-line {
-        display: grid;
-        grid-template-columns: 42px 44px 1fr;
-        gap: 12px;
-        font-family: var(--font-mono);
-        color: var(--text-2);
-      }
-      .log-time,
-      .log-level {
-        color: var(--text-dim);
-      }
-      .log-level.log-info {
-        color: var(--accent);
       }
       .empty-state {
         padding: 28px;
