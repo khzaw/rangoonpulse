@@ -58,6 +58,11 @@ spec:
                   secretKeyRef:
                     name: tracerr-db-secret
                     key: POSTGRES_PASSWORD
+              - name: REACTIVE_RESUME_DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: reactive-resume-db-secret
+                    key: POSTGRES_PASSWORD
             resources:
               requests:
                 cpu: "300m"
@@ -80,7 +85,7 @@ spec:
           10-init-app-dbs.sh: |
             (
               set -eu
-              echo "Initializing app databases/users (tracearr) ..."
+              echo "Initializing app databases/users (tracearr, reactive_resume) ..."
 
               # Role: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then
@@ -93,6 +98,15 @@ spec:
 
               # Tracerr requires TimescaleDB.
               psql -v ON_ERROR_STOP=1 -d tracearr -c "CREATE EXTENSION IF NOT EXISTS timescaledb"
+
+              # Role: reactive_resume
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='reactive_resume'" | grep -q 1; then
+                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE reactive_resume LOGIN PASSWORD '$${REACTIVE_RESUME_DB_PASSWORD}'"
+              fi
+              # DB: reactive_resume
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='reactive_resume'" | grep -q 1; then
+                createdb -O reactive_resume reactive_resume
+              fi
             )
 
     persistence:

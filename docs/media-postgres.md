@@ -3,6 +3,7 @@
 ## Purpose
 `media-postgres` is a shared in-cluster Postgres 16 + TimescaleDB instance used by:
 - Tracerr (`tracearr` DB)
+- Reactive Resume (`reactive_resume` DB)
 
 Immich uses its own Postgres and is intentionally not consolidated here.
 
@@ -23,5 +24,6 @@ Required Secret:
 
 This release also reads per-app DB passwords from existing Secrets:
 - `default/tracerr-db-secret` (`POSTGRES_PASSWORD`)
+- `default/reactive-resume-db-secret` (`POSTGRES_PASSWORD`)
 
 The init script creates roles/DBs on first boot only.

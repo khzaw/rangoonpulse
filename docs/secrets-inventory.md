@@ -71,6 +71,14 @@ Notes:
     - key: `JWT_SECRET`
     - key: `COOKIE_SECRET`
 
+- **reactive-resume** (`apps/reactive-resume/helmrelease.yaml`)
+  - `default/reactive-resume-db-secret`
+    - key: `DATABASE_URL`
+    - key: `POSTGRES_PASSWORD` (also used by `media-postgres` init)
+  - `default/reactive-resume-app-secret`
+    - key: `AUTH_SECRET`
+    - key: `PRINTER_TOKEN`
+
 - **immich** (`apps/immich/helmrelease.yaml`)
   - `default/immich-db-secret`
     - key: `POSTGRES_PASSWORD`

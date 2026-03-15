@@ -159,6 +159,7 @@ Notes:
   - `apps/uptime-kuma`
   - `apps/speedtest`
   - `apps/actualbudget`
+  - `apps/reactive-resume`
   - `apps/anki-server`
   - `apps/autobrr`
   - `apps/prowlarr`
@@ -406,7 +407,7 @@ Important external-dns behavior:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
       `isponsorblock-tv`, `profilarr`, `shelfmark`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
-      `obsidian-livesync`, `prowlarr`, `radarr`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
+      `obsidian-livesync`, `prowlarr`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
       `uptime-kuma`, `vaultwarden`
   - excluded from auto-apply by policy (analyzed only): `actualbudget`, `immich`, `immich-postgres`, `media-postgres`,
     `vaultwarden-postgres`, `blog`, `mmcal`
@@ -501,3 +502,4 @@ Examples:
 - `docs/exposure-control-phase2-phase3-mvp.md`
 - `docs/cloudflare-access-share-hosts-email-otp-plan.md`
 - `docs/transmission-optional-vpn.md`
+- `docs/reactive-resume.md`

@@ -248,6 +248,9 @@ spec:
                               - title: Vaultwarden
                                 url: https://passwords.${BASE_DOMAIN}
                                 icon: di:vaultwarden
+                              - title: Reactive Resume
+                                url: https://build-resume.${BASE_DOMAIN}
+                                icon: mdi:file-account-outline
                               - title: AdGuard
                                 url: https://adguard.${BASE_DOMAIN}
                                 icon: di:adguard-home

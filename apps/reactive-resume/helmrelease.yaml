@@ -1,0 +1,209 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: reactive-resume
+  namespace: default
+spec:
+  interval: 15m
+  timeout: 10m
+  dependsOn:
+    - name: media-postgres
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
+    controllers:
+      main:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: ghcr.io/amruthpillai/reactive-resume
+              tag: "v5.0.11"
+            env:
+              - name: TZ
+                value: "${TIMEZONE}"
+              - name: NODE_ENV
+                value: production
+              - name: APP_URL
+                value: https://build-resume.${BASE_DOMAIN}
+              - name: PRINTER_APP_URL
+                value: http://127.0.0.1:3000
+              - name: PRINTER_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: reactive-resume-app-secret
+                    key: PRINTER_TOKEN
+              - name: PRINTER_ENDPOINT
+                value: ws://127.0.0.1:3001?token=$(PRINTER_TOKEN)
+              - name: DATABASE_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: reactive-resume-db-secret
+                    key: DATABASE_URL
+              - name: AUTH_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: reactive-resume-app-secret
+                    key: AUTH_SECRET
+              - name: FLAG_DISABLE_IMAGE_PROCESSING
+                value: "true"
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "600m"
+                memory: "768Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            probes:
+              startup:
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: 3000
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 36
+              liveness:
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: 3000
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness:
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: 3000
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 6
+
+          printer:
+            image:
+              repository: ghcr.io/browserless/chromium
+              tag: "v2.43.0"
+            env:
+              - name: PORT
+                value: "3001"
+              - name: TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: reactive-resume-app-secret
+                    key: PRINTER_TOKEN
+              - name: CONCURRENT
+                value: "2"
+              - name: QUEUED
+                value: "4"
+              - name: HEALTH
+                value: "true"
+            resources:
+              requests:
+                cpu: "250m"
+                memory: "512Mi"
+              limits:
+                cpu: "1000m"
+                memory: "1536Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop:
+                  - ALL
+            probes:
+              startup:
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - curl -fsS "http://127.0.0.1:3001/pressure?token=$TOKEN" >/dev/null
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+              readiness:
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - curl -fsS "http://127.0.0.1:3001/pressure?token=$TOKEN" >/dev/null
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 10
+              liveness:
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -c
+                      - curl -fsS "http://127.0.0.1:3001/pressure?token=$TOKEN" >/dev/null
+                  initialDelaySeconds: 20
+                  periodSeconds: 20
+                  timeoutSeconds: 5
+                  failureThreshold: 5
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 3000
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: build-resume.${BASE_DOMAIN}
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - host: build-resume.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: reactive-resume-tls
+            hosts:
+              - build-resume.${BASE_DOMAIN}
+
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: truenas-nfs
+        accessMode: ReadWriteOnce
+        size: 2Gi
+        globalMounts:
+          - path: /app/data

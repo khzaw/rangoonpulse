@@ -38,6 +38,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "obsidian-livesync": "apps/obsidian-livesync/helmrelease.yaml",
     "prowlarr": "apps/prowlarr/helmrelease.yaml",
     "radarr": "apps/radarr/helmrelease.yaml",
+    "reactive-resume": "apps/reactive-resume/helmrelease.yaml",
     "sabnzbd": "apps/sabnzbd/helmrelease.yaml",
     "sonarr": "apps/sonarr/helmrelease.yaml",
     "speedtest": "apps/speedtest/helmrelease.yaml",

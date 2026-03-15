@@ -61,6 +61,7 @@ Then pick the smallest focused set of docs below before planning or editing.
 ### Service-specific guides
 
 - [`docs/study-services-livesync-anki-booklore.md`](./study-services-livesync-anki-booklore.md)
+- [`docs/reactive-resume.md`](./reactive-resume.md)
 - [`docs/shelfmark.md`](./shelfmark.md)
 - [`docs/tracerr.md`](./tracerr.md)
 - [`docs/isponsorblocktv.md`](./isponsorblocktv.md)

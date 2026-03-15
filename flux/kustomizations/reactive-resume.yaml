@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: reactive-resume
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./apps/reactive-resume
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
+  targetNamespace: default
+  timeout: 10m
+  dependsOn:
+    - name: media-postgres
+    - name: ingress-nginx
