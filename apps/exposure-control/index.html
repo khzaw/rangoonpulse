@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rangoonpulse operator cockpit</title>
+        <link rel="stylesheet" href="/assets/styles.css" />
+
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="crumbs">
+          <span class="brand-mark">A</span>
+          <span>/</span>
+          <span>rangoonpulse</span>
+          <span class="env-pill">production</span>
+        </div>
+        <div class="top-actions">
+          <button id="refreshAllBtn" type="button">Refresh all</button>
+          <button id="emergencyBtn" class="danger" type="button">Disable all exposures</button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="hero">
+        <div>
+          <h1>operator cockpit</h1>
+          <div class="hero-subtitle">
+            One operator surface for exposure controls, transmission routing, image checks, and resource tuning.
+            Backends remain separate: exposure-control owns write actions, resource-advisor stays the tuning/report backend.
+          </div>
+        </div>
+      </section>
+
+      <nav class="section-nav" aria-label="Section navigation">
+        <a class="nav-pill" data-page-link href="#updates">image updates</a>
+        <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
+        <a class="nav-pill" data-page-link href="#tuning">tuning</a>
+      </nav>
+
+      <section id="overviewPanel" class="section overview-shared">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">overview</h2>
+            <p class="section-copy">Current operator posture across both backends.</p>
+          </div>
+          <div id="loadState" class="result-count">Loading dashboard state...</div>
+        </div>
+        <div id="overviewStrip" class="overview-strip"></div>
+        <div class="overview-meta-row">
+          <div id="overviewMeta" class="overview-meta-cluster"></div>
+          <div id="overviewDetail" class="result-count"></div>
+        </div>
+      </section>
+
+      <section id="exposure" class="section" data-page-section>
+        <div class="panel-actions">
+          <div>
+            <h2 class="section-heading">exposure control</h2>
+            <p class="section-copy">Temporary public exposure control on __SHARE_HOST_PREFIX__&lt;id&gt;.__PUBLIC_DOMAIN__ with __DEFAULT_EXPIRY_HOURS__h default expiry.</p>
+          </div>
+          <div id="exposureMeta" class="section-detail"></div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>status</th>
+                <th>auth</th>
+                <th>public url</th>
+                <th>expires</th>
+                <th>controls</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="msg" class="msg"></div>
+        </div>
+        <div class="content-block" style="padding-top:0">
+          <div id="transmissionPanel" class="subsection-bar">
+            <div>
+              <div class="subsection-label">transmission</div>
+              <p class="section-copy">Route Transmission directly or through the Gluetun VPN sidecar.</p>
+            </div>
+            <div id="vpnSectionMeta" class="section-detail"></div>
+          </div>
+          <div class="vpn-card">
+            <div class="vpn-row">
+              <div>
+                <div class="vpn-title">Transmission Egress</div>
+                <div id="vpnMeta" class="vpn-meta">Loading Transmission VPN status...</div>
+                <div class="vpn-meta">
+                  Gluetun WebUI:
+                  <a href="__TRANSMISSION_VPN_WEBUI_URL__" target="_blank" rel="noreferrer">open dashboard</a>
+                </div>
+              </div>
+              <div class="controls">
+                <button id="vpnDirectBtn" type="button">Route Direct</button>
+                <button id="vpnEnableBtn" type="button">Route via VPN</button>
+              </div>
+            </div>
+            <div id="vpnMsg" class="msg"></div>
+          </div>
+        </div>
+        <div class="content-block" style="padding-top:0">
+          <div class="subsection-bar">
+            <div>
+              <div class="subsection-label">audit</div>
+              <p class="section-copy">Recent exposure and transmission control actions.</p>
+            </div>
+            <div id="auditMeta" class="section-detail"></div>
+          </div>
+          <div class="audit-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>time</th>
+                  <th>action</th>
+                  <th>service</th>
+                  <th>details</th>
+                </tr>
+              </thead>
+              <tbody id="auditRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="updates" class="section" data-page-section>
+        <div class="updates-toolbar">
+          <div>
+            <h2 class="section-heading">image updates</h2>
+            <div id="updatesMeta" class="updates-meta">No update check yet.</div>
+          </div>
+          <button id="updatesRefreshBtn" type="button">Check Now</button>
+        </div>
+        <div class="updates-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>service</th>
+                <th>current</th>
+                <th>latest</th>
+                <th>status</th>
+                <th>image</th>
+              </tr>
+            </thead>
+            <tbody id="updatesRows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="updatesMsg" class="msg"></div>
+        </div>
+      </section>
+
+      <section id="tuning" class="section" data-page-section>
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">tuning</h2>
+            <p class="section-copy">Resource-advisor recommendations and live apply preflight, inside the shared cockpit.</p>
+          </div>
+          <div id="tuningSummary" class="section-detail">Waiting for advisor data...</div>
+        </div>
+        <div class="content-block" style="padding-bottom:0">
+          <div class="section-bar" style="padding:0 0 14px">
+            <div class="utility-links">
+              <a class="top-button" href="/api/tuning/latest.json" target="_blank" rel="noreferrer">json</a>
+              <a class="top-button" href="/api/tuning/latest.md" target="_blank" rel="noreferrer">markdown</a>
+              <a class="top-button" href="/api/tuning/metrics" target="_blank" rel="noreferrer">metrics</a>
+            </div>
+            <a class="primary-button" href="/api/tuning/latest.json" target="_blank" rel="noreferrer">open report</a>
+          </div>
+        </div>
+        <div class="content-block">
+          <div id="tuningOverviewStrip" class="overview-strip tuning-strip"></div>
+          <div class="overview-meta-row">
+            <div id="tuningOverviewMeta" class="overview-meta-cluster"></div>
+            <div id="tuningOverviewDetail" class="result-count"></div>
+          </div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">apply preflight</h3>
+            <p class="section-copy">Live selection preview for the weekly apply job, using hard node-fit blocking and advisory cluster pressure ordering.</p>
+          </div>
+          <div id="plannerMeta" class="section-detail">planner unavailable</div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div id="plannerGrid" class="planner-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">recommendation focus</h3>
+            <p class="section-copy">Highest-signal slices from the current advisor window.</p>
+          </div>
+          <div id="tuningFocusMeta" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div id="tuningFocusGrid" class="focus-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">control notes</h3>
+            <p class="section-copy">Planner bounds and recurring note patterns behind the current recommendation set.</p>
+          </div>
+          <div id="tuningControlMeta" class="section-detail"></div>
+        </div>
+        <div class="content-block" style="padding-top:18px">
+          <div id="tuningControlGrid" class="support-grid"></div>
+        </div>
+        <div class="section-bar">
+          <div>
+            <h3 class="section-heading">recommendation set</h3>
+            <p class="section-copy">Filterable live view from the current configmap report, with live pod restart counts beside historical 14d restart activity.</p>
+          </div>
+          <div id="tuningTableMeta" class="section-detail"></div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="filter-group" role="tablist" aria-label="Tuning action filters">
+              <button class="filter-btn active" type="button" data-filter-action="all">all</button>
+              <button class="filter-btn" type="button" data-filter-action="upsize">upsize</button>
+              <button class="filter-btn" type="button" data-filter-action="downsize">downsize</button>
+              <button class="filter-btn" type="button" data-filter-action="no-change">no change</button>
+            </div>
+            <select id="noteFilter" class="control-select" aria-label="Tuning note filter">
+              <option value="all">all notes</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <label class="search-shell">
+              <span class="input-prefix">&gt;</span>
+              <input id="searchInput" type="search" placeholder="Filter workloads..." />
+            </label>
+            <div id="tuningCount" class="result-count">0 visible rows</div>
+          </div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>workload</th>
+                <th>action</th>
+                <th>cpu request</th>
+                <th>memory request</th>
+                <th>observed usage</th>
+                <th>basis</th>
+                <th>restart signal</th>
+                <th>notes</th>
+              </tr>
+            </thead>
+            <tbody id="tuningRows"></tbody>
+          </table>
+          <div id="tuningEmpty" class="empty-state" hidden>No rows match the current filters.</div>
+        </div>
+        <div class="content-block">
+          <div class="section-bar" style="padding:0 0 14px;border-bottom:none">
+            <div>
+              <h3 class="section-heading">system output</h3>
+              <p class="section-copy">Recent markdown lines from the runtime-owned advisor report.</p>
+            </div>
+            <div id="tuningRuntimeMeta" class="section-detail"></div>
+          </div>
+          <div class="terminal-shell">
+            <div id="runtimeLines" class="terminal-content"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+        <script src="/assets/app.js" defer></script>
+
+  </body>
+</html>

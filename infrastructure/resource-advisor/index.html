@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>__PLACEHOLDER_01__</title>
+        <link rel="stylesheet" href="/assets/index.css" />
+
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="crumbs">
+          <span class="brand-mark">A</span>
+          <span class="crumb-separator">/</span>
+          <span class="crumb-label">rangoonpulse</span>
+          <span class="env-pill">production</span>
+        </div>
+        <div class="top-actions">
+          <a class="top-button" href="/latest.json">report json</a>
+          <a class="top-button" href="/latest.md">report markdown</a>
+          <a class="top-button" href="/apply-plan.json">apply json</a>
+          <a class="top-button" href="/apply-plan.md">apply markdown</a>
+          <a class="top-button" href="/metrics">metrics</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="overview" class="section">
+        <div class="section-bar">
+          <div>
+            <h1 class="section-heading">overview</h1>
+            <p class="section-copy">__PLACEHOLDER_02__</p>
+          </div>
+          <div class="overview-meta">last __PLACEHOLDER_03__ window</div>
+        </div>
+
+        <div class="overview-strip">
+          __PLACEHOLDER_04__
+        </div>
+
+        <div class="overview-meta-row">
+          <div class="overview-meta-cluster">
+            <span>last run <strong id="last-run-local" data-utc="__PLACEHOLDER_05__">__PLACEHOLDER_06__</strong></span>
+            <span>last apply <strong class="time-local" data-utc="__PLACEHOLDER_07__">__PLACEHOLDER_08__</strong></span>
+            <span>next apply <strong class="time-local" data-utc="__PLACEHOLDER_09__">__PLACEHOLDER_10__</strong></span>
+            <span>browser tz <strong id="browser-tz">browser local</strong></span>
+            <span>mode <strong>__PLACEHOLDER_11__</strong></span>
+            <span>allocatable <strong>__PLACEHOLDER_12__</strong> cpu <strong>__PLACEHOLDER_13__</strong> memory</span>
+          </div>
+          <div class="result-count">__PLACEHOLDER_14__ · report scope and live apply scope are split below.</div>
+        </div>
+      </section>
+
+      <section id="apply-preflight" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">apply preflight</h2>
+            <p class="section-copy">live selection preview for the weekly apply job. this section keeps live preflight, next-up candidates, and the persisted last real apply run separate.</p>
+          </div>
+          <div class="section-detail">schedule __PLACEHOLDER_15__ __PLACEHOLDER_16__</div>
+        </div>
+        <div class="planner-grid">
+          __PLACEHOLDER_17__
+        </div>
+      </section>
+
+      <section id="recommendations" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">recommendation set</h2>
+            <p class="section-copy">filterable live view from the current configmap report, with live pod restart counts beside historical 14d restart activity.</p>
+          </div>
+          <a class="primary-button" href="/latest.json">open report</a>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="filter-group" role="tablist" aria-label="Action filters">
+              <button class="filter-btn active" type="button" data-filter-action="all">all</button>
+              <button class="filter-btn" type="button" data-filter-action="upsize">upsize</button>
+              <button class="filter-btn" type="button" data-filter-action="downsize">downsize</button>
+              <button class="filter-btn" type="button" data-filter-action="no-change">no change</button>
+            </div>
+            <select id="noteFilter" class="control-select" aria-label="Note filter">
+              <option value="all">all notes</option>
+              __PLACEHOLDER_18__
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <label class="search-shell">
+              <span class="input-prefix">&gt;</span>
+              <input id="searchInput" type="search" placeholder="Filter workloads..." />
+            </label>
+            <div id="resultCount" class="result-count">__PLACEHOLDER_19__ visible rows</div>
+          </div>
+        </div>
+
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>workload</th>
+                <th>action</th>
+                <th>cpu request</th>
+                <th>memory request</th>
+                <th>observed usage</th>
+                <th>basis</th>
+                <th>restart signal</th>
+                <th>notes</th>
+              </tr>
+            </thead>
+            <tbody id="recommendationRows">
+              __PLACEHOLDER_20__
+            </tbody>
+          </table>
+          <div id="emptyState" class="empty-state" hidden>No rows match the current filters.</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">recommendation focus</h2>
+            <p class="section-copy">highest-signal slices from the current advisor window.</p>
+          </div>
+          <div class="section-detail">__PLACEHOLDER_21__ of metrics coverage</div>
+        </div>
+        <div class="focus-grid">
+          __PLACEHOLDER_22__
+          __PLACEHOLDER_23__
+          __PLACEHOLDER_24__
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">control notes</h2>
+            <p class="section-copy">report-scoped posture, planner bounds, and recurring note patterns behind the current recommendation set.</p>
+          </div>
+          <div class="section-detail">__PLACEHOLDER_25__ total recommendations</div>
+        </div>
+        <div class="support-grid">
+          __PLACEHOLDER_26__
+        </div>
+      </section>
+
+      <section id="runtime" class="section">
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">system output</h2>
+            <p class="section-copy">recent report markdown lines served by the exporter.</p>
+          </div>
+          <div class="section-detail">__PLACEHOLDER_27__</div>
+        </div>
+        <div class="terminal-shell">
+          <div class="terminal-content">
+            __PLACEHOLDER_28__
+          </div>
+        </div>
+      </section>
+    </main>
+        <script src="/assets/index.js" defer></script>
+
+  </body>
+</html>

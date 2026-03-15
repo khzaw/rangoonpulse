@@ -9,7 +9,10 @@ resources:
 configMapGenerator:
   - name: exposure-control-app-files
     files:
+      - app.js
+      - index.html
       - server.js
       - services.json
+      - styles.css
 generatorOptions:
   disableNameSuffixHash: true

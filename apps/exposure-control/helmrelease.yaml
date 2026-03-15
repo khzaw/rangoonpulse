@@ -130,3 +130,12 @@ spec:
               - path: /app/services.json
                 subPath: services.json
                 readOnly: true
+              - path: /app/index.html
+                subPath: index.html
+                readOnly: true
+              - path: /app/styles.css
+                subPath: styles.css
+                readOnly: true
+              - path: /app/app.js
+                subPath: app.js
+                readOnly: true

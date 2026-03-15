@@ -20,5 +20,8 @@ configMapGenerator:
     files:
       - advisor.py
       - exporter.py
+      - index.html
+      - index.css
+      - index.js
 generatorOptions:
   disableNameSuffixHash: true
