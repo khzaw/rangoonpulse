@@ -14,6 +14,11 @@ Then pick the smallest focused set of docs below before planning or editing.
 
 ## Task Routing
 
+### Repository-wide configuration
+
+- [`docs/shared-cluster-settings.md`](./shared-cluster-settings.md) when touching base domain, timezone, node names, node IPs,
+  ingress VIPs, LAN-service IPs, or Flux post-build substitutions.
+
 ### Networking, ingress, DNS, and access
 
 - [`docs/networking-current-state-and-simplification.md`](./networking-current-state-and-simplification.md) for the current cluster access model.

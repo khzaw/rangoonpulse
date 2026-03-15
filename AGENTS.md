@@ -24,6 +24,7 @@ continue work without re-discovery.
 - `core/`: core components (for example ingress-nginx base install/patch)
 - `infrastructure/`: infra components and non-app services
 - `flux/`: Helm repositories + Flux Kustomizations
+- `flux/cluster-settings.yaml`: source of truth for shared non-secret cluster constants used by Flux substitutions
 - `skills/`: project-specific agent skills and session bootstraps
 - `talos/`: Talos machine configuration
 - `docs/`: architectural notes, migration docs, backup planning
@@ -35,6 +36,10 @@ continue work without re-discovery.
 - Do not introduce a separate `values.yaml` when an app can be fully configured inline in `helmrelease.yaml`.
 - Keep ingress, DNS annotation, and TLS settings aligned for every externally accessed app.
 - Do not commit plaintext passwords/API keys in manifests.
+- Prefer `flux/cluster-settings.yaml` for cluster-wide non-secret constants instead of redeclaring the same domain,
+  node name, IP, VIP, or timezone value across many manifests.
+- When using Flux post-build substitutions, escape runtime-literal placeholders as `$${VAR}` so Flux renders literal
+  `${VAR}` into the applied manifest.
 
 ## Documentation Hygiene (For Agents)
 - If you change conventions (networking/access model, DNS/hostnames, storage classes, secrets patterns, app charts),
@@ -457,6 +462,7 @@ Examples:
 
 ## Useful Reference Docs
 - `docs/README.md`
+- `docs/shared-cluster-settings.md`
 - `docs/resource-advisor-phase1-phase2.md`
 - `docs/networking-current-state-and-simplification.md`
 - `docs/pangolin-fit-analysis.md`

@@ -182,13 +182,29 @@ Current cluster status: both nodes are functional and schedulable.
 │   ├── storage/
 │   └── tailscale-operator/
 ├── flux/                      # Flux GitOps configuration
-│   ├── repositories/           # Helm repositories
-│   └── kustomizations/         # App kustomizations
+│   ├── repositories/          # Helm repositories
+│   ├── kustomizations/        # App kustomizations
+│   └── cluster-settings.yaml  # Shared non-secret cluster constants
 ├── skills/                    # Project-specific agent skills
 ├── talos/                     # Talos machine configuration
 ├── docs/                      # Documentation & runbooks
 └── scripts/                   # Operational scripts
 ```
+
+---
+
+## Shared Settings
+
+Cluster-wide non-secret constants now live in:
+- `/Users/khz/Code/rangoonpulse/flux/cluster-settings.yaml`
+
+Flux child `Kustomization` objects consume those values with post-build substitution, so changing items like the base
+domain, timezone, node names, ingress VIP, or LAN service IPs can now be done in one place for the GitOps-managed
+manifests.
+
+Operational note:
+- some configs intentionally need literal `${...}` at runtime; in repo source those are written as `$${...}` so Flux
+  renders them back to literal `${...}`. See [`docs/shared-cluster-settings.md`](./docs/shared-cluster-settings.md).
 
 ---
 
