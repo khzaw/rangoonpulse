@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-settings
+  namespace: flux-system
+data:
+  BASE_DOMAIN: khzaw.dev
+  TIMEZONE: Asia/Singapore
+  PRIMARY_NODE_NAME: talos-7nf-osf
+  UTILITY_NODE_NAME: talos-uua-g6r
+  PRIMARY_NODE_IP: 10.0.0.197
+  UTILITY_NODE_IP: 10.0.0.38
+  INGRESS_VIP: 10.0.0.231
+  NAS_IP: 10.0.0.210
+  ROUTER_IP: 10.0.0.1
+  ADGUARD_PRIMARY_IP: 10.0.0.233
+  ADGUARD_SECONDARY_IP: 10.0.0.234
+  LAN_CIDR: 10.0.0.0/24
+  POD_CIDR: 10.244.0.0/16
+  SERVICE_CIDR: 10.96.0.0/12
