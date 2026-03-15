@@ -43,7 +43,7 @@ metadata:
   namespace: public-edge
   annotations:
     # Create DNS alias to Cloudflare Tunnel edge endpoint.
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}speedtest.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-speedtest.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -55,7 +55,7 @@ metadata:
   name: share-chartsdb-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}chartsdb.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-chartsdb.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -67,7 +67,7 @@ metadata:
   name: share-booklore-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}booklore.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-booklore.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -79,7 +79,7 @@ metadata:
   name: share-shelfmark-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}shelfmark.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-shelfmark.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -91,7 +91,7 @@ metadata:
   name: share-jellyfin-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}jellyfin.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-jellyfin.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -103,7 +103,7 @@ metadata:
   name: share-seerr-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}seerr.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-seerr.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -115,7 +115,7 @@ metadata:
   name: share-audiobookshelf-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}audiobookshelf.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-audiobookshelf.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -127,7 +127,7 @@ metadata:
   name: share-uptime-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}uptime.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-uptime.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -139,7 +139,7 @@ metadata:
   name: share-sonarr-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}sonarr.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-sonarr.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -151,7 +151,7 @@ metadata:
   name: share-radarr-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}radarr.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-radarr.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -163,7 +163,7 @@ metadata:
   name: share-tracerr-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}tracerr.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-tracerr.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -175,7 +175,7 @@ metadata:
   name: share-tunarr-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}tunarr.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-tunarr.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -187,7 +187,7 @@ metadata:
   name: share-vaultwarden-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}vaultwarden.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-vaultwarden.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -199,7 +199,7 @@ metadata:
   name: share-immich-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}immich.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-immich.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -211,7 +211,7 @@ metadata:
   name: share-calibre-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}calibre.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-calibre.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -223,7 +223,7 @@ metadata:
   name: share-calibre-manage-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}calibre-manage.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: share-calibre-manage.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName

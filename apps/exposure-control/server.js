@@ -25,7 +25,7 @@ const PUBLIC_DOMAIN = expandBaseDomainTokens(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "${BASE_DOMAIN}",
 ).toLowerCase();
 const SHARE_HOST_PREFIX = (
-  process.env.SHARE_HOST_PREFIX || "${SHARE_HOST_PREFIX}"
+  process.env.SHARE_HOST_PREFIX || "share-"
 ).toLowerCase();
 const CONTROL_PANEL_HOST = expandBaseDomainTokens(
   process.env.CONTROL_PANEL_HOST || "controlpanel.${BASE_DOMAIN}",

@@ -199,7 +199,7 @@ Cluster-wide non-secret constants now live in:
 - `/Users/khz/Code/rangoonpulse/flux/cluster-settings.yaml`
 
 Flux child `Kustomization` objects consume those values with post-build substitution, so changing items like the base
-domain, share-host prefix, timezone, node names, ingress VIP, or LAN service IPs can now be done in one place for the GitOps-managed
+domain, timezone, node names, ingress VIP, or LAN service IPs can now be done in one place for the GitOps-managed
 manifests.
 
 Operational note:

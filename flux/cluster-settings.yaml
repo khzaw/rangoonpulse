@@ -7,7 +7,6 @@ metadata:
   namespace: flux-system
 data:
   BASE_DOMAIN: khzaw.dev
-  SHARE_HOST_PREFIX: share-
   TIMEZONE: Asia/Singapore
   PRIMARY_NODE_NAME: talos-7nf-osf
   UTILITY_NODE_NAME: talos-uua-g6r

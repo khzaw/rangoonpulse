@@ -16,7 +16,6 @@ many manifests.
 
 Current keys:
 - `BASE_DOMAIN`
-- `SHARE_HOST_PREFIX`
 - `TIMEZONE`
 - `PRIMARY_NODE_NAME`
 - `UTILITY_NODE_NAME`
@@ -75,7 +74,6 @@ Files that already rely on this pattern:
 
 Good candidates for `cluster-settings`:
 - base domain and shared hostname suffixes
-- shared public-host prefixes such as `share-`
 - timezone
 - node names used in selectors and dashboards
 - stable LAN IPs and shared CIDRs
