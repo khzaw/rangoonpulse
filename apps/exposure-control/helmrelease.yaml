@@ -43,12 +43,13 @@ spec:
               tag: 24-alpine
             command:
               - node
-              - /app/server.js
+              - /app-files/server.js
             env:
+              APP_DIR: /app-files
               TZ: "${TIMEZONE}"
               PORT: "8080"
               DATA_DIR: /data
-              SERVICES_FILE: /app/services.json
+              SERVICES_FILE: /app-files/services.json
               PUBLIC_DOMAIN: ${BASE_DOMAIN}
               SHARE_HOST_PREFIX: share-
               CONTROL_PANEL_HOST: controlpanel.${BASE_DOMAIN}
@@ -121,21 +122,6 @@ spec:
         enabled: true
         type: configMap
         name: exposure-control-app-files
-        advancedMounts:
-          main:
-            main:
-              - path: /app/server.js
-                subPath: server.js
-                readOnly: true
-              - path: /app/services.json
-                subPath: services.json
-                readOnly: true
-              - path: /app/index.html
-                subPath: index.html
-                readOnly: true
-              - path: /app/styles.css
-                subPath: styles.css
-                readOnly: true
-              - path: /app/app.js
-                subPath: app.js
-                readOnly: true
+        globalMounts:
+          - path: /app-files
+            readOnly: true
