@@ -82,6 +82,13 @@ spec:
                 service:
                   identifier: main
                   port: http
+          - host: glance.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
 
         annotations:
           external-dns.alpha.kubernetes.io/hostname: rangoonpulse.${BASE_DOMAIN}
@@ -92,6 +99,7 @@ spec:
           - secretName: glance-tls
             hosts:
               - rangoonpulse.${BASE_DOMAIN}
+              - glance.${BASE_DOMAIN}
 
     configMaps:
       config:

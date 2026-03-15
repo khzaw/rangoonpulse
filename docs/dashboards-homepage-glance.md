@@ -11,6 +11,9 @@ Operational note:
 - Glance: `https://rangoonpulse.khzaw.dev`
 - Glance alias: `https://glance.khzaw.dev` (`CNAME` to the canonical hostname)
 
+Keep both hostnames on the Glance Ingress and TLS certificate even though `glance.khzaw.dev` is a DNS `CNAME`.
+The browser still sends `Host: glance.khzaw.dev`, so removing that host from the Ingress yields an NGINX `404`.
+
 ## Glance
 GitOps source of truth:
 - `apps/glance/helmrelease.yaml`
