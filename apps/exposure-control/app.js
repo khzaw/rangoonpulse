@@ -627,7 +627,11 @@
         rowsEl.innerHTML = '';
         if (!services.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="6" class="empty-state">No services configured.</td>';
+          const td = document.createElement('td');
+          td.colSpan = 6;
+          td.className = 'empty-state';
+          td.textContent = 'No services configured.';
+          tr.appendChild(td);
           rowsEl.appendChild(tr);
           return;
         }
@@ -635,12 +639,45 @@
           const tr = document.createElement('tr');
           if (svc.enabled) tr.classList.add('is-enabled');
           const expiry = fmtExpiry(svc.expiresAt);
-          tr.innerHTML =
-            '<td><div class="svc-name">' + svc.name + '</div><div class="svc-id">' + svc.id + '</div></td>' +
-            '<td><span class="badge ' + (svc.enabled ? 'on' : 'off') + '">' + (svc.enabled ? 'enabled' : 'disabled') + '</span></td>' +
-            '<td><span class="auth-mode">' + (svc.authMode === 'cloudflare-access' ? 'cf-access' : svc.authMode) + '</span></td>' +
-            '<td><a href="' + svc.publicUrl + '" target="_blank" rel="noreferrer">' + svc.publicHost + '</a></td>' +
-            '<td><span class="expiry ' + expiry.state + '" data-expires-at="' + (svc.expiresAt || '') + '" data-enabled="' + (svc.enabled ? '1' : '0') + '">' + expiry.text + '</span></td>';
+
+          const serviceTd = document.createElement('td');
+          const serviceName = document.createElement('div');
+          serviceName.className = 'svc-name';
+          serviceName.textContent = svc.name || 'unknown';
+          const serviceId = document.createElement('div');
+          serviceId.className = 'svc-id';
+          serviceId.textContent = svc.id || 'n/a';
+          serviceTd.append(serviceName, serviceId);
+
+          const statusTd = document.createElement('td');
+          const statusBadge = document.createElement('span');
+          statusBadge.className = 'badge ' + (svc.enabled ? 'on' : 'off');
+          statusBadge.textContent = svc.enabled ? 'enabled' : 'disabled';
+          statusTd.appendChild(statusBadge);
+
+          const authTd = document.createElement('td');
+          const authMode = document.createElement('span');
+          authMode.className = 'auth-mode';
+          authMode.textContent = svc.authMode === 'cloudflare-access' ? 'cf-access' : String(svc.authMode || 'none');
+          authTd.appendChild(authMode);
+
+          const urlTd = document.createElement('td');
+          const publicLink = document.createElement('a');
+          publicLink.href = String(svc.publicUrl || '#');
+          publicLink.target = '_blank';
+          publicLink.rel = 'noreferrer';
+          publicLink.textContent = String(svc.publicHost || '');
+          urlTd.appendChild(publicLink);
+
+          const expiryTd = document.createElement('td');
+          const expiryNode = document.createElement('span');
+          expiryNode.className = 'expiry ' + expiry.state;
+          expiryNode.dataset.expiresAt = String(svc.expiresAt || '');
+          expiryNode.dataset.enabled = svc.enabled ? '1' : '0';
+          expiryNode.textContent = expiry.text;
+          expiryTd.appendChild(expiryNode);
+
+          tr.append(serviceTd, statusTd, authTd, urlTd, expiryTd);
 
           const controlsTd = document.createElement('td');
           const controls = document.createElement('div');

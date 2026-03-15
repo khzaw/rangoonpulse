@@ -4,18 +4,31 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { URL } = require("node:url");
 
+const CONFIGURED_BASE_DOMAIN = String(
+  process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "",
+).trim();
+
+function expandBaseDomainTokens(value) {
+  const replacement = CONFIGURED_BASE_DOMAIN || "${BASE_DOMAIN}";
+  return String(value || "")
+    .replace(/\$\{BASE_DOMAIN\}/g, replacement)
+    .replace(/\$\{base_domain\}/g, replacement);
+}
+
 const PORT = Number(process.env.PORT || "8080");
 const APP_DIR = process.env.APP_DIR || "/app";
 const DATA_DIR = process.env.DATA_DIR || "/data";
 const STATE_FILE = path.join(DATA_DIR, "state.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit.json");
 const SERVICES_FILE = process.env.SERVICES_FILE || path.join(APP_DIR, "services.json");
-const PUBLIC_DOMAIN = (process.env.PUBLIC_DOMAIN || "${BASE_DOMAIN}").toLowerCase();
+const PUBLIC_DOMAIN = expandBaseDomainTokens(
+  process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "${BASE_DOMAIN}",
+).toLowerCase();
 const SHARE_HOST_PREFIX = (
   process.env.SHARE_HOST_PREFIX || "share-"
 ).toLowerCase();
-const CONTROL_PANEL_HOST = (
-  process.env.CONTROL_PANEL_HOST || "controlpanel.${BASE_DOMAIN}"
+const CONTROL_PANEL_HOST = expandBaseDomainTokens(
+  process.env.CONTROL_PANEL_HOST || "controlpanel.${BASE_DOMAIN}",
 ).toLowerCase();
 const DEFAULT_EXPIRY_HOURS = Number(process.env.DEFAULT_EXPIRY_HOURS || "1");
 const RECONCILE_INTERVAL_SECONDS = Number(
@@ -84,8 +97,9 @@ const TRANSMISSION_VPN_CONTROL_CONFIGMAP =
   process.env.TRANSMISSION_VPN_CONTROL_CONFIGMAP || "transmission-vpn-control";
 const TRANSMISSION_VPN_RUNTIME_CONFIGMAP_FALLBACK =
   process.env.TRANSMISSION_VPN_RUNTIME_CONFIGMAP || "transmission-vpn-state";
-const TRANSMISSION_VPN_WEBUI_URL =
-  process.env.TRANSMISSION_VPN_WEBUI_URL || "https://torrent-vpn.${BASE_DOMAIN}";
+const TRANSMISSION_VPN_WEBUI_URL = expandBaseDomainTokens(
+  process.env.TRANSMISSION_VPN_WEBUI_URL || "https://torrent-vpn.${BASE_DOMAIN}",
+);
 const RESOURCE_ADVISOR_UI_URL =
   process.env.RESOURCE_ADVISOR_UI_URL ||
   "http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/api/ui.json";
@@ -169,7 +183,10 @@ function loadServices() {
       );
     }
   }
-  return parsed;
+  return parsed.map((svc) => ({
+    ...svc,
+    target: expandBaseDomainTokens(svc.target),
+  }));
 }
 
 function defaultState(services) {
