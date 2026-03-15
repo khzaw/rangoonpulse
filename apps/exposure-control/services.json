@@ -86,13 +86,13 @@
   {
     "id": "calibre",
     "name": "Calibre Web Automated",
-    "target": "https://calibre.khzaw.dev",
+    "target": "https://calibre.${BASE_DOMAIN}",
     "description": "OPDS and web library"
   },
   {
     "id": "calibre-manage",
     "name": "Calibre Manage",
-    "target": "https://calibre-manage.khzaw.dev",
+    "target": "https://calibre-manage.${BASE_DOMAIN}",
     "description": "Calibre GUI and content server paths"
   }
 ]

@@ -119,7 +119,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: sponsorblocktv.khzaw.dev
+          - host: sponsorblocktv.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -127,13 +127,13 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: sponsorblocktv.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: sponsorblocktv.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: sponsorblocktv-tls
             hosts:
-              - sponsorblocktv.khzaw.dev
+              - sponsorblocktv.${BASE_DOMAIN}
 
     configMaps:
       info:

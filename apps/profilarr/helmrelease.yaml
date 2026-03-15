@@ -52,7 +52,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: profilarr.khzaw.dev
+          - host: profilarr.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -60,13 +60,13 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: profilarr.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: profilarr.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: profilarr-tls
             hosts:
-              - profilarr.khzaw.dev
+              - profilarr.${BASE_DOMAIN}
 
     persistence:
       # Profilarr stores its state (including its internal DB) under /config.

@@ -55,7 +55,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: chartsdb.khzaw.dev
+          - host: chartsdb.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -63,10 +63,10 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: chartsdb.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: chartsdb.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: chartsdb-tls
             hosts:
-              - chartsdb.khzaw.dev
+              - chartsdb.${BASE_DOMAIN}

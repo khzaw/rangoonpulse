@@ -34,7 +34,7 @@ spec:
               TZ: "${TIMEZONE}"
               PUID: "1000"
               PGID: "1000"
-              SABNZBD__HOST_WHITELIST: "sabnzbd.khzaw.dev"
+              SABNZBD__HOST_WHITELIST: "sabnzbd.${BASE_DOMAIN}"
             resources:
               requests:
                 cpu: "150m"
@@ -54,7 +54,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: sabnzbd.khzaw.dev
+          - host: sabnzbd.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -63,7 +63,7 @@ spec:
                   port: http
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: sabnzbd.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: sabnzbd.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -71,7 +71,7 @@ spec:
         tls:
           - secretName: sabnzbd-tls
             hosts:
-              - sabnzbd.khzaw.dev
+              - sabnzbd.${BASE_DOMAIN}
 
     persistence:
       config:

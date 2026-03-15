@@ -76,7 +76,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: mmcal.khzaw.dev
+          - host: mmcal.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -92,4 +92,4 @@ spec:
         tls:
           - secretName: mmcal-tls
             hosts:
-              - mmcal.khzaw.dev
+              - mmcal.${BASE_DOMAIN}

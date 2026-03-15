@@ -76,7 +76,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: blog.khzaw.dev
+          - host: blog.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -89,4 +89,4 @@ spec:
         tls:
           - secretName: blog-tls
             hosts:
-              - blog.khzaw.dev
+              - blog.${BASE_DOMAIN}

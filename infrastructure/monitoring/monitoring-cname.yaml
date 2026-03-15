@@ -6,10 +6,10 @@ metadata:
   name: monitoring-cname
   namespace: monitoring
   annotations:
-    # Create `monitoring.khzaw.dev` as a DNS alias to `grafana.khzaw.dev`.
+    # Create `monitoring.${BASE_DOMAIN}` as a DNS alias to `grafana.${BASE_DOMAIN}`.
     # external-dns must watch Services (`--source=service`) for this to work.
-    external-dns.alpha.kubernetes.io/hostname: monitoring.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: monitoring.${BASE_DOMAIN}
 spec:
   type: ExternalName
-  externalName: grafana.khzaw.dev
+  externalName: grafana.${BASE_DOMAIN}
 

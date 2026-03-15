@@ -55,18 +55,18 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: ersatztv.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: ersatztv.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: ersatztv.khzaw.dev
+          - host: ersatztv.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
                 service:
                   identifier: main
                   port: http
-          - host: iptv.khzaw.dev
+          - host: iptv.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -76,8 +76,8 @@ spec:
         tls:
           - secretName: ersatztv-tls
             hosts:
-              - ersatztv.khzaw.dev
-              - iptv.khzaw.dev
+              - ersatztv.${BASE_DOMAIN}
+              - iptv.${BASE_DOMAIN}
 
     persistence:
       config:

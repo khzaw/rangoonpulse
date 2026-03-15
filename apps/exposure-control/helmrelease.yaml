@@ -49,9 +49,9 @@ spec:
               PORT: "8080"
               DATA_DIR: /data
               SERVICES_FILE: /app/services.json
-              PUBLIC_DOMAIN: khzaw.dev
+              PUBLIC_DOMAIN: ${BASE_DOMAIN}
               SHARE_HOST_PREFIX: share-
-              CONTROL_PANEL_HOST: controlpanel.khzaw.dev
+              CONTROL_PANEL_HOST: controlpanel.${BASE_DOMAIN}
               DEFAULT_EXPIRY_HOURS: "1"
               RECONCILE_INTERVAL_SECONDS: "30"
               DEFAULT_AUTH_MODE: cloudflare-access
@@ -63,7 +63,7 @@ spec:
               TRANSMISSION_VPN_NAMESPACE: default
               TRANSMISSION_VPN_CONTROL_CONFIGMAP: transmission-vpn-control
               TRANSMISSION_VPN_RUNTIME_CONFIGMAP: transmission-vpn-state
-              TRANSMISSION_VPN_WEBUI_URL: https://torrent-vpn.khzaw.dev
+              TRANSMISSION_VPN_WEBUI_URL: https://torrent-vpn.${BASE_DOMAIN}
             resources:
               requests:
                 cpu: "20m"
@@ -91,15 +91,15 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: controlpanel.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: controlpanel.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: controlpanel-tls
             hosts:
-              - controlpanel.khzaw.dev
+              - controlpanel.${BASE_DOMAIN}
         hosts:
-          - host: controlpanel.khzaw.dev
+          - host: controlpanel.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix

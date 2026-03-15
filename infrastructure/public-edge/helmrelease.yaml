@@ -86,43 +86,43 @@ spec:
           config.yaml: |
             # Static share host routes point to the in-cluster exposure-control backend.
             ingress:
-              - hostname: blog.khzaw.dev
+              - hostname: blog.${BASE_DOMAIN}
                 service: http://blog.default.svc.cluster.local:8080
-              - hostname: mmcal.khzaw.dev
+              - hostname: mmcal.${BASE_DOMAIN}
                 service: http://mmcal.default.svc.cluster.local:8080
-              - hostname: rangoonmapper.khzaw.dev
+              - hostname: rangoonmapper.${BASE_DOMAIN}
                 service: http://rangoon-mapper.default.svc.cluster.local:8080
-              - hostname: share-speedtest.khzaw.dev
+              - hostname: share-speedtest.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-chartsdb.khzaw.dev
+              - hostname: share-chartsdb.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-booklore.khzaw.dev
+              - hostname: share-booklore.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-shelfmark.khzaw.dev
+              - hostname: share-shelfmark.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-jellyfin.khzaw.dev
+              - hostname: share-jellyfin.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-seerr.khzaw.dev
+              - hostname: share-seerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-audiobookshelf.khzaw.dev
+              - hostname: share-audiobookshelf.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-uptime.khzaw.dev
+              - hostname: share-uptime.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-sonarr.khzaw.dev
+              - hostname: share-sonarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-radarr.khzaw.dev
+              - hostname: share-radarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-tracerr.khzaw.dev
+              - hostname: share-tracerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-tunarr.khzaw.dev
+              - hostname: share-tunarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-vaultwarden.khzaw.dev
+              - hostname: share-vaultwarden.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-immich.khzaw.dev
+              - hostname: share-immich.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-calibre.khzaw.dev
+              - hostname: share-calibre.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: share-calibre-manage.khzaw.dev
+              - hostname: share-calibre-manage.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - service: http_status:404
 

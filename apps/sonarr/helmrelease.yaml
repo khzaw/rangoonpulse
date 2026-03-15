@@ -54,7 +54,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: sonarr.khzaw.dev
+          - host: sonarr.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -63,7 +63,7 @@ spec:
                   port: 8989
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: sonarr.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: sonarr.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -71,7 +71,7 @@ spec:
         tls:
           - secretName: sonarr-tls
             hosts:
-              - sonarr.khzaw.dev
+              - sonarr.${BASE_DOMAIN}
 
     persistence:
       config:

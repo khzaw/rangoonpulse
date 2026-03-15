@@ -77,7 +77,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: tv.khzaw.dev
+          - host: tv.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -85,7 +85,7 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: tv.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: tv.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           nginx.ingress.kubernetes.io/proxy-buffering: "off"
@@ -96,7 +96,7 @@ spec:
         tls:
           - secretName: tv-tls
             hosts:
-              - tv.khzaw.dev
+              - tv.${BASE_DOMAIN}
 
     persistence:
       # nodecast-tv stores a SQLite database under /app/data. SQLite on NFS can have locking/latency issues,

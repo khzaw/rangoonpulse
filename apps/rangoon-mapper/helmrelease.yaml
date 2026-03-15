@@ -78,7 +78,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: rangoonmapper.khzaw.dev
+          - host: rangoonmapper.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -91,4 +91,4 @@ spec:
         tls:
           - secretName: rangoon-mapper-tls
             hosts:
-              - rangoonmapper.khzaw.dev
+              - rangoonmapper.${BASE_DOMAIN}

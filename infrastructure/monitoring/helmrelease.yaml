@@ -89,17 +89,17 @@ spec:
         ingressClassName: nginx
         pathType: Prefix
         hosts:
-          - monitoring.khzaw.dev
-          - grafana.khzaw.dev
+          - monitoring.${BASE_DOMAIN}
+          - grafana.${BASE_DOMAIN}
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: grafana.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: grafana.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: grafana-tls
             hosts:
-              - monitoring.khzaw.dev
-              - grafana.khzaw.dev
+              - monitoring.${BASE_DOMAIN}
+              - grafana.${BASE_DOMAIN}
 
 
       dashboards:

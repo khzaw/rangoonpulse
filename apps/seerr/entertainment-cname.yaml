@@ -6,9 +6,9 @@ metadata:
   name: seerr-entertainment-cname
   namespace: default
   annotations:
-    # Publish entertainment.khzaw.dev as a CNAME to seerr.khzaw.dev.
+    # Publish entertainment.${BASE_DOMAIN} as a CNAME to seerr.${BASE_DOMAIN}.
     # external-dns must watch Services (`--source=service`) for this to work.
-    external-dns.alpha.kubernetes.io/hostname: entertainment.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: entertainment.${BASE_DOMAIN}
 spec:
   type: ExternalName
-  externalName: seerr.khzaw.dev
+  externalName: seerr.${BASE_DOMAIN}

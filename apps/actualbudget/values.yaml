@@ -42,18 +42,18 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: actual.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: actual.${BASE_DOMAIN}
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: actual.khzaw.dev
+    - host: actual.${BASE_DOMAIN}
       paths:
         - path: /
           pathType: ImplementationSpecific
   tls:
     - secretName: actual-tls
       hosts:
-        - actual.khzaw.dev
+        - actual.${BASE_DOMAIN}
 
 persistence:
   enabled: true

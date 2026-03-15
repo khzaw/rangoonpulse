@@ -6,7 +6,7 @@ metadata:
   name: calibre
   namespace: default
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: calibre-manage.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: calibre-manage.${BASE_DOMAIN}
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -18,10 +18,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - calibre-manage.khzaw.dev
+        - calibre-manage.${BASE_DOMAIN}
       secretName: calibre-manage-tls
   rules:
-    - host: calibre-manage.khzaw.dev
+    - host: calibre-manage.${BASE_DOMAIN}
       http:
         paths:
           - path: /content/?(.*) # Capture group $1 is everything after /content/
@@ -55,10 +55,10 @@ spec:
   ingressClassName: nginx-calibre
   tls:
     - hosts:
-        - calibre-manage.khzaw.dev
+        - calibre-manage.${BASE_DOMAIN}
       secretName: calibre-manage-tls
   rules:
-    - host: calibre-manage.khzaw.dev
+    - host: calibre-manage.${BASE_DOMAIN}
       http:
         paths:
           - path: /content/?(.*)

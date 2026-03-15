@@ -66,13 +66,13 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: livesync.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: livesync.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: livesync.khzaw.dev
+          - host: livesync.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -82,7 +82,7 @@ spec:
         tls:
           - secretName: livesync-tls
             hosts:
-              - livesync.khzaw.dev
+              - livesync.${BASE_DOMAIN}
 
     persistence:
       data:

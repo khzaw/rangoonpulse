@@ -7,7 +7,7 @@ metadata:
   namespace: default
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    external-dns.alpha.kubernetes.io/hostname: nas.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: nas.${BASE_DOMAIN}
     nginx.ingress.kubernetes.io/backend-protocol: HTTP
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
@@ -15,7 +15,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: nas.khzaw.dev
+    - host: nas.${BASE_DOMAIN}
       http:
         paths:
           - path: /
@@ -28,4 +28,4 @@ spec:
   tls:
     - secretName: lan-gateway-tls
       hosts:
-        - nas.khzaw.dev
+        - nas.${BASE_DOMAIN}

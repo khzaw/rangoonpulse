@@ -53,7 +53,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: prowlarr.khzaw.dev
+          - host: prowlarr.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -62,7 +62,7 @@ spec:
                   port: http
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: prowlarr.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: prowlarr.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -70,7 +70,7 @@ spec:
         tls:
           - secretName: prowlarr-tls
             hosts:
-              - prowlarr.khzaw.dev
+              - prowlarr.${BASE_DOMAIN}
 
     persistence:
       config:

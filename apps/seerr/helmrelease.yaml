@@ -59,14 +59,14 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: seerr.khzaw.dev
+          - host: seerr.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
                 service:
                   identifier: main
                   port: http
-          - host: entertainment.khzaw.dev
+          - host: entertainment.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -75,7 +75,7 @@ spec:
                   port: http
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: seerr.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: seerr.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -83,8 +83,8 @@ spec:
         tls:
           - secretName: seerr-tls
             hosts:
-              - seerr.khzaw.dev
-              - entertainment.khzaw.dev
+              - seerr.${BASE_DOMAIN}
+              - entertainment.${BASE_DOMAIN}
 
     persistence:
       config:

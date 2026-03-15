@@ -41,7 +41,7 @@ spec:
               TZ: "${TIMEZONE}"
               PUID: "1000"
               GUID: "1000"
-              JELLYFIN_PublishedServerUrl: "https://jellyfin.khzaw.dev"
+              JELLYFIN_PublishedServerUrl: "https://jellyfin.${BASE_DOMAIN}"
             resources:
               requests:
                 cpu: "400m"
@@ -61,7 +61,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: jellyfin.khzaw.dev
+          - host: jellyfin.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -70,7 +70,7 @@ spec:
                   port: 8096
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: jellyfin.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: jellyfin.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -78,7 +78,7 @@ spec:
         tls:
           - secretName: jellyfin-tls
             hosts:
-              - jellyfin.khzaw.dev
+              - jellyfin.${BASE_DOMAIN}
 
     persistence:
       config:

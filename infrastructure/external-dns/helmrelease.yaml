@@ -41,7 +41,7 @@ spec:
               - --provider=cloudflare
               - --policy=sync
               - --registry=txt
-              - --domain-filter=khzaw.dev
+              - --domain-filter=${BASE_DOMAIN}
               # We declare hostnames explicitly via the external-dns annotation on each Ingress.
               # This avoids accidentally publishing DNS for every Ingress rule/TLS host and lets us
               # do things like CNAME aliases cleanly.

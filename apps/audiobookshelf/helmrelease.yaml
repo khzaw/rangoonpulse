@@ -61,7 +61,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: audiobookshelf.khzaw.dev
+          - host: audiobookshelf.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -69,14 +69,14 @@ spec:
                   name: audiobookshelf
                   port: 80
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: audiobookshelf.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: audiobookshelf.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: audiobookshelf-tls
             hosts:
-              - audiobookshelf.khzaw.dev
+              - audiobookshelf.${BASE_DOMAIN}
 
     persistence:
       data:

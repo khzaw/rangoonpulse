@@ -65,7 +65,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "This dashboard tracks the public sharing control plane exported by `exposure-control`. UI: `https://controlpanel.khzaw.dev`."
+            "content": "This dashboard tracks the public sharing control plane exported by `exposure-control`. UI: `https://controlpanel.${BASE_DOMAIN}`."
           }
         },
         {

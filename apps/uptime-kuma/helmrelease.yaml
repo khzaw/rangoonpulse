@@ -68,15 +68,15 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: uptime.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: uptime.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: uptime-kuma-tls
             hosts:
-              - uptime.khzaw.dev
+              - uptime.${BASE_DOMAIN}
         hosts:
-          - host: uptime.khzaw.dev
+          - host: uptime.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix

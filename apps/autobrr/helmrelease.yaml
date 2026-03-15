@@ -60,7 +60,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: autobrr.khzaw.dev
+          - host: autobrr.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -68,13 +68,13 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: autobrr.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: autobrr.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: autobrr-tls
             hosts:
-              - autobrr.khzaw.dev
+              - autobrr.${BASE_DOMAIN}
 
     persistence:
       # autobrr persists its config (and default DB) under /config.

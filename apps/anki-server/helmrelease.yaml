@@ -62,12 +62,12 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: anki.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: anki.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: anki.khzaw.dev
+          - host: anki.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -77,7 +77,7 @@ spec:
         tls:
           - secretName: anki-server-tls
             hosts:
-              - anki.khzaw.dev
+              - anki.${BASE_DOMAIN}
 
     persistence:
       data:

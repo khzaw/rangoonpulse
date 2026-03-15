@@ -4,7 +4,7 @@ metadata:
   name: transmission-vpn-ui
   namespace: default
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: torrent-vpn.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: torrent-vpn.${BASE_DOMAIN}
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
@@ -12,9 +12,9 @@ spec:
   tls:
     - secretName: transmission-vpn-ui-tls
       hosts:
-        - torrent-vpn.khzaw.dev
+        - torrent-vpn.${BASE_DOMAIN}
   rules:
-    - host: torrent-vpn.khzaw.dev
+    - host: torrent-vpn.${BASE_DOMAIN}
       http:
         paths:
           - path: /

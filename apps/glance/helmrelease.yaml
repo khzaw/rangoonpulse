@@ -75,14 +75,14 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: glance.khzaw.dev
+          - host: glance.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
                 service:
                   identifier: main
                   port: http
-          - host: hq.khzaw.dev
+          - host: hq.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -91,15 +91,15 @@ spec:
                   port: http
 
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: glance.khzaw.dev,hq.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: glance.${BASE_DOMAIN},hq.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
 
         tls:
           - secretName: glance-tls
             hosts:
-              - glance.khzaw.dev
-              - hq.khzaw.dev
+              - glance.${BASE_DOMAIN}
+              - hq.${BASE_DOMAIN}
 
     configMaps:
       config:
@@ -213,116 +213,116 @@ spec:
                           - title: Apps
                             links:
                               - title: Jellyfin
-                                url: https://jellyfin.khzaw.dev
+                                url: https://jellyfin.${BASE_DOMAIN}
                                 icon: di:jellyfin
                               - title: Immich
-                                url: https://photos.khzaw.dev
+                                url: https://photos.${BASE_DOMAIN}
                                 icon: di:immich
                               - title: Seerr
-                                url: https://seerr.khzaw.dev
+                                url: https://seerr.${BASE_DOMAIN}
                                 icon: di:jellyseerr
                               - title: Audiobookshelf
-                                url: https://audiobookshelf.khzaw.dev
+                                url: https://audiobookshelf.${BASE_DOMAIN}
                                 icon: di:audiobookshelf
                               - title: Shelfmark
-                                url: https://shelfmark.khzaw.dev
+                                url: https://shelfmark.${BASE_DOMAIN}
                                 icon: mdi:bookshelf
                               - title: Calibre
-                                url: https://calibre.khzaw.dev
+                                url: https://calibre.${BASE_DOMAIN}
                                 icon: di:calibre
                               - title: Calibre VNC
-                                url: https://calibre-manage.khzaw.dev
+                                url: https://calibre-manage.${BASE_DOMAIN}
                                 icon: di:calibre
                               - title: Booklore
-                                url: https://booklore.khzaw.dev
+                                url: https://booklore.${BASE_DOMAIN}
                                 icon: mdi:book-open-page-variant
                               - title: Anki
-                                url: https://anki.khzaw.dev
+                                url: https://anki.${BASE_DOMAIN}
                                 icon: mdi:cards-outline
                               - title: LiveSync
-                                url: https://livesync.khzaw.dev
+                                url: https://livesync.${BASE_DOMAIN}
                                 icon: mdi:notebook-sync-outline
                               - title: Actual Budget
-                                url: https://actual.khzaw.dev
+                                url: https://actual.${BASE_DOMAIN}
                                 icon: di:actual-budget
                               - title: Vaultwarden
-                                url: https://passwords.khzaw.dev
+                                url: https://passwords.${BASE_DOMAIN}
                                 icon: di:vaultwarden
                               - title: AdGuard
-                                url: https://adguard.khzaw.dev
+                                url: https://adguard.${BASE_DOMAIN}
                                 icon: di:adguard-home
                               - title: AdGuard 2
-                                url: https://adguard2.khzaw.dev
+                                url: https://adguard2.${BASE_DOMAIN}
                                 icon: di:adguard-home
                           - title: Arr Stack
                             links:
                               - title: Sonarr
-                                url: https://sonarr.khzaw.dev
+                                url: https://sonarr.${BASE_DOMAIN}
                                 icon: di:sonarr
                               - title: Radarr
-                                url: https://radarr.khzaw.dev
+                                url: https://radarr.${BASE_DOMAIN}
                                 icon: di:radarr
                               - title: Prowlarr
-                                url: https://prowlarr.khzaw.dev
+                                url: https://prowlarr.${BASE_DOMAIN}
                                 icon: di:prowlarr
                               - title: Bazarr
-                                url: https://bazarr.khzaw.dev
+                                url: https://bazarr.${BASE_DOMAIN}
                                 icon: di:bazarr
                               - title: Tunarr
-                                url: https://tunarr.khzaw.dev
+                                url: https://tunarr.${BASE_DOMAIN}
                                 icon: di:tunarr
                               - title: ErsatzTV
-                                url: https://ersatztv.khzaw.dev
+                                url: https://ersatztv.${BASE_DOMAIN}
                                 icon: di:ersatztv
                               - title: Nodecast TV
-                                url: https://tv.khzaw.dev
+                                url: https://tv.${BASE_DOMAIN}
                                 icon: mdi:television-classic
                               - title: Transmission
-                                url: https://torrent.khzaw.dev
+                                url: https://torrent.${BASE_DOMAIN}
                                 icon: di:transmission
                               - title: Transmission VPN
-                                url: https://torrent-vpn.khzaw.dev
+                                url: https://torrent-vpn.${BASE_DOMAIN}
                                 icon: mdi:shield-link-variant
                               - title: SABnzbd
-                                url: https://sabnzbd.khzaw.dev
+                                url: https://sabnzbd.${BASE_DOMAIN}
                                 icon: di:sabnzbd
                           - title: Ops
                             links:
                               - title: Grafana
-                                url: https://grafana.khzaw.dev
+                                url: https://grafana.${BASE_DOMAIN}
                                 icon: di:grafana
                               - title: Tracerr
-                                url: https://tracerr.khzaw.dev
+                                url: https://tracerr.${BASE_DOMAIN}
                                 icon: mdi:graph-box
                               - title: ChartsDB
-                                url: https://chartsdb.khzaw.dev
+                                url: https://chartsdb.${BASE_DOMAIN}
                                 icon: mdi:database-outline
                               - title: SponsorBlock TV
-                                url: https://sponsorblocktv.khzaw.dev
+                                url: https://sponsorblocktv.${BASE_DOMAIN}
                                 icon: mdi:skip-forward-outline
                               - title: Profilarr
-                                url: https://profilarr.khzaw.dev
+                                url: https://profilarr.${BASE_DOMAIN}
                                 icon: mdi:format-list-bulleted
                               - title: autobrr
-                                url: https://autobrr.khzaw.dev
+                                url: https://autobrr.${BASE_DOMAIN}
                                 icon: mdi:autorenew
                               - title: Uptime Kuma
-                                url: https://uptime.khzaw.dev
+                                url: https://uptime.${BASE_DOMAIN}
                                 icon: di:uptime-kuma
                               - title: Operator Cockpit
-                                url: https://controlpanel.khzaw.dev
+                                url: https://controlpanel.${BASE_DOMAIN}
                                 icon: mdi:cloud-lock-outline
                               - title: Tuning
-                                url: https://controlpanel.khzaw.dev#tuning
+                                url: https://controlpanel.${BASE_DOMAIN}#tuning
                                 icon: mdi:tune
                               - title: Speedtest
-                                url: https://speedtest.khzaw.dev
+                                url: https://speedtest.${BASE_DOMAIN}
                                 icon: mdi:speedometer
                               - title: Router
-                                url: https://router.khzaw.dev
+                                url: https://router.${BASE_DOMAIN}
                                 icon: mdi:router-network
                               - title: TrueNAS
-                                url: https://nas.khzaw.dev
+                                url: https://nas.${BASE_DOMAIN}
                                 icon: di:truenas
                       - type: split-column
                         title: Stats
@@ -671,93 +671,93 @@ spec:
                         style: compact
                         sites:
                           - title: Glance
-                            url: https://glance.khzaw.dev
+                            url: https://glance.${BASE_DOMAIN}
                             check-url: http://glance.default.svc.cluster.local:8080
                             icon: di:glance
                           - title: Operator Cockpit
-                            url: https://controlpanel.khzaw.dev
+                            url: https://controlpanel.${BASE_DOMAIN}
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
                             icon: mdi:cloud-lock-outline
                           - title: AdGuard
-                            url: https://adguard.khzaw.dev
+                            url: https://adguard.${BASE_DOMAIN}
                             check-url: http://adguard-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
                           - title: AdGuard 2
-                            url: https://adguard2.khzaw.dev
+                            url: https://adguard2.${BASE_DOMAIN}
                             check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
                           - title: Tuning
-                            url: https://controlpanel.khzaw.dev#tuning
+                            url: https://controlpanel.${BASE_DOMAIN}#tuning
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
                             icon: mdi:tune
                           - title: Tracerr
-                            url: https://tracerr.khzaw.dev
+                            url: https://tracerr.${BASE_DOMAIN}
                             check-url: http://tracerr.default.svc.cluster.local:3000
                             icon: mdi:graph-box
                           - title: ChartsDB
-                            url: https://chartsdb.khzaw.dev
+                            url: https://chartsdb.${BASE_DOMAIN}
                             check-url: http://chartsdb.default.svc.cluster.local
                             icon: mdi:database-outline
                           - title: Immich
-                            url: https://photos.khzaw.dev
+                            url: https://photos.${BASE_DOMAIN}
                             check-url: http://immich-server.default.svc.cluster.local:2283/server-info/ping
                             icon: di:immich
                           - title: Booklore
-                            url: https://booklore.khzaw.dev
+                            url: https://booklore.${BASE_DOMAIN}
                             check-url: http://booklore.default.svc.cluster.local:6060
                             icon: mdi:book-open-page-variant
                           - title: Shelfmark
-                            url: https://shelfmark.khzaw.dev
+                            url: https://shelfmark.${BASE_DOMAIN}
                             check-url: http://shelfmark.default.svc.cluster.local:8084/api/health
                             icon: mdi:bookshelf
                           - title: Anki
-                            url: https://anki.khzaw.dev
+                            url: https://anki.${BASE_DOMAIN}
                             check-url: http://anki-server.default.svc.cluster.local:8080
                             icon: mdi:cards-outline
                             alt-status-codes:
                               - 404
                           - title: LiveSync
-                            url: https://livesync.khzaw.dev
+                            url: https://livesync.${BASE_DOMAIN}
                             check-url: http://obsidian-livesync.default.svc.cluster.local:5984
                             icon: mdi:notebook-sync-outline
                           - title: Jellyfin
-                            url: https://jellyfin.khzaw.dev
+                            url: https://jellyfin.${BASE_DOMAIN}
                             check-url: http://jellyfin.default.svc.cluster.local:8096
                             icon: di:jellyfin
                           - title: Nodecast TV
-                            url: https://tv.khzaw.dev
+                            url: https://tv.${BASE_DOMAIN}
                             check-url: http://nodecast-tv.default.svc.cluster.local:3000
                             icon: mdi:television-classic
                           - title: SponsorBlock TV
-                            url: https://sponsorblocktv.khzaw.dev
+                            url: https://sponsorblocktv.${BASE_DOMAIN}
                             check-url: http://isponsorblock-tv.default.svc.cluster.local:8080
                             icon: mdi:skip-forward-outline
                           - title: Profilarr
-                            url: https://profilarr.khzaw.dev
+                            url: https://profilarr.${BASE_DOMAIN}
                             check-url: http://profilarr.default.svc.cluster.local:6868
                             icon: mdi:format-list-bulleted
                           - title: autobrr
-                            url: https://autobrr.khzaw.dev
+                            url: https://autobrr.${BASE_DOMAIN}
                             check-url: http://autobrr.default.svc.cluster.local:7474
                             icon: mdi:autorenew
                           - title: Grafana
-                            url: https://grafana.khzaw.dev
+                            url: https://grafana.${BASE_DOMAIN}
                             check-url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local/api/health
                             icon: di:grafana
                           - title: Vaultwarden
-                            url: https://passwords.khzaw.dev
+                            url: https://passwords.${BASE_DOMAIN}
                             check-url: http://vaultwarden.default.svc.cluster.local
                             icon: di:vaultwarden
                           - title: Speedtest
-                            url: https://speedtest.khzaw.dev
+                            url: https://speedtest.${BASE_DOMAIN}
                             check-url: http://speedtest.default.svc.cluster.local
                             icon: mdi:speedometer
                           - title: Router
-                            url: https://router.khzaw.dev
-                            check-url: https://router.khzaw.dev
+                            url: https://router.${BASE_DOMAIN}
+                            check-url: https://router.${BASE_DOMAIN}
                             icon: mdi:router-network
                           - title: TrueNAS
-                            url: https://nas.khzaw.dev
+                            url: https://nas.${BASE_DOMAIN}
                             check-url: http://nas-lan.default.svc.cluster.local/ui/
                             icon: di:truenas
                       - type: monitor
@@ -766,65 +766,65 @@ spec:
                         style: compact
                         sites:
                           - title: Jellyfin
-                            url: https://jellyfin.khzaw.dev
+                            url: https://jellyfin.${BASE_DOMAIN}
                             check-url: http://jellyfin.default.svc.cluster.local:8096
                             icon: di:jellyfin
                           - title: Seerr
-                            url: https://seerr.khzaw.dev
+                            url: https://seerr.${BASE_DOMAIN}
                             check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
                           - title: Booklore
-                            url: https://booklore.khzaw.dev
+                            url: https://booklore.${BASE_DOMAIN}
                             check-url: http://booklore.default.svc.cluster.local:6060
                             icon: mdi:book-open-page-variant
                           - title: Shelfmark
-                            url: https://shelfmark.khzaw.dev
+                            url: https://shelfmark.${BASE_DOMAIN}
                             check-url: http://shelfmark.default.svc.cluster.local:8084/api/health
                             icon: mdi:bookshelf
                           - title: Anki
-                            url: https://anki.khzaw.dev
+                            url: https://anki.${BASE_DOMAIN}
                             check-url: http://anki-server.default.svc.cluster.local:8080
                             icon: mdi:cards-outline
                             alt-status-codes:
                               - 404
                           - title: LiveSync
-                            url: https://livesync.khzaw.dev
+                            url: https://livesync.${BASE_DOMAIN}
                             check-url: http://obsidian-livesync.default.svc.cluster.local:5984
                             icon: mdi:notebook-sync-outline
                           - title: Actual Budget
-                            url: https://actual.khzaw.dev
+                            url: https://actual.${BASE_DOMAIN}
                             check-url: http://actualbudget.default.svc.cluster.local:5006
                             icon: di:actual-budget
                           - title: Operator Cockpit
-                            url: https://controlpanel.khzaw.dev
+                            url: https://controlpanel.${BASE_DOMAIN}
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz
                             icon: mdi:cloud-lock-outline
                           - title: AdGuard
-                            url: https://adguard.khzaw.dev
+                            url: https://adguard.${BASE_DOMAIN}
                             check-url: http://adguard-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
                           - title: AdGuard 2
-                            url: https://adguard2.khzaw.dev
+                            url: https://adguard2.${BASE_DOMAIN}
                             check-url: http://adguard-secondary-main.default.svc.cluster.local/login.html
                             icon: di:adguard-home
                           - title: Tuning
-                            url: https://controlpanel.khzaw.dev#tuning
+                            url: https://controlpanel.${BASE_DOMAIN}#tuning
                             check-url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
                             icon: mdi:tune
                           - title: Transmission
-                            url: https://torrent.khzaw.dev
+                            url: https://torrent.${BASE_DOMAIN}
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
                             icon: di:transmission
                           - title: Transmission VPN
-                            url: https://torrent-vpn.khzaw.dev
+                            url: https://torrent-vpn.${BASE_DOMAIN}
                             check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
                             icon: mdi:shield-link-variant
                           - title: Router
-                            url: https://router.khzaw.dev
-                            check-url: https://router.khzaw.dev
+                            url: https://router.${BASE_DOMAIN}
+                            check-url: https://router.${BASE_DOMAIN}
                             icon: mdi:router-network
                           - title: TrueNAS
-                            url: https://nas.khzaw.dev
+                            url: https://nas.${BASE_DOMAIN}
                             check-url: http://nas-lan.default.svc.cluster.local/ui/
                             icon: di:truenas
                       - type: monitor
@@ -833,35 +833,35 @@ spec:
                         style: compact
                         sites:
                           - title: Sonarr
-                            url: https://sonarr.khzaw.dev
+                            url: https://sonarr.${BASE_DOMAIN}
                             check-url: http://sonarr.default.svc.cluster.local:8989
                             icon: di:sonarr
                           - title: Radarr
-                            url: https://radarr.khzaw.dev
+                            url: https://radarr.${BASE_DOMAIN}
                             check-url: http://radarr.default.svc.cluster.local:7878
                             icon: di:radarr
                           - title: Prowlarr
-                            url: https://prowlarr.khzaw.dev
+                            url: https://prowlarr.${BASE_DOMAIN}
                             check-url: http://prowlarr.default.svc.cluster.local:9696
                             icon: di:prowlarr
                           - title: Bazarr
-                            url: https://bazarr.khzaw.dev
+                            url: https://bazarr.${BASE_DOMAIN}
                             check-url: http://bazarr.default.svc.cluster.local:6767
                             icon: di:bazarr
                           - title: Seerr
-                            url: https://seerr.khzaw.dev
+                            url: https://seerr.${BASE_DOMAIN}
                             check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
                           - title: Transmission
-                            url: https://torrent.khzaw.dev
+                            url: https://torrent.${BASE_DOMAIN}
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
                             icon: di:transmission
                           - title: Transmission VPN
-                            url: https://torrent-vpn.khzaw.dev
+                            url: https://torrent-vpn.${BASE_DOMAIN}
                             check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
                             icon: mdi:shield-link-variant
                           - title: SABnzbd
-                            url: https://sabnzbd.khzaw.dev
+                            url: https://sabnzbd.${BASE_DOMAIN}
                             check-url: http://sabnzbd.default.svc.cluster.local:8080
                             icon: di:sabnzbd
 
@@ -906,7 +906,7 @@ spec:
 
                           {{ $itemId := .String "NowPlayingItem.Id" }}
                           {{ $img := "" }}
-                          {{ if ne $itemId "" }}{{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=220&quality=90&api_key=%s" $itemId "$${JELLYFIN_API_KEY}" }}{{ end }}
+                          {{ if ne $itemId "" }}{{ $img = printf "https://jellyfin.${BASE_DOMAIN}/Items/%s/Images/Primary?maxHeight=220&quality=90&api_key=%s" $itemId "$${JELLYFIN_API_KEY}" }}{{ end }}
 
                           <div class="flex" style="gap: 12px; align-items: stretch;">
                             {{ if ne $img "" }}
@@ -964,7 +964,7 @@ spec:
                             {{ $title := $name }}
                             {{ if ne $series "" }}{{ $title = printf "%s - %s" $series $name }}{{ end }}
                             {{ $img := "" }}
-                            {{ if ne $id "" }}{{ $img = printf "https://jellyfin.khzaw.dev/Items/%s/Images/Primary?maxHeight=180&quality=90&api_key=%s" $id "$${JELLYFIN_API_KEY}" }}{{ end }}
+                            {{ if ne $id "" }}{{ $img = printf "https://jellyfin.${BASE_DOMAIN}/Items/%s/Images/Primary?maxHeight=180&quality=90&api_key=%s" $id "$${JELLYFIN_API_KEY}" }}{{ end }}
                             <div style="width: 112px;">
                               {{ if ne $img "" }}
                               <img src="{{ $img }}" style="width: 112px; height: 168px; object-fit: cover; border-radius: 10px; background: rgba(255,255,255,.06);" />
@@ -1005,7 +1005,7 @@ spec:
                                 {{ $episode := .Int "episodeNumber" }}
                                 {{ $air := .String "airDateUtc" }}
                                 {{ $poster := "" }}
-                                {{ if gt $seriesId 0 }}{{ $poster = printf "https://sonarr.khzaw.dev/MediaCover/%d/poster.jpg?apikey=%s" $seriesId "$${SONARR_API_KEY}" }}{{ end }}
+                                {{ if gt $seriesId 0 }}{{ $poster = printf "https://sonarr.${BASE_DOMAIN}/MediaCover/%d/poster.jpg?apikey=%s" $seriesId "$${SONARR_API_KEY}" }}{{ end }}
                                 {{ if eq $poster "" }}{{ $poster = .String "series.images.0.remoteUrl" }}{{ end }}
                                 <div style="width: 112px;">
                                   {{ if ne $poster "" }}
@@ -1041,7 +1041,7 @@ spec:
                                 {{ $year := .Int "year" }}
                                 {{ $added := .String "added" }}
                                 {{ $poster := "" }}
-                                {{ if gt $id 0 }}{{ $poster = printf "https://radarr.khzaw.dev/MediaCover/%d/poster.jpg?apikey=%s" $id "$${RADARR_API_KEY}" }}{{ end }}
+                                {{ if gt $id 0 }}{{ $poster = printf "https://radarr.${BASE_DOMAIN}/MediaCover/%d/poster.jpg?apikey=%s" $id "$${RADARR_API_KEY}" }}{{ end }}
                                 {{ if eq $poster "" }}{{ $poster = .String "images.0.remoteUrl" }}{{ end }}
                                 <div style="width: 112px;">
                                   {{ if ne $poster "" }}
@@ -1195,51 +1195,51 @@ spec:
                         style: detailed
                         sites:
                           - title: Seerr
-                            url: https://seerr.khzaw.dev
+                            url: https://seerr.${BASE_DOMAIN}
                             check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
                           - title: Jellyfin
-                            url: https://jellyfin.khzaw.dev
+                            url: https://jellyfin.${BASE_DOMAIN}
                             check-url: http://jellyfin.default.svc.cluster.local:8096
                             icon: di:jellyfin
                           - title: Sonarr
-                            url: https://sonarr.khzaw.dev
+                            url: https://sonarr.${BASE_DOMAIN}
                             check-url: http://sonarr.default.svc.cluster.local:8989
                             icon: di:sonarr
                           - title: Radarr
-                            url: https://radarr.khzaw.dev
+                            url: https://radarr.${BASE_DOMAIN}
                             check-url: http://radarr.default.svc.cluster.local:7878
                             icon: di:radarr
                           - title: Prowlarr
-                            url: https://prowlarr.khzaw.dev
+                            url: https://prowlarr.${BASE_DOMAIN}
                             check-url: http://prowlarr.default.svc.cluster.local:9696
                             icon: di:prowlarr
                           - title: Bazarr
-                            url: https://bazarr.khzaw.dev
+                            url: https://bazarr.${BASE_DOMAIN}
                             check-url: http://bazarr.default.svc.cluster.local:6767
                             icon: di:bazarr
                           - title: Tunarr
-                            url: https://tunarr.khzaw.dev
+                            url: https://tunarr.${BASE_DOMAIN}
                             check-url: http://tunarr.default.svc.cluster.local:8000
                             icon: di:tunarr
                           - title: ErsatzTV
-                            url: https://ersatztv.khzaw.dev
+                            url: https://ersatztv.${BASE_DOMAIN}
                             check-url: http://ersatztv.default.svc.cluster.local:8409
                             icon: di:ersatztv
                           - title: Transmission
-                            url: https://torrent.khzaw.dev
+                            url: https://torrent.${BASE_DOMAIN}
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
                             icon: di:transmission
                           - title: Transmission VPN
-                            url: https://torrent-vpn.khzaw.dev
+                            url: https://torrent-vpn.${BASE_DOMAIN}
                             check-url: http://transmission-vpn-ui.default.svc.cluster.local:3000/api/health
                             icon: mdi:shield-link-variant
                           - title: SABnzbd
-                            url: https://sabnzbd.khzaw.dev
+                            url: https://sabnzbd.${BASE_DOMAIN}
                             check-url: http://sabnzbd.default.svc.cluster.local:8080
                             icon: di:sabnzbd
                           - title: Tracerr
-                            url: https://tracerr.khzaw.dev
+                            url: https://tracerr.${BASE_DOMAIN}
                             check-url: http://tracerr.default.svc.cluster.local:3000
                             icon: mdi:graph-box
       assets:

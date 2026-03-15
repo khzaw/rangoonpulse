@@ -38,8 +38,8 @@ spec:
               PUID: "1000"
               PGID: "1000"
               SESSION_COOKIE_SECURE: "true"
-              CALIBRE_WEB_URL: "https://calibre.khzaw.dev"
-              AUDIOBOOK_LIBRARY_URL: "https://audiobookshelf.khzaw.dev"
+              CALIBRE_WEB_URL: "https://calibre.${BASE_DOMAIN}"
+              AUDIOBOOK_LIBRARY_URL: "https://audiobookshelf.${BASE_DOMAIN}"
             probes:
               liveness:
                 enabled: true
@@ -79,12 +79,12 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: shelfmark.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: shelfmark.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: shelfmark.khzaw.dev
+          - host: shelfmark.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -94,7 +94,7 @@ spec:
         tls:
           - secretName: shelfmark-tls
             hosts:
-              - shelfmark.khzaw.dev
+              - shelfmark.${BASE_DOMAIN}
 
     persistence:
       config:

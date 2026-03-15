@@ -151,7 +151,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: tracerr.khzaw.dev
+          - host: tracerr.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -159,13 +159,13 @@ spec:
                   identifier: main
                   port: http
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: tracerr.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: tracerr.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: tracerr-tls
             hosts:
-              - tracerr.khzaw.dev
+              - tracerr.${BASE_DOMAIN}
 
     persistence:
       redis-data:

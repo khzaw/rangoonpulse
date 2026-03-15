@@ -9,12 +9,12 @@ const DATA_DIR = process.env.DATA_DIR || "/data";
 const STATE_FILE = path.join(DATA_DIR, "state.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit.json");
 const SERVICES_FILE = process.env.SERVICES_FILE || "/app/services.json";
-const PUBLIC_DOMAIN = (process.env.PUBLIC_DOMAIN || "khzaw.dev").toLowerCase();
+const PUBLIC_DOMAIN = (process.env.PUBLIC_DOMAIN || "${BASE_DOMAIN}").toLowerCase();
 const SHARE_HOST_PREFIX = (
   process.env.SHARE_HOST_PREFIX || "share-"
 ).toLowerCase();
 const CONTROL_PANEL_HOST = (
-  process.env.CONTROL_PANEL_HOST || "controlpanel.khzaw.dev"
+  process.env.CONTROL_PANEL_HOST || "controlpanel.${BASE_DOMAIN}"
 ).toLowerCase();
 const DEFAULT_EXPIRY_HOURS = Number(process.env.DEFAULT_EXPIRY_HOURS || "1");
 const RECONCILE_INTERVAL_SECONDS = Number(
@@ -84,7 +84,7 @@ const TRANSMISSION_VPN_CONTROL_CONFIGMAP =
 const TRANSMISSION_VPN_RUNTIME_CONFIGMAP_FALLBACK =
   process.env.TRANSMISSION_VPN_RUNTIME_CONFIGMAP || "transmission-vpn-state";
 const TRANSMISSION_VPN_WEBUI_URL =
-  process.env.TRANSMISSION_VPN_WEBUI_URL || "https://torrent-vpn.khzaw.dev";
+  process.env.TRANSMISSION_VPN_WEBUI_URL || "https://torrent-vpn.${BASE_DOMAIN}";
 const RESOURCE_ADVISOR_UI_URL =
   process.env.RESOURCE_ADVISOR_UI_URL ||
   "http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/api/ui.json";

@@ -72,12 +72,12 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: booklore.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: booklore.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: booklore.khzaw.dev
+          - host: booklore.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -87,7 +87,7 @@ spec:
         tls:
           - secretName: booklore-tls
             hosts:
-              - booklore.khzaw.dev
+              - booklore.${BASE_DOMAIN}
 
     persistence:
       data:

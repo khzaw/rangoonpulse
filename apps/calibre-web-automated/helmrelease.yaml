@@ -65,7 +65,7 @@ spec:
         enabled: true
         className: nginx
         hosts:
-          - host: calibre.khzaw.dev
+          - host: calibre.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -73,14 +73,14 @@ spec:
                   name: calibre-web-automated
                   port: 8083
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: calibre.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: calibre.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           nginx.ingress.kubernetes.io/proxy-body-size: "0"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         tls:
           - secretName: calibre-web-automated-tls
             hosts:
-              - calibre.khzaw.dev
+              - calibre.${BASE_DOMAIN}
 
     persistence:
       config:

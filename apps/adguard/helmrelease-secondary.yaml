@@ -142,11 +142,11 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: adguard2.khzaw.dev
+          external-dns.alpha.kubernetes.io/hostname: adguard2.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: adguard2.khzaw.dev
+          - host: adguard2.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -156,7 +156,7 @@ spec:
         tls:
           - secretName: adguard2-tls
             hosts:
-              - adguard2.khzaw.dev
+              - adguard2.${BASE_DOMAIN}
 
     persistence:
       data:

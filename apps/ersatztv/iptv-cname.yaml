@@ -6,9 +6,9 @@ metadata:
   name: ersatztv-iptv-cname
   namespace: default
   annotations:
-    # Publish iptv.khzaw.dev as a CNAME to ersatztv.khzaw.dev.
+    # Publish iptv.${BASE_DOMAIN} as a CNAME to ersatztv.${BASE_DOMAIN}.
     # external-dns must watch Services (`--source=service`) for this to work.
-    external-dns.alpha.kubernetes.io/hostname: iptv.khzaw.dev
+    external-dns.alpha.kubernetes.io/hostname: iptv.${BASE_DOMAIN}
 spec:
   type: ExternalName
-  externalName: ersatztv.khzaw.dev
+  externalName: ersatztv.${BASE_DOMAIN}
