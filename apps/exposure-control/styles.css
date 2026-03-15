@@ -561,6 +561,10 @@
         width: 100%;
         border-collapse: collapse;
       }
+      .tuning-table {
+        min-width: 1460px;
+        table-layout: fixed;
+      }
       th,
       td {
         text-align: left;
@@ -582,6 +586,50 @@
         font-size: 11px;
         font-weight: 400;
         font-family: var(--font-mono);
+      }
+      .tuning-table th:nth-child(1),
+      .tuning-table td:nth-child(1) {
+        width: 25%;
+      }
+      .tuning-table th:nth-child(2),
+      .tuning-table td:nth-child(2) {
+        width: 8%;
+      }
+      .tuning-table th:nth-child(3),
+      .tuning-table td:nth-child(3),
+      .tuning-table th:nth-child(4),
+      .tuning-table td:nth-child(4),
+      .tuning-table th:nth-child(5),
+      .tuning-table td:nth-child(5) {
+        width: 10%;
+      }
+      .tuning-table th:nth-child(6),
+      .tuning-table td:nth-child(6) {
+        width: 6%;
+      }
+      .tuning-table th:nth-child(7),
+      .tuning-table td:nth-child(7) {
+        width: 14%;
+      }
+      .tuning-table th:nth-child(8),
+      .tuning-table td:nth-child(8) {
+        width: 17%;
+      }
+      .tuning-table .metric-pair,
+      .tuning-table .usage-line {
+        white-space: nowrap;
+      }
+      .tuning-table .metric-delta,
+      .tuning-table .workload-meta {
+        margin-top: 6px;
+      }
+      .tuning-table .workload-meta {
+        line-height: 1.45;
+      }
+      .tuning-table .notes-cell {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
       .badge,
       .status-chip,
