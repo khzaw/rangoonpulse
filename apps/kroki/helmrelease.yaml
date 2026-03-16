@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kroki
+  namespace: default
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: app-template
+      version: "4.2.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+
+    controllers:
+      main:
+        containers:
+          main:
+            image:
+              repository: yuzutech/kroki
+              tag: 0.30.1
+            env:
+              - name: KROKI_MERMAID_HOST
+                value: "127.0.0.1"
+              - name: KROKI_MERMAID_PORT
+                value: "8002"
+              - name: KROKI_BPMN_HOST
+                value: "127.0.0.1"
+              - name: KROKI_BPMN_PORT
+                value: "8003"
+              - name: KROKI_EXCALIDRAW_HOST
+                value: "127.0.0.1"
+              - name: KROKI_EXCALIDRAW_PORT
+                value: "8004"
+              - name: KROKI_SAFE_MODE
+                value: "SECURE"
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "128Mi"
+              limits:
+                cpu: "500m"
+                memory: "512Mi"
+          mermaid:
+            image:
+              repository: yuzutech/kroki-mermaid
+              tag: 0.30.1
+            resources:
+              requests:
+                cpu: "25m"
+                memory: "64Mi"
+              limits:
+                cpu: "300m"
+                memory: "256Mi"
+          bpmn:
+            image:
+              repository: yuzutech/kroki-bpmn
+              tag: 0.30.1
+            resources:
+              requests:
+                cpu: "25m"
+                memory: "64Mi"
+              limits:
+                cpu: "200m"
+                memory: "256Mi"
+          excalidraw:
+            image:
+              repository: yuzutech/kroki-excalidraw
+              tag: 0.30.1
+            resources:
+              requests:
+                cpu: "25m"
+                memory: "64Mi"
+              limits:
+                cpu: "200m"
+                memory: "256Mi"
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8000
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: diagrams.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: diagrams.${BASE_DOMAIN}
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls:
+          - secretName: kroki-tls
+            hosts:
+              - diagrams.${BASE_DOMAIN}
