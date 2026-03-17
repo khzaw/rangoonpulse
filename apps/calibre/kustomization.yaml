@@ -6,9 +6,3 @@ namespace: default
 resources:
   - helmrelease.yaml
   - ingress.yaml
-configMapGenerator:
-  - name: calibre-helm-values
-    files:
-      - values.yaml=values.yaml
-    options:
-      disableNameSuffixHash: true

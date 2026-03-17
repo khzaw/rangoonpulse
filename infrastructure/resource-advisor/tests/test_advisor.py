@@ -189,6 +189,36 @@ class BuildApplyPlanTests(unittest.TestCase):
         self.assertEqual(plan["skipped_reason_counts"].get("node_capacity_block"), 1)
         self.assertTrue(plan["node_fit"]["hard_fit_ok"])
 
+    def test_build_apply_plan_maps_calibre_to_helmrelease(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "calibre",
+                    current_cpu="150m",
+                    recommended_cpu="112m",
+                    current_memory="512Mi",
+                    recommended_memory="640Mi",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(len(plan["selected"]), 1)
+        self.assertEqual(plan["selected"][0]["release"], "calibre")
+        self.assertEqual(plan["selected"][0]["path"], "apps/calibre/helmrelease.yaml")
+
 
 class ApplyPrTests(unittest.TestCase):
     def test_open_or_update_apply_pr_creates_one_pr_per_release(self):

@@ -10,7 +10,7 @@ Date: 2026-02-18
 - `default/app-configs-pvc-nfs` (`1Gi`, `RWX`, storageClass `truenas-nfs`)
 
 App mappings:
-- `apps/calibre/values.yaml`
+- `apps/calibre/helmrelease.yaml`
   - `/books` -> `calibre-books-nfs`
   - `/config` (subPath `calibre`) -> `app-configs-pvc-nfs`
 - `apps/calibre-web-automated/helmrelease.yaml`

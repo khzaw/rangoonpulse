@@ -28,7 +28,61 @@ spec:
   uninstall:
     keepHistory: false
 
-  valuesFrom:
-    - kind: ConfigMap
-      name: calibre-helm-values
-      valuesKey: values.yaml
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+
+    controllers:
+      main:
+        replicas: 1
+        strategy: RollingUpdate
+        containers:
+          main:
+            image:
+              repository: lscr.io/linuxserver/calibre
+              tag: "v9.3.1-ls387"
+            env:
+              TZ: '${TIMEZONE}'
+              PUID: "1000"
+              PGID: "1000"
+            resources:
+              requests:
+                cpu: 150m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 3Gi
+
+    service:
+      main:
+        ports:
+          http:
+            port: 8080 # web GUI access via KasmVNC
+          https:
+            port: 8181
+          server:
+            port: 8081 # content server
+
+    ingress:
+      main:
+        enabled: false
+
+    persistence:
+      config:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: app-configs-pvc-nfs
+        advancedMounts:
+          main:
+            main:
+              - path: /config
+                subPath: calibre
+
+      books:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: calibre-books-nfs
+        globalMounts:
+          - path: /books
