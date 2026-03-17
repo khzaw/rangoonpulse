@@ -23,8 +23,9 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
   - runs weekly (`03:30` Monday, timezone `Asia/Singapore`)
   - computes safe, per-service apply plan
   - persists `apply-plan.json`, `apply-plan.md`, and `applyLastRunAt` into ConfigMap `monitoring/resource-advisor-latest`
-  - creates a unique `tune/...` branch from the latest `master`
-  - opens one apply PR per run when eligible changes exist
+  - creates one unique `tune/...` branch per selected service from the latest `master`
+  - opens one apply PR per selected service when eligible changes exist
+  - writes file-update commits with explicit GitHub `author` and `committer` identity (current default: `khzaw <khzaw@users.noreply.github.com>`)
   - applies only allowlisted HelmRelease resource changes
 - finished jobs are auto-cleaned by TTL:
   - `ttlSecondsAfterFinished: 21600` (6 hours)
@@ -226,9 +227,9 @@ kubectl get jobs -n monitoring | rg resource-advisor
 ## Workflow After Phase 3
 1. Phase 1 keeps publishing visibility reports to `monitoring/resource-advisor-latest`.
 2. The exporter shows a live apply preflight view using the current report and cluster footprint.
-3. Phase 3 proposes safe, node-fit-checked HelmRelease updates in a dedicated apply PR.
-4. Apply PR description contains decision rationale, constraints, and skip reasons.
-5. Operator reviews and merges the apply PR.
+3. Phase 3 proposes safe, node-fit-checked HelmRelease updates in one or more per-service apply PRs.
+4. Each apply PR description contains decision rationale, constraints, and skip reasons.
+5. Operator reviews and merges the service PRs.
 6. Flux reconciles and applies.
 7. Next cycles adjust incrementally from new baseline.
 

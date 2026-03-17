@@ -115,13 +115,32 @@ class ExporterTests(unittest.TestCase):
                             "current": {"requests": {"cpu": "200m", "memory": "512Mi"}},
                             "recommended": {"requests": {"cpu": "150m", "memory": "640Mi"}},
                             "selection_reason": "upsize_with_node_fit",
+                        },
+                        {
+                            "release": "bazarr",
+                            "container": "main",
+                            "current": {"requests": {"cpu": "100m", "memory": "256Mi"}},
+                            "recommended": {"requests": {"cpu": "75m", "memory": "320Mi"}},
+                            "selection_reason": "downsize_with_mature_data",
                         }
                     ],
                     "skipped": [],
                     "execution": {
                         "status": "created",
                         "executed_at": "2026-03-11T19:30:00Z",
-                        "pr_url": "https://example.invalid/pr/1",
+                        "pr_count": 2,
+                        "pull_requests": [
+                            {
+                                "release": "tunarr",
+                                "status": "created",
+                                "pr_url": "https://example.invalid/pr/1",
+                            },
+                            {
+                                "release": "bazarr",
+                                "status": "created",
+                                "pr_url": "https://example.invalid/pr/2",
+                            },
+                        ],
                     },
                 }
                 exporter.STATE.last_apply_md = "# apply plan\n"
@@ -141,9 +160,12 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("resource_advisor_apply_next_run_timestamp_seconds", metrics)
         self.assertIn("resource_advisor_apply_last_run_status", metrics)
         self.assertEqual(payload["lastApply"]["status"], "created")
+        self.assertEqual(payload["lastApply"]["prCount"], 2)
+        self.assertEqual(len(payload["lastApply"]["execution"]["pull_requests"]), 2)
         self.assertEqual(payload["schedule"]["schedule"], "30 3 * * 1")
         self.assertEqual(len(payload["applyPreflight"]["nextUp"]), 1)
         self.assertIn("last real apply run", html)
+        self.assertIn("https://example.invalid/pr/2", html)
         self.assertIn("/apply-plan.json", html)
 
 

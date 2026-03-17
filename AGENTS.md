@@ -385,8 +385,8 @@ Important external-dns behavior:
     - weekly run at `03:30` Monday (`Asia/Singapore`)
     - apply-PR mode with data-maturity guards, hard node-fit blocking, and advisory cluster posture ordering
     - persists `apply-plan.json`, `apply-plan.md`, and `applyLastRunAt` into the same runtime ConfigMap
-    - creates unique `tune/...` branches from latest `master`
-    - supports multiple simultaneous recommendation branches/PRs
+    - creates one unique `tune/...` branch per selected service from latest `master`
+    - opens one apply PR per selected service when eligible changes exist, so multiple service PRs can be emitted in the same run
 - Report PR flow is disabled by design.
 - Apply PR flow rules:
   - commit only HelmRelease resource changes

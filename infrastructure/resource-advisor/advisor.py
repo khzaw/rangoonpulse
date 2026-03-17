@@ -652,6 +652,19 @@ def read_repo_file(repository: str, branch: str, path: str, token: str) -> tuple
     return 200, payload.get("sha"), content
 
 
+def build_commit_identity(role: str) -> dict[str, str] | None:
+    role = role.strip().upper()
+    name = os.getenv(f"GITHUB_{role}_NAME", "").strip()
+    email = os.getenv(f"GITHUB_{role}_EMAIL", "").strip()
+
+    if not name and not email:
+        return None
+    if not name or not email:
+        log(f"Incomplete GitHub {role.lower()} identity configured; skipping explicit {role.lower()} payload")
+        return None
+    return {"name": name, "email": email}
+
+
 def update_repo_file(
     repository: str,
     branch: str,
@@ -673,6 +686,12 @@ def update_repo_file(
         "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
         "branch": branch,
     }
+    author = build_commit_identity("AUTHOR")
+    committer = build_commit_identity("COMMITTER")
+    if author:
+        put_payload["author"] = author
+    if committer:
+        put_payload["committer"] = committer
     if sha:
         put_payload["sha"] = sha
 
@@ -1635,14 +1654,34 @@ def append_apply_execution_markdown(markdown: str, execution: dict | None) -> st
         f"- Executed at: `{execution.get('executed_at', 'n/a')}`",
         f"- Status: `{execution.get('status', 'unknown')}`",
     ]
-    if execution.get("head_branch"):
-        lines.append(f"- Head branch: `{execution.get('head_branch')}`")
-    if execution.get("pr_url"):
-        lines.append(f"- Pull request: `{execution.get('pr_url')}`")
-    if execution.get("patched_paths"):
-        lines.append(
-            "- Patched paths: " + ", ".join(f"`{path}`" for path in execution.get("patched_paths") or [])
-        )
+    pull_requests = [item for item in (execution.get("pull_requests") or []) if isinstance(item, dict)]
+    if pull_requests:
+        lines.append(f"- Service PRs: `{len(pull_requests)}`")
+        status_counts = execution.get("status_counts") or count_by(pull_requests, "status")
+        if status_counts:
+            summary = ", ".join(
+                f"{status}={count}" for status, count in sorted(status_counts.items())
+            )
+            lines.append(f"- Result summary: `{summary}`")
+        for item in pull_requests:
+            summary = f"`{item.get('release', 'unknown')}`: `{item.get('status', 'unknown')}`"
+            if item.get("head_branch"):
+                summary += f", branch `{item.get('head_branch')}`"
+            if item.get("pr_url"):
+                summary += f", PR `{item.get('pr_url')}`"
+            if item.get("patched_paths"):
+                paths = ", ".join(f"`{path}`" for path in item.get("patched_paths") or [])
+                summary += f", paths {paths}"
+            lines.append(f"- {summary}")
+    else:
+        if execution.get("head_branch"):
+            lines.append(f"- Head branch: `{execution.get('head_branch')}`")
+        if execution.get("pr_url"):
+            lines.append(f"- Pull request: `{execution.get('pr_url')}`")
+        if execution.get("patched_paths"):
+            lines.append(
+                "- Patched paths: " + ", ".join(f"`{path}`" for path in execution.get("patched_paths") or [])
+            )
     if execution.get("error"):
         lines.append(f"- Error: `{execution.get('error')}`")
     lines.append("")
@@ -1673,8 +1712,132 @@ def sanitize_tune_subject(value: str) -> str:
     return slug or "resource-advisor"
 
 
-def build_apply_pr_title(plan: dict) -> str:
-    selected = plan.get("selected", [])
+def group_selected_by_release(selected: list[dict]) -> list[tuple[str, list[dict]]]:
+    grouped: dict[str, list[dict]] = {}
+    for item in selected:
+        release = str(item.get("release") or "resource-advisor")
+        grouped.setdefault(release, []).append(item)
+    return list(grouped.items())
+
+
+def build_selection_projection_summary(plan: dict, selected: list[dict]) -> dict:
+    node_fit = plan.get("node_fit", {}) or {}
+    node_rows = [item for item in (node_fit.get("nodes") or []) if isinstance(item, dict)]
+
+    by_node: dict[str, dict[str, float]] = {}
+    node_alloc: dict[str, dict[str, float]] = {}
+    node_budget: dict[str, dict[str, float]] = {}
+    node_order: list[str] = []
+
+    for node in node_rows:
+        name = str(node.get("name") or "")
+        if not name:
+            continue
+        node_order.append(name)
+        allocatable = node.get("allocatable") or {}
+        advisory_budget = node.get("advisory_budget") or {}
+        current_requests = node.get("current_requests") or {}
+        by_node[name] = {
+            "cpu_m": float(current_requests.get("cpu_m", 0.0) or 0.0),
+            "mem_mi": float(current_requests.get("memory_mi", 0.0) or 0.0),
+        }
+        node_alloc[name] = {
+            "cpu_m": float(allocatable.get("cpu_m", 0.0) or 0.0),
+            "mem_mi": float(allocatable.get("memory_mi", 0.0) or 0.0),
+        }
+        node_budget[name] = {
+            "cpu_m": float(advisory_budget.get("cpu_m", 0.0) or 0.0),
+            "mem_mi": float(advisory_budget.get("memory_mi", 0.0) or 0.0),
+        }
+
+    for item in selected:
+        placement = item.get("placement") or {}
+        counts = {
+            str(node): int(count)
+            for node, count in placement.items()
+            if str(node) in by_node and int(count) > 0
+        } if isinstance(placement, dict) else {}
+        if not counts and node_order:
+            counts = {sorted(node_order)[0]: safe_int(item.get("replicas"), 1)}
+
+        delta_cpu_per_pod = float(item.get("delta", {}).get("requests_cpu_m", 0.0) or 0.0)
+        delta_mem_per_pod = float(item.get("delta", {}).get("requests_memory_mi", 0.0) or 0.0)
+        for node, count in counts.items():
+            by_node.setdefault(node, {"cpu_m": 0.0, "mem_mi": 0.0})
+            by_node[node]["cpu_m"] += delta_cpu_per_pod * float(count)
+            by_node[node]["mem_mi"] += delta_mem_per_pod * float(count)
+
+    total_cpu = 0.0
+    total_mem = 0.0
+    for values in by_node.values():
+        total_cpu += float(values.get("cpu_m", 0.0) or 0.0)
+        total_mem += float(values.get("mem_mi", 0.0) or 0.0)
+
+    advisory_cpu_budget = float((plan.get("budgets") or {}).get("cpu_m", 0.0) or 0.0)
+    advisory_mem_budget = float((plan.get("budgets") or {}).get("memory_mi", 0.0) or 0.0)
+    hard_fit_ok = True
+    projected_overages = {
+        "total_cpu_m": round(total_cpu, 1),
+        "total_mem_mi": round(total_mem, 1),
+        "advisory_cpu_budget_m": round(advisory_cpu_budget, 1),
+        "advisory_mem_budget_mi": round(advisory_mem_budget, 1),
+        "over_advisory_cpu_m": round(max(0.0, total_cpu - advisory_cpu_budget), 1),
+        "over_advisory_mem_mi": round(max(0.0, total_mem - advisory_mem_budget), 1),
+        "hard_over_by_node": {},
+        "advisory_over_by_node": {},
+    }
+
+    projected_nodes = []
+    for name in node_order:
+        projected_cpu = float((by_node.get(name) or {}).get("cpu_m", 0.0) or 0.0)
+        projected_mem = float((by_node.get(name) or {}).get("mem_mi", 0.0) or 0.0)
+        alloc = node_alloc.get(name, {})
+        budget = node_budget.get(name, {})
+        hard_over_cpu = max(0.0, projected_cpu - float(alloc.get("cpu_m", 0.0) or 0.0))
+        hard_over_mem = max(0.0, projected_mem - float(alloc.get("mem_mi", 0.0) or 0.0))
+        advisory_over_cpu = max(0.0, projected_cpu - float(budget.get("cpu_m", 0.0) or 0.0))
+        advisory_over_mem = max(0.0, projected_mem - float(budget.get("mem_mi", 0.0) or 0.0))
+        if hard_over_cpu > 0.01 or hard_over_mem > 0.01:
+            hard_fit_ok = False
+            projected_overages["hard_over_by_node"][name] = {
+                "over_cpu_m": round(hard_over_cpu, 1),
+                "over_mem_mi": round(hard_over_mem, 1),
+            }
+        if advisory_over_cpu > 0.01 or advisory_over_mem > 0.01:
+            projected_overages["advisory_over_by_node"][name] = {
+                "over_cpu_m": round(advisory_over_cpu, 1),
+                "over_mem_mi": round(advisory_over_mem, 1),
+            }
+
+        original = next((item for item in node_rows if str(item.get("name") or "") == name), {})
+        projected_nodes.append(
+            {
+                "name": name,
+                "allocatable": original.get("allocatable") or {},
+                "advisory_budget": original.get("advisory_budget") or {},
+                "current_requests": original.get("current_requests") or {},
+                "projected_requests": {
+                    "cpu_m": round(projected_cpu, 1),
+                    "memory_mi": round(projected_mem, 1),
+                },
+            }
+        )
+
+    return {
+        "projected_requests_after_selected": {
+            "cpu_m": round(total_cpu, 1),
+            "memory_mi": round(total_mem, 1),
+        },
+        "node_fit": {
+            "assumptions": node_fit.get("assumptions"),
+            "hard_fit_ok": hard_fit_ok,
+            "projected_overages": projected_overages,
+            "nodes": projected_nodes,
+        },
+    }
+
+
+def build_apply_pr_title(selected: list[dict]) -> str:
     if not selected:
         return "tune/resource-advisor: refresh apply plan"
 
@@ -1688,8 +1851,7 @@ def build_apply_pr_title(plan: dict) -> str:
     return f"tune/{service}: {action} (+{len(selected) - 1} more)"
 
 
-def build_apply_branch_name(branch_hint: str, plan: dict) -> str:
-    selected = plan.get("selected", [])
+def build_apply_branch_name(branch_hint: str, selected: list[dict]) -> str:
     now_tag = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S%f")
 
     if "/" in branch_hint:
@@ -1714,98 +1876,11 @@ def build_apply_branch_name(branch_hint: str, plan: dict) -> str:
     return branch
 
 
-def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
-    result = {
-        "mode": "apply-pr",
-        "status": "unknown",
-        "selected_count": len(plan.get("selected", [])),
-        "executed_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-    }
-    token = os.getenv("GITHUB_TOKEN", "").strip()
-    if not token:
-        log("GITHUB_TOKEN is not set; skipping apply PR mode work")
-        result["status"] = "token_missing"
-        return result
+def build_apply_pr_body(report: dict, plan: dict, selected: list[dict]) -> str:
+    projection = build_selection_projection_summary(plan, selected)
+    projected_requests = projection["projected_requests_after_selected"]
+    node_fit = projection["node_fit"]
 
-    selected = plan.get("selected", [])
-    if not selected:
-        log("No selected recommendations for apply mode; skipping PR")
-        result["status"] = "no_selected_changes"
-        return result
-
-    repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
-    base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
-    head_branch_hint = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
-    result.update({"repository": repository, "base_branch": base_branch})
-
-    if "/" not in repository:
-        log(f"Invalid GITHUB_REPOSITORY: {repository}")
-        result["status"] = "invalid_repository"
-        return result
-
-    head_branch = build_apply_branch_name(head_branch_hint, plan)
-    log(f"Using apply PR branch: {head_branch}")
-    result["head_branch"] = head_branch
-
-    if not ensure_branch(repository, base_branch, head_branch, token):
-        result["status"] = "branch_prepare_failed"
-        return result
-
-    changed = False
-    changed_paths: list[str] = []
-
-    grouped: dict[str, list[dict]] = {}
-    for item in selected:
-        grouped.setdefault(item["path"], []).append(item)
-
-    for path, items in grouped.items():
-        status, _sha, content = read_repo_file(repository, head_branch, path, token)
-        if status != 200 or content is None:
-            log(f"Skipping {path}; unable to fetch content")
-            continue
-
-        patched = content
-        any_item_applied = False
-
-        for item in items:
-            patched, item_changed, reason = patch_app_template_resources(
-                content=patched,
-                container_name=item["container"],
-                req_cpu=item["recommended"]["requests"]["cpu"],
-                req_mem=item["recommended"]["requests"]["memory"],
-                lim_cpu=item["recommended"]["limits"]["cpu"],
-                lim_mem=item["recommended"]["limits"]["memory"],
-            )
-            if item_changed:
-                any_item_applied = True
-            else:
-                log(
-                    "No patch for "
-                    f"{item['release']}:{item['container']} in {path} ({reason})"
-                )
-
-        if not any_item_applied:
-            continue
-
-        file_changed = update_repo_file(
-            repository=repository,
-            branch=head_branch,
-            path=path,
-            content=patched,
-            token=token,
-            commit_message="resource-advisor: apply safe resource tuning",
-        )
-        changed = file_changed or changed
-        if file_changed:
-            changed_paths.append(path)
-
-    if not changed:
-        log("No repository changes for apply mode; skipping PR")
-        result["status"] = "no_repo_changes"
-        return result
-
-    title = build_apply_pr_title(plan)
-    result["title"] = title
     skip_reason_counts: dict[str, int] = {}
     for item in plan.get("skipped", []):
         reason = item.get("reason", "unknown")
@@ -1843,7 +1918,6 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
     if not skipped_lines:
         skipped_lines.append("- none")
 
-    node_fit = plan.get("node_fit", {}) or {}
     node_fit_assumptions = str(node_fit.get("assumptions") or "").strip()
     node_rows = []
     for node in node_fit.get("nodes", []) or []:
@@ -1877,8 +1951,8 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
         over_total_mem = fit.get("over_advisory_mem_mi")
         over_nodes = fit.get("hard_over_by_node", {}) or {}
         node_bits = []
-        for n, v in over_nodes.items():
-            node_bits.append(f"{n}: +{v.get('over_cpu_m', 0)}m, +{v.get('over_mem_mi', 0)}Mi")
+        for node_name, values in over_nodes.items():
+            node_bits.append(f"{node_name}: +{values.get('over_cpu_m', 0)}m, +{values.get('over_mem_mi', 0)}Mi")
         node_block_lines.append(
             "- `{}/{}:` blocked by hard node capacity (advisory overage: CPU `{}m`, Mem `{}Mi`; hard node overage: {}).".format(
                 release,
@@ -1908,9 +1982,9 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
             f"Memory `{plan.get('current_requests', {}).get('memory_mi')}Mi`\n"
         ),
         (
-            f"- Projected requests after selected changes: CPU "
-            f"`{plan.get('projected_requests_after_selected', {}).get('cpu_m')}m`, Memory "
-            f"`{plan.get('projected_requests_after_selected', {}).get('memory_mi')}Mi`\n\n"
+            f"- Projected requests after this service change: CPU "
+            f"`{projected_requests.get('cpu_m')}m`, Memory "
+            f"`{projected_requests.get('memory_mi')}Mi`\n\n"
         ),
         (
             f"- Advisory pressure: CPU `{plan.get('advisory_pressure', {}).get('cpu')}`, "
@@ -1918,7 +1992,7 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
         ),
         "## Node Fit Simulation\n",
         f"- Assumptions: {node_fit_assumptions or 'n/a'}\n",
-        f"- Hard fit ok after selected changes: `{node_fit.get('hard_fit_ok')}`\n",
+        f"- Hard fit ok after this service change: `{node_fit.get('hard_fit_ok')}`\n",
         "- Policy: hard blocking uses allocatable node capacity; advisory request ceilings are retained for operator context and planner ordering.\n\n",
         "| Node | Alloc CPU | Advisory CPU | Current CPU | Projected CPU | Alloc Mem | Advisory Mem | Current Mem | Projected Mem |\n",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|\n",
@@ -1933,24 +2007,168 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
         "- Latest machine-readable report is in ConfigMap `monitoring/resource-advisor-latest`.\n",
         "- This PR intentionally includes HelmRelease resource changes only.\n",
     ]
-    body = "".join(body_parts)
+    return "".join(body_parts)
 
-    pr_result = ensure_pull_request(
-        repository=repository,
-        token=token,
-        head_branch=head_branch,
-        base_branch=base_branch,
-        title=title,
-        body=body,
-    )
-    result["status"] = str(pr_result.get("status") or "unknown")
-    result["patched_paths"] = changed_paths
-    if pr_result.get("number") is not None:
-        result["pr_number"] = pr_result.get("number")
-    if pr_result.get("url"):
-        result["pr_url"] = pr_result.get("url")
-    if pr_result.get("error"):
-        result["error"] = pr_result.get("error")
+
+def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
+    result = {
+        "mode": "apply-pr",
+        "status": "unknown",
+        "selected_count": len(plan.get("selected", [])),
+        "executed_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    }
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    if not token:
+        log("GITHUB_TOKEN is not set; skipping apply PR mode work")
+        result["status"] = "token_missing"
+        return result
+
+    selected = plan.get("selected", [])
+    if not selected:
+        log("No selected recommendations for apply mode; skipping PR")
+        result["status"] = "no_selected_changes"
+        return result
+
+    repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
+    base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
+    head_branch_hint = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
+    result.update({"repository": repository, "base_branch": base_branch})
+
+    if "/" not in repository:
+        log(f"Invalid GITHUB_REPOSITORY: {repository}")
+        result["status"] = "invalid_repository"
+        return result
+
+    pull_requests: list[dict] = []
+    all_patched_paths: list[str] = []
+
+    for release, release_items in group_selected_by_release(selected):
+        head_branch = build_apply_branch_name(head_branch_hint, release_items)
+        log(f"Using apply PR branch for {release}: {head_branch}")
+        pr_entry = {
+            "release": release,
+            "selected_count": len(release_items),
+            "head_branch": head_branch,
+            "status": "unknown",
+        }
+
+        if not ensure_branch(repository, base_branch, head_branch, token):
+            pr_entry["status"] = "branch_prepare_failed"
+            pull_requests.append(pr_entry)
+            continue
+
+        changed = False
+        changed_paths: list[str] = []
+
+        grouped_paths: dict[str, list[dict]] = {}
+        for item in release_items:
+            grouped_paths.setdefault(item["path"], []).append(item)
+
+        for path, path_items in grouped_paths.items():
+            status, _sha, content = read_repo_file(repository, head_branch, path, token)
+            if status != 200 or content is None:
+                log(f"Skipping {path}; unable to fetch content")
+                continue
+
+            patched = content
+            any_item_applied = False
+
+            for item in path_items:
+                patched, item_changed, reason = patch_app_template_resources(
+                    content=patched,
+                    container_name=item["container"],
+                    req_cpu=item["recommended"]["requests"]["cpu"],
+                    req_mem=item["recommended"]["requests"]["memory"],
+                    lim_cpu=item["recommended"]["limits"]["cpu"],
+                    lim_mem=item["recommended"]["limits"]["memory"],
+                )
+                if item_changed:
+                    any_item_applied = True
+                else:
+                    log(
+                        "No patch for "
+                        f"{item['release']}:{item['container']} in {path} ({reason})"
+                    )
+
+            if not any_item_applied:
+                continue
+
+            file_changed = update_repo_file(
+                repository=repository,
+                branch=head_branch,
+                path=path,
+                content=patched,
+                token=token,
+                commit_message="resource-advisor: apply safe resource tuning",
+            )
+            changed = file_changed or changed
+            if file_changed:
+                changed_paths.append(path)
+
+        pr_entry["patched_paths"] = changed_paths
+        all_patched_paths.extend(changed_paths)
+
+        if not changed:
+            log(f"No repository changes for apply mode on {release}; skipping PR")
+            pr_entry["status"] = "no_repo_changes"
+            pull_requests.append(pr_entry)
+            continue
+
+        title = build_apply_pr_title(release_items)
+        pr_entry["title"] = title
+        body = build_apply_pr_body(report, plan, release_items)
+
+        pr_result = ensure_pull_request(
+            repository=repository,
+            token=token,
+            head_branch=head_branch,
+            base_branch=base_branch,
+            title=title,
+            body=body,
+        )
+        pr_entry["status"] = str(pr_result.get("status") or "unknown")
+        if pr_result.get("number") is not None:
+            pr_entry["pr_number"] = pr_result.get("number")
+        if pr_result.get("url"):
+            pr_entry["pr_url"] = pr_result.get("url")
+        if pr_result.get("error"):
+            pr_entry["error"] = pr_result.get("error")
+        pull_requests.append(pr_entry)
+
+    status_counts = count_by(pull_requests, "status")
+    successful_statuses = {"created", "updated"}
+    failure_statuses = {"branch_prepare_failed", "lookup_failed", "update_failed", "create_failed", "unknown"}
+    successful_results = [item for item in pull_requests if str(item.get("status") or "") in successful_statuses]
+    failed_results = [item for item in pull_requests if str(item.get("status") or "") in failure_statuses]
+
+    if failed_results and successful_results:
+        result["status"] = "partial_failure"
+    elif failed_results:
+        result["status"] = str(failed_results[0].get("status") or "failed")
+    elif successful_results and len(status_counts) == 1:
+        result["status"] = successful_results[0]["status"]
+    elif successful_results:
+        result["status"] = "created_or_updated"
+    elif status_counts.get("no_repo_changes") == len(pull_requests):
+        result["status"] = "no_repo_changes"
+    else:
+        result["status"] = "unknown"
+
+    result["service_count"] = len(pull_requests)
+    result["pr_count"] = len(successful_results)
+    result["status_counts"] = status_counts
+    result["patched_paths"] = all_patched_paths
+    result["pull_requests"] = pull_requests
+    if len(pull_requests) == 1:
+        only = pull_requests[0]
+        if only.get("head_branch"):
+            result["head_branch"] = only.get("head_branch")
+        if only.get("pr_url"):
+            result["pr_url"] = only.get("pr_url")
+        if only.get("pr_number") is not None:
+            result["pr_number"] = only.get("pr_number")
+        if only.get("error"):
+            result["error"] = only.get("error")
     return result
 
 

@@ -681,6 +681,12 @@ def build_ui_payload() -> dict[str, Any]:
     advisory_pressure = apply_plan.get("advisory_pressure") or {}
     node_fit = apply_plan.get("node_fit") or {}
     last_apply_execution = (last_apply_plan.get("execution") or {}) if isinstance(last_apply_plan, dict) else {}
+    last_apply_pull_requests = [
+        item for item in (last_apply_execution.get("pull_requests") or []) if isinstance(item, dict)
+    ]
+    last_apply_pr_count = int(last_apply_execution.get("pr_count") or len(last_apply_pull_requests) or 0)
+    if last_apply_pr_count <= 0 and last_apply_execution.get("pr_url"):
+        last_apply_pr_count = 1
     last_apply_selected = [item for item in (last_apply_plan.get("selected") or []) if isinstance(item, dict)]
     last_apply_skipped = [item for item in (last_apply_plan.get("skipped") or []) if isinstance(item, dict)]
 
@@ -779,6 +785,7 @@ def build_ui_payload() -> dict[str, Any]:
         "lastApply": {
             "runAt": str(snap.get("last_apply_run_at") or ""),
             "status": str(last_apply_execution.get("status") or ""),
+            "prCount": last_apply_pr_count,
             "selectedCount": len(last_apply_selected),
             "selected": last_apply_selected,
             "skippedCount": len(last_apply_skipped),
@@ -865,10 +872,16 @@ def build_index_html() -> str:
     selected_reason_counts = apply_plan.get("selected_reason_counts") or {}
 
     last_apply_execution = (last_apply_plan.get("execution") or {}) if isinstance(last_apply_plan, dict) else {}
+    last_apply_pull_requests = [
+        item for item in (last_apply_execution.get("pull_requests") or []) if isinstance(item, dict)
+    ]
     last_apply_selected = [item for item in (last_apply_plan.get("selected") or []) if isinstance(item, dict)]
     last_apply_status = str(last_apply_execution.get("status") or "")
     last_apply_run = str(snap.get("last_apply_run_at") or last_apply_execution.get("executed_at") or "")
     last_apply_selected_count = len(last_apply_selected)
+    last_apply_pr_count = int(last_apply_execution.get("pr_count") or len(last_apply_pull_requests) or 0)
+    if last_apply_pr_count <= 0 and last_apply_execution.get("pr_url"):
+        last_apply_pr_count = 1
     next_apply_run = str(apply_schedule.get("next_run_at") or "")
     apply_schedule_label = str(apply_schedule.get("schedule") or "")
     apply_schedule_tz = str(apply_schedule.get("time_zone") or "")
@@ -1071,9 +1084,30 @@ def build_index_html() -> str:
         [
             _build_stat_pill("status", last_apply_status.replace("_", " ") or "no run", "ok" if last_apply_status in {"created", "updated", "no_selected_changes", "no_repo_changes"} else "guarded" if last_apply_status else "neutral"),
             _build_stat_pill("selected", str(last_apply_selected_count), "neutral"),
+            _build_stat_pill("prs", str(last_apply_pr_count), "neutral"),
             _build_stat_pill("next run", "scheduled" if next_apply_run else "unknown", "ok" if next_apply_run else "guarded"),
         ]
     )
+
+    last_apply_pr_links = []
+    for item in last_apply_pull_requests[:5]:
+        url = str(item.get("pr_url") or "").strip()
+        release = str(item.get("release") or "service")
+        status = str(item.get("status") or "unknown").replace("_", " ")
+        if not url:
+            continue
+        last_apply_pr_links.append(
+            f'<a href="{_escape_attr(url)}">{html.escape(release)}</a> ({html.escape(status)})'
+        )
+    if not last_apply_pr_links and last_apply_execution.get("pr_url"):
+        url = str(last_apply_execution.get("pr_url") or "").strip()
+        last_apply_pr_links.append(f'<a href="{_escape_attr(url)}">{html.escape(url)}</a>')
+    pr_copy = ""
+    if last_apply_pr_links:
+        suffix = ""
+        if len(last_apply_pull_requests) > len(last_apply_pr_links):
+            suffix = f" +{len(last_apply_pull_requests) - len(last_apply_pr_links)} more"
+        pr_copy = " · prs " + ", ".join(last_apply_pr_links) + suffix
 
     current_plan_cpu = _with_unit_space(f"{_fmt_decimal(plan_current.get('cpu_m'))}m")
     current_plan_mem = _with_unit_space(f"{_fmt_decimal(plan_current.get('memory_mi'))}Mi")
@@ -1171,7 +1205,7 @@ def build_index_html() -> str:
         <div class="support-card-title">last real apply run</div>
         <div class="policy-grid">{last_apply_pills}</div>
         <ul class="focus-list planner-list">{''.join(f'<li>{item}</li>' for item in last_apply_items) if last_apply_items else '<li><span class="muted">no persisted apply execution has been recorded yet.</span></li>'}</ul>
-        <p class="support-copy">last run <span class="time-local" data-utc="{_escape_attr(last_apply_run)}">{html.escape(last_apply_run or 'n/a')}</span>{' · pr <a href="' + _escape_attr(last_apply_execution.get('pr_url') or '') + '">' + html.escape(str(last_apply_execution.get('pr_url') or 'open')) + '</a>' if last_apply_execution.get('pr_url') else ''}. next scheduled apply <span class="time-local" data-utc="{_escape_attr(next_apply_run)}">{html.escape(next_apply_run or 'n/a')}</span>.</p>
+        <p class="support-copy">last run <span class="time-local" data-utc="{_escape_attr(last_apply_run)}">{html.escape(last_apply_run or 'n/a')}</span>{pr_copy}. next scheduled apply <span class="time-local" data-utc="{_escape_attr(next_apply_run)}">{html.escape(next_apply_run or 'n/a')}</span>.</p>
       </article>
       <article class="support-card">
         <div class="support-card-title">skip summary</div>
