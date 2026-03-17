@@ -301,32 +301,48 @@ class ApplyPrTests(unittest.TestCase):
 
 
 class RepoUpdateTests(unittest.TestCase):
-    def test_update_repo_file_sets_explicit_author_and_committer(self):
-        with patch.dict(
-            os.environ,
-            {
-                "GITHUB_AUTHOR_NAME": "khzaw",
-                "GITHUB_AUTHOR_EMAIL": "khzaw@users.noreply.github.com",
-                "GITHUB_COMMITTER_NAME": "khzaw",
-                "GITHUB_COMMITTER_EMAIL": "khzaw@users.noreply.github.com",
-            },
-            clear=True,
-        ):
-            with patch.object(advisor, "read_repo_file", return_value=(200, "abc123", "old")):
-                with patch.object(advisor, "github_request", return_value=(200, {})) as github_request_mock:
-                    changed = advisor.update_repo_file(
-                        repository="khzaw/rangoonpulse",
-                        branch="tune/test",
-                        path="apps/tunarr/helmrelease.yaml",
-                        content="new",
-                        token="token",
-                        commit_message="resource-advisor: apply safe resource tuning",
-                    )
+    def test_update_repo_file_does_not_set_explicit_author_fields(self):
+        with patch.object(advisor, "read_repo_file", return_value=(200, "abc123", "old")):
+            with patch.object(advisor, "github_request", return_value=(200, {})) as github_request_mock:
+                changed = advisor.update_repo_file(
+                    repository="khzaw/rangoonpulse",
+                    branch="tune/test",
+                    path="apps/tunarr/helmrelease.yaml",
+                    content="new",
+                    token="token",
+                    commit_message="resource-advisor: apply safe resource tuning",
+                )
 
         self.assertTrue(changed)
         payload = github_request_mock.call_args.args[3]
-        self.assertEqual(payload["author"], {"name": "khzaw", "email": "khzaw@users.noreply.github.com"})
-        self.assertEqual(payload["committer"], {"name": "khzaw", "email": "khzaw@users.noreply.github.com"})
+        self.assertNotIn("author", payload)
+        self.assertNotIn("committer", payload)
+
+    def test_ensure_pull_request_assigns_requested_users(self):
+        with patch.dict(os.environ, {"GITHUB_PR_ASSIGNEES": "khzaw"}, clear=True):
+            with patch.object(
+                advisor,
+                "github_request",
+                side_effect=[
+                    (200, []),
+                    (201, {"number": 42, "html_url": "https://example.invalid/pr/42"}),
+                    (200, {"number": 42}),
+                ],
+            ) as github_request_mock:
+                result = advisor.ensure_pull_request(
+                    repository="khzaw/rangoonpulse",
+                    token="token",
+                    head_branch="tune/test",
+                    base_branch="master",
+                    title="title",
+                    body="body",
+                )
+
+        self.assertEqual(result["status"], "created")
+        self.assertEqual(result["number"], 42)
+        self.assertEqual(github_request_mock.call_args_list[2].args[0], "PATCH")
+        self.assertIn("/issues/42", github_request_mock.call_args_list[2].args[1])
+        self.assertEqual(github_request_mock.call_args_list[2].args[3], {"assignees": ["khzaw"]})
 
 
 if __name__ == "__main__":

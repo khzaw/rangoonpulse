@@ -652,19 +652,6 @@ def read_repo_file(repository: str, branch: str, path: str, token: str) -> tuple
     return 200, payload.get("sha"), content
 
 
-def build_commit_identity(role: str) -> dict[str, str] | None:
-    role = role.strip().upper()
-    name = os.getenv(f"GITHUB_{role}_NAME", "").strip()
-    email = os.getenv(f"GITHUB_{role}_EMAIL", "").strip()
-
-    if not name and not email:
-        return None
-    if not name or not email:
-        log(f"Incomplete GitHub {role.lower()} identity configured; skipping explicit {role.lower()} payload")
-        return None
-    return {"name": name, "email": email}
-
-
 def update_repo_file(
     repository: str,
     branch: str,
@@ -686,12 +673,6 @@ def update_repo_file(
         "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
         "branch": branch,
     }
-    author = build_commit_identity("AUTHOR")
-    committer = build_commit_identity("COMMITTER")
-    if author:
-        put_payload["author"] = author
-    if committer:
-        put_payload["committer"] = committer
     if sha:
         put_payload["sha"] = sha
 
@@ -704,6 +685,15 @@ def update_repo_file(
     return True
 
 
+def sync_pull_request_assignees(repository: str, token: str, number: int, assignees: list[str]) -> bool:
+    issue_url = f"https://api.github.com/repos/{repository}/issues/{number}"
+    status, response = github_request("PATCH", issue_url, token, {"assignees": assignees})
+    if status not in (200, 201):
+        log(f"Failed to sync assignees for PR #{number}: {status} {response}")
+        return False
+    return True
+
+
 def ensure_pull_request(
     repository: str,
     token: str,
@@ -712,6 +702,7 @@ def ensure_pull_request(
     title: str,
     body: str,
 ) -> dict:
+    requested_assignees = env_list("GITHUB_PR_ASSIGNEES", "khzaw")
     owner, _ = repository.split("/", 1)
     pulls_url = f"https://api.github.com/repos/{repository}/pulls"
     head_query = urllib.parse.quote(f"{owner}:{head_branch}", safe="")
@@ -726,6 +717,8 @@ def ensure_pull_request(
         update_payload = {"title": title, "body": body}
         update_status, update_resp = github_request("PATCH", update_url, token, update_payload)
         if update_status in (200, 201):
+            if requested_assignees:
+                sync_pull_request_assignees(repository, token, int(number), requested_assignees)
             log(f"Updated existing PR for branch {head_branch}: {pr.get('html_url')}")
             return {"status": "updated", "number": number, "url": pr.get("html_url")}
         else:
@@ -749,8 +742,12 @@ def ensure_pull_request(
         log(f"Failed to create PR: {create_status} {created}")
         return {"status": "create_failed", "error": created}
 
+    number = created.get("number")
+    if requested_assignees and number is not None:
+        sync_pull_request_assignees(repository, token, int(number), requested_assignees)
+
     log(f"Created PR: {created.get('html_url')}")
-    return {"status": "created", "number": created.get("number"), "url": created.get("html_url")}
+    return {"status": "created", "number": number, "url": created.get("html_url")}
 
 
 def estimate_coverage_days(prom: PromClient) -> float:

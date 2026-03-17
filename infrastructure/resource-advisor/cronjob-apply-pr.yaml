@@ -89,14 +89,8 @@ spec:
                   value: master
                 - name: GITHUB_APPLY_HEAD_BRANCH
                   value: tune/resource-advisor-apply
-                - name: GITHUB_AUTHOR_NAME
+                - name: GITHUB_PR_ASSIGNEES
                   value: khzaw
-                - name: GITHUB_AUTHOR_EMAIL
-                  value: khzaw@users.noreply.github.com
-                - name: GITHUB_COMMITTER_NAME
-                  value: khzaw
-                - name: GITHUB_COMMITTER_EMAIL
-                  value: khzaw@users.noreply.github.com
                 - name: GITHUB_TOKEN
                   valueFrom:
                     secretKeyRef:

@@ -25,7 +25,7 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
   - persists `apply-plan.json`, `apply-plan.md`, and `applyLastRunAt` into ConfigMap `monitoring/resource-advisor-latest`
   - creates one unique `tune/...` branch per selected service from the latest `master`
   - opens one apply PR per selected service when eligible changes exist
-  - writes file-update commits with explicit GitHub `author` and `committer` identity (current default: `khzaw <khzaw@users.noreply.github.com>`)
+  - assigns each apply PR to the configured GitHub user list (`GITHUB_PR_ASSIGNEES`, current default: `khzaw`)
   - applies only allowlisted HelmRelease resource changes
 - finished jobs are auto-cleaned by TTL:
   - `ttlSecondsAfterFinished: 21600` (6 hours)
