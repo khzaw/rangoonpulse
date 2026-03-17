@@ -49,12 +49,11 @@ spec:
               PGID: "1000"
             resources:
               requests:
-                cpu: 150m
-                memory: 512Mi
+                cpu: "112m"
+                memory: "640Mi"
               limits:
-                cpu: 1000m
-                memory: 3Gi
-
+                cpu: "750m"
+                memory: "3124Mi"
     service:
       main:
         ports:
