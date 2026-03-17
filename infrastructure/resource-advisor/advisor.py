@@ -1873,6 +1873,12 @@ def build_apply_branch_name(branch_hint: str, selected: list[dict]) -> str:
     return branch
 
 
+def build_apply_commit_message(release: str) -> str:
+    subject = sanitize_tune_subject(release).replace("-", " ")
+    release_prefix = release.strip() or subject or "resource-advisor"
+    return f"{release_prefix}: tune resources by resource advisor"
+
+
 def build_apply_pr_body(report: dict, plan: dict, selected: list[dict]) -> str:
     projection = build_selection_projection_summary(plan, selected)
     projected_requests = projection["projected_requests_after_selected"]
@@ -2096,7 +2102,7 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
                 path=path,
                 content=patched,
                 token=token,
-                commit_message="resource-advisor: apply safe resource tuning",
+                commit_message=build_apply_commit_message(release),
             )
             changed = file_changed or changed
             if file_changed:

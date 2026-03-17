@@ -33,6 +33,7 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
 
 Apply PR cleanliness:
 - only HelmRelease resource diffs are committed
+- commit subjects are service-specific (`<service>: tune resources by resource advisor`)
 - no generated `docs/resource-advisor/*.json` or `*.md` artifacts are committed
 - all rationale is embedded in the PR description
 - PR description includes deadband, advisory cluster posture, node-fit snapshot, selected changes, and skipped reason summary

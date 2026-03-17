@@ -295,6 +295,8 @@ class ApplyPrTests(unittest.TestCase):
         self.assertEqual(patch_resources_mock.call_count, 3)
         self.assertEqual(update_repo_file_mock.call_count, 2)
         self.assertEqual(ensure_pr_mock.call_count, 2)
+        self.assertEqual(update_repo_file_mock.call_args_list[0].kwargs["commit_message"], "tunarr: tune resources by resource advisor")
+        self.assertEqual(update_repo_file_mock.call_args_list[1].kwargs["commit_message"], "sonarr: tune resources by resource advisor")
         self.assertIn("tune/tunarr:", ensure_pr_mock.call_args_list[0].kwargs["title"])
         self.assertIn("tune/sonarr:", ensure_pr_mock.call_args_list[1].kwargs["title"])
         self.assertIn("Projected requests after this service change", ensure_pr_mock.call_args_list[0].kwargs["body"])
@@ -310,7 +312,7 @@ class RepoUpdateTests(unittest.TestCase):
                     path="apps/tunarr/helmrelease.yaml",
                     content="new",
                     token="token",
-                    commit_message="resource-advisor: apply safe resource tuning",
+                    commit_message="tunarr: tune resources by resource advisor",
                 )
 
         self.assertTrue(changed)
