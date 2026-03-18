@@ -164,6 +164,7 @@ Notes:
   - `apps/anki-server`
   - `apps/autobrr`
   - `apps/prowlarr`
+  - `apps/jackett`
   - `apps/flaresolverr`
 - Remember: `local-path` PVs are node-affined. Moving an app between nodes usually implies wiping/recreating the PVC
   (or migrating storage to NFS).
@@ -408,7 +409,7 @@ Important external-dns behavior:
     - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`,
       `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`,
       `isponsorblock-tv`, `profilarr`, `shelfmark`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`,
-      `obsidian-livesync`, `prowlarr`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
+      `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`,
       `uptime-kuma`, `vaultwarden`
   - excluded from auto-apply by policy (analyzed only): `actualbudget`, `immich`, `immich-postgres`, `media-postgres`,
     `vaultwarden-postgres`, `blog`, `mmcal`

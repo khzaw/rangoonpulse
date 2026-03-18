@@ -60,6 +60,12 @@
     "description": "Radarr"
   },
   {
+    "id": "jackett",
+    "name": "Jackett",
+    "target": "http://jackett.default.svc.cluster.local:9117",
+    "description": "Jackett"
+  },
+  {
     "id": "tracerr",
     "name": "Tracerr",
     "target": "http://tracerr.default.svc.cluster.local:3000",

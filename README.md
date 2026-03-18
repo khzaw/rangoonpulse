@@ -133,6 +133,8 @@ Current cluster status: both nodes are functional and schedulable.
 
 *Plus: tracerr for tracking automation metrics*
 
+*Jackett is available at `jackett.khzaw.dev` as an alternate tracker proxy for workflows that still expect a Jackett/Torznab endpoint.*
+
 *Transmission can run direct or through a Gluetun sidecar, with the control toggle on `controlpanel.khzaw.dev` and the Gluetun WebUI at `torrent-vpn.khzaw.dev`.*
 
 *`controlpanel.khzaw.dev` is the combined operator cockpit for travel readiness, exposure control, Transmission routing, image updates, and the resource-advisor tuning view. The resource-advisor backend remains separate, but its public tuning hostname has been retired.*

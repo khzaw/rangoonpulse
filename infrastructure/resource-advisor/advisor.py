@@ -32,6 +32,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "isponsorblock-tv": "apps/isponsorblock-tv/helmrelease.yaml",
     "profilarr": "apps/profilarr/helmrelease.yaml",
     "tracerr": "apps/tracerr/helmrelease.yaml",
+    "jackett": "apps/jackett/helmrelease.yaml",
     "jellyfin": "apps/jellyfin/helmrelease.yaml",
     "jellyseerr": "apps/seerr/helmrelease.yaml",
     "nodecast-tv": "apps/nodecast-tv/helmrelease.yaml",

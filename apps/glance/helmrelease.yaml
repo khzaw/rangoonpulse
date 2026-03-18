@@ -268,6 +268,9 @@ spec:
                               - title: Prowlarr
                                 url: https://prowlarr.${BASE_DOMAIN}
                                 icon: di:prowlarr
+                              - title: Jackett
+                                url: https://jackett.${BASE_DOMAIN}
+                                icon: mdi:magnify-scan
                               - title: Bazarr
                                 url: https://bazarr.${BASE_DOMAIN}
                                 icon: di:bazarr
@@ -597,6 +600,7 @@ spec:
                           - Sonarr/Sonarr
                           - Radarr/Radarr
                           - Prowlarr/Prowlarr
+                          - Jackett/Jackett
                           - morpheus65535/bazarr
                           - transmission/transmission
                           - sabnzbd/sabnzbd
@@ -847,6 +851,10 @@ spec:
                             url: https://prowlarr.${BASE_DOMAIN}
                             check-url: http://prowlarr.default.svc.cluster.local:9696
                             icon: di:prowlarr
+                          - title: Jackett
+                            url: https://jackett.${BASE_DOMAIN}
+                            check-url: http://jackett.default.svc.cluster.local:9117
+                            icon: mdi:magnify-scan
                           - title: Bazarr
                             url: https://bazarr.${BASE_DOMAIN}
                             check-url: http://bazarr.default.svc.cluster.local:6767
@@ -1217,6 +1225,10 @@ spec:
                             url: https://prowlarr.${BASE_DOMAIN}
                             check-url: http://prowlarr.default.svc.cluster.local:9696
                             icon: di:prowlarr
+                          - title: Jackett
+                            url: https://jackett.${BASE_DOMAIN}
+                            check-url: http://jackett.default.svc.cluster.local:9117
+                            icon: mdi:magnify-scan
                           - title: Bazarr
                             url: https://bazarr.${BASE_DOMAIN}
                             check-url: http://bazarr.default.svc.cluster.local:6767

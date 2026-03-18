@@ -130,7 +130,7 @@ Auto-apply (Phase 3 PR commits) is currently enabled for:
 - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `booklore`, `booklore-mariadb`
 - `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`, `shelfmark`
 - `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`
-- `obsidian-livesync`, `prowlarr`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
+- `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`
 
 Analyzed but intentionally excluded from auto-apply (manual-only adjustments):

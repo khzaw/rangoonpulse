@@ -62,6 +62,7 @@ resources:
   - ./kustomizations/transmission.yaml
   - ./kustomizations/sabnzbd.yaml
   - ./kustomizations/prowlarr.yaml
+  - ./kustomizations/jackett.yaml
   - ./kustomizations/radarr.yaml
   - ./kustomizations/sonarr.yaml
   - ./kustomizations/bazarr.yaml
