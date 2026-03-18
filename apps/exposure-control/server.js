@@ -508,6 +508,26 @@ function parseImageReference(image) {
   return { raw, registry, repository, tag };
 }
 
+function normalizeTagListingImageRef(imageRef) {
+  if (!imageRef) return imageRef;
+
+  // LinuxServer's lscr.io registry is backed by GHCR and exposes a very deep
+  // tag list full of architecture/version aliases. Docker Hub publishes the
+  // same release tags in a cleaner shape, which makes semver/comparable checks
+  // materially more reliable for the control-panel updater.
+  if (
+    imageRef.registry === "lscr.io" &&
+    imageRef.repository.startsWith("linuxserver/")
+  ) {
+    return {
+      ...imageRef,
+      registry: "docker.io",
+    };
+  }
+
+  return imageRef;
+}
+
 function parseSemverTag(tag) {
   const s = String(tag || "").trim();
   const m = s.match(
@@ -1039,17 +1059,18 @@ async function fetchRegistryBearerToken(challenge, repository) {
 }
 
 async function listRegistryTags(imageRef) {
-  const cacheKey = imageRef.registry + "/" + imageRef.repository;
+  const lookupImageRef = normalizeTagListingImageRef(imageRef);
+  const cacheKey = lookupImageRef.registry + "/" + lookupImageRef.repository;
   const cached = registryTagCache.get(cacheKey);
   const now = Date.now();
   if (cached && now - cached.ts < 6 * 60 * 60 * 1000) return cached.tags;
 
   const apiHost =
-    imageRef.registry === "docker.io"
+    lookupImageRef.registry === "docker.io"
       ? "registry-1.docker.io"
-      : imageRef.registry;
+      : lookupImageRef.registry;
   const base = "https://" + apiHost;
-  let nextUrl = base + "/v2/" + imageRef.repository + "/tags/list?n=200";
+  let nextUrl = base + "/v2/" + lookupImageRef.repository + "/tags/list?n=200";
   const tokenState = { token: "" };
   const tags = [];
   const seen = new Set();
@@ -1059,7 +1080,7 @@ async function listRegistryTags(imageRef) {
     pageCount += 1;
     const res = await registryRequest(
       nextUrl,
-      imageRef.repository,
+      lookupImageRef.repository,
       tokenState,
       {},
     );
