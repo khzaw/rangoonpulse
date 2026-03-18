@@ -105,6 +105,12 @@ const IMAGE_UPDATE_MAX_WORKLOADS = clampInt(
   10,
   500,
 );
+const IMAGE_UPDATE_TAG_PAGE_LIMIT = clampInt(
+  process.env.IMAGE_UPDATE_TAG_PAGE_LIMIT,
+  16,
+  1,
+  40,
+);
 const IMAGE_UPDATE_EXCLUDED_WORKLOADS = new Set(
   String(process.env.IMAGE_UPDATE_EXCLUDED_WORKLOADS || "blog,mmcal")
     .split(",")
@@ -1049,7 +1055,7 @@ async function listRegistryTags(imageRef) {
   const seen = new Set();
   let pageCount = 0;
 
-  while (nextUrl && pageCount < 8) {
+  while (nextUrl && pageCount < IMAGE_UPDATE_TAG_PAGE_LIMIT) {
     pageCount += 1;
     const res = await registryRequest(
       nextUrl,
