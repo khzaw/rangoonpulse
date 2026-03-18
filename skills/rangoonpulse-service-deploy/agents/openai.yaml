@@ -1,0 +1,6 @@
+interface:
+  display_name: "Rangoonpulse Deploy"
+  short_description: "Deploy apps in rangoonpulse safely"
+  default_prompt: "Use $rangoonpulse-service-deploy to add or change a service in /Users/khz/Code/rangoonpulse and carry it through live verification."
+policy:
+  allow_implicit_invocation: false

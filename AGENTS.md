@@ -54,6 +54,7 @@ continue work without re-discovery.
 - Use the project skill `rangoonpulse-session-bootstrap` when the agent skill catalog exposes it.
 - After reading `docs/README.md`, open the focused doc(s) for the task's domain before making recommendations or edits.
 - Do not brute-force every file in `docs/`; use the docs index to pick the relevant subset.
+- When adding, deploying, exposing, or materially changing a service, use the project skill `rangoonpulse-service-deploy` when the agent skill catalog exposes it.
 
 ## Service Change Touch Points
 - When adding, moving, renaming, or materially changing a service, update all relevant operators surfaces in the same

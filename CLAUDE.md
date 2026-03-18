@@ -32,6 +32,7 @@ scripts/        # Operational scripts
 
 - On every new session in this repo, read `AGENTS.md`, `README.md`, and `docs/README.md` before planning or editing.
 - If the skill catalog exposes `rangoonpulse-session-bootstrap`, use it.
+- If adding, deploying, exposing, or materially changing a service, use `rangoonpulse-service-deploy` when available.
 - After `docs/README.md`, read the focused doc or incident note for the area you are changing before proposing changes.
 - Use the docs index to target the relevant docs; do not bulk-read the whole `docs/` directory by default.
 
