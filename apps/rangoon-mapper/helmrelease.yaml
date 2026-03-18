@@ -37,7 +37,7 @@ spec:
           main:
             image:
               repository: ghcr.io/projectrangoon/rangoon-mapper
-              tag: 1773506663-a0f7624a8f3034bace29325e2eda6f2145b189e3 # {"$imagepolicy": "flux-system:rangoon-mapper:tag"}
+              tag: 1773847134-3b9f4144a41e6bc6a01ca9c5a4d27fce37a2b226 # {"$imagepolicy": "flux-system:rangoon-mapper:tag"}
             probes:
               liveness:
                 enabled: true
