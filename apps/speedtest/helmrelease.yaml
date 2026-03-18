@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/librespeed
-              tag: v5.5.1-ls262
+              tag: v5.5.1-ls263
             env:
               TZ: "${TIMEZONE}"
             resources:
