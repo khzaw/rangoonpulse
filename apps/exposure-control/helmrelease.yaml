@@ -81,6 +81,8 @@ spec:
               IMAGE_UPDATE_CACHE_TTL_HOURS: "168"
               IMAGE_UPDATE_HTTP_TIMEOUT_MS: "6000"
               IMAGE_UPDATE_EXCLUDED_WORKLOADS: blog,mmcal,rangoon-mapper
+              HELM_UPDATE_CACHE_TTL_HOURS: "168"
+              HELM_UPDATE_HTTP_TIMEOUT_MS: "8000"
               TRAVEL_CACHE_TTL_SECONDS: "30"
               TRAVEL_HTTP_TIMEOUT_MS: "4000"
               TRANSMISSION_VPN_NAMESPACE: default

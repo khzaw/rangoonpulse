@@ -52,6 +52,10 @@
       const travelDisableSharesBtn = document.getElementById('travelDisableSharesBtn');
       const travelExposureLink = document.getElementById('travelExposureLink');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
+      const helmUpdatesRowsEl = document.getElementById('helmUpdatesRows');
+      const helmUpdatesMsgEl = document.getElementById('helmUpdatesMsg');
+      const helmUpdatesMetaEl = document.getElementById('helmUpdatesMeta');
+      const helmUpdatesRefreshBtn = document.getElementById('helmUpdatesRefreshBtn');
       const pageSections = Array.from(document.querySelectorAll('[data-page-section]'));
       const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
 
@@ -64,6 +68,7 @@
         audit: [],
         vpn: null,
         updates: null,
+        helmUpdates: null,
         travel: null,
         tuning: null,
       };
@@ -91,6 +96,10 @@
 
       function setTravelMsg(text, isError) {
         setMessage(travelMsgEl, text, isError);
+      }
+
+      function setHelmUpdatesMsg(text, isError) {
+        setMessage(helmUpdatesMsgEl, text, isError);
       }
 
       function normalizePage(value) {
@@ -378,12 +387,15 @@
       function renderOverview() {
         const services = dashboardState.services || [];
         const updates = dashboardState.updates || null;
+        const helmUpdates = dashboardState.helmUpdates || null;
         const travel = dashboardState.travel || null;
         const tuning = dashboardState.tuning || null;
         const vpn = dashboardState.vpn || null;
         const activeExposures = services.filter((svc) => svc.enabled).length;
         const updateItems = updates && Array.isArray(updates.items) ? updates.items : [];
         const updatesAvailable = updateItems.filter((item) => item && item.status === 'update').length;
+        const helmUpdateItems = helmUpdates && Array.isArray(helmUpdates.items) ? helmUpdates.items : [];
+        const helmUpdatesAvailable = helmUpdateItems.filter((item) => item && item.status === 'update').length;
         const selectedNow = tuning && tuning.applyPreflight ? Number(tuning.applyPreflight.selectedCount || 0) : 0;
         const recommendations = tuning && tuning.report ? Number(tuning.report.recommendationCount || 0) : 0;
         const hardFitOk = tuning && tuning.applyPreflight ? Boolean(tuning.applyPreflight.hardFitOk) : false;
@@ -415,6 +427,11 @@
             barPct: updateItems.length ? updatesAvailable / updateItems.length * 100 : 0,
             tone: updatesAvailable > 0 ? 'warning' : 'status',
           }) +
+          overviewSegment('chart updates', String(helmUpdatesAvailable), helmUpdateItems.length ? helmUpdateItems.length + ' helm releases' : 'cached report unavailable', {
+            eyebrow: 'updates available',
+            barPct: helmUpdateItems.length ? helmUpdatesAvailable / helmUpdateItems.length * 100 : 0,
+            tone: helmUpdatesAvailable > 0 ? 'warning' : 'status',
+          }) +
           overviewSegment('travel', travelState, travelHeadline, {
             eyebrow: 'remote posture',
             barPct: travelState === 'ready' ? 100 : travelState === 'degraded' ? 55 : travelState === 'blocked' ? 15 : 30,
@@ -431,7 +448,8 @@
           meta.push('<span>advisor run ' + fmtDateTime(tuning.fetch.lastRunAt) + '</span>');
           meta.push('<span>advisor mode ' + (tuning.fetch.mode || 'n/a') + '</span>');
         }
-        if (updates && updates.checkedAt) meta.push('<span>updates checked ' + fmtDateTime(updates.checkedAt) + '</span>');
+        if (updates && updates.checkedAt) meta.push('<span>images checked ' + fmtDateTime(updates.checkedAt) + '</span>');
+        if (helmUpdates && helmUpdates.checkedAt) meta.push('<span>charts checked ' + fmtDateTime(helmUpdates.checkedAt) + '</span>');
         if (vpn) meta.push('<span>transmission desired ' + desiredMode + '</span>');
         if (travel && travel.checkedAt) meta.push('<span>travel checked ' + fmtDateTime(travel.checkedAt) + '</span>');
         overviewMetaEl.innerHTML = meta.join('');
@@ -1009,6 +1027,58 @@
         }
       }
 
+      function renderHelmUpdates(payload) {
+        const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        helmUpdatesRowsEl.innerHTML = '';
+        if (!items.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="5" class="empty-state">No helm chart rows available.</td>';
+          helmUpdatesRowsEl.appendChild(tr);
+        } else {
+          items.forEach((item) => {
+            const tr = document.createElement('tr');
+            const nsPrefix = item.namespace ? item.namespace + '/' : '';
+            tr.innerHTML =
+              '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
+              '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
+              '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
+              '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
+              '<td><div class="updates-version">' + (item.chart || '—') + '</div><div class="updates-sub">' + (item.repo || '—') + (item.detail ? ' · ' + item.detail : '') + '</div></td>';
+            helmUpdatesRowsEl.appendChild(tr);
+          });
+        }
+        const checkedAt = payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) : 'not checked yet';
+        const nextCheckAt = payload && payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : 'unknown';
+        const source = payload && payload.source ? payload.source : 'unknown';
+        const staleText = payload && payload.stale ? ' · stale cache' : '';
+        const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
+        helmUpdatesMetaEl.textContent = 'Checked: ' + checkedAt + ' | Next check: ' + nextCheckAt + ' | Source: ' + source + staleText + refreshingText;
+      }
+
+      async function loadHelmUpdates(options) {
+        const force = Boolean(options && options.force);
+        if (force) {
+          helmUpdatesRefreshBtn.disabled = true;
+          setHelmUpdatesMsg('Checking helm chart repos...');
+        }
+        try {
+          const path = force ? '/api/helm-updates?force=1' : '/api/helm-updates';
+          const payload = await request(path, 'GET');
+          dashboardState.helmUpdates = payload;
+          renderHelmUpdates(payload);
+          renderOverview();
+          if (payload.stale) {
+            setHelmUpdatesMsg('Showing cached data while background refresh runs.');
+          } else {
+            setHelmUpdatesMsg('Helm chart report loaded.');
+          }
+        } catch (err) {
+          setHelmUpdatesMsg(err.message, true);
+        } finally {
+          if (force) helmUpdatesRefreshBtn.disabled = false;
+        }
+      }
+
       async function loadDashboard(options) {
         const silent = Boolean(options && options.silent);
         if (!silent) {
@@ -1020,12 +1090,13 @@
         }
 
         try {
-          const [svcData, auditData, vpnData, tuningData, updatesData, travelData] = await Promise.allSettled([
+          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, travelData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
             request('/api/transmission-vpn', 'GET'),
             request('/api/tuning', 'GET'),
             request('/api/image-updates', 'GET'),
+            request('/api/helm-updates', 'GET'),
             request('/api/travel', 'GET'),
           ]);
 
@@ -1062,6 +1133,15 @@
             renderUpdates({ items: [] });
             setUpdatesMsg(updatesData.reason.message, true);
           }
+          if (helmUpdatesData.status === 'fulfilled') {
+            dashboardState.helmUpdates = helmUpdatesData.value;
+            renderHelmUpdates(dashboardState.helmUpdates);
+            if (!silent) setHelmUpdatesMsg('Helm chart report loaded.');
+          } else {
+            dashboardState.helmUpdates = null;
+            renderHelmUpdates({ items: [] });
+            setHelmUpdatesMsg(helmUpdatesData.reason.message, true);
+          }
           if (travelData && travelData.status === 'fulfilled') {
             dashboardState.travel = travelData.value;
             renderTravel(dashboardState.travel);
@@ -1083,6 +1163,7 @@
 
       refreshAllBtn.onclick = () => loadDashboard();
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
+      helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
 
       emergencyBtn.onclick = async () => {
         if (!confirm('Disable ALL temporary exposures?')) return;

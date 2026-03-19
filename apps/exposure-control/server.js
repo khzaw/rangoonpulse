@@ -117,6 +117,25 @@ const IMAGE_UPDATE_EXCLUDED_WORKLOADS = new Set(
     .map((v) => v.trim().toLowerCase())
     .filter(Boolean),
 );
+const HELM_UPDATE_CACHE_TTL_HOURS = clampInt(
+  process.env.HELM_UPDATE_CACHE_TTL_HOURS,
+  168,
+  24,
+  24 * 30,
+);
+const HELM_UPDATE_HTTP_TIMEOUT_MS = clampInt(
+  process.env.HELM_UPDATE_HTTP_TIMEOUT_MS,
+  8000,
+  2000,
+  20000,
+);
+const HELM_UPDATE_CONCURRENCY = clampInt(
+  process.env.HELM_UPDATE_CONCURRENCY,
+  4,
+  1,
+  12,
+);
+const HELM_UPDATES_CACHE_FILE = path.join(DATA_DIR, "helm-updates-cache.json");
 const KUBE_SERVICE_HOST = process.env.KUBERNETES_SERVICE_HOST || "";
 const KUBE_SERVICE_PORT = process.env.KUBERNETES_SERVICE_PORT_HTTPS || "443";
 const KUBE_TOKEN_FILE =
@@ -163,6 +182,8 @@ const travelSnapshotCache = {
   ts: 0,
 };
 let imageUpdateRefreshPromise = null;
+let helmUpdateRefreshPromise = null;
+const helmRepoIndexCache = new Map();
 const MOVING_TAG_FAMILY_TOKENS = new Set(["ls", "r", "rev", "build"]);
 
 function nowIso() {
@@ -1655,6 +1676,422 @@ async function getImageUpdates(forceRefresh) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Helm chart update tracker
+// ---------------------------------------------------------------------------
+
+async function listAllHelmReleases() {
+  const list = await kubeGetJson(
+    "/apis/helm.toolkit.fluxcd.io/v2/helmreleases",
+  );
+  return Array.isArray(list && list.items) ? list.items : [];
+}
+
+async function listAllHelmRepositories() {
+  const list = await kubeGetJson(
+    "/apis/source.toolkit.fluxcd.io/v1/helmrepositories",
+  );
+  const repos = Array.isArray(list && list.items) ? list.items : [];
+  const map = new Map();
+  for (const repo of repos) {
+    const ns = (repo.metadata && repo.metadata.namespace) || "";
+    const name = (repo.metadata && repo.metadata.name) || "";
+    map.set(ns + "/" + name, repo);
+  }
+  return map;
+}
+
+function helmSemverParse(tag) {
+  const match = String(tag || "")
+    .trim()
+    .match(/^v?(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
+  if (!match) return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    prerelease: match[4] || "",
+  };
+}
+
+function helmSemverCompare(a, b) {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  if (a.patch !== b.patch) return a.patch - b.patch;
+  if (!a.prerelease && b.prerelease) return 1;
+  if (a.prerelease && !b.prerelease) return -1;
+  if (a.prerelease < b.prerelease) return -1;
+  if (a.prerelease > b.prerelease) return 1;
+  return 0;
+}
+
+async function fetchHelmRepoIndex(repoUrl) {
+  const trimmed = String(repoUrl || "").replace(/\/+$/, "");
+  if (!trimmed) return null;
+  if (trimmed.startsWith("oci://")) return null;
+
+  const cacheKey = trimmed;
+  if (helmRepoIndexCache.has(cacheKey)) return helmRepoIndexCache.get(cacheKey);
+
+  const indexUrl = trimmed + "/index.yaml";
+  try {
+    const res = await requestUrl(indexUrl, {
+      method: "GET",
+      headers: { accept: "application/x-yaml, text/yaml, text/plain" },
+      timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
+    });
+    if (res.statusCode !== 200) {
+      helmRepoIndexCache.set(cacheKey, null);
+      return null;
+    }
+    const parsed = parseHelmRepoIndex(res.body);
+    helmRepoIndexCache.set(cacheKey, parsed);
+    return parsed;
+  } catch {
+    helmRepoIndexCache.set(cacheKey, null);
+    return null;
+  }
+}
+
+function parseHelmRepoIndex(body) {
+  const entries = {};
+  const text = String(body || "");
+  const lines = text.split("\n");
+  let currentChart = null;
+  let inEntries = false;
+
+  for (const line of lines) {
+    const trimmed = line.trimEnd();
+    if (/^entries:\s*$/.test(trimmed)) {
+      inEntries = true;
+      continue;
+    }
+    if (!inEntries) continue;
+    if (/^\S/.test(trimmed)) break;
+
+    const chartMatch = trimmed.match(/^  ([a-zA-Z0-9._-]+):\s*$/);
+    if (chartMatch) {
+      currentChart = chartMatch[1];
+      entries[currentChart] = [];
+      continue;
+    }
+    if (currentChart) {
+      const versionMatch = line.match(/^    version:\s*"?([^"\s]+)"?\s*$/);
+      if (versionMatch) {
+        entries[currentChart].push(versionMatch[1]);
+      }
+    }
+  }
+  return entries;
+}
+
+function findLatestHelmVersion(chartName, repoIndex, currentVersion) {
+  if (!repoIndex || !repoIndex[chartName]) return null;
+  const versions = repoIndex[chartName];
+  const current = helmSemverParse(currentVersion);
+  if (!current) return null;
+
+  let best = null;
+  let bestParsed = null;
+  for (const v of versions) {
+    const parsed = helmSemverParse(v);
+    if (!parsed) continue;
+    if (parsed.prerelease) continue;
+    if (parsed.major !== current.major) continue;
+    if (!bestParsed || helmSemverCompare(parsed, bestParsed) > 0) {
+      best = v;
+      bestParsed = parsed;
+    }
+  }
+  return best;
+}
+
+async function fetchOciChartTags(ociUrl, chartName) {
+  const trimmed = String(ociUrl || "").replace(/^oci:\/\//, "").replace(/\/+$/, "");
+  if (!trimmed) return [];
+  const registry = trimmed.split("/")[0];
+  const repoPath = trimmed.slice(registry.length + 1);
+  const fullRepo = repoPath ? repoPath + "/" + chartName : chartName;
+
+  try {
+    const tokenUrl = "https://" + registry + "/v2/" + fullRepo + "/tags/list";
+    const res = await requestHttps(tokenUrl, {
+      method: "GET",
+      headers: { accept: "application/json" },
+      timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
+    });
+    if (res.statusCode === 200) {
+      const data = JSON.parse(res.body || "{}");
+      return Array.isArray(data.tags) ? data.tags : [];
+    }
+    if (res.statusCode === 401) {
+      const authHeader = String(res.headers["www-authenticate"] || "");
+      const realmMatch = authHeader.match(/realm="([^"]+)"/);
+      const serviceMatch = authHeader.match(/service="([^"]+)"/);
+      const scopeMatch = authHeader.match(/scope="([^"]+)"/);
+      if (realmMatch) {
+        let tokenReqUrl = realmMatch[1];
+        const params = [];
+        if (serviceMatch) params.push("service=" + encodeURIComponent(serviceMatch[1]));
+        if (scopeMatch) params.push("scope=" + encodeURIComponent(scopeMatch[1]));
+        else params.push("scope=" + encodeURIComponent("repository:" + fullRepo + ":pull"));
+        tokenReqUrl += "?" + params.join("&");
+        const tokenRes = await requestHttps(tokenReqUrl, {
+          method: "GET",
+          headers: { accept: "application/json" },
+          timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
+        });
+        if (tokenRes.statusCode === 200) {
+          const tokenData = JSON.parse(tokenRes.body || "{}");
+          const token = tokenData.token || tokenData.access_token || "";
+          if (token) {
+            const retryRes = await requestHttps(
+              "https://" + registry + "/v2/" + fullRepo + "/tags/list",
+              {
+                method: "GET",
+                headers: {
+                  accept: "application/json",
+                  authorization: "Bearer " + token,
+                },
+                timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
+              },
+            );
+            if (retryRes.statusCode === 200) {
+              const retryData = JSON.parse(retryRes.body || "{}");
+              return Array.isArray(retryData.tags) ? retryData.tags : [];
+            }
+          }
+        }
+      }
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function findLatestFromTags(tags, currentVersion) {
+  const current = helmSemverParse(currentVersion);
+  if (!current) return null;
+  let best = null;
+  let bestParsed = null;
+  for (const tag of tags) {
+    const parsed = helmSemverParse(tag);
+    if (!parsed) continue;
+    if (parsed.prerelease) continue;
+    if (parsed.major !== current.major) continue;
+    if (!bestParsed || helmSemverCompare(parsed, bestParsed) > 0) {
+      best = tag;
+      bestParsed = parsed;
+    }
+  }
+  return best;
+}
+
+async function buildHelmUpdateSnapshot() {
+  helmRepoIndexCache.clear();
+  const helmReleases = await listAllHelmReleases();
+  const helmRepos = await listAllHelmRepositories();
+
+  const items = [];
+
+  const lookupTasks = helmReleases.map((hr) => {
+    const meta = hr.metadata || {};
+    const spec = hr.spec || {};
+    const chart = spec.chart || {};
+    const chartSpec = chart.spec || {};
+    const sourceRef = chartSpec.sourceRef || {};
+    const status = hr.status || {};
+    const currentVersion = String(chartSpec.version || "").trim();
+    const chartName = String(chartSpec.chart || "").trim();
+    const repoName = String(sourceRef.name || "").trim();
+    const repoNamespace = String(sourceRef.namespace || meta.namespace || "flux-system").trim();
+    const repoKey = repoNamespace + "/" + repoName;
+    const repo = helmRepos.get(repoKey);
+    const repoUrl = repo && repo.spec ? String(repo.spec.url || "").trim() : "";
+    const isOci = repoUrl.startsWith("oci://");
+
+    const lastApplied = status.lastAppliedRevision || status.lastAttemptedRevision || "";
+    const installedVersion = lastApplied
+      ? String(lastApplied).replace(/^[^/]*\//, "").split("@")[0]
+      : currentVersion;
+
+    const row = {
+      id: String(meta.name || ""),
+      namespace: String(meta.namespace || "default"),
+      name: String(meta.name || ""),
+      chart: chartName,
+      repo: repoName,
+      repoUrl: repoUrl,
+      currentVersion: installedVersion || currentVersion,
+      specVersion: currentVersion,
+      latestVersion: null,
+      updateAvailable: false,
+      status: "unknown",
+      statusText: "Unknown",
+      detail: "",
+    };
+    items.push(row);
+
+    return { row, chartName, repoUrl, isOci, currentVersion: installedVersion || currentVersion };
+  });
+
+  await mapWithConcurrency(lookupTasks, HELM_UPDATE_CONCURRENCY, async function(task) {
+    try {
+      if (!task.repoUrl) {
+        task.row.status = "unknown";
+        task.row.statusText = "No repo";
+        task.row.detail = "HelmRepository source not found.";
+        return;
+      }
+
+      if (task.isOci) {
+        const tags = await fetchOciChartTags(task.repoUrl, task.chartName);
+        if (!tags.length) {
+          task.row.status = "unknown";
+          task.row.statusText = "Unknown";
+          task.row.detail = "Could not fetch OCI tags for " + task.chartName + ".";
+          return;
+        }
+        const latest = findLatestFromTags(tags, task.currentVersion);
+        if (!latest) {
+          task.row.status = "unknown";
+          task.row.statusText = "Unknown";
+          task.row.detail = "No compatible version found in OCI tags.";
+          return;
+        }
+        task.row.latestVersion = latest;
+        const currentParsed = helmSemverParse(task.currentVersion);
+        const latestParsed = helmSemverParse(latest);
+        task.row.updateAvailable = currentParsed && latestParsed && helmSemverCompare(latestParsed, currentParsed) > 0;
+        task.row.status = task.row.updateAvailable ? "update" : "current";
+        task.row.statusText = task.row.updateAvailable ? "Update available" : "Up to date";
+        task.row.detail = task.row.updateAvailable
+          ? "New chart version " + latest + " available."
+          : "Running latest chart version in this major.";
+        return;
+      }
+
+      const index = await fetchHelmRepoIndex(task.repoUrl);
+      if (!index) {
+        task.row.status = "unknown";
+        task.row.statusText = "Unknown";
+        task.row.detail = "Could not fetch repo index from " + task.repoUrl + ".";
+        return;
+      }
+      const latest = findLatestHelmVersion(task.chartName, index, task.currentVersion);
+      if (!latest) {
+        task.row.status = "unknown";
+        task.row.statusText = "Unknown";
+        task.row.detail = "No compatible version found for chart " + task.chartName + ".";
+        return;
+      }
+      task.row.latestVersion = latest;
+      const currentParsed = helmSemverParse(task.currentVersion);
+      const latestParsed = helmSemverParse(latest);
+      task.row.updateAvailable = currentParsed && latestParsed && helmSemverCompare(latestParsed, currentParsed) > 0;
+      task.row.status = task.row.updateAvailable ? "update" : "current";
+      task.row.statusText = task.row.updateAvailable ? "Update available" : "Up to date";
+      task.row.detail = task.row.updateAvailable
+        ? "New chart version " + latest + " available."
+        : "Running latest chart version in this major.";
+    } catch (err) {
+      task.row.status = "unknown";
+      task.row.statusText = "Error";
+      task.row.detail = err.message;
+    }
+  });
+
+  items.sort(function(a, b) {
+    const aPriority = a.status === "update" ? 0 : 1;
+    const bPriority = b.status === "update" ? 0 : 1;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+
+  return {
+    checkedAt: nowIso(),
+    ttlHours: HELM_UPDATE_CACHE_TTL_HOURS,
+    items,
+  };
+}
+
+function helmUpdateNextCheckAt(checkedAt) {
+  const ts = Date.parse(checkedAt || "");
+  if (!Number.isFinite(ts)) return null;
+  return new Date(ts + HELM_UPDATE_CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString();
+}
+
+function loadHelmUpdateCache() {
+  const cached = readJsonFile(HELM_UPDATES_CACHE_FILE);
+  if (!cached || !Array.isArray(cached.items)) return null;
+  return cached;
+}
+
+function isHelmUpdateCacheFresh(cached) {
+  const nextCheckAt = helmUpdateNextCheckAt(cached && cached.checkedAt);
+  if (!nextCheckAt) return false;
+  return Date.parse(nextCheckAt) > Date.now();
+}
+
+async function getHelmUpdates(forceRefresh) {
+  const cached = loadHelmUpdateCache();
+  const hasFreshCache = cached && isHelmUpdateCacheFresh(cached);
+
+  if (!forceRefresh && hasFreshCache) {
+    return {
+      ...cached,
+      source: "cache",
+      stale: false,
+      refreshInProgress: Boolean(helmUpdateRefreshPromise),
+      nextCheckAt: helmUpdateNextCheckAt(cached.checkedAt),
+    };
+  }
+
+  if (!helmUpdateRefreshPromise) {
+    helmUpdateRefreshPromise = (async () => {
+      const snapshot = await buildHelmUpdateSnapshot();
+      writeJsonFile(HELM_UPDATES_CACHE_FILE, snapshot);
+      return snapshot;
+    })().finally(() => {
+      helmUpdateRefreshPromise = null;
+    });
+  }
+
+  if (!forceRefresh && cached) {
+    return {
+      ...cached,
+      source: "cache",
+      stale: true,
+      refreshInProgress: true,
+      nextCheckAt: helmUpdateNextCheckAt(cached.checkedAt),
+    };
+  }
+
+  try {
+    const fresh = await helmUpdateRefreshPromise;
+    return {
+      ...fresh,
+      source: "live",
+      stale: false,
+      refreshInProgress: false,
+      nextCheckAt: helmUpdateNextCheckAt(fresh.checkedAt),
+    };
+  } catch (err) {
+    if (cached) {
+      return {
+        ...cached,
+        source: "cache",
+        stale: true,
+        refreshInProgress: false,
+        error: err.message,
+        nextCheckAt: helmUpdateNextCheckAt(cached.checkedAt),
+      };
+    }
+    throw err;
+  }
+}
+
 async function getTransmissionVpnControlConfig() {
   const cm = await kubeGetJson(
     "/api/v1/namespaces/" + TRANSMISSION_VPN_NAMESPACE + "/configmaps/" + TRANSMISSION_VPN_CONTROL_CONFIGMAP,
@@ -2259,6 +2696,18 @@ async function handleApi(req, res, parsedUrl) {
       parsedUrl.searchParams.get("refresh") === "1";
     try {
       const payload = await getImageUpdates(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/helm-updates") {
+    const force =
+      parsedUrl.searchParams.get("force") === "1" ||
+      parsedUrl.searchParams.get("refresh") === "1";
+    try {
+      const payload = await getHelmUpdates(force);
       return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 500, { error: err.message });

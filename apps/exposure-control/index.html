@@ -27,14 +27,14 @@
         <div>
           <h1>operator cockpit</h1>
           <div class="hero-subtitle">
-            One operator surface for travel readiness, exposure controls, transmission routing, image checks, and resource tuning.
+            One operator surface for travel readiness, exposure controls, transmission routing, image and chart updates, and resource tuning.
             Backends remain separate: exposure-control owns write actions, resource-advisor stays the tuning/report backend.
           </div>
         </div>
       </section>
 
       <nav class="section-nav" aria-label="Section navigation">
-        <a class="nav-pill" data-page-link href="#updates">image updates</a>
+        <a class="nav-pill" data-page-link href="#updates">updates</a>
         <a class="nav-pill" data-page-link href="#travel">travel</a>
         <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
         <a class="nav-pill" data-page-link href="#tuning">tuning</a>
@@ -155,6 +155,30 @@
         </div>
         <div class="content-block">
           <div id="updatesMsg" class="msg"></div>
+        </div>
+        <div class="updates-toolbar" style="padding-top:24px">
+          <div>
+            <h2 class="section-heading">helm chart updates</h2>
+            <div id="helmUpdatesMeta" class="updates-meta">No chart check yet.</div>
+          </div>
+          <button id="helmUpdatesRefreshBtn" type="button">Check Now</button>
+        </div>
+        <div class="updates-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>release</th>
+                <th>current</th>
+                <th>latest</th>
+                <th>status</th>
+                <th>chart / repo</th>
+              </tr>
+            </thead>
+            <tbody id="helmUpdatesRows"></tbody>
+          </table>
+        </div>
+        <div class="content-block">
+          <div id="helmUpdatesMsg" class="msg"></div>
         </div>
       </section>
 
