@@ -36,6 +36,25 @@ spec:
         serviceAccount:
           name: exposure-control
         strategy: Recreate
+        initContainers:
+          fix-data-permissions:
+            image:
+              repository: alpine
+              tag: "3.22"
+            command:
+              - /bin/sh
+              - -c
+              - |
+                chown -R 1000:1000 /data
+                chmod 664 /data/state.json /data/audit.json 2>/dev/null || true
+            securityContext:
+              runAsUser: 0
+              runAsGroup: 0
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
         containers:
           main:
             image:

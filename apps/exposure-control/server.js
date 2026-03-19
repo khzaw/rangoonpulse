@@ -2420,7 +2420,7 @@ const server = http.createServer(async (req, res) => {
           error: "api access is restricted to control panel host",
         });
       }
-      return handleApi(req, res, parsed);
+      return await handleApi(req, res, parsed);
     }
 
     if (svc) {

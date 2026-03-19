@@ -228,6 +228,11 @@ Validation status:
   - `/metrics` endpoint serves `exposure_control_*` metrics,
   - emergency disable-all endpoint is reachable from control panel host.
 
+Operational note:
+- `apps/exposure-control/helmrelease.yaml` now includes an init container that resets `/data` ownership to `1000:1000`
+  before the Node app starts. Keep this in place while the runtime PVC stores `state.json` and `audit.json`; older
+  root-owned files cause enable/disable actions to fail with `EACCES`.
+
 ### Phase 5: Blog Permanent-Public Onboarding
 1. Deploy blog service in-cluster (GitOps-managed app path).
 2. Create permanent public exposure policy for `blog.khzaw.dev`:
