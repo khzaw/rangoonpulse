@@ -218,7 +218,7 @@ Important external-dns behavior:
 - Do not make two live AdGuard instances share one writable data directory. Keep PVCs separate; seed secondary config from primary
   if you need matching behavior, or move the desired settings into GitOps.
 - Runtime DNS tuning is enforced at container startup in both `apps/adguard/primary/helmrelease.yaml` and
-  `apps/adguard/secondary/helmrelease.yaml` (including `upstream_mode: fastest_addr`) to avoid drift after UI/wizard
+  `apps/adguard/secondary/helmrelease.yaml` (web on `:80`, cache/timeout tuning, DHCP disabled) to avoid drift after UI/wizard
   changes.
 - If `AdGuardHome.yaml` is missing, startup now seeds a minimal working config onto the PVC instead of dropping into the
   first-run wizard on `:3000`; health probes require live listeners on TCP `80` and `53`, so wizard mode no longer

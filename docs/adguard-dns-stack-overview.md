@@ -94,7 +94,6 @@ drift away from intended GitOps behavior.
 
 To keep behavior stable, startup now enforces DNS keys in
 `apps/adguard/primary/helmrelease.yaml` and `apps/adguard/secondary/helmrelease.yaml` before launching AdGuard:
-- `dns.upstream_mode: fastest_addr`
 - `dns.fastest_timeout: 1s`
 - `dns.cache_size: 16777216`
 - `dns.cache_ttl_min: 60`
@@ -152,7 +151,6 @@ Current seeded baseline:
 - web UI on `0.0.0.0:80`
 - DNS on `0.0.0.0:53`
 - upstreams `1.1.1.1` and `1.0.0.1`
-- `upstream_mode: fastest_addr`
 - query log and statistics enabled
 - DHCP disabled
 
