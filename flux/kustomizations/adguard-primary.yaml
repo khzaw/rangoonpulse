@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: adguard-primary
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./apps/adguard/primary
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
+  targetNamespace: default
+  timeout: 5m
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: adguard
+      namespace: default
+  dependsOn:
+    - name: adguard-secondary
+    - name: ingress-nginx
+    - name: external-dns
+    - name: cert-manager
+    - name: metallb-config
+    - name: local-path-provisioner

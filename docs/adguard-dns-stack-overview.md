@@ -8,7 +8,8 @@ This document explains:
 
 ## Current Deployment (As Of 2026-03-08)
 - Namespace: `default`
-- Primary HelmRelease: `apps/adguard/helmrelease.yaml`
+- Primary HelmRelease: `apps/adguard/primary/helmrelease.yaml`
+  - Flux Kustomization: `flux/kustomizations/adguard-primary.yaml`
   - node: `talos-uua-g6r`
   - DNS Service: `Service/adguard-dns`
     - type: `LoadBalancer`
@@ -21,7 +22,8 @@ This document explains:
   - Web UI ingress:
     - hostname: `adguard.khzaw.dev`
     - ingress VIP: `10.0.0.231`
-- Secondary HelmRelease: `apps/adguard/helmrelease-secondary.yaml`
+- Secondary HelmRelease: `apps/adguard/secondary/helmrelease.yaml`
+  - Flux Kustomization: `flux/kustomizations/adguard-secondary.yaml`
   - node: `talos-7nf-osf`
   - DNS Service: `Service/adguard-secondary-dns`
     - type: `LoadBalancer`
@@ -84,14 +86,14 @@ After setup, AdGuard may switch web UI from `:3000` to `:80`.
 If Kubernetes Service/Ingress still targets `3000`, `https://adguard.khzaw.dev` returns `502` from nginx.
 
 Expected GitOps state:
-- `apps/adguard/helmrelease.yaml` -> `service.main.ports.http.port: 80`
+- `apps/adguard/primary/helmrelease.yaml` -> `service.main.ports.http.port: 80`
 
 ### 2) Runtime Config Drift vs GitOps
 AdGuard writes runtime config into `/adguard-data/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
 drift away from intended GitOps behavior.
 
 To keep behavior stable, startup now enforces DNS keys in
-`apps/adguard/helmrelease.yaml` and `apps/adguard/helmrelease-secondary.yaml` before launching AdGuard:
+`apps/adguard/primary/helmrelease.yaml` and `apps/adguard/secondary/helmrelease.yaml` before launching AdGuard:
 - `dns.upstream_mode: fastest_addr`
 - `dns.fastest_timeout: 1s`
 - `dns.cache_size: 16777216`
@@ -138,11 +140,27 @@ See:
 If AdGuard query logs show only a Kubernetes node IP, source NAT is happening before traffic reaches the pod.
 
 Expected GitOps state:
-- `apps/adguard/helmrelease.yaml` and `apps/adguard/helmrelease-secondary.yaml` -> `service.dns.externalTrafficPolicy: Local`
+- `apps/adguard/primary/helmrelease.yaml` and `apps/adguard/secondary/helmrelease.yaml` -> `service.dns.externalTrafficPolicy: Local`
 
 Important:
 - If all queries still appear as one IP after this change, that IP is usually the router (DNS proxy/relay mode).
 - For per-device visibility, clients must query AdGuard directly (`10.0.0.233`) via DHCP or local DNS settings, not via router DNS forwarding.
+
+### 7) Upgrade One AdGuard At A Time
+Primary and secondary AdGuard now reconcile through separate Flux `Kustomization` objects:
+- `adguard-primary` -> `./apps/adguard/primary`
+- `adguard-secondary` -> `./apps/adguard/secondary`
+
+The primary rollout is gated on the secondary Flux `Kustomization` being Ready:
+- both Kustomizations use `wait: true`
+- each Kustomization health-checks its own `HelmRelease`
+- `adguard-primary` has `dependsOn: adguard-secondary`
+
+Use that split to avoid restarting both DNS services in the same rollout window. Recommended order:
+1. reconcile `adguard-secondary`
+2. verify `dig @10.0.0.234 ...` and pod health
+3. reconcile `adguard-primary`
+4. verify `dig @10.0.0.233 ...` and pod health
 
 ## Validation Commands
 ```bash
@@ -167,6 +185,7 @@ dig @10.0.0.234 google.com +short
 # App health
 flux get hr -n default adguard
 flux get hr -n default adguard-secondary
+flux get kustomizations -n flux-system | rg adguard
 kubectl logs -n default deploy/adguard --tail=100
 kubectl logs -n default deploy/adguard-secondary --tail=100
 ```

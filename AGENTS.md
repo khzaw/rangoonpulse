@@ -33,6 +33,9 @@ continue work without re-discovery.
 - Use GitOps. Do not rely on direct `kubectl apply` for permanent changes.
 - `kubectl apply --dry-run=client` is fine for validation.
 - Prefer `HelmRelease` changes over raw manifests.
+- For redundant but critical services where concurrent restarts would be user-visible or unsafe (for example paired DNS),
+  do not reconcile both instances from one Flux rollout unit. Use separate Flux `Kustomization` objects with `wait: true`,
+  explicit health checks, and ordered `dependsOn` gating so one instance must become Ready before the other can roll.
 - Do not introduce a separate `values.yaml` when an app can be fully configured inline in `helmrelease.yaml`.
 - Keep ingress, DNS annotation, and TLS settings aligned for every externally accessed app.
 - Do not commit plaintext passwords/API keys in manifests.
@@ -188,8 +191,13 @@ Important external-dns behavior:
   Services (example: `infrastructure/monitoring/monitoring-cname.yaml`).
 
 ## LAN DNS (AdGuard)
-- Primary deployment: `apps/adguard/helmrelease.yaml`
-- Secondary deployment: `apps/adguard/helmrelease-secondary.yaml`
+- Primary deployment: `apps/adguard/primary/helmrelease.yaml`
+- Secondary deployment: `apps/adguard/secondary/helmrelease.yaml`
+- Flux rollout units:
+  - `flux/kustomizations/adguard-primary.yaml` -> `./apps/adguard/primary`
+  - `flux/kustomizations/adguard-secondary.yaml` -> `./apps/adguard/secondary`
+- Roll primary and secondary separately for upgrades that could restart DNS. Avoid reconciling both AdGuard Flux
+  kustomizations at the same time unless you have an explicit maintenance window.
 - DNS endpoints for router/clients:
   - `Service/adguard-dns` (`LoadBalancer` `10.0.0.233`, TCP/UDP `53`) on the Raspberry Pi node
   - `Service/adguard-secondary-dns` (`LoadBalancer` `10.0.0.234`, TCP/UDP `53`) on the primary node
@@ -204,8 +212,8 @@ Important external-dns behavior:
   If the PVC is not a real mount, startup should fail fast rather than silently writing state into container overlay storage.
 - Do not make two live AdGuard instances share one writable data directory. Keep PVCs separate; seed secondary config from primary
   if you need matching behavior, or move the desired settings into GitOps.
-- Runtime DNS tuning is enforced at container startup in both `apps/adguard/helmrelease.yaml` and
-  `apps/adguard/helmrelease-secondary.yaml` (including `upstream_mode: fastest_addr`) to avoid drift after UI/wizard
+- Runtime DNS tuning is enforced at container startup in both `apps/adguard/primary/helmrelease.yaml` and
+  `apps/adguard/secondary/helmrelease.yaml` (including `upstream_mode: fastest_addr`) to avoid drift after UI/wizard
   changes.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`
 
