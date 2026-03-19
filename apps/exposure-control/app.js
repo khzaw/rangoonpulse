@@ -834,7 +834,7 @@
 
           const statusTd = document.createElement('td');
           const statusBadge = document.createElement('span');
-          statusBadge.className = 'badge ' + (svc.enabled ? 'on' : 'off');
+          statusBadge.className = 'update-chip ' + (svc.enabled ? 'current' : 'not-installed');
           statusBadge.textContent = svc.enabled ? 'enabled' : 'disabled';
           statusTd.appendChild(statusBadge);
 

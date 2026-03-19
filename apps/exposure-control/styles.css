@@ -456,6 +456,8 @@
         padding: 26px 28px;
         border-right: 1px solid var(--border);
         min-height: 186px;
+        display: flex;
+        flex-direction: column;
       }
       .overview-segment:last-child {
         border-right: none;
@@ -485,7 +487,7 @@
       }
       .overview-subtitle {
         margin-top: 12px;
-        min-height: 40px;
+        flex: 1;
         color: var(--text-2);
       }
       .overview-meter {
