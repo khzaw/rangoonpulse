@@ -89,6 +89,10 @@ spec:
                   value: master
                 - name: GITHUB_APPLY_HEAD_BRANCH
                   value: tune/resource-advisor-apply
+                - name: GITHUB_COMMIT_AUTHOR_NAME
+                  value: Kaung Htet
+                - name: GITHUB_COMMIT_AUTHOR_EMAIL
+                  value: kayhzaw@gmail.com
                 - name: GITHUB_PR_ASSIGNEES
                   value: khzaw
                 - name: GITHUB_TOKEN

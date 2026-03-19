@@ -1,6 +1,6 @@
 interface:
-  display_name: "Rangoonpulse Bootstrap"
-  short_description: "Bootstrap rangoonpulse sessions safely"
-  default_prompt: "Use $rangoonpulse-session-bootstrap before starting work in /Users/khz/Code/rangoonpulse."
+  display_name: "Rangoonpulse Session Bootstrap"
+  short_description: "Mandatory startup reading for rangoonpulse"
+  default_prompt: "Always use $rangoonpulse-session-bootstrap first in /Users/khz/Code/rangoonpulse. Read AGENTS.md, README.md, docs/README.md, then the smallest relevant focused docs before planning, answering repo questions, review, debugging, or edits."
 policy:
   allow_implicit_invocation: true

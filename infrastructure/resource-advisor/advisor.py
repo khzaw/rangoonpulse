@@ -660,6 +660,8 @@ def update_repo_file(
     content: str,
     token: str,
     commit_message: str,
+    author_name: str = "",
+    author_email: str = "",
 ) -> bool:
     status, sha, existing = read_repo_file(repository, branch, path, token)
     if status not in (200, 404):
@@ -676,6 +678,13 @@ def update_repo_file(
     }
     if sha:
         put_payload["sha"] = sha
+    if author_name and author_email:
+        identity = {
+            "name": author_name,
+            "email": author_email,
+        }
+        put_payload["author"] = identity
+        put_payload["committer"] = identity
 
     put_status, put_resp = github_request("PUT", put_url, token, put_payload)
     if put_status not in (200, 201):
@@ -2036,6 +2045,8 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
     repository = os.getenv("GITHUB_REPOSITORY", "khzaw/rangoonpulse").strip()
     base_branch = os.getenv("GITHUB_BASE_BRANCH", "master").strip()
     head_branch_hint = os.getenv("GITHUB_APPLY_HEAD_BRANCH", "tune/resource-advisor-apply").strip()
+    commit_author_name = os.getenv("GITHUB_COMMIT_AUTHOR_NAME", "").strip()
+    commit_author_email = os.getenv("GITHUB_COMMIT_AUTHOR_EMAIL", "").strip()
     result.update({"repository": repository, "base_branch": base_branch})
 
     if "/" not in repository:
@@ -2104,6 +2115,8 @@ def open_or_update_apply_pr(report: dict, plan: dict) -> dict:
                 content=patched,
                 token=token,
                 commit_message=build_apply_commit_message(release),
+                author_name=commit_author_name,
+                author_email=commit_author_email,
             )
             changed = file_changed or changed
             if file_changed:

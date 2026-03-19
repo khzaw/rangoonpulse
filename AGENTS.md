@@ -51,7 +51,7 @@ continue work without re-discovery.
 
 ## Session Bootstrap (For Agents)
 - On every new session in this repo, read `README.md` and `docs/README.md` after this file before planning or editing.
-- Use the project skill `rangoonpulse-session-bootstrap` when the agent skill catalog exposes it.
+- Use the project skill `rangoonpulse-session-bootstrap` when the agent skill catalog exposes it; treat that bootstrap as mandatory for every new session and session takeover.
 - After reading `docs/README.md`, open the focused doc(s) for the task's domain before making recommendations or edits.
 - Do not brute-force every file in `docs/`; use the docs index to pick the relevant subset.
 - When adding, deploying, exposing, or materially changing a service, use the project skill `rangoonpulse-service-deploy` when the agent skill catalog exposes it.
@@ -392,6 +392,7 @@ Important external-dns behavior:
 - Report PR flow is disabled by design.
 - Apply PR flow rules:
   - commit only HelmRelease resource changes
+  - apply PR commits use the explicit GitHub API identity from `GITHUB_COMMIT_AUTHOR_NAME` / `GITHUB_COMMIT_AUTHOR_EMAIL`
   - do not commit generated report/apply artifacts into repository
   - include decision rationale, constraints, and skipped reasons in PR description
   - apply planner uses live pod request footprint + current pod placement for node-fit simulation and blocks only on allocatable node capacity; advisory CPU/memory request ceilings remain informational and influence ordering only

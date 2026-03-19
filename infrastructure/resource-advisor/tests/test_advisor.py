@@ -264,6 +264,8 @@ class ApplyPrTests(unittest.TestCase):
                 "GITHUB_REPOSITORY": "khzaw/rangoonpulse",
                 "GITHUB_BASE_BRANCH": "master",
                 "GITHUB_APPLY_HEAD_BRANCH": "tune/resource-advisor-apply",
+                "GITHUB_COMMIT_AUTHOR_NAME": "Kaung Htet",
+                "GITHUB_COMMIT_AUTHOR_EMAIL": "kayhzaw@gmail.com",
             },
             clear=True,
         ):
@@ -297,13 +299,34 @@ class ApplyPrTests(unittest.TestCase):
         self.assertEqual(ensure_pr_mock.call_count, 2)
         self.assertEqual(update_repo_file_mock.call_args_list[0].kwargs["commit_message"], "tunarr: tune resources by resource advisor")
         self.assertEqual(update_repo_file_mock.call_args_list[1].kwargs["commit_message"], "sonarr: tune resources by resource advisor")
+        self.assertEqual(update_repo_file_mock.call_args_list[0].kwargs["author_name"], "Kaung Htet")
+        self.assertEqual(update_repo_file_mock.call_args_list[0].kwargs["author_email"], "kayhzaw@gmail.com")
         self.assertIn("tune/tunarr:", ensure_pr_mock.call_args_list[0].kwargs["title"])
         self.assertIn("tune/sonarr:", ensure_pr_mock.call_args_list[1].kwargs["title"])
         self.assertIn("Projected requests after this service change", ensure_pr_mock.call_args_list[0].kwargs["body"])
 
 
 class RepoUpdateTests(unittest.TestCase):
-    def test_update_repo_file_does_not_set_explicit_author_fields(self):
+    def test_update_repo_file_sets_explicit_author_fields_when_provided(self):
+        with patch.object(advisor, "read_repo_file", return_value=(200, "abc123", "old")):
+            with patch.object(advisor, "github_request", return_value=(200, {})) as github_request_mock:
+                changed = advisor.update_repo_file(
+                    repository="khzaw/rangoonpulse",
+                    branch="tune/test",
+                    path="apps/tunarr/helmrelease.yaml",
+                    content="new",
+                    token="token",
+                    commit_message="tunarr: tune resources by resource advisor",
+                    author_name="Kaung Htet",
+                    author_email="kayhzaw@gmail.com",
+                )
+
+        self.assertTrue(changed)
+        payload = github_request_mock.call_args.args[3]
+        self.assertEqual(payload["author"], {"name": "Kaung Htet", "email": "kayhzaw@gmail.com"})
+        self.assertEqual(payload["committer"], {"name": "Kaung Htet", "email": "kayhzaw@gmail.com"})
+
+    def test_update_repo_file_omits_author_fields_when_not_provided(self):
         with patch.object(advisor, "read_repo_file", return_value=(200, "abc123", "old")):
             with patch.object(advisor, "github_request", return_value=(200, {})) as github_request_mock:
                 changed = advisor.update_repo_file(
