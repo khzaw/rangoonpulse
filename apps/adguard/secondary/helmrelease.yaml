@@ -47,6 +47,39 @@ spec:
 
                 mkdir -p "$DATA/conf" "$WORK/data"
 
+                if [ ! -f "$CFG" ]; then
+                  # Seed a valid baseline config so a recreated PVC does not fall
+                  # back to the AdGuard first-run wizard on port 3000.
+                  printf '%s\n' \
+                    'http:' \
+                    '  address: 0.0.0.0:80' \
+                    'users: []' \
+                    'dns:' \
+                    '  bind_hosts:' \
+                    '    - 0.0.0.0' \
+                    '  port: 53' \
+                    '  upstream_dns:' \
+                    '    - 1.1.1.1' \
+                    '    - 1.0.0.1' \
+                    '  upstream_mode: fastest_addr' \
+                    '  fastest_timeout: 1s' \
+                    '  cache_size: 16777216' \
+                    '  cache_ttl_min: 60' \
+                    '  cache_ttl_max: 3600' \
+                    '  cache_optimistic: true' \
+                    '  upstream_timeout: 3s' \
+                    'querylog:' \
+                    '  enabled: true' \
+                    'statistics:' \
+                    '  enabled: true' \
+                    'filters: []' \
+                    'whitelist_filters: []' \
+                    'user_rules: []' \
+                    'dhcp:' \
+                    '  enabled: false' \
+                    > "$CFG"
+                fi
+
                 # Keep key DNS performance settings in GitOps so runtime changes do not drift.
                 if [ -f "$CFG" ]; then
                   sed -i -E 's/^  address:.*/  address: 0.0.0.0:80/' "$CFG"
@@ -108,6 +141,50 @@ spec:
                   -w "$WORK"
             env:
               TZ: "${TIMEZONE}"
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -ec
+                      - |
+                        test -f /adguard-data/conf/AdGuardHome.yaml
+                        nc -z 127.0.0.1 80
+                        nc -z 127.0.0.1 53
+                  failureThreshold: 24
+                  periodSeconds: 5
+                  timeoutSeconds: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -ec
+                      - |
+                        test -f /adguard-data/conf/AdGuardHome.yaml
+                        nc -z 127.0.0.1 80
+                        nc -z 127.0.0.1 53
+                  periodSeconds: 10
+                  timeoutSeconds: 3
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - sh
+                      - -ec
+                      - |
+                        test -f /adguard-data/conf/AdGuardHome.yaml
+                        nc -z 127.0.0.1 80
+                        nc -z 127.0.0.1 53
+                  periodSeconds: 30
+                  timeoutSeconds: 3
             resources:
               requests:
                 cpu: "25m"
@@ -162,8 +239,6 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        storageClass: local-path
-        accessMode: ReadWriteOnce
-        size: 2Gi
+        existingClaim: adguard-secondary-data
         globalMounts:
           - path: /adguard-data

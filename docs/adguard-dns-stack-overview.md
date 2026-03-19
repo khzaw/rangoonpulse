@@ -130,6 +130,35 @@ Safe pattern in this cluster:
 - same GitOps-enforced baseline runtime tuning on both instances,
 - if you want matching behavior, copy `AdGuardHome.yaml` from the primary instance to the secondary instance as a one-way sync.
 
+### 4a) Keep Critical PVCs Outside The HelmRelease
+AdGuard no longer relies on Helm-generated PVCs.
+
+Why this matters:
+- uninstalling or renaming a HelmRelease can delete Helm-owned `local-path` PVCs,
+- that wipes `AdGuardHome.yaml` and drops the pod back into first-run wizard mode,
+- the process can still look superficially healthy unless the probes check the right ports.
+
+Expected GitOps state:
+- primary data claim: `PersistentVolumeClaim/adguard-data`
+- secondary data claim: `PersistentVolumeClaim/adguard-secondary-data`
+- both claims are managed as standalone manifests beside the HelmRelease
+- both claims are annotated `kustomize.toolkit.fluxcd.io/prune: disabled`
+
+### 4b) Bootstrap Missing Config Instead Of Falling Back To The Wizard
+If a PVC is genuinely empty, container startup now writes a minimal working `AdGuardHome.yaml` to the PVC before launching
+AdGuard.
+
+Current seeded baseline:
+- web UI on `0.0.0.0:80`
+- DNS on `0.0.0.0:53`
+- upstreams `1.1.1.1` and `1.0.0.1`
+- `upstream_mode: fastest_addr`
+- query log and statistics enabled
+- DHCP disabled
+
+This gives a working resolver immediately after a destructive data event instead of leaving DNS and ingress dead behind the
+setup wizard on `:3000`.
+
 ### 5) Router DNS Rebind Protection
 If DNS answers point public hostnames to private IPs (for example `10.0.0.231`), some routers block replies.
 
@@ -161,6 +190,16 @@ Use that split to avoid restarting both DNS services in the same rollout window.
 2. verify `dig @10.0.0.234 ...` and pod health
 3. reconcile `adguard-primary`
 4. verify `dig @10.0.0.233 ...` and pod health
+
+### 8) Probes Must Catch Wizard Mode
+AdGuard now uses startup, readiness, and liveness probes that require:
+- `/adguard-data/conf/AdGuardHome.yaml` to exist,
+- TCP `80` to accept connections,
+- TCP `53` to accept connections.
+
+Why this matters:
+- first-run wizard mode only listens on `:3000`,
+- without explicit probes, Kubernetes can report the pod `Running` while DNS and ingress are both broken.
 
 ## Validation Commands
 ```bash

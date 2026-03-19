@@ -207,6 +207,11 @@ Important external-dns behavior:
 - Do not use Kubernetes `ClusterIP` addresses in LAN DNS settings.
 - AdGuard web UI is exposed at `https://adguard.khzaw.dev` through ingress (`Service/adguard-main`).
 - Secondary AdGuard web UI is exposed at `https://adguard2.khzaw.dev` through ingress (`Service/adguard-secondary-main`).
+- AdGuard runtime state now lives on standalone PVCs:
+  - `PersistentVolumeClaim/adguard-data`
+  - `PersistentVolumeClaim/adguard-secondary-data`
+  Both are GitOps-managed outside the HelmRelease and annotated `kustomize.toolkit.fluxcd.io/prune: disabled` so
+  Flux/Helm churn cannot silently wipe DNS state.
 - Post-install wizard note: AdGuard may switch web UI to port `80`; keep `service.main.ports.http.port` aligned with runtime.
 - Mount the AdGuard PVC at a neutral path (current: `/adguard-data`), not split `conf/` and `work/` behind `subPath` mounts.
   If the PVC is not a real mount, startup should fail fast rather than silently writing state into container overlay storage.
@@ -215,6 +220,9 @@ Important external-dns behavior:
 - Runtime DNS tuning is enforced at container startup in both `apps/adguard/primary/helmrelease.yaml` and
   `apps/adguard/secondary/helmrelease.yaml` (including `upstream_mode: fastest_addr`) to avoid drift after UI/wizard
   changes.
+- If `AdGuardHome.yaml` is missing, startup now seeds a minimal working config onto the PVC instead of dropping into the
+  first-run wizard on `:3000`; health probes require live listeners on TCP `80` and `53`, so wizard mode no longer
+  passes as healthy.
 - Detailed architecture + router setup: `docs/adguard-dns-stack-overview.md`
 
 ## Cluster DNS Reliability (Flux Path)
