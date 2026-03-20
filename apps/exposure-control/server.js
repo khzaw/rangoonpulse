@@ -304,15 +304,11 @@ function loadTravelConfig() {
 }
 
 function defaultState(services) {
-  const exposures = {};
-  for (const svc of services) {
-    exposures[svc.id] = {
-      enabled: false,
-      expiresAt: null,
-      updatedAt: nowIso(),
-    };
-  }
-  return { exposures };
+  return {
+    exposures: Object.fromEntries(
+      services.map((svc) => [svc.id, { enabled: false, expiresAt: null, updatedAt: nowIso() }]),
+    ),
+  };
 }
 
 function loadState(services) {
@@ -331,24 +327,16 @@ function loadState(services) {
       throw new Error("state root must be object");
     if (!parsed.exposures || typeof parsed.exposures !== "object")
       parsed.exposures = {};
-    // Add missing services
-    for (const svc of services) {
-      if (!parsed.exposures[svc.id]) {
-        parsed.exposures[svc.id] = {
-          enabled: false,
-          expiresAt: null,
-          updatedAt: nowIso(),
-        };
-      }
-    }
-    // Remove stale services no longer in services.json
-    for (const id of Object.keys(parsed.exposures)) {
-      if (!knownIds.has(id)) {
-        console.log('state: pruning stale service entry "' + id + '"');
-        delete parsed.exposures[id];
-      }
-    }
-    return parsed;
+    Object.keys(parsed.exposures)
+      .filter((id) => !knownIds.has(id))
+      .forEach((id) => console.log('state: pruning stale service entry "' + id + '"'));
+    const exposures = Object.fromEntries(
+      services.map((svc) => [
+        svc.id,
+        parsed.exposures[svc.id] ?? { enabled: false, expiresAt: null, updatedAt: nowIso() },
+      ]),
+    );
+    return { ...parsed, exposures };
   } catch (err) {
     console.error("failed to read state file, rebuilding:", err.message);
     const fresh = defaultState(services);
@@ -441,7 +429,7 @@ function checkShareRateLimit(req, serviceId) {
     return false;
   }
 
-  existing.count += 1;
+  rateLimits.set(key, { ...existing, count: existing.count + 1 });
   return true;
 }
 
@@ -610,31 +598,26 @@ function parseComparableTag(tag) {
   const parts = raw.match(/[A-Za-z]+|\d+/g);
   if (!parts || parts.length === 0) return null;
 
-  let sawString = false;
-  let previousString = "";
-  let hasVariableNumber = false;
-  const tokens = parts.map((part) => {
-    if (/^\d+$/.test(part)) {
-      const variable =
-        !sawString || MOVING_TAG_FAMILY_TOKENS.has(previousString);
-      if (variable) hasVariableNumber = true;
+  const { tokens, hasVariableNumber } = parts.reduce(
+    (acc, part) => {
+      if (/^\d+$/.test(part)) {
+        const variable = !acc.sawString || MOVING_TAG_FAMILY_TOKENS.has(acc.previousString);
+        return {
+          ...acc,
+          hasVariableNumber: acc.hasVariableNumber || variable,
+          tokens: [...acc.tokens, { type: "num", value: Number(part), raw: part, variable }],
+        };
+      }
+      const lower = part.toLowerCase();
       return {
-        type: "num",
-        value: Number(part),
-        raw: part,
-        variable,
+        sawString: true,
+        previousString: lower,
+        hasVariableNumber: acc.hasVariableNumber,
+        tokens: [...acc.tokens, { type: "str", value: lower, raw: part, variable: false }],
       };
-    }
-
-    sawString = true;
-    previousString = part.toLowerCase();
-    return {
-      type: "str",
-      value: previousString,
-      raw: part,
-      variable: false,
-    };
-  });
+    },
+    { sawString: false, previousString: "", hasVariableNumber: false, tokens: [] },
+  );
 
   if (!hasVariableNumber) return null;
   return { raw, tokens };
@@ -1020,11 +1003,10 @@ function travelStateRank(value) {
 }
 
 function worstTravelState(values) {
-  let worst = "ready";
-  for (const value of values || []) {
-    if (travelStateRank(value) > travelStateRank(worst)) worst = normalizeTravelState(value);
-  }
-  return worst;
+  return (values || []).reduce(
+    (worst, value) => travelStateRank(value) > travelStateRank(worst) ? normalizeTravelState(value) : worst,
+    "ready",
+  );
 }
 
 function travelHeadline(state, connector, exposures, transmission) {
@@ -1719,99 +1701,13 @@ async function buildImageUpdateSnapshot() {
     });
   }
 
-  await mapWithConcurrency(
-    lookupTasks,
-    IMAGE_UPDATE_CONCURRENCY,
-    async function(task) {
-      try {
-        if (task.strategy === "semver") {
-          const tags = await listRegistryTags(task.imageRef);
-          const latest = resolveLatestSemver(task.imageRef.tag, tags);
-          if (!latest) {
-            task.row.status = "unknown";
-            task.row.statusText = "Unknown";
-            task.row.detail = "No stable semver tags found in registry.";
-            return;
-          }
-          task.row.latestVersion = latest.latestTag;
-          task.row.updateAvailable = latest.updateAvailable;
-          task.row.status = latest.updateAvailable ? "update" : "current";
-          task.row.statusText = latest.updateAvailable
-            ? "Update available"
-            : "Up to date";
-          task.row.detail = latest.updateAvailable
-            ? "New version " + latest.latestTag + " available."
-            : "Running latest known stable version.";
-          return;
-        }
-
-        if (task.strategy === "comparable") {
-          const tags = await listRegistryTags(task.imageRef);
-          const latest = resolveLatestComparableTag(task.imageRef.tag, tags);
-          if (latest) {
-            task.row.latestVersion = latest.latestTag;
-            task.row.updateAvailable = latest.updateAvailable;
-            task.row.status = latest.updateAvailable ? "update" : "current";
-            task.row.statusText = latest.updateAvailable
-              ? "Update available"
-              : "Up to date";
-            task.row.detail = latest.updateAvailable
-              ? "New matching tag " + latest.latestTag + " available."
-              : "Running latest known matching tag.";
-            return;
-          }
-        }
-
-        if (!task.currentDigest) {
-          task.row.status = "unknown";
-          task.row.statusText = "Unknown";
-          task.row.detail =
-            "Current tag '" +
-            task.imageRef.tag +
-            "' is not version-sortable and pod image digest is unavailable.";
-          return;
-        }
-
-        const platform = task.podNodeName
-          ? await getNodePlatform(task.podNodeName)
-          : { os: "linux", architecture: "" };
-        const remoteDigest = await fetchRegistryManifestDigest(
-          task.imageRef,
-          task.imageRef.tag,
-          platform,
-        );
-        if (!remoteDigest) {
-          task.row.status = "unknown";
-          task.row.statusText = "Unknown";
-          task.row.detail =
-            "Current tag '" +
-            task.imageRef.tag +
-            "' could not be compared against a registry digest.";
-          return;
-        }
-
-        task.row.latestVersion = task.imageRef.tag;
-        task.row.updateAvailable = remoteDigest !== task.currentDigest;
-        task.row.status = task.row.updateAvailable ? "update" : "current";
-        task.row.statusText = task.row.updateAvailable
-          ? "Update available"
-          : "Up to date";
-        task.row.detail = task.row.updateAvailable
-          ? "Tag '" +
-            task.imageRef.tag +
-            "' now points to " +
-            shortDigest(remoteDigest) +
-            "."
-          : "Registry digest matches running tag '" +
-            task.imageRef.tag +
-            "'.";
-      } catch (err) {
-        task.row.status = "unknown";
-        task.row.statusText = "Registry error";
-        task.row.detail = err.message;
-      }
-    },
-  );
+  await mapWithConcurrency(lookupTasks, IMAGE_UPDATE_CONCURRENCY, async function(task) {
+    try {
+      Object.assign(task.row, await resolveImageUpdateFields(task));
+    } catch (err) {
+      Object.assign(task.row, { status: "unknown", statusText: "Registry error", detail: err.message });
+    }
+  });
 
   items.sort(function(a, b) {
     const aPriority = a.status === "update" ? 0 : 1;
@@ -1886,6 +1782,78 @@ async function getImageUpdates(forceRefresh) {
   }
 }
 
+async function resolveImageUpdateFields(task) {
+  if (task.strategy === "semver") {
+    const tags = await listRegistryTags(task.imageRef);
+    const latest = resolveLatestSemver(task.imageRef.tag, tags);
+    if (!latest) {
+      return { status: "unknown", statusText: "Unknown", detail: "No stable semver tags found in registry." };
+    }
+    return {
+      latestVersion: latest.latestTag,
+      updateAvailable: latest.updateAvailable,
+      status: latest.updateAvailable ? "update" : "current",
+      statusText: latest.updateAvailable ? "Update available" : "Up to date",
+      detail: latest.updateAvailable
+        ? "New version " + latest.latestTag + " available."
+        : "Running latest known stable version.",
+    };
+  }
+
+  if (task.strategy === "comparable") {
+    const tags = await listRegistryTags(task.imageRef);
+    const latest = resolveLatestComparableTag(task.imageRef.tag, tags);
+    if (latest) {
+      return {
+        latestVersion: latest.latestTag,
+        updateAvailable: latest.updateAvailable,
+        status: latest.updateAvailable ? "update" : "current",
+        statusText: latest.updateAvailable ? "Update available" : "Up to date",
+        detail: latest.updateAvailable
+          ? "New matching tag " + latest.latestTag + " available."
+          : "Running latest known matching tag.",
+      };
+    }
+  }
+
+  if (!task.currentDigest) {
+    return {
+      status: "unknown",
+      statusText: "Unknown",
+      detail:
+        "Current tag '" +
+        task.imageRef.tag +
+        "' is not version-sortable and pod image digest is unavailable.",
+    };
+  }
+
+  const platform = task.podNodeName
+    ? await getNodePlatform(task.podNodeName)
+    : { os: "linux", architecture: "" };
+  const remoteDigest = await fetchRegistryManifestDigest(task.imageRef, task.imageRef.tag, platform);
+  if (!remoteDigest) {
+    return {
+      status: "unknown",
+      statusText: "Unknown",
+      detail:
+        "Current tag '" +
+        task.imageRef.tag +
+        "' could not be compared against a registry digest.",
+    };
+  }
+
+  const updateAvailable = remoteDigest !== task.currentDigest;
+  return {
+    latestVersion: task.imageRef.tag,
+    updateAvailable,
+    status: updateAvailable ? "update" : "current",
+    statusText: updateAvailable ? "Update available" : "Up to date",
+    detail: updateAvailable
+      ? "Tag '" + task.imageRef.tag + "' now points to " + shortDigest(remoteDigest) + "."
+      : "Registry digest matches running tag '" + task.imageRef.tag + "'.",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helm chart update tracker
 // ---------------------------------------------------------------------------
@@ -1902,13 +1870,12 @@ async function listAllHelmRepositories() {
     "/apis/source.toolkit.fluxcd.io/v1/helmrepositories",
   );
   const repos = Array.isArray(list && list.items) ? list.items : [];
-  const map = new Map();
-  for (const repo of repos) {
-    const ns = (repo.metadata && repo.metadata.namespace) || "";
-    const name = (repo.metadata && repo.metadata.name) || "";
-    map.set(ns + "/" + name, repo);
-  }
-  return map;
+  return new Map(
+    repos.map((repo) => [
+      ((repo.metadata && repo.metadata.namespace) || "") + "/" + ((repo.metadata && repo.metadata.name) || ""),
+      repo,
+    ]),
+  );
 }
 
 function helmSemverParse(tag) {
@@ -2098,6 +2065,56 @@ function findLatestFromTags(tags, currentVersion) {
   return best;
 }
 
+async function resolveHelmUpdateFields(task) {
+  if (!task.repoUrl) {
+    return { status: "unknown", statusText: "No repo", detail: "HelmRepository source not found." };
+  }
+
+  if (task.isOci) {
+    const tags = await fetchOciChartTags(task.repoUrl, task.chartName);
+    if (!tags.length) {
+      return { status: "unknown", statusText: "Unknown", detail: "Could not fetch OCI tags for " + task.chartName + "." };
+    }
+    const latest = findLatestFromTags(tags, task.currentVersion);
+    if (!latest) {
+      return { status: "unknown", statusText: "Unknown", detail: "No compatible version found in OCI tags." };
+    }
+    const currentParsed = helmSemverParse(task.currentVersion);
+    const latestParsed = helmSemverParse(latest);
+    const updateAvailable = Boolean(currentParsed && latestParsed && helmSemverCompare(latestParsed, currentParsed) > 0);
+    return {
+      latestVersion: latest,
+      updateAvailable,
+      status: updateAvailable ? "update" : "current",
+      statusText: updateAvailable ? "Update available" : "Up to date",
+      detail: updateAvailable
+        ? "New chart version " + latest + " available."
+        : "Running latest chart version in this major.",
+    };
+  }
+
+  const index = await fetchHelmRepoIndex(task.repoUrl);
+  if (!index) {
+    return { status: "unknown", statusText: "Unknown", detail: "Could not fetch repo index from " + task.repoUrl + "." };
+  }
+  const latest = findLatestHelmVersion(task.chartName, index, task.currentVersion);
+  if (!latest) {
+    return { status: "unknown", statusText: "Unknown", detail: "No compatible version found for chart " + task.chartName + "." };
+  }
+  const currentParsed = helmSemverParse(task.currentVersion);
+  const latestParsed = helmSemverParse(latest);
+  const updateAvailable = Boolean(currentParsed && latestParsed && helmSemverCompare(latestParsed, currentParsed) > 0);
+  return {
+    latestVersion: latest,
+    updateAvailable,
+    status: updateAvailable ? "update" : "current",
+    statusText: updateAvailable ? "Update available" : "Up to date",
+    detail: updateAvailable
+      ? "New chart version " + latest + " available."
+      : "Running latest chart version in this major.",
+  };
+}
+
 async function buildHelmUpdateSnapshot() {
   helmRepoIndexCache.clear();
   const helmReleases = await listAllHelmReleases();
@@ -2148,67 +2165,9 @@ async function buildHelmUpdateSnapshot() {
 
   await mapWithConcurrency(lookupTasks, HELM_UPDATE_CONCURRENCY, async function(task) {
     try {
-      if (!task.repoUrl) {
-        task.row.status = "unknown";
-        task.row.statusText = "No repo";
-        task.row.detail = "HelmRepository source not found.";
-        return;
-      }
-
-      if (task.isOci) {
-        const tags = await fetchOciChartTags(task.repoUrl, task.chartName);
-        if (!tags.length) {
-          task.row.status = "unknown";
-          task.row.statusText = "Unknown";
-          task.row.detail = "Could not fetch OCI tags for " + task.chartName + ".";
-          return;
-        }
-        const latest = findLatestFromTags(tags, task.currentVersion);
-        if (!latest) {
-          task.row.status = "unknown";
-          task.row.statusText = "Unknown";
-          task.row.detail = "No compatible version found in OCI tags.";
-          return;
-        }
-        task.row.latestVersion = latest;
-        const currentParsed = helmSemverParse(task.currentVersion);
-        const latestParsed = helmSemverParse(latest);
-        task.row.updateAvailable = currentParsed && latestParsed && helmSemverCompare(latestParsed, currentParsed) > 0;
-        task.row.status = task.row.updateAvailable ? "update" : "current";
-        task.row.statusText = task.row.updateAvailable ? "Update available" : "Up to date";
-        task.row.detail = task.row.updateAvailable
-          ? "New chart version " + latest + " available."
-          : "Running latest chart version in this major.";
-        return;
-      }
-
-      const index = await fetchHelmRepoIndex(task.repoUrl);
-      if (!index) {
-        task.row.status = "unknown";
-        task.row.statusText = "Unknown";
-        task.row.detail = "Could not fetch repo index from " + task.repoUrl + ".";
-        return;
-      }
-      const latest = findLatestHelmVersion(task.chartName, index, task.currentVersion);
-      if (!latest) {
-        task.row.status = "unknown";
-        task.row.statusText = "Unknown";
-        task.row.detail = "No compatible version found for chart " + task.chartName + ".";
-        return;
-      }
-      task.row.latestVersion = latest;
-      const currentParsed = helmSemverParse(task.currentVersion);
-      const latestParsed = helmSemverParse(latest);
-      task.row.updateAvailable = currentParsed && latestParsed && helmSemverCompare(latestParsed, currentParsed) > 0;
-      task.row.status = task.row.updateAvailable ? "update" : "current";
-      task.row.statusText = task.row.updateAvailable ? "Update available" : "Up to date";
-      task.row.detail = task.row.updateAvailable
-        ? "New chart version " + latest + " available."
-        : "Running latest chart version in this major.";
+      Object.assign(task.row, await resolveHelmUpdateFields(task));
     } catch (err) {
-      task.row.status = "unknown";
-      task.row.statusText = "Error";
-      task.row.detail = err.message;
+      Object.assign(task.row, { status: "unknown", statusText: "Error", detail: err.message });
     }
   });
 
@@ -2367,14 +2326,9 @@ async function ensureTransmissionVpnState() {
 }
 
 function selectTransmissionPod(pods) {
-  let selected = null;
-  for (const pod of pods || []) {
-    if (String(inferWorkloadId(pod) || "").toLowerCase() !== "transmission") {
-      continue;
-    }
-    if (isBetterPod(pod, selected)) selected = pod;
-  }
-  return selected;
+  return (pods || [])
+    .filter((pod) => String(inferWorkloadId(pod) || "").toLowerCase() === "transmission")
+    .reduce((best, pod) => isBetterPod(pod, best) ? pod : best, null);
 }
 
 async function getTransmissionVpnStatus() {
@@ -2524,17 +2478,13 @@ async function buildTravelSnapshot() {
       code: "client-exit-node-required",
       message: "Exit-node use is selected on the client device, not by the control panel.",
     },
-  ];
-  if (transmission && transmission.placeholderConfig) {
-    notes.push({
+    transmission && transmission.placeholderConfig && {
       level: transmission.desiredMode === "vpn" ? "warn" : "info",
       code: "transmission-placeholder-vpn",
       message:
         "Transmission VPN wiring exists, but the current repo still uses placeholder WireGuard values until real provider credentials are added.",
-    });
-  }
-  if (activeShares.length > 0) {
-    notes.push({
+    },
+    activeShares.length > 0 && {
       level: "warn",
       code: "active-public-shares",
       message:
@@ -2542,16 +2492,14 @@ async function buildTravelSnapshot() {
         " temporary public share" +
         (activeShares.length === 1 ? " is" : "s are") +
         " active.",
-    });
-  }
-  if (connector.state !== "ready") {
-    notes.push({
+    },
+    connector.state !== "ready" && {
       level: "warn",
       code: "connector-degraded",
       message:
         "If remote access is unstable, verify ConnectorReady and re-check the advertised /32 routes in Tailscale.",
-    });
-  }
+    },
+  ].filter(Boolean);
 
   metrics.travelLastSnapshotTimestampSeconds = Math.floor(Date.now() / 1000);
   metrics.travelSummaryState = summaryState;
@@ -2623,9 +2571,7 @@ async function getTravelSnapshot(forceRefresh) {
     const exposure = state.exposures[svc.id];
     if (exposure && exposure.enabled) {
       if (isExpired(exposure)) {
-        exposure.enabled = false;
-        exposure.expiresAt = null;
-        exposure.updatedAt = nowIso();
+        state.exposures[svc.id] = { ...exposure, enabled: false, expiresAt: null, updatedAt: nowIso() };
         appendAuditEntry({
           action: "auto-expire",
           serviceId: svc.id,
@@ -2683,10 +2629,13 @@ function disableExpiredExposures() {
     for (const svc of services) {
       const exposure = state.exposures[svc.id];
       if (isExpired(exposure)) {
-        exposure.enabled = false;
-        exposure.expiresAt = null;
-        exposure.updatedAt = nowIso();
-        exposure.authMode = exposureAuthMode(svc, exposure);
+        state.exposures[svc.id] = {
+          ...exposure,
+          enabled: false,
+          expiresAt: null,
+          updatedAt: nowIso(),
+          authMode: exposureAuthMode(svc, exposure),
+        };
         metrics.expiredDisableTotal += 1;
         appendAuditEntry({ action: "auto-expire", serviceId: svc.id });
         changed = true;
@@ -2716,11 +2665,7 @@ setInterval(
 );
 
 function activeExposureCount() {
-  let active = 0;
-  for (const svc of services) {
-    if (effectiveEnabled(state.exposures[svc.id])) active += 1;
-  }
-  return active;
+  return services.reduce((n, svc) => n + (effectiveEnabled(state.exposures[svc.id]) ? 1 : 0), 0);
 }
 
 function renderMetrics() {
@@ -2840,12 +2785,9 @@ async function handleApi(req, res, parsedUrl) {
   }
 
   if (req.method === "POST" && pathname === "/api/admin/disable-all") {
-    let disabled = 0;
+    const disabled = services.filter((svc) => state.exposures[svc.id]?.enabled).length;
     for (const svc of services) {
       const exposure = state.exposures[svc.id];
-      if (exposure && exposure.enabled) {
-        disabled += 1;
-      }
       state.exposures[svc.id] = {
         enabled: false,
         expiresAt: null,
