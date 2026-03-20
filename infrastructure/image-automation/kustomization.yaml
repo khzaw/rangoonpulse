@@ -8,6 +8,4 @@ resources:
   - mmcal-image-policy.yaml
   - rangoon-mapper-image-repository.yaml
   - rangoon-mapper-image-policy.yaml
-  - shelfmark-image-repository.yaml
-  - shelfmark-image-policy.yaml
   - image-update-automation.yaml
