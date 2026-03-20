@@ -188,7 +188,6 @@ Current cluster status: both nodes are functional and schedulable.
 │   ├── repositories/          # Helm repositories
 │   ├── kustomizations/        # App kustomizations
 │   └── cluster-settings.yaml  # Shared non-secret cluster constants
-├── skills/                    # Project-specific agent skills
 ├── talos/                     # Talos machine configuration
 ├── docs/                      # Documentation & runbooks
 └── scripts/                   # Operational scripts

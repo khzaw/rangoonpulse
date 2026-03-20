@@ -25,7 +25,6 @@ continue work without re-discovery.
 - `infrastructure/`: infra components and non-app services
 - `flux/`: Helm repositories + Flux Kustomizations
 - `flux/cluster-settings.yaml`: source of truth for shared non-secret cluster constants used by Flux substitutions
-- `skills/`: project-specific agent skills and session bootstraps
 - `talos/`: Talos machine configuration
 - `docs/`: architectural notes, migration docs, backup planning
 
@@ -54,10 +53,8 @@ continue work without re-discovery.
 
 ## Session Bootstrap (For Agents)
 - On every new session in this repo, read `README.md` and `docs/README.md` after this file before planning or editing.
-- Use the project skill `rangoonpulse-session-bootstrap` when the agent skill catalog exposes it; treat that bootstrap as mandatory for every new session and session takeover.
 - After reading `docs/README.md`, open the focused doc(s) for the task's domain before making recommendations or edits.
 - Do not brute-force every file in `docs/`; use the docs index to pick the relevant subset.
-- When adding, deploying, exposing, or materially changing a service, use the project skill `rangoonpulse-service-deploy` when the agent skill catalog exposes it.
 
 ## Service Change Touch Points
 - When adding, moving, renaming, or materially changing a service, update all relevant operators surfaces in the same
