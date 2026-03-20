@@ -12,10 +12,28 @@ On every new session in `/Users/khz/Code/rangoonpulse`, read:
 
 Then pick the smallest focused set of docs below before planning or editing.
 
+## Knowledge Base
+
+- [`docs/architecture.md`](./architecture.md) for the top-level repo and knowledge map
+- [`docs/knowledge-base-conventions.md`](./knowledge-base-conventions.md) for doc-vs-skill boundaries, front matter conventions, and local checks
+
+## Project-Local Skills
+
+Use the smallest matching repo-local skill when the task clearly fits:
+
+- `rangoonpulse-service-deploy` for adding, exposing, renaming, or materially changing a service
+- `rangoonpulse-upgrade` for image or chart bumps
+- `rangoonpulse-cluster-conventions` for shared cluster settings, placement, storage, ingress/TLS, secrets, and default manifest conventions
+- `rangoonpulse-access-and-edge` for Tailscale, public-edge, share hosts, exposure-control, Transmission VPN routing, and access-path exceptions
+- `rangoonpulse-adguard-dns` for dual AdGuard and LAN DNS changes
+- `rangoonpulse-resource-advisor` for tuning automation and service auto-tuning integration
+
 ## Task Routing
 
 ### Repository-wide configuration
 
+- [`docs/architecture.md`](./architecture.md) for a top-level map of domains and cross-cutting touch points.
+- [`docs/knowledge-base-conventions.md`](./knowledge-base-conventions.md) for the repository knowledge structure and maintenance rules.
 - [`docs/shared-cluster-settings.md`](./shared-cluster-settings.md) when touching base domain, timezone, node names, node IPs,
   ingress VIPs, LAN-service IPs, or Flux post-build substitutions.
 - [`docs/dependency-updates-renovate-and-flux-image-automation.md`](./dependency-updates-renovate-and-flux-image-automation.md)
@@ -28,10 +46,15 @@ Then pick the smallest focused set of docs below before planning or editing.
 - [`docs/adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md) for LAN DNS architecture and router integration.
 - [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS and Flux DNS hardening.
 - [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) and [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for Cloudflare Tunnel and share-host exposure.
+- [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md) for the implemented exposure-control backend/UI behavior and security hardening path.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) when public share-host auth changes.
 - [`docs/travel-center.md`](./travel-center.md) when changing the control panel's travel readiness and remote-life workflow.
 - [`docs/router-dns-rebind-private-a-records.md`](./router-dns-rebind-private-a-records.md) when private `A` records or router DNS behavior are involved.
 - [`docs/transmission-optional-vpn.md`](./transmission-optional-vpn.md) when touching Transmission routing or Gluetun control.
+
+### Cluster incidents and recovery
+
+- [`docs/arm64-node-canal-flexvol-exec-format-error.md`](./arm64-node-canal-flexvol-exec-format-error.md) for the historical ARM64 Canal crashloop incident and recovery steps.
 
 ### Storage, stateful services, and recovery
 
@@ -48,6 +71,7 @@ Then pick the smallest focused set of docs below before planning or editing.
 
 - [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the tuning workflow and apply-PR model.
 - [`docs/homelab-operations-dashboards.md`](./homelab-operations-dashboards.md) for the Grafana operations dashboards.
+- [`docs/dashboards-homepage-glance.md`](./dashboards-homepage-glance.md) for the Glance dashboard, monitors, and widget-specific gotchas.
 - [`docs/gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md) for rollout/change timeline interpretation.
 - [`docs/dns-access-path-dashboard.md`](./dns-access-path-dashboard.md) for DNS and ingress path troubleshooting.
 - [`docs/node-capacity-dashboard.md`](./node-capacity-dashboard.md) for node fit and capacity views.
@@ -60,6 +84,10 @@ Then pick the smallest focused set of docs below before planning or editing.
 - [`docs/secrets-inventory.md`](./secrets-inventory.md) for service-to-secret mapping.
 - [`docs/secrets-management-current-state-options-and-plan.md`](./secrets-management-current-state-options-and-plan.md) for the SOPS and age operating model.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) for share-host auth behavior.
+
+### Operations and commands
+
+- [`docs/ops-command-cheatsheet.md`](./ops-command-cheatsheet.md) for day-2 command snippets and common triage flows.
 
 ### Service-specific guides
 

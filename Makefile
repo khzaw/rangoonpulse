@@ -2,6 +2,7 @@
 .PHONY: reconcile reconcile-all deploy-blog deploy-mmcal
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
+.PHONY: check-docs
 
 CLUSTER_SETTINGS_FILE ?= flux/cluster-settings.yaml
 PRIMARY_NODE := $(shell awk '/^  PRIMARY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))
@@ -91,3 +92,6 @@ talos-dashboard-pi: ## Open Talos dashboard for Pi node
 
 validate: ## Dry-run validate a manifest (usage: make validate FILE=apps/blog/helmrelease.yaml)
 	kubectl apply --dry-run=client -f $(FILE)
+
+check-docs: ## Validate docs and skill structure
+	python3 scripts/check_docs.py
