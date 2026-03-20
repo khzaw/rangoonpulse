@@ -24,7 +24,7 @@ This doc defines the current split between service update automation and static-
 
 ## Renovate Guardrails
 - PR concurrency limited to avoid large first-run floods
-- No dependency dashboard because this repository keeps GitHub Issues disabled
+- Dependency dashboard enabled through GitHub Issues
 - Static-site image tags are excluded from Renovate:
   - `/Users/khz/Code/rangoonpulse/apps/blog/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/mmcal/helmrelease.yaml`

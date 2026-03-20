@@ -4,7 +4,7 @@
     "config:recommended"
   ],
   "timezone": "Asia/Singapore",
-  "dependencyDashboard": false,
+  "dependencyDashboard": true,
   "labels": [
     "dependencies",
     "renovate"
