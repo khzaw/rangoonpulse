@@ -31,6 +31,7 @@ This doc defines the current split between service update automation and static-
   - `/Users/khz/Code/rangoonpulse/apps/rangoon-mapper/helmrelease.yaml`
 - The intentionally pinned `alexfozor/flaresolverr` image is excluded from Renovate
 - Generated Flux install manifests under `flux/flux-system/**` are ignored
+- `controlpanel.khzaw.dev` can dispatch the Renovate workflow and link matching open PRs from the updates tab
 
 ## Flux Image Automation Scope
 - GitOps path: `/Users/khz/Code/rangoonpulse/infrastructure/image-automation/`
@@ -55,4 +56,8 @@ gh run list --workflow renovate.yaml --limit 5
 
 # Inspect opened PRs
 gh pr list --search "label:renovate"
+
+# Control panel triggers
+curl -s https://controlpanel.khzaw.dev/api/renovate | jq
+curl -s -X POST https://controlpanel.khzaw.dev/api/renovate/run | jq
 ```

@@ -907,6 +907,30 @@
       .msg {
         min-height: 18px;
       }
+      .updates-toolbar-actions,
+      .updates-links {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .updates-links a,
+      .updates-action-link {
+        color: var(--text-2);
+        text-decoration: none;
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }
+      .updates-links a:hover,
+      .updates-action-link:hover {
+        color: var(--text-1);
+      }
+      .updates-action-note {
+        color: var(--text-3);
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }
       .terminal-shell {
         background: #0a0a0a;
       }

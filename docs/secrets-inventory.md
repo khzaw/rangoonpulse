@@ -20,6 +20,10 @@ Notes:
     - consumed via `envFrom.secretRef`
     - keys: various `*_API_KEY` values used by Glance widgets
 
+- **exposure-control** (`apps/exposure-control/helmrelease.yaml`)
+  - `default/exposure-control-github`
+    - key: `GITHUB_TOKEN` (GitHub API token for dispatching Renovate workflow and listing Renovate runs and PRs)
+
 ### Study Services
 - **obsidian-livesync** (`apps/obsidian-livesync/helmrelease.yaml`)
   - `default/obsidian-livesync-secret`

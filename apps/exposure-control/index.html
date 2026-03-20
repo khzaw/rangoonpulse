@@ -134,6 +134,19 @@
       <section id="updates" class="section" data-page-section>
         <div class="updates-toolbar">
           <div>
+            <h2 class="section-heading">renovate</h2>
+            <div id="renovateMeta" class="updates-meta">Loading Renovate status...</div>
+          </div>
+          <div class="updates-toolbar-actions">
+            <div id="renovateLinks" class="updates-links"></div>
+            <button id="renovateRunBtn" type="button">Run Renovate</button>
+          </div>
+        </div>
+        <div class="content-block">
+          <div id="renovateMsg" class="msg"></div>
+        </div>
+        <div class="updates-toolbar">
+          <div>
             <h2 class="section-heading">image updates</h2>
             <div id="updatesMeta" class="updates-meta">No update check yet.</div>
           </div>
@@ -148,6 +161,7 @@
                 <th>latest</th>
                 <th>status</th>
                 <th>image</th>
+                <th>action</th>
               </tr>
             </thead>
             <tbody id="updatesRows"></tbody>
@@ -172,6 +186,7 @@
                 <th>latest</th>
                 <th>status</th>
                 <th>chart / repo</th>
+                <th>action</th>
               </tr>
             </thead>
             <tbody id="helmUpdatesRows"></tbody>

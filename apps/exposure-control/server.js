@@ -153,6 +153,23 @@ const TRANSMISSION_VPN_WEBUI_URL = expandBaseDomainTokens(
 const RESOURCE_ADVISOR_UI_URL =
   process.env.RESOURCE_ADVISOR_UI_URL ||
   "http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/api/ui.json";
+const GITHUB_API_URL = String(
+  process.env.GITHUB_API_URL || "https://api.github.com",
+).replace(/\/+$/, "");
+const GITHUB_REPOSITORY = String(process.env.GITHUB_REPOSITORY || "").trim();
+const GITHUB_TOKEN = String(process.env.GITHUB_TOKEN || "").trim();
+const RENOVATE_WORKFLOW_FILE = String(
+  process.env.RENOVATE_WORKFLOW_FILE || "renovate.yaml",
+).trim();
+const RENOVATE_WORKFLOW_REF = String(
+  process.env.RENOVATE_WORKFLOW_REF || "master",
+).trim();
+const RENOVATE_STATUS_CACHE_TTL_SECONDS = clampInt(
+  process.env.RENOVATE_STATUS_CACHE_TTL_SECONDS,
+  60,
+  10,
+  600,
+);
 
 const metrics = {
   enableTotal: 0,
@@ -177,6 +194,11 @@ const kubeNodePlatformCache = new Map();
 const registryTagCache = new Map();
 const registryManifestCache = new Map();
 const travelSnapshotCache = {
+  promise: null,
+  snapshot: null,
+  ts: 0,
+};
+const renovateStatusCache = {
   promise: null,
   snapshot: null,
   ts: 0,
@@ -793,6 +815,194 @@ function requestUrl(urlString, options) {
     if (opts.body) req.write(opts.body);
     req.end();
   });
+}
+
+function githubApiPath(pathname) {
+  return GITHUB_API_URL + pathname;
+}
+
+function githubRepositoryPath() {
+  return "/repos/" + GITHUB_REPOSITORY;
+}
+
+function githubHeaders(extra) {
+  return {
+    accept: "application/vnd.github+json",
+    authorization: "Bearer " + GITHUB_TOKEN,
+    "user-agent": "exposure-control/1.0",
+    "x-github-api-version": "2022-11-28",
+    ...(extra || {}),
+  };
+}
+
+function githubConfigured() {
+  return Boolean(GITHUB_TOKEN && GITHUB_REPOSITORY && RENOVATE_WORKFLOW_FILE);
+}
+
+async function githubRequest(pathname, options) {
+  if (!githubConfigured()) {
+    throw new Error("GitHub workflow integration is not configured.");
+  }
+
+  const response = await requestHttps(githubApiPath(pathname), {
+    method: (options && options.method) || "GET",
+    headers: githubHeaders((options && options.headers) || {}),
+    body: options && options.body ? JSON.stringify(options.body) : undefined,
+    timeoutMs: 10000,
+  });
+
+  if (response.statusCode === 204) return null;
+
+  let parsed = null;
+  try {
+    parsed = response.body ? JSON.parse(response.body) : null;
+  } catch {
+    parsed = null;
+  }
+
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    const message =
+      (parsed && (parsed.message || parsed.error)) ||
+      ("GitHub API request failed (" + response.statusCode + ")");
+    throw new Error(message);
+  }
+
+  return parsed;
+}
+
+function pickRenovateDashboardIssue(issues) {
+  return (
+    (issues || []).find(
+      (issue) =>
+        issue &&
+        !issue.pull_request &&
+        String(issue.title || "").trim() === "Dependency Dashboard",
+    ) || null
+  );
+}
+
+function sanitizeRenovatePr(pr) {
+  const labels = Array.isArray(pr && pr.labels)
+    ? pr.labels
+        .map((label) => String((label && label.name) || "").trim())
+        .filter(Boolean)
+    : [];
+  return {
+    number: Number(pr.number || 0),
+    title: String(pr.title || ""),
+    url: String(pr.html_url || ""),
+    headRefName: String((pr && pr.head && pr.head.ref) || ""),
+    updatedAt: String(pr.updated_at || ""),
+    labels,
+  };
+}
+
+function sanitizeWorkflowRun(run) {
+  if (!run) return null;
+  return {
+    id: Number(run.id || 0),
+    runNumber: Number(run.run_number || 0),
+    status: String(run.status || ""),
+    conclusion: String(run.conclusion || ""),
+    createdAt: String(run.created_at || ""),
+    updatedAt: String(run.updated_at || ""),
+    url: String(run.html_url || ""),
+  };
+}
+
+async function buildRenovateStatusSnapshot() {
+  if (!githubConfigured()) {
+    return {
+      configured: false,
+      error: "GitHub workflow integration is not configured.",
+    };
+  }
+
+  const [runsData, pullsData, issuesData] = await Promise.all([
+    githubRequest(
+      githubRepositoryPath() +
+        "/actions/workflows/" +
+        encodeURIComponent(RENOVATE_WORKFLOW_FILE) +
+        "/runs?per_page=10",
+    ),
+    githubRequest(githubRepositoryPath() + "/pulls?state=open&per_page=100"),
+    githubRequest(githubRepositoryPath() + "/issues?state=open&per_page=100"),
+  ]);
+
+  const workflowRuns = Array.isArray(runsData && runsData.workflow_runs)
+    ? runsData.workflow_runs
+    : [];
+  const openPrs = Array.isArray(pullsData) ? pullsData : [];
+  const openIssues = Array.isArray(issuesData) ? issuesData : [];
+  const dashboardIssue = pickRenovateDashboardIssue(openIssues);
+  const renovatePrs = openPrs.filter((pr) => {
+    const headRef = String((pr && pr.head && pr.head.ref) || "");
+    const labels = Array.isArray(pr && pr.labels)
+      ? pr.labels.map((label) => String((label && label.name) || "").trim())
+      : [];
+    return headRef.startsWith("renovate/") || labels.includes("renovate");
+  });
+
+  const activeRun =
+    workflowRuns.find((run) => String(run.status || "") !== "completed") || null;
+  const lastRun = workflowRuns.length ? workflowRuns[0] : null;
+
+  return {
+    configured: true,
+    repository: GITHUB_REPOSITORY,
+    workflowFile: RENOVATE_WORKFLOW_FILE,
+    workflowRef: RENOVATE_WORKFLOW_REF,
+    activeRun: sanitizeWorkflowRun(activeRun),
+    lastRun: sanitizeWorkflowRun(lastRun),
+    openPrCount: renovatePrs.length,
+    openPrs: renovatePrs.map(sanitizeRenovatePr),
+    dashboardIssueUrl: dashboardIssue ? String(dashboardIssue.html_url || "") : "",
+    dashboardIssueNumber: dashboardIssue ? Number(dashboardIssue.number || 0) : 0,
+    checkedAt: nowIso(),
+  };
+}
+
+async function getRenovateStatus(forceRefresh) {
+  const cacheAgeMs = Date.now() - renovateStatusCache.ts;
+  if (
+    !forceRefresh &&
+    renovateStatusCache.snapshot &&
+    cacheAgeMs < RENOVATE_STATUS_CACHE_TTL_SECONDS * 1000
+  ) {
+    return renovateStatusCache.snapshot;
+  }
+
+  if (!renovateStatusCache.promise) {
+    renovateStatusCache.promise = (async () => {
+      const snapshot = await buildRenovateStatusSnapshot();
+      renovateStatusCache.snapshot = snapshot;
+      renovateStatusCache.ts = Date.now();
+      return snapshot;
+    })().finally(() => {
+      renovateStatusCache.promise = null;
+    });
+  }
+
+  return await renovateStatusCache.promise;
+}
+
+async function runRenovateWorkflow() {
+  await githubRequest(
+    githubRepositoryPath() +
+      "/actions/workflows/" +
+      encodeURIComponent(RENOVATE_WORKFLOW_FILE) +
+      "/dispatches",
+    {
+      method: "POST",
+      body: { ref: RENOVATE_WORKFLOW_REF },
+    },
+  );
+  renovateStatusCache.snapshot = null;
+  renovateStatusCache.ts = 0;
+  return {
+    queued: true,
+    message: "Renovate workflow dispatched.",
+  };
 }
 
 function normalizeTravelState(value) {
@@ -2708,6 +2918,27 @@ async function handleApi(req, res, parsedUrl) {
       parsedUrl.searchParams.get("refresh") === "1";
     try {
       const payload = await getHelmUpdates(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/renovate") {
+    const force =
+      parsedUrl.searchParams.get("force") === "1" ||
+      parsedUrl.searchParams.get("refresh") === "1";
+    try {
+      const payload = await getRenovateStatus(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/renovate/run") {
+    try {
+      const payload = await runRenovateWorkflow();
       return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 500, { error: err.message });

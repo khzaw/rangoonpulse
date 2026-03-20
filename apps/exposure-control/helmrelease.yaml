@@ -54,6 +54,11 @@ spec:
               PUBLIC_DOMAIN: ${BASE_DOMAIN}
               SHARE_HOST_PREFIX: ${SHARE_HOST_PREFIX}
               CONTROL_PANEL_HOST: controlpanel.${BASE_DOMAIN}
+              GITHUB_API_URL: https://api.github.com
+              GITHUB_REPOSITORY: khzaw/rangoonpulse
+              RENOVATE_WORKFLOW_FILE: renovate.yaml
+              RENOVATE_WORKFLOW_REF: master
+              RENOVATE_STATUS_CACHE_TTL_SECONDS: "60"
               DEFAULT_EXPIRY_HOURS: "1"
               RECONCILE_INTERVAL_SECONDS: "30"
               DEFAULT_AUTH_MODE: cloudflare-access
@@ -70,6 +75,9 @@ spec:
               TRANSMISSION_VPN_CONTROL_CONFIGMAP: transmission-vpn-control
               TRANSMISSION_VPN_RUNTIME_CONFIGMAP: transmission-vpn-state
               TRANSMISSION_VPN_WEBUI_URL: https://torrent-vpn.${BASE_DOMAIN}
+            envFrom:
+              - secretRef:
+                  name: exposure-control-github
             resources:
               requests:
                 cpu: "20m"

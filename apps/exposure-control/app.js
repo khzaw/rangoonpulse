@@ -36,10 +36,13 @@
       const rowsEl = document.getElementById('rows');
       const auditRowsEl = document.getElementById('auditRows');
       const updatesRowsEl = document.getElementById('updatesRows');
+      const renovateMetaEl = document.getElementById('renovateMeta');
+      const renovateLinksEl = document.getElementById('renovateLinks');
       const vpnMetaEl = document.getElementById('vpnMeta');
       const transmissionPanelEl = document.getElementById('transmissionPanel');
       const msgEl = document.getElementById('msg');
       const vpnMsgEl = document.getElementById('vpnMsg');
+      const renovateMsgEl = document.getElementById('renovateMsg');
       const updatesMsgEl = document.getElementById('updatesMsg');
       const updatesMetaEl = document.getElementById('updatesMeta');
       const travelMsgEl = document.getElementById('travelMsg');
@@ -51,6 +54,7 @@
       const travelVpnBtn = document.getElementById('travelVpnBtn');
       const travelDisableSharesBtn = document.getElementById('travelDisableSharesBtn');
       const travelExposureLink = document.getElementById('travelExposureLink');
+      const renovateRunBtn = document.getElementById('renovateRunBtn');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
       const helmUpdatesRowsEl = document.getElementById('helmUpdatesRows');
       const helmUpdatesMsgEl = document.getElementById('helmUpdatesMsg');
@@ -67,6 +71,7 @@
         services: [],
         audit: [],
         vpn: null,
+        renovate: null,
         updates: null,
         helmUpdates: null,
         travel: null,
@@ -88,6 +93,10 @@
 
       function setVpnMsg(text, isError) {
         setMessage(vpnMsgEl, text, isError);
+      }
+
+      function setRenovateMsg(text, isError) {
+        setMessage(renovateMsgEl, text, isError);
       }
 
       function setUpdatesMsg(text, isError) {
@@ -208,6 +217,114 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function normalizeMatchToken(value) {
+        return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      }
+
+      function normalizeRepoName(value) {
+        return String(value || '').replace(/\.git$/i, '').trim();
+      }
+
+      function prMatchScore(pr, item, mode) {
+        const haystack = normalizeMatchToken(String(pr && pr.title || '') + ' ' + String(pr && pr.headRefName || ''));
+        if (!haystack) return 0;
+
+        const candidates = mode === 'image'
+          ? [item && item.imageRepo, item && item.name, item && item.id]
+          : [item && item.chart, item && item.name, item && item.id];
+
+        let best = 0;
+        candidates.forEach((candidate) => {
+          const normalized = normalizeMatchToken(candidate);
+          if (!normalized || normalized.length < 4) return;
+          if (haystack.includes(normalized)) best = Math.max(best, normalized.length);
+        });
+        return best;
+      }
+
+      function findMatchingRenovatePr(item, mode) {
+        const prs = dashboardState.renovate && Array.isArray(dashboardState.renovate.openPrs)
+          ? dashboardState.renovate.openPrs
+          : [];
+        let best = null;
+        let bestScore = 0;
+        prs.forEach((pr) => {
+          const score = prMatchScore(pr, item, mode);
+          if (score > bestScore) {
+            best = pr;
+            bestScore = score;
+          }
+        });
+        return bestScore > 0 ? best : null;
+      }
+
+      function renderRenovateStatus(payload) {
+        const renovate = payload || null;
+        dashboardState.renovate = renovate;
+        renovateLinksEl.innerHTML = '';
+
+        if (!renovate || !renovate.configured) {
+          renovateMetaEl.textContent = renovate && renovate.error ? renovate.error : 'Renovate is not configured.';
+          renovateRunBtn.disabled = true;
+          return;
+        }
+
+        const meta = [];
+        const activeRun = renovate.activeRun || null;
+        const lastRun = activeRun || renovate.lastRun || null;
+        meta.push('Run: ' + (lastRun ? (lastRun.status === 'completed' ? (lastRun.conclusion || 'completed') : lastRun.status) : 'idle'));
+        if (lastRun && lastRun.updatedAt) meta.push('Updated: ' + fmtDateTime(lastRun.updatedAt));
+        meta.push('Open PRs: ' + String(renovate.openPrCount || 0));
+        renovateMetaEl.textContent = meta.join(' | ');
+        renovateRunBtn.disabled = Boolean(activeRun);
+
+        const links = [];
+        if (renovate.dashboardIssueUrl) {
+          links.push('<a href="' + escapeHtml(renovate.dashboardIssueUrl) + '" target="_blank" rel="noreferrer">Dependency Dashboard</a>');
+        }
+        if (lastRun && lastRun.url) {
+          links.push('<a href="' + escapeHtml(lastRun.url) + '" target="_blank" rel="noreferrer">Latest Run</a>');
+        }
+        if (renovate.repository) {
+          links.push('<a href="https://github.com/' + escapeHtml(normalizeRepoName(renovate.repository)) + '/pulls?q=is%3Apr+is%3Aopen+label%3Arenovate" target="_blank" rel="noreferrer">Open PRs</a>');
+        }
+        renovateLinksEl.innerHTML = links.join(' · ');
+        if (dashboardState.updates) renderUpdates(dashboardState.updates);
+        if (dashboardState.helmUpdates) renderHelmUpdates(dashboardState.helmUpdates);
+      }
+
+      async function loadRenovateStatus(options) {
+        const force = Boolean(options && options.force);
+        try {
+          const path = force ? '/api/renovate?force=1' : '/api/renovate';
+          renderRenovateStatus(await request(path, 'GET'));
+          if (force) {
+            const activeRun = dashboardState.renovate && dashboardState.renovate.activeRun;
+            setRenovateMsg(activeRun ? 'Renovate workflow is running.' : 'Renovate status refreshed.');
+          }
+        } catch (err) {
+          renderRenovateStatus({ configured: false, error: err.message });
+          if (force) setRenovateMsg(err.message, true);
+        }
+      }
+
+      async function runRenovate() {
+        renovateRunBtn.disabled = true;
+        setRenovateMsg('Dispatching Renovate workflow...');
+        try {
+          const payload = await request('/api/renovate/run', 'POST', {});
+          setRenovateMsg(payload.message || 'Renovate workflow dispatched.');
+          await loadRenovateStatus({ force: true });
+          setTimeout(() => {
+            loadRenovateStatus({ force: true }).catch(() => {});
+          }, 5000);
+        } catch (err) {
+          setRenovateMsg(err.message, true);
+        } finally {
+          renovateRunBtn.disabled = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
+        }
       }
 
       function renderInlineMarkdown(value) {
@@ -966,18 +1083,25 @@
         updatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="5" class="empty-state">No update rows available.</td>';
+          tr.innerHTML = '<td colspan="6" class="empty-state">No update rows available.</td>';
           updatesRowsEl.appendChild(tr);
         } else {
           items.forEach((item) => {
             const tr = document.createElement('tr');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
+            const matchingPr = findMatchingRenovatePr(item, 'image');
+            const actionHtml = matchingPr
+              ? '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>'
+              : (item.status === 'update'
+                  ? '<span class="updates-action-note">No PR yet</span>'
+                  : '<span class="updates-action-note">—</span>');
             tr.innerHTML =
               '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
               '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>';
+              '<td><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>' +
+              '<td class="updates-cell-center">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
         }
@@ -1032,18 +1156,25 @@
         helmUpdatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="5" class="empty-state">No helm chart rows available.</td>';
+          tr.innerHTML = '<td colspan="6" class="empty-state">No helm chart rows available.</td>';
           helmUpdatesRowsEl.appendChild(tr);
         } else {
           items.forEach((item) => {
             const tr = document.createElement('tr');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
+            const matchingPr = findMatchingRenovatePr(item, 'helm');
+            const actionHtml = matchingPr
+              ? '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>'
+              : (item.status === 'update'
+                  ? '<span class="updates-action-note">No PR yet</span>'
+                  : '<span class="updates-action-note">—</span>');
             tr.innerHTML =
               '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
               '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td><div class="updates-version">' + (item.chart || '—') + '</div><div class="updates-sub">' + (item.repo || '—') + (item.detail ? ' · ' + item.detail : '') + '</div></td>';
+              '<td><div class="updates-version">' + (item.chart || '—') + '</div><div class="updates-sub">' + (item.repo || '—') + (item.detail ? ' · ' + item.detail : '') + '</div></td>' +
+              '<td class="updates-cell-center">' + actionHtml + '</td>';
             helmUpdatesRowsEl.appendChild(tr);
           });
         }
@@ -1090,13 +1221,14 @@
         }
 
         try {
-          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, travelData] = await Promise.allSettled([
+          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
             request('/api/transmission-vpn', 'GET'),
             request('/api/tuning', 'GET'),
             request('/api/image-updates', 'GET'),
             request('/api/helm-updates', 'GET'),
+            request('/api/renovate', 'GET'),
             request('/api/travel', 'GET'),
           ]);
 
@@ -1142,6 +1274,13 @@
             renderHelmUpdates({ items: [] });
             setHelmUpdatesMsg(helmUpdatesData.reason.message, true);
           }
+          if (renovateData.status === 'fulfilled') {
+            renderRenovateStatus(renovateData.value);
+            if (!silent) setRenovateMsg('');
+          } else {
+            renderRenovateStatus({ configured: false, error: renovateData.reason.message });
+            if (!silent) setRenovateMsg(renovateData.reason.message, true);
+          }
           if (travelData && travelData.status === 'fulfilled') {
             dashboardState.travel = travelData.value;
             renderTravel(dashboardState.travel);
@@ -1164,6 +1303,7 @@
       refreshAllBtn.onclick = () => loadDashboard();
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
+      renovateRunBtn.onclick = () => runRenovate();
 
       emergencyBtn.onclick = async () => {
         if (!confirm('Disable ALL temporary exposures?')) return;
