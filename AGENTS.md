@@ -270,6 +270,9 @@ Important external-dns behavior:
   - Cloudflare should bypass cache on update-critical HTML/routes.
   - Cloudflare should cache hashed/static assets (css/js/fonts/images) aggressively.
 - Publish workflows in source repos can purge Cloudflare update-critical URLs when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID` secrets are set.
+- Static-site style image automation is intentionally narrow:
+  - Flux image automation writes direct Git commits only for `blog`, `mmcal`, and `rangoon-mapper`
+  - ordinary cluster service image/chart maintenance should go through Renovate PRs instead
 
 ## Storage Conventions and Current Decisions
 - Default StorageClass intent: `truenas-nfs` (NFS-backed default), not `local-path`.
@@ -480,6 +483,7 @@ Examples:
 ## Useful Reference Docs
 - `docs/README.md`
 - `docs/shared-cluster-settings.md`
+- `docs/dependency-updates-renovate-and-flux-image-automation.md`
 - `docs/resource-advisor-phase1-phase2.md`
 - `docs/networking-current-state-and-simplification.md`
 - `docs/pangolin-fit-analysis.md`

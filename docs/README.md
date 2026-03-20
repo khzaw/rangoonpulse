@@ -18,6 +18,8 @@ Then pick the smallest focused set of docs below before planning or editing.
 
 - [`docs/shared-cluster-settings.md`](./shared-cluster-settings.md) when touching base domain, timezone, node names, node IPs,
   ingress VIPs, LAN-service IPs, or Flux post-build substitutions.
+- [`docs/dependency-updates-renovate-and-flux-image-automation.md`](./dependency-updates-renovate-and-flux-image-automation.md)
+  for service update PR automation and the static-site image automation split.
 
 ### Networking, ingress, DNS, and access
 

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "Asia/Singapore",
+  "dependencyDashboard": true,
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "enabledManagers": [
+    "flux",
+    "github-actions",
+    "helm-values"
+  ],
+  "ignorePaths": [
+    "flux/flux-system/**"
+  ],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "flux": {
+    "managerFilePatterns": [
+      "/(^|/)(apps|core|infrastructure)/.+\\.ya?ml$/",
+      "/(^|/)flux/repositories/.+\\.ya?ml$/"
+    ]
+  },
+  "helm-values": {
+    "managerFilePatterns": [
+      "/(^|/)(apps|core|infrastructure)/.+(helmrelease|values)\\.ya?ml$/"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Keep static-site artifact promotion on Flux image automation.",
+      "matchManagers": [
+        "helm-values"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchFileNames": [
+        "apps/blog/helmrelease.yaml",
+        "apps/mmcal/helmrelease.yaml",
+        "apps/rangoon-mapper/helmrelease.yaml"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Keep the intentionally pinned Flaresolverr fork manual.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "alexfozor/flaresolverr"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group Helm chart patch and minor updates.",
+      "matchManagers": [
+        "flux"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "helm chart patch and minor updates"
+    },
+    {
+      "description": "Group GitHub Actions patch and minor updates.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "github actions patch and minor updates"
+    }
+  ]
+}
