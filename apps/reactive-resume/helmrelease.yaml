@@ -36,7 +36,7 @@ spec:
           main:
             image:
               repository: ghcr.io/amruthpillai/reactive-resume
-              tag: "v5.0.12"
+              tag: "v5.0.13"
             env:
               - name: TZ
                 value: "${TIMEZONE}"
