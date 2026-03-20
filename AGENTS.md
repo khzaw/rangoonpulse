@@ -42,6 +42,10 @@ continue work without re-discovery.
   node name, IP, VIP, or timezone value across many manifests.
 - When using Flux post-build substitutions, escape runtime-literal placeholders as `$${VAR}` so Flux renders literal
   `${VAR}` into the applied manifest.
+- This repo may have multiple agents or a human editing in parallel. A dirty worktree is not a problem by itself.
+  Do not revert or stage unrelated changes just to make it clean.
+- Before commit/push, inspect `git status` and stage only your task's hunks. Use `git add -p` when a file contains mixed
+  ownership or unrelated edits.
 
 ## Documentation Hygiene (For Agents)
 - If you change conventions (networking/access model, DNS/hostnames, storage classes, secrets patterns, app charts),
@@ -54,6 +58,9 @@ continue work without re-discovery.
 ## Session Bootstrap (For Agents)
 - On every new session in this repo, read `README.md` and `docs/README.md` after this file before planning or editing.
 - After reading `docs/README.md`, open the focused doc(s) for the task's domain before making recommendations or edits.
+- After the startup reading, treat the shared-worktree skill at `.agents/skills/rangoonpulse-shared-worktree/` as
+  baseline behavior for the rest of the session: unrelated edits may belong to other agents or the user, and should be
+  left alone unless they directly overlap the assigned task.
 - Do not brute-force every file in `docs/`; use the docs index to pick the relevant subset.
 
 ## Service Change Touch Points

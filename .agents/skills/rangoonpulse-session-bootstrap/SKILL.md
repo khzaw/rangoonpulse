@@ -33,6 +33,8 @@ Then use `/Users/khz/Code/rangoonpulse/docs/README.md` to choose focused docs:
 - If work began before bootstrapping, stop and read the startup trio before continuing.
 - Do not start with manifest edits before reading the docs trio above.
 - Do not brute-force every file in `docs/`; use the docs index to target the relevant material.
+- After the startup reading, carry `/Users/khz/Code/rangoonpulse/.agents/skills/rangoonpulse-shared-worktree/SKILL.md`
+  as mandatory baseline behavior for the rest of the session.
 - In the first substantive update, state which focused docs were consulted and the constraints they impose.
 - If the task changes an operating convention, update `docs/README.md` and the focused doc that owns that convention in the same change.
 - If no focused doc exists for a recurring operational area, add one and link it from `docs/README.md` and `AGENTS.md`.
