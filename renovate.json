@@ -15,7 +15,10 @@
     "helm-values"
   ],
   "ignorePaths": [
-    "flux/flux-system/**"
+    "flux/flux-system/**",
+    "apps/blog/**",
+    "apps/mmcal/**",
+    "apps/rangoon-mapper/**"
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
@@ -31,21 +34,6 @@
     ]
   },
   "packageRules": [
-    {
-      "description": "Keep static-site artifact promotion on Flux image automation.",
-      "matchManagers": [
-        "helm-values"
-      ],
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchFileNames": [
-        "apps/blog/helmrelease.yaml",
-        "apps/mmcal/helmrelease.yaml",
-        "apps/rangoon-mapper/helmrelease.yaml"
-      ],
-      "enabled": false
-    },
     {
       "description": "Keep the intentionally pinned Flaresolverr fork manual.",
       "matchDatasources": [
