@@ -327,6 +327,14 @@
         }
       }
 
+      async function runRenovateScan(label) {
+        const targetLabel = String(label || '').trim();
+        if (targetLabel) {
+          setRenovateMsg('Dispatching Renovate workflow for ' + targetLabel + '...');
+        }
+        await runRenovate();
+      }
+
       function renderInlineMarkdown(value) {
         return escapeHtml(value)
           .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -1080,6 +1088,8 @@
 
       function renderUpdates(payload) {
         const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
+        const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
         updatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
@@ -1090,11 +1100,18 @@
             const tr = document.createElement('tr');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
             const matchingPr = findMatchingRenovatePr(item, 'image');
-            const actionHtml = matchingPr
-              ? '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>'
-              : (item.status === 'update'
-                  ? '<span class="updates-action-note">No PR yet</span>'
-                  : '<span class="updates-action-note">—</span>');
+            let actionHtml = '<span class="updates-action-note">—</span>';
+            if (matchingPr) {
+              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>';
+            } else if (item.status === 'update') {
+              if (!renovateConfigured) {
+                actionHtml = '<span class="updates-action-note">Renovate off</span>';
+              } else if (renovateActiveRun) {
+                actionHtml = '<span class="updates-action-note">Scan running</span>';
+              } else {
+                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="image" data-item-label="' + escapeHtml(item.name || item.id || 'service') + '">Run scan</button>';
+              }
+            }
             tr.innerHTML =
               '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
@@ -1153,6 +1170,8 @@
 
       function renderHelmUpdates(payload) {
         const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
+        const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
         helmUpdatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
@@ -1163,11 +1182,18 @@
             const tr = document.createElement('tr');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
             const matchingPr = findMatchingRenovatePr(item, 'helm');
-            const actionHtml = matchingPr
-              ? '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>'
-              : (item.status === 'update'
-                  ? '<span class="updates-action-note">No PR yet</span>'
-                  : '<span class="updates-action-note">—</span>');
+            let actionHtml = '<span class="updates-action-note">—</span>';
+            if (matchingPr) {
+              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>';
+            } else if (item.status === 'update') {
+              if (!renovateConfigured) {
+                actionHtml = '<span class="updates-action-note">Renovate off</span>';
+              } else if (renovateActiveRun) {
+                actionHtml = '<span class="updates-action-note">Scan running</span>';
+              } else {
+                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="helm" data-item-label="' + escapeHtml(item.name || item.id || 'chart') + '">Run scan</button>';
+              }
+            }
             tr.innerHTML =
               '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
@@ -1304,6 +1330,26 @@
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
+      updatesRowsEl.onclick = async (event) => {
+        const button = event.target.closest('[data-renovate-scan]');
+        if (!button) return;
+        button.disabled = true;
+        try {
+          await runRenovateScan(button.dataset.itemLabel || 'service update');
+        } finally {
+          button.disabled = false;
+        }
+      };
+      helmUpdatesRowsEl.onclick = async (event) => {
+        const button = event.target.closest('[data-renovate-scan]');
+        if (!button) return;
+        button.disabled = true;
+        try {
+          await runRenovateScan(button.dataset.itemLabel || 'chart update');
+        } finally {
+          button.disabled = false;
+        }
+      };
 
       emergencyBtn.onclick = async () => {
         if (!confirm('Disable ALL temporary exposures?')) return;
