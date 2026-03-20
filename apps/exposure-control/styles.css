@@ -831,6 +831,13 @@
       .updates-cell-center {
         vertical-align: middle;
       }
+      .updates-context-cell {
+        width: 24%;
+      }
+      .updates-action-cell {
+        width: 1%;
+        white-space: nowrap;
+      }
       .audit-action {
         font-size: 12px;
         font-weight: 500;
@@ -930,6 +937,7 @@
         color: var(--text-3);
         font-size: 12px;
         font-family: var(--font-mono);
+        white-space: nowrap;
       }
       .updates-action-btn {
         min-height: 28px;
@@ -938,6 +946,7 @@
         font-size: 11px;
         font-family: var(--font-mono);
         color: var(--text-2);
+        white-space: nowrap;
       }
       .updates-action-btn:hover {
         color: var(--text-1);

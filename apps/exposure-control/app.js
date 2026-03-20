@@ -1117,8 +1117,8 @@
               '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
               '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>' +
-              '<td class="updates-cell-center">' + actionHtml + '</td>';
+              '<td class="updates-context-cell"><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>' +
+              '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
         }
@@ -1199,8 +1199,8 @@
               '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
               '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td><div class="updates-version">' + (item.chart || '—') + '</div><div class="updates-sub">' + (item.repo || '—') + (item.detail ? ' · ' + item.detail : '') + '</div></td>' +
-              '<td class="updates-cell-center">' + actionHtml + '</td>';
+              '<td class="updates-context-cell"><div class="updates-version">' + (item.chart || '—') + '</div><div class="updates-sub">' + (item.repo || '—') + (item.detail ? ' · ' + item.detail : '') + '</div></td>' +
+              '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
             helmUpdatesRowsEl.appendChild(tr);
           });
         }
