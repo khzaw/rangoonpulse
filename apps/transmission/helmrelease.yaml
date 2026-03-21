@@ -51,7 +51,7 @@ spec:
             enabled: false
             image:
               repository: qmcgaw/gluetun
-              tag: v3.40.0
+              tag: v3.41.1
             env:
               TZ: "${TIMEZONE}"
               VPN_SERVICE_PROVIDER: custom
