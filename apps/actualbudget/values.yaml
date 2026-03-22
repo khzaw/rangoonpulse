@@ -38,7 +38,9 @@ readinessProbe:
 nodeSelector:
   kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
-podSecurityContext: {}
+podSecurityContext:
+  fsGroup: null
+  fsGroupChangePolicy: null
 
 securityContext:
   allowPrivilegeEscalation: false
