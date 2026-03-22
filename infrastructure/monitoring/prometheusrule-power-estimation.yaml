@@ -73,7 +73,7 @@ spec:
               label_replace(
                 max by (instance, nodename) (
                   (
-                    node_hwmon_in_lcrit_alarm
+                    node_hwmon_in_lcrit_alarm_volts
                     * on(instance, chip) group_left(chip_name)
                     node_hwmon_chip_names{chip_name="rpi_volt"}
                   )
