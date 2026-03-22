@@ -7,7 +7,6 @@ resources:
   - helmrelease.yaml
   - helmrelease-blackbox-exporter.yaml
   - monitoring-cname.yaml
-  - external-dns-canary.yaml
   - servicemonitor-kubelet-resource.yaml
   - grafana-dashboard-gitops-change-timeline.yaml
   - grafana-dashboard-dns-access-paths.yaml
