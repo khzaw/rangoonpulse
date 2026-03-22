@@ -14,7 +14,10 @@ spec:
       rules:
         - alert: TrueNASManagementPlaneUnavailable
           expr: >
-            probe_success{target="truenas-api"} == 0
+            probe_success{
+              target="truenas-api",
+              instance="http://${NAS_IP}/api/v2.0/system/version/"
+            } == 0
           for: 2m
           labels:
             severity: critical
@@ -24,7 +27,10 @@ spec:
 
         - alert: TrueNASNFSUnavailable
           expr: >
-            probe_success{target="truenas-nfs"} == 0
+            probe_success{
+              target="truenas-nfs",
+              instance="${NAS_IP}:2049"
+            } == 0
           for: 2m
           labels:
             severity: critical
