@@ -36,7 +36,7 @@ readinessProbe:
   failureThreshold: 6
 
 nodeSelector:
-  kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+  kubernetes.io/hostname: ${UTILITY_NODE_NAME}
 
 podSecurityContext:
   fsGroup: null
