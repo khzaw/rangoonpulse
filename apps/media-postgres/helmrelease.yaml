@@ -63,6 +63,11 @@ spec:
                   secretKeyRef:
                     name: reactive-resume-db-secret
                     key: POSTGRES_PASSWORD
+              - name: SPEEDTEST_TRACKER_DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: speedtest-tracker-secret
+                    key: POSTGRES_PASSWORD
             resources:
               requests:
                 cpu: "300m"
@@ -85,7 +90,7 @@ spec:
           10-init-app-dbs.sh: |
             (
               set -eu
-              echo "Initializing app databases/users (tracearr, reactive_resume) ..."
+              echo "Initializing app databases/users (tracearr, reactive_resume, speedtest_tracker) ..."
 
               # Role: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then
@@ -106,6 +111,15 @@ spec:
               # DB: reactive_resume
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='reactive_resume'" | grep -q 1; then
                 createdb -O reactive_resume reactive_resume
+              fi
+
+              # Role: speedtest_tracker
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='speedtest_tracker'" | grep -q 1; then
+                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE speedtest_tracker LOGIN PASSWORD '$${SPEEDTEST_TRACKER_DB_PASSWORD}'"
+              fi
+              # DB: speedtest_tracker
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='speedtest_tracker'" | grep -q 1; then
+                createdb -O speedtest_tracker speedtest_tracker
               fi
             )
 

@@ -19,5 +19,6 @@ spec:
   targetNamespace: default
   timeout: 5m
   dependsOn:
+    - name: media-postgres
     - name: ingress-nginx
     - name: external-dns

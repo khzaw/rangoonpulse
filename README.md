@@ -103,7 +103,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **Glance** | Dashboard & service hub |
 | **Uptime Kuma** | Uptime monitoring |
 | **Grafana** | Metrics & dashboards |
-| **Speedtest** | Network speed testing |
+| **Speedtest Tracker** | Network speed testing and historical results |
 | **Resource Advisor** | Automated resource tuning |
 
 ### Media & Library

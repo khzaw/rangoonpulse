@@ -66,6 +66,8 @@ Notes:
     - key: `POSTGRES_PASSWORD` (postgres superuser password)
   - `default/tracerr-db-secret`
     - key: `POSTGRES_PASSWORD` (used by init script to create role/db)
+  - `default/speedtest-tracker-secret`
+    - key: `POSTGRES_PASSWORD` (used by init script to create role/db)
 
 - **tracerr** (`apps/tracerr/helmrelease.yaml`)
   - `default/tracerr-db-secret`
@@ -82,6 +84,10 @@ Notes:
   - `default/reactive-resume-app-secret`
     - key: `AUTH_SECRET`
     - key: `PRINTER_TOKEN`
+
+- **speedtest-tracker** (`apps/speedtest/helmrelease.yaml`)
+  - `default/speedtest-tracker-secret`
+    - keys: `APP_KEY`, `POSTGRES_PASSWORD`
 
 - **immich** (`apps/immich/helmrelease.yaml`)
   - `default/immich-db-secret`
