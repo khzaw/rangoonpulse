@@ -42,11 +42,11 @@ spec:
               LOG_HTML: "true"
             resources:
               requests:
-                cpu: 150m
-                memory: 512Mi
+                cpu: "112m"
+                memory: "640Mi"
               limits:
-                cpu: 1000m
-                memory: 2Gi
+                cpu: "750m"
+                memory: "2468Mi"
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
