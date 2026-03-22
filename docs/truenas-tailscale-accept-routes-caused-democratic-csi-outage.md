@@ -190,6 +190,7 @@ That points to a memory-starvation event where NFSv4 server-side copy activity w
 - Keep unused NAS services off. During the incident, `iscsitarget` was enabled even though it had zero configured targets, extents, or target-extents.
 - Preserve userspace headroom on low-memory TrueNAS hosts by capping ARC instead of leaving `zfs_arc_max` unlimited.
 - Avoid negotiating generic `nfsvers=4` from Kubernetes clients on this cluster. `nfsvers=4` allows Linux clients to negotiate up to `4.2`; pinning to `nfsvers=4.1` avoids the `nfsd4_copy` path implicated in this outage pattern.
+- Monitoring now also probes the TrueNAS management plane and NFS port directly, so alerting can fire before democratic-csi fan-out becomes the first obvious symptom.
 
 ### Repo Guardrail Added
 

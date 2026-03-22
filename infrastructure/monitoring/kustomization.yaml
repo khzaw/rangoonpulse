@@ -5,6 +5,7 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - helmrelease.yaml
+  - helmrelease-blackbox-exporter.yaml
   - monitoring-cname.yaml
   - servicemonitor-kubelet-resource.yaml
   - grafana-dashboard-gitops-change-timeline.yaml
@@ -22,4 +23,5 @@ resources:
   - servicemonitor-exposure-control.yaml
   - prometheusrule-exposure-control.yaml
   - prometheusrule-truenas-storage-alerts.yaml
+  - prometheusrule-truenas-host-alerts.yaml
   - alertmanagerconfig-homelab.yaml

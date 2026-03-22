@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: truenas-host-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: truenas-host-alerts.rules
+      interval: 1m
+      rules:
+        - alert: TrueNASManagementPlaneUnavailable
+          expr: >
+            probe_success{target="truenas-api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "TrueNAS management plane is unavailable"
+            description: "The unauthenticated TrueNAS API probe has been failing for 2 minutes. This usually means nginx or middlewared is unhealthy on the NAS, and democratic-csi may fail shortly after."
+
+        - alert: TrueNASNFSUnavailable
+          expr: >
+            probe_success{target="truenas-nfs"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "TrueNAS NFS endpoint is unavailable"
+            description: "The NAS is not accepting TCP connections on port 2049 for 2 minutes. TrueNAS-backed mounts and PVC-backed workloads are at immediate risk."
