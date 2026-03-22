@@ -45,6 +45,17 @@ Rationale:
 - Improves upstream failover behavior and stale-connection handling.
 - Keeps in-cluster service discovery unchanged (`kubernetes cluster.local ...`).
 
+### 2a) Talos Node Nameserver Pinning
+Talos machine configs now pin node-level upstream resolvers to:
+- `1.1.1.1`
+- `1.0.0.1`
+- `9.9.9.9`
+
+Rationale:
+- Image pulls and other node-runtime lookups do not use CoreDNS; they depend on the host resolver path.
+- Pinning Talos nameservers avoids dependence on the router-provided resolver chain for kubelet/containerd traffic.
+- This reduces the chance that registry pulls fail with host-side DNS errors while in-cluster DNS remains healthy.
+
 ### 3) Flux Controller Metrics Scraping
 Added `PodMonitor monitoring/flux-controllers` to scrape `http-prom` endpoints for:
 - `source-controller`

@@ -44,7 +44,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/networking-current-state-and-simplification.md`](./networking-current-state-and-simplification.md) for the current cluster access model.
 - [`docs/lan-access-current-state-and-lean-plan.md`](./lan-access-current-state-and-lean-plan.md) for LAN and Tailscale ingress access.
 - [`docs/adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md) for LAN DNS architecture and router integration.
-- [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS and Flux DNS hardening.
+- [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS, Flux, and Talos node DNS hardening.
 - [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) and [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for Cloudflare Tunnel and share-host exposure.
 - [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md) for the implemented exposure-control backend/UI behavior and security hardening path.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) when public share-host auth changes.
