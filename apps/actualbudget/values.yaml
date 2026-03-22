@@ -21,22 +21,22 @@ livenessProbe:
   httpGet:
     path: /
     port: http
-  initialDelaySeconds: 45
-  periodSeconds: 10
-  timeoutSeconds: 2
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  timeoutSeconds: 5
   failureThreshold: 6
 
 readinessProbe:
   httpGet:
     path: /
     port: http
-  initialDelaySeconds: 20
-  periodSeconds: 10
-  timeoutSeconds: 2
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  timeoutSeconds: 5
   failureThreshold: 6
 
 nodeSelector:
-  kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+  kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
 ingress:
   enabled: true
