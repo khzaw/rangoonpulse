@@ -34,15 +34,6 @@ spec:
         retention: 120h
         alertmanagerConfiguration:
           name: homelab-alerting
-        storage:
-          volumeClaimTemplate:
-            spec:
-              storageClassName: local-path
-              accessModes:
-                - ReadWriteOnce
-              resources:
-                requests:
-                  storage: 1Gi
       config:
         global:
           resolve_timeout: 5m
