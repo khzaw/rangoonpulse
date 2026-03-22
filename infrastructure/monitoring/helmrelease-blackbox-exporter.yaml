@@ -72,5 +72,5 @@ spec:
           url: http://${NAS_IP}/api/v2.0/system/version/
           module: truenas_api_http
         - name: truenas-nfs
-          url: tcp://${NAS_IP}:2049
+          url: ${NAS_IP}:2049
           module: tcp_connect
