@@ -165,3 +165,36 @@ Network:
   - unavailable `democratic-csi` controllers
   - unavailable `democratic-csi` node plugins
   - cluster impact where multiple `truenas-*` PVC-backed pods remain unready
+
+## Second Failure Pattern: TrueNAS Userspace OOM Under NFS Load
+
+Later, the NAS failed again with a different signature:
+
+- the host still answered ping and NFS/RPC on `111` and `2049`
+- the TrueNAS UI/API on `80/443` refused connections
+- `democratic-csi` crashed because its probe to `http://10.0.0.210:80/api/v2.0/system/version/` failed
+
+On-box evidence showed this was **not** pool corruption:
+
+- `zpool status` reported `boot-pool`, `nvme_pool`, and `tank` all `ONLINE`
+- `nginx.service` had been killed by the Linux OOM killer
+- `middlewared` had grown above 2 GiB RSS on a host with about 3.7 GiB usable RAM
+- kernel logs repeatedly showed `nfsd invoked oom-killer` with stack frames in:
+  - `nfsd_copy_file_range`
+  - `nfsd4_copy`
+
+That points to a memory-starvation event where NFSv4 server-side copy activity was the trigger, and the management plane (`nginx` / TrueNAS API) was one of the casualties. When the API dies, `democratic-csi` becomes unavailable and PVC-backed workloads get stuck on restart.
+
+### Practical Mitigations
+
+- Keep unused NAS services off. During the incident, `iscsitarget` was enabled even though it had zero configured targets, extents, or target-extents.
+- Preserve userspace headroom on low-memory TrueNAS hosts by capping ARC instead of leaving `zfs_arc_max` unlimited.
+- Avoid negotiating generic `nfsvers=4` from Kubernetes clients on this cluster. `nfsvers=4` allows Linux clients to negotiate up to `4.2`; pinning to `nfsvers=4.1` avoids the `nfsd4_copy` path implicated in this outage pattern.
+
+### Repo Guardrail Added
+
+The democratic-csi storage classes now use:
+
+- `nfsvers=4.1`
+
+for both HDD-backed and NVMe-backed TrueNAS NFS storage classes. Existing dynamically provisioned PVs should also be patched in-cluster so future remounts use the same version.

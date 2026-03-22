@@ -43,7 +43,7 @@ spec:
         fsType: nfs
       mountOptions:
       - noatime
-      - nfsvers=4
+      - nfsvers=4.1
 
     driver:
       config:
