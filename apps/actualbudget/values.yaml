@@ -36,7 +36,20 @@ readinessProbe:
   failureThreshold: 6
 
 nodeSelector:
-  kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+  kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
 
 ingress:
   enabled: true
