@@ -161,4 +161,7 @@ Network:
 - If the issue repeats after an app upgrade/restart, re-check:
   - TrueNAS Tailscale app settings (`Accept Routes`)
   - `ip route get 10.0.0.197` on the NAS
-
+- Monitoring now includes `PrometheusRule/monitoring/truenas-storage-alerts` to catch:
+  - unavailable `democratic-csi` controllers
+  - unavailable `democratic-csi` node plugins
+  - cluster impact where multiple `truenas-*` PVC-backed pods remain unready

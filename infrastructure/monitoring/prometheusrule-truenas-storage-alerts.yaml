@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: truenas-storage-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: truenas-storage-alerts.rules
+      interval: 1m
+      rules:
+        - alert: TrueNASCSIControllerUnavailable
+          expr: >
+            max by (deployment) (
+              kube_deployment_status_replicas_unavailable{
+                namespace="democratic-csi",
+                deployment=~"democratic-csi-(hdd|nvme)-controller"
+              }
+            ) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "TrueNAS CSI controller is unavailable"
+            description: "The democratic-csi controller {{ $labels.deployment }} has unavailable replicas for 5 minutes. Provisioning and mount operations against TrueNAS-backed storage may fail."
+
+        - alert: TrueNASCSINodePluginUnavailable
+          expr: >
+            max by (daemonset) (
+              kube_daemonset_status_number_unavailable{
+                namespace="democratic-csi",
+                daemonset=~"democratic-csi-(hdd|nvme)-node"
+              }
+            ) > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "TrueNAS CSI node plugin is unavailable"
+            description: "The democratic-csi node daemonset {{ $labels.daemonset }} has unavailable pods for 10 minutes. Existing or new TrueNAS-backed mounts on one or more nodes may be broken."
+
+        - alert: TrueNASStorageBackedWorkloadsUnavailable
+          expr: >
+            count(
+              sum by (namespace, pod) (
+                (
+                  max by (namespace, pod, persistentvolumeclaim) (
+                    kube_pod_spec_volumes_persistentvolumeclaims_info
+                  )
+                  * on(namespace, persistentvolumeclaim) group_left(storageclass)
+                    max by (namespace, persistentvolumeclaim, storageclass) (
+                      kube_persistentvolumeclaim_info{storageclass=~"truenas-.*"}
+                    )
+                )
+                * on(namespace, pod) group_left()
+                  max by (namespace, pod) (
+                    kube_pod_status_phase{phase=~"Pending|Running"} == 1
+                  )
+                * on(namespace, pod) group_left()
+                  (
+                    1 - max by (namespace, pod) (
+                      kube_pod_status_ready{condition="true"}
+                    )
+                  )
+              ) > 0
+            ) >= 2
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Multiple TrueNAS-backed workloads are unavailable"
+            description: "At least two Pending or Running pods that use truenas-* PVCs have been unready for 10 minutes. This is a strong signal that TrueNAS or democratic-csi is degraded."

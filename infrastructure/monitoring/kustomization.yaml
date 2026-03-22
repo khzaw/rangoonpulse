@@ -21,3 +21,4 @@ resources:
   - prometheusrule-homelab-ops-dashboards.yaml
   - servicemonitor-exposure-control.yaml
   - prometheusrule-exposure-control.yaml
+  - prometheusrule-truenas-storage-alerts.yaml
