@@ -53,8 +53,9 @@ Current shared metrics:
 
 ## Notes
 
-- These dashboards are built only from metrics already scraped in this cluster: kubelet, kube-state-metrics, Flux controllers, exposure-control, Prometheus, Grafana, and resource-advisor.
-- `nodeExporter` remains disabled, so host-disk IOPS, host filesystem latency, thermals, and hardware-network counters are intentionally out of scope.
+- These dashboards are built from kubelet, kube-state-metrics, Flux controllers, exposure-control, Prometheus, Grafana, resource-advisor, and node-exporter.
+- `nodeExporter` is enabled primarily to surface host hardware signals such as the utility node Raspberry Pi low-voltage alarm on the power dashboard.
+- Host-disk latency and broader hardware tuning are still mostly out of scope for these dashboards unless a panel explicitly uses those series.
 - `Public Edge Overview` reflects the current exposure-control exporter surface. It does not infer per-share identity beyond the totals exported today.
 
 ## Verification

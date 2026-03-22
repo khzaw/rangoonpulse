@@ -66,6 +66,24 @@ spec:
               * on(node) homelab:node_power_model_cpu_utilization:ratio
             )
 
+        # Surface Raspberry Pi low-voltage alarms from node-exporter hwmon.
+        - record: homelab:node_rpi_low_voltage_alarm
+          expr: >
+            max by (node) (
+              label_replace(
+                max by (instance, nodename) (
+                  (
+                    node_hwmon_in_lcrit_alarm
+                    * on(instance, chip) group_left(chip_name)
+                    node_hwmon_chip_names{chip_name="rpi_volt"}
+                  )
+                  * on(instance) group_left(nodename)
+                  node_uname_info
+                ),
+                "node", "$1", "nodename", "(.*)"
+              )
+            )
+
         - record: homelab:cluster_estimated_power_watts
           expr: sum(homelab:node_estimated_power_watts)
 

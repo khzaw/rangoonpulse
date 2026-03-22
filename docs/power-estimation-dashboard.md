@@ -1,13 +1,15 @@
 # Node Power Estimation Dashboard
 
-This cluster now exposes an estimated node power model in Grafana without adding
-new exporters.
+This cluster now exposes an estimated node power model in Grafana plus a live
+Raspberry Pi low-voltage signal for the utility node.
 
 ## Why Estimate-Only
 
 - There is no smart-plug/UPS wall-power telemetry source in this setup.
-- Node exporter remains disabled by policy in monitoring.
-- The model uses existing Prometheus metrics only, so runtime overhead is minimal.
+- Node exporter is enabled so Grafana can surface the Raspberry Pi utility node's
+  low-voltage alarm before workloads fail.
+- The wattage model still uses existing cluster metrics only, so runtime overhead
+  remains low and the power/cost figures are still estimates.
 - Energy and cost panels are still estimates because the underlying watt values are estimated.
 
 ## GitOps Objects
@@ -38,6 +40,16 @@ Current defaults:
 
 - `talos-7nf-osf`: idle `20W`, max `75W`
 - `talos-uua-g6r`: idle `4W`, max `12W`
+
+## Live Utility-Node Power Health
+
+- `prometheus-node-exporter` now scrapes the Raspberry Pi utility node hardware sensors.
+- The dashboard adds a live low-voltage alarm sourced from the Pi `rpi_volt` hwmon device.
+- A current alarm means the node is presently below its low-voltage threshold.
+- The dashboard also shows whether a low-voltage condition appeared anywhere inside the
+  selected Grafana time range.
+- This low-voltage panel is real hardware telemetry; only the wattage and energy panels
+  remain estimated.
 
 ## Tuning Constants
 
@@ -74,6 +86,9 @@ kubectl get configmap -n monitoring grafana-dashboard-node-power-estimation -o y
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
   wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_estimated_power_watts'
+
+kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
+  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_rpi_low_voltage_alarm'
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
   wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:singapore_household_tariff_sgd_per_kwh'

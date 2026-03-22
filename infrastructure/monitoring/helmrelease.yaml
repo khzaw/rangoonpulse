@@ -133,7 +133,7 @@ spec:
           memory: 256Mi
 
     nodeExporter:
-      enabled: false
+      enabled: true
 
     prometheus-node-exporter:
       resources:

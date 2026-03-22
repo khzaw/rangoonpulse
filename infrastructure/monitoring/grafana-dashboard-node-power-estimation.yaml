@@ -15,9 +15,9 @@ data:
       "title": "Node Power Estimation",
       "timezone": "browser",
       "schemaVersion": 41,
-      "version": 1,
+      "version": 2,
       "refresh": "1m",
-      "tags": ["power", "homelab", "estimated"],
+      "tags": ["power", "homelab", "estimated", "hardware"],
       "time": {
         "from": "now-24h",
         "to": "now"
@@ -85,7 +85,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost uses the Singapore regulated household tariff pinned in Prometheus for `1 January 2026` through `31 March 2026` (`29.11` cents/kWh, GST inclusive)."
+            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost uses the Singapore regulated household tariff pinned in Prometheus for `1 January 2026` through `31 March 2026` (`29.11` cents/kWh, GST inclusive). The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
           }
         },
         {
@@ -433,6 +433,176 @@ data:
             "defaults": {
               "unit": "percentunit",
               "decimals": 2
+            }
+          }
+        },
+        {
+          "id": 12,
+          "type": "stat",
+          "title": "Utility Node Low-Voltage Alarm",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "max(homelab:node_rpi_low_voltage_alarm{node=\"${UTILITY_NODE_NAME}\"}) or on() vector(0)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "Clear",
+                      "color": "green"
+                    },
+                    "1": {
+                      "text": "Low Voltage",
+                      "color": "red"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 13,
+          "type": "stat",
+          "title": "Utility Node Low-Voltage Seen In Range",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "max(max_over_time(homelab:node_rpi_low_voltage_alarm{node=\"${UTILITY_NODE_NAME}\"}[$__range])) or on() vector(0)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "Not Seen",
+                      "color": "green"
+                    },
+                    "1": {
+                      "text": "Seen",
+                      "color": "red"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 14,
+          "type": "timeseries",
+          "title": "Utility Node Low-Voltage Alarm History",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 16,
+            "x": 8,
+            "y": 25
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "expr": "homelab:node_rpi_low_voltage_alarm{node=\"${UTILITY_NODE_NAME}\"}",
+              "legendFormat": "low-voltage alarm"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "max": 1,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
             }
           }
         }
