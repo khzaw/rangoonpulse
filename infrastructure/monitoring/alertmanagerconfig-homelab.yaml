@@ -30,17 +30,11 @@ spec:
           title: >-
             [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}
           message: >-
-            {{ range .Alerts -}}
-            {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
-            {{ if .Annotations.description }}
+            {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}{{ .CommonLabels.alertname }}{{ end }}
+            {{ if .CommonAnnotations.description }}
 
-            {{ .Annotations.description }}
+            {{ .CommonAnnotations.description }}
             {{ end }}
-
-            Labels:
-            {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }}
-            {{ end }}
-            {{ end -}}
           sendResolved: true
       telegramConfigs:
         - botToken:
@@ -48,17 +42,11 @@ spec:
             key: TELEGRAM_BOT_TOKEN
           chatID: 19198668
           message: >-
-            {{ range .Alerts -}}
-            {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
-            {{ if .Annotations.description }}
+            [{{ .Status | toUpper }}] {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}{{ .CommonLabels.alertname }}{{ end }}
+            {{ if .CommonAnnotations.description }}
 
-            {{ .Annotations.description }}
+            {{ .CommonAnnotations.description }}
             {{ end }}
-
-            Labels:
-            {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }}
-            {{ end }}
-            {{ end -}}
           parseMode: Markdown
           sendResolved: true
     - name: "null"
