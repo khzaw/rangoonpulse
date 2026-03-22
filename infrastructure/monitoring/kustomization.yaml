@@ -22,3 +22,4 @@ resources:
   - servicemonitor-exposure-control.yaml
   - prometheusrule-exposure-control.yaml
   - prometheusrule-truenas-storage-alerts.yaml
+  - alertmanagerconfig-homelab.yaml

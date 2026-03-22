@@ -26,7 +26,30 @@ spec:
       retries: 3
   values:
     alertmanager:
-      enabled: false
+      enabled: true
+      alertmanagerSpec:
+        nodeSelector:
+          kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+        replicas: 1
+        retention: 120h
+        alertmanagerConfiguration:
+          name: homelab-alerting
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Gi
+      config:
+        global:
+          resolve_timeout: 5m
+        route:
+          receiver: "null"
+        receivers:
+          - name: "null"
 
     prometheus:
 

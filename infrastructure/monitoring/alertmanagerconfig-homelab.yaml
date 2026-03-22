@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: homelab-alerting
+  namespace: monitoring
+spec:
+  route:
+    receiver: critical-multi
+    groupBy:
+      - alertname
+      - namespace
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    routes:
+      - receiver: critical-multi
+        matchers:
+          - name: severity
+            matchType: "="
+            value: critical
+      - receiver: "null"
+  receivers:
+    - name: critical-multi
+      discordConfigs:
+        - apiURL:
+            name: alertmanager-receivers
+            key: DISCORD_WEBHOOK_URL
+          title: >-
+            [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}
+          message: >-
+            {{ range .Alerts -}}
+            {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
+            {{ if .Annotations.description }}
+
+            {{ .Annotations.description }}
+            {{ end }}
+
+            Labels:
+            {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }}
+            {{ end }}
+            {{ end -}}
+          sendResolved: true
+      telegramConfigs:
+        - botToken:
+            name: alertmanager-receivers
+            key: TELEGRAM_BOT_TOKEN
+          chatID: 19198668
+          message: >-
+            {{ range .Alerts -}}
+            {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
+            {{ if .Annotations.description }}
+
+            {{ .Annotations.description }}
+            {{ end }}
+
+            Labels:
+            {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }}
+            {{ end }}
+            {{ end -}}
+          parseMode: Markdown
+          sendResolved: true
+    - name: "null"
