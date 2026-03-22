@@ -72,6 +72,12 @@
     "description": "Tracerr"
   },
   {
+    "id": "kroki",
+    "name": "Kroki",
+    "target": "http://kroki.default.svc.cluster.local:8000",
+    "description": "Diagram rendering service"
+  },
+  {
     "id": "tunarr",
     "name": "Tunarr",
     "target": "http://tunarr.default.svc.cluster.local:8000",

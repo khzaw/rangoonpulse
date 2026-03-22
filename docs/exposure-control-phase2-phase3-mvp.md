@@ -36,6 +36,7 @@ Default exposure expiry:
   - `share-sonarr.khzaw.dev`
   - `share-radarr.khzaw.dev`
   - `share-tracerr.khzaw.dev`
+  - `share-kroki.khzaw.dev`
   - `share-tunarr.khzaw.dev`
   - `share-vaultwarden.khzaw.dev`
   - `share-immich.khzaw.dev`

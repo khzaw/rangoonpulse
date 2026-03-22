@@ -114,6 +114,8 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}tracerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: ${SHARE_HOST_PREFIX}kroki.${BASE_DOMAIN}
+                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}tunarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}vaultwarden.${BASE_DOMAIN}
