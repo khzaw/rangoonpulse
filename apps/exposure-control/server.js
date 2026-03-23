@@ -1547,15 +1547,20 @@ function resolveLatestSemver(currentTag, tags) {
   const current = parseSemverTag(currentTag);
   if (!current || current.prerelease) return null;
   let best = null;
+  let currentFoundInRegistry = false;
   for (const tag of tags || []) {
     const parsed = parseSemverTag(tag);
     if (!parsed || parsed.prerelease) continue;
+    if (parsed.major === current.major && parsed.minor === current.minor && parsed.patch === current.patch) {
+      currentFoundInRegistry = true;
+    }
     if (!best || compareSemver(parsed, best) > 0) best = parsed;
   }
   if (!best) return null;
+  const updateAvailable = compareSemver(best, current) > 0 || !currentFoundInRegistry;
   return {
     latestTag: best.raw,
-    updateAvailable: compareSemver(best, current) > 0,
+    updateAvailable,
   };
 }
 
