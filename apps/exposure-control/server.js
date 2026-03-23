@@ -1497,8 +1497,14 @@ function isBetterPod(candidate, current) {
 function inferWorkloadId(pod) {
   const labels = (pod && pod.metadata && pod.metadata.labels) || {};
   const instance = labels["app.kubernetes.io/instance"];
-  if (instance) return instance;
   const appName = labels["app.kubernetes.io/name"];
+  if (instance) {
+    if (appName && appName !== instance) {
+      const combined = appName.startsWith(instance) ? appName : instance + "-" + appName;
+      return combined;
+    }
+    return instance;
+  }
   if (appName) return appName;
 
   const owner = (pod && pod.metadata && pod.metadata.ownerReferences && pod.metadata.ownerReferences[0]) || null;
