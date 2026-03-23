@@ -1604,6 +1604,7 @@ function isImageUpdateCacheFresh(cached) {
 async function buildImageUpdateSnapshot() {
   kubePodsCache.clear();
   kubeNodePlatformCache.clear();
+  registryTagCache.clear();
   const selectedPods = new Map();
 
   for (const namespace of IMAGE_UPDATE_NAMESPACES) {

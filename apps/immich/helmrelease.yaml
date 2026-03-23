@@ -142,6 +142,8 @@ spec:
         main:
           containers:
             main:
+              image:
+                tag: v2.5.6
               resources:
                 requests:
                   cpu: "300m"
@@ -162,6 +164,8 @@ spec:
         main:
           containers:
             main:
+              image:
+                tag: v2.5.6
               resources:
                 requests:
                   cpu: "200m"
