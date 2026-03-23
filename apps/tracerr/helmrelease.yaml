@@ -32,7 +32,7 @@ spec:
             image:
               repository: ghcr.io/connorgallopo/tracearr
               # Pin to a known-good release; avoid surprise breakage from :latest.
-              tag: 1.4.23
+              tag: 1.4.24
             env:
               # Required:
               # - tracerr-app-secret (JWT_SECRET, COOKIE_SECRET)
