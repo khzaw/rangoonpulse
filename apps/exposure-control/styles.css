@@ -1045,6 +1045,37 @@
         text-align: center;
         color: var(--text-2);
       }
+      @keyframes shimmer {
+        0% { background-position: -600px 0; }
+        100% { background-position: 600px 0; }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .skeleton-line {
+        display: block;
+        border-radius: 3px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+        background-size: 1200px 100%;
+        animation: shimmer 1.5s infinite linear;
+        pointer-events: none;
+      }
+      button.is-loading {
+        pointer-events: none;
+      }
+      button.is-loading::after {
+        content: '';
+        width: 11px;
+        height: 11px;
+        border: 1.5px solid rgba(255,255,255,0.12);
+        border-top-color: var(--text-2);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        display: inline-block;
+        flex-shrink: 0;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
           animation: none !important;

@@ -260,6 +260,43 @@
         return bestScore > 0 ? best : null;
       }
 
+      function setBtnLoading(btn, on) {
+        if (!btn) return;
+        btn.disabled = Boolean(on);
+        btn.classList.toggle('is-loading', Boolean(on));
+      }
+
+      function skeletonLine(width, height) {
+        return '<span class="skeleton-line" style="width:' + (width || '80%') + ';height:' + (height || '13px') + '"></span>';
+      }
+
+      function skeletonOverviewStrip(count) {
+        let html = '';
+        for (let i = 0; i < (count || 6); i++) {
+          html +=
+            '<section class="overview-segment">' +
+              '<div class="overview-segment-head">' + skeletonLine('64px', '10px') + '</div>' +
+              '<div class="overview-value" style="margin-top:18px">' + skeletonLine('52px', '36px') + '</div>' +
+              '<div class="overview-subtitle" style="margin-top:12px">' + skeletonLine('110px', '10px') + '</div>' +
+              '<div class="overview-meter" style="margin-top:28px"><span class="overview-meter-fill" style="width:0%"></span></div>' +
+            '</section>';
+        }
+        return html;
+      }
+
+      function skeletonTableRows(cols, count) {
+        let html = '';
+        for (let i = 0; i < (count || 4); i++) {
+          const tds = [];
+          for (let c = 0; c < cols; c++) {
+            const w = c === 0 ? '70%' : (c % 2 === 0 ? '50%' : '60%');
+            tds.push('<td>' + skeletonLine(w) + '</td>');
+          }
+          html += '<tr>' + tds.join('') + '</tr>';
+        }
+        return html;
+      }
+
       function renderRenovateStatus(payload) {
         const renovate = payload || null;
         dashboardState.renovate = renovate;
@@ -311,7 +348,7 @@
       }
 
       async function runRenovate() {
-        renovateRunBtn.disabled = true;
+        setBtnLoading(renovateRunBtn, true);
         setRenovateMsg('Dispatching Renovate workflow...');
         try {
           const payload = await request('/api/renovate/run', 'POST', {});
@@ -323,6 +360,7 @@
         } catch (err) {
           setRenovateMsg(err.message, true);
         } finally {
+          renovateRunBtn.classList.remove('is-loading');
           renovateRunBtn.disabled = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
         }
       }
@@ -1016,7 +1054,7 @@
           enableBtn.onclick = async () => {
             try {
               mutationInFlight += 1;
-              enableBtn.disabled = true;
+              setBtnLoading(enableBtn, true);
               await request('/api/services/' + svc.id + '/enable', 'POST', {
                 hours: Number(expirySelect.value),
                 authMode: authSelect.value,
@@ -1036,7 +1074,7 @@
           disableBtn.onclick = async () => {
             try {
               mutationInFlight += 1;
-              disableBtn.disabled = true;
+              setBtnLoading(disableBtn, true);
               await request('/api/services/' + svc.id + '/disable', 'POST');
               setMsg('Disabled ' + svc.id);
               await loadDashboard({ silent: true });
@@ -1133,7 +1171,7 @@
       async function loadUpdates(options) {
         const force = Boolean(options && options.force);
         if (force) {
-          updatesRefreshBtn.disabled = true;
+          setBtnLoading(updatesRefreshBtn, true);
           setLoadState('Checking image updates...');
           setMsg('Checking image updates...');
           setUpdatesMsg('Checking registries...');
@@ -1164,7 +1202,7 @@
             setMsg(err.message, true);
           }
         } finally {
-          if (force) updatesRefreshBtn.disabled = false;
+          if (force) setBtnLoading(updatesRefreshBtn, false);
         }
       }
 
@@ -1215,7 +1253,7 @@
       async function loadHelmUpdates(options) {
         const force = Boolean(options && options.force);
         if (force) {
-          helmUpdatesRefreshBtn.disabled = true;
+          setBtnLoading(helmUpdatesRefreshBtn, true);
           setHelmUpdatesMsg('Checking helm chart repos...');
         }
         try {
@@ -1232,7 +1270,7 @@
         } catch (err) {
           setHelmUpdatesMsg(err.message, true);
         } finally {
-          if (force) helmUpdatesRefreshBtn.disabled = false;
+          if (force) setBtnLoading(helmUpdatesRefreshBtn, false);
         }
       }
 
@@ -1244,6 +1282,15 @@
           setVpnMsg('Refreshing Transmission VPN status...');
           setUpdatesMsg('Loading cached update report...');
           setTravelMsg('Refreshing travel readiness...');
+          setBtnLoading(refreshAllBtn, true);
+          overviewStripEl.innerHTML = skeletonOverviewStrip(7);
+          travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          tuningOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          rowsEl.innerHTML = skeletonTableRows(6, 4);
+          auditRowsEl.innerHTML = skeletonTableRows(4, 3);
+          updatesRowsEl.innerHTML = skeletonTableRows(6, 4);
+          helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
+          tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
         }
 
         try {
@@ -1323,6 +1370,8 @@
         } catch (err) {
           setLoadState(err.message, true);
           if (!silent) setMsg(err.message, true);
+        } finally {
+          if (!silent) setBtnLoading(refreshAllBtn, false);
         }
       }
 
@@ -1355,7 +1404,7 @@
         if (!confirm('Disable ALL temporary exposures?')) return;
         try {
           mutationInFlight += 1;
-          emergencyBtn.disabled = true;
+          setBtnLoading(emergencyBtn, true);
           await request('/api/admin/disable-all', 'POST');
           setMsg('All exposures disabled');
           await loadDashboard({ silent: true });
@@ -1363,7 +1412,7 @@
           setMsg(err.message, true);
         } finally {
           mutationInFlight = Math.max(0, mutationInFlight - 1);
-          emergencyBtn.disabled = false;
+          setBtnLoading(emergencyBtn, false);
         }
       };
 
@@ -1375,8 +1424,8 @@
         if (!confirm(prompt)) return;
         try {
           mutationInFlight += 1;
-          vpnDirectBtn.disabled = true;
-          vpnEnableBtn.disabled = true;
+          setBtnLoading(vpnDirectBtn, true);
+          setBtnLoading(vpnEnableBtn, true);
           setVpnMsg('Applying ' + nextMode + ' mode...');
           const payload = await request('/api/transmission-vpn', 'POST', { mode: nextMode });
           renderTransmissionVpn(payload);
@@ -1386,6 +1435,8 @@
           setVpnMsg(err.message, true);
         } finally {
           mutationInFlight = Math.max(0, mutationInFlight - 1);
+          vpnDirectBtn.classList.remove('is-loading');
+          vpnEnableBtn.classList.remove('is-loading');
           if (transmissionVpnState) renderTransmissionVpn(transmissionVpnState);
         }
       }
@@ -1400,8 +1451,8 @@
           if (!confirm('Disable ALL temporary exposures?')) return;
           try {
             mutationInFlight += 1;
-            travelDisableSharesBtn.disabled = true;
-            emergencyBtn.disabled = true;
+            setBtnLoading(travelDisableSharesBtn, true);
+            setBtnLoading(emergencyBtn, true);
             await request('/api/admin/disable-all', 'POST');
             setTravelMsg('All exposures disabled');
             setMsg('All exposures disabled');
@@ -1410,7 +1461,8 @@
             setTravelMsg(err.message, true);
           } finally {
             mutationInFlight = Math.max(0, mutationInFlight - 1);
-            emergencyBtn.disabled = false;
+            setBtnLoading(travelDisableSharesBtn, false);
+            setBtnLoading(emergencyBtn, false);
           }
         };
       }
