@@ -36,7 +36,7 @@ spec:
           main:
             image:
               repository: ghcr.io/amruthpillai/reactive-resume
-              tag: "v5.0.14"
+              tag: "v5.0.15"
             env:
               - name: TZ
                 value: "${TIMEZONE}"
@@ -108,7 +108,7 @@ spec:
           printer:
             image:
               repository: ghcr.io/browserless/chromium
-              tag: "v2.44.0"
+              tag: "v2.46.0"
             env:
               - name: PORT
                 value: "3001"
