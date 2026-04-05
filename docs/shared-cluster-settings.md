@@ -23,8 +23,10 @@ Current keys:
 - `PRIMARY_NODE_IP`
 - `UTILITY_NODE_IP`
 - `INGRESS_VIP`
+- `IRIS_VIP`
 - `NAS_IP`
 - `ROUTER_IP`
+- `IRIS_MAC_MINI_IP`
 - `ADGUARD_PRIMARY_IP`
 - `ADGUARD_SECONDARY_IP`
 - `LAN_CIDR`
@@ -80,6 +82,7 @@ Good candidates for `cluster-settings`:
 - node names used in selectors and dashboards
 - stable LAN IPs and shared CIDRs
 - ingress VIP and LAN-service IPs
+- dedicated VIPs for special edge exceptions
 
 Do not put these in `cluster-settings`:
 - secrets or credentials

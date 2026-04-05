@@ -7,6 +7,7 @@ Non-negotiables:
 - `*.khzaw.dev` services must work on LAN.
 - The same `*.khzaw.dev` services must work remotely when connected to Tailscale.
 - The same model should extend to non-Kubernetes LAN services such as NAS (`10.0.0.210`) and router (`10.0.0.1`).
+- `iris.khzaw.dev` must support both HTTPS and SSH on the same hostname without per-client SSH config.
 
 ## Environment Snapshot (Current Baseline)
 This repository now uses a unified destination model:
@@ -17,8 +18,13 @@ This repository now uses a unified destination model:
   - MetalLB external IP: `10.0.0.231`
   - Primary ports: `80` and `443`
   - Additional scoped listener: `Service/ingress-nginx-calibre-controller` exposes `9090` on the same VIP (`10.0.0.231`) using MetalLB shared-IP, for `calibre-manage` content path only
+- Dedicated edge exception:
+  - `iris.khzaw.dev` uses dedicated MetalLB VIP `10.0.0.235`
+  - `443` fronts the ordinary ingress-nginx controller through `Service/ingress-nginx-iris-controller`
+  - `22` forwards directly to the Mac mini through `Service/Endpoints iris-ssh-edge -> 10.0.0.66:22`
 - DNS:
   - Cloudflare records for app hostnames resolve to `10.0.0.231` (managed by external-dns)
+  - `iris.khzaw.dev` is the private exception and resolves to `10.0.0.235`
   - LAN clients use AdGuard (`Service/adguard-dns`) at `10.0.0.233` with `Service/adguard-secondary-dns` at `10.0.0.234`
     for recursive resolution/filtering redundancy
   - LAN devices use the same destination IPs
@@ -30,9 +36,10 @@ This repository now uses a unified destination model:
     - advertises `/32` host routes:
       - `10.0.0.38/32` (utility node)
       - `10.0.0.197/32` (Talos node / Kubernetes API)
-      - `10.0.0.231/32` (ingress VIP)
-      - `10.0.0.210/32` (NAS)
-      - `10.0.0.1/32` (router)
+    - `10.0.0.231/32` (ingress VIP)
+    - `10.0.0.210/32` (NAS)
+    - `10.0.0.1/32` (router)
+    - `10.0.0.235/32` (`iris.khzaw.dev` dedicated VIP)
   - Remote tailnet clients reach the same `10.0.0.x` destinations via subnet routing
   - Travel devices can also select that same Connector as a Tailscale exit node so internet traffic egresses through home without changing the private access model
 - LAN devices behind ingress (NAS/router):
@@ -48,18 +55,23 @@ This repository now uses a unified destination model:
 2. `ingress-nginx-calibre-controller` (same MetalLB VIP `10.0.0.231`, port `9090`)
 - Dedicated ingress class `nginx-calibre` for `calibre-manage` explicit `:9090` access to `/content` only.
 
-3. Cloudflare DNS + external-dns
+3. `iris.khzaw.dev` dedicated VIP (`10.0.0.235`)
+- Gives one hostname a unique edge IP so HTTPS and SSH can coexist cleanly.
+- Web traffic still lands on the shared ingress-nginx controller.
+- SSH traffic forwards directly to the Mac mini host.
+
+4. Cloudflare DNS + external-dns
 - Keeps public DNS records aligned with ingress state, pointing app hostnames to `10.0.0.231`.
 
-4. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`; `Service/adguard-secondary-dns`, `10.0.0.234`)
+5. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`; `Service/adguard-secondary-dns`, `10.0.0.234`)
 - Primary + secondary LAN recursive resolvers/filters for client DNS queries.
 - Forwards upstream while preserving the same app destination IP model.
 
-5. Tailscale subnet router + exit node (`Connector`)
+6. Tailscale subnet router + exit node (`Connector`)
 - Enables tailnet clients to reach `10.0.0.x` LAN destinations without a separate ingress proxy.
 - Also provides optional full-tunnel home egress for travel devices while keeping the same private destination model.
 
-6. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
+7. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
 - Allows `nas.khzaw.dev` / `router.khzaw.dev` to terminate trusted TLS at ingress while proxying to LAN IPs.
 
 ### Data Flow
@@ -124,6 +136,8 @@ sequenceDiagram
 - No dual-DNS behavior (no wildcard answers to a Tailscale proxy IP).
 - No separate Tailscale ingress proxy workloads to keep healthy.
 - Easier to reason about when debugging (DNS always points to LAN IPs; connectivity depends on routes).
+- One intentional exception exists:
+  - `iris.khzaw.dev` uses dedicated VIP `10.0.0.235` so the same hostname can support HTTPS and SSH.
 
 ## Guardrails / Known Failure Modes
 - Keep host routes (`/32`) unless you explicitly want the blast radius of advertising the full LAN subnet.

@@ -20,12 +20,16 @@ Open the smallest relevant subset:
 
 ## Current Baseline
 
-- LAN and remote Tailscale clients both target the same ingress VIP: `10.0.0.231`.
+- LAN and remote Tailscale clients usually target the same ingress VIP: `10.0.0.231`.
 - Remote access uses Tailscale subnet routing, not a separate Tailscale ingress proxy.
 - The active `Connector` lives at `/Users/khz/Code/rangoonpulse/infrastructure/tailscale-subnet-router/connector.yaml`.
 - It acts as both subnet router and exit node and advertises `/32` routes for the primary node, utility node, ingress VIP, NAS, and router.
 - Public internet share-host exposure routes through Cloudflare Tunnel via `/Users/khz/Code/rangoonpulse/infrastructure/public-edge/`.
 - `controlpanel.khzaw.dev` is the combined operator cockpit for exposure control, travel readiness, Transmission VPN control, image updates, and tuning UI entry.
+- `iris.khzaw.dev` is the private exception:
+  - dedicated VIP `10.0.0.235`
+  - `443` fronts ingress-nginx for OpenClaw web
+  - `22` forwards directly to the Mac mini SSH service
 
 ## Guardrails
 
@@ -45,6 +49,10 @@ Open the smallest relevant subset:
 - `calibre-manage.khzaw.dev:9090/content` is the explicit-port exception.
   - Use ingress class `nginx-calibre`.
   - Do not add `external-dns` or `cert-manager` annotations on that `nginx-calibre` Ingress.
+- `iris.khzaw.dev` is the dedicated-VIP exception.
+  - DNS ownership lives on `Service/ingress-nginx-iris-controller`, not the Ingress.
+  - Keep `10.0.0.235/32` advertised in the Tailscale subnet-router.
+  - Do not point the hostname back at the shared ingress VIP `10.0.0.231`.
 - Transmission VPN routing has GitOps control config plus runtime-owned state:
   - GitOps control file: `/Users/khz/Code/rangoonpulse/apps/transmission/transmission-vpn-control.yaml`
   - runtime-owned ConfigMap: `default/transmission-vpn-state`

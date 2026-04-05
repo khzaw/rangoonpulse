@@ -20,6 +20,25 @@ GitOps source of truth:
 - `infrastructure/lan-gateway/ingress.yaml`
 - `infrastructure/lan-gateway/router-ingress.yaml`
 
+## Iris Exception
+
+`iris.khzaw.dev` is intentionally not part of the ordinary shared-VIP LAN gateway pattern.
+
+Current working state:
+
+- `iris.khzaw.dev` resolves to dedicated VIP `10.0.0.235`
+- `10.0.0.235:443` routes through ingress-nginx to OpenClaw on `10.0.0.66:18789`
+- `10.0.0.235:22` forwards directly to `10.0.0.66:22`
+
+Why:
+
+- the same hostname must support both browser access and SSH,
+- SSH cannot share the general `10.0.0.231` ingress VIP cleanly,
+- the dedicated VIP avoids client-side SSH aliases or split hostnames.
+
+See:
+- `docs/iris-dedicated-vip.md`
+
 ### Data Path
 ```mermaid
 flowchart LR
@@ -57,4 +76,3 @@ Some router UIs generate absolute redirects/links based on the upstream host. Th
 - `nginx.ingress.kubernetes.io/proxy-redirect-to`
 
 These keep the UI stable under `https://router.khzaw.dev`.
-
