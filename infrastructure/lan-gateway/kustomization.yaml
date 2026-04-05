@@ -6,5 +6,7 @@ namespace: default
 resources:
   - nas-service.yaml
   - router-service.yaml
+  - iris-service.yaml
   - ingress.yaml
   - router-ingress.yaml
+  - iris-ingress.yaml

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/ingress-networking.k8s.io-v1.json
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-gateway-iris
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/hostname: iris.${BASE_DOMAIN}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: iris.${BASE_DOMAIN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: iris-openclaw-lan
+                port:
+                  number: 18789
+  tls:
+    - secretName: iris-openclaw-tls
+      hosts:
+        - iris.${BASE_DOMAIN}
