@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-iris-controller
+  namespace: ingress-nginx
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    khzaw.dev/edge-host: iris
+  annotations:
+    metallb.universe.tf/allow-shared-ip: iris-edge-vip
+    external-dns.alpha.kubernetes.io/hostname: iris.${BASE_DOMAIN}
+spec:
+  type: LoadBalancer
+  loadBalancerIP: ${IRIS_VIP}
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+  ports:
+    - appProtocol: http
+      name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+    - appProtocol: https
+      name: https
+      port: 443
+      protocol: TCP
+      targetPort: https

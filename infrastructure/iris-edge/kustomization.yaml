@@ -2,9 +2,8 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: default
 resources:
-  - nas-service.yaml
-  - router-service.yaml
-  - ingress.yaml
-  - router-ingress.yaml
+  - openclaw-service.yaml
+  - openclaw-ingress.yaml
+  - web-vip-service.yaml
+  - ssh-vip-service.yaml

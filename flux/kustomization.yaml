@@ -74,6 +74,7 @@ resources:
   - ./kustomizations/glance.yaml
   - ./kustomizations/tracerr.yaml
   - ./kustomizations/lan-access.yaml
+  - ./kustomizations/iris-edge.yaml
   - ./kustomizations/vaultwarden-postgres.yaml
   - ./kustomizations/vaultwarden.yaml
   - ./kustomizations/tunarr.yaml

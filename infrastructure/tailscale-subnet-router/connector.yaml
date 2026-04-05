@@ -14,3 +14,4 @@ spec:
       - ${PRIMARY_NODE_IP}/32
       - ${NAS_IP}/32
       - ${INGRESS_VIP}/32
+      - ${IRIS_VIP}/32
