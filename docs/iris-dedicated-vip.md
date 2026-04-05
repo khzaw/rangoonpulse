@@ -91,6 +91,35 @@ The Mac mini remains a private backend. OpenClaw itself should stay in the simpl
 
 OpenClaw does not need to own the certificate or the public hostname edge.
 
+## OpenClaw Authentication Model
+
+OpenClaw on the Mac mini has more than one gate. The dedicated VIP and ingress only solve transport:
+
+- the gateway token authenticates the Control UI session,
+- device pairing still needs approval for that browser/device,
+- allowed origins still gate which browser origins may connect.
+
+In practice that means:
+
+- entering the correct token is not sufficient if the device is still unpaired,
+- `openclaw devices approve` may still be required on the Mac mini,
+- `https://iris.khzaw.dev` and `http://localhost:18789` are different origins and do not share stored Control UI settings,
+- direct browser access to `http://10.0.0.66:18789` is expected to fail unless that origin is explicitly added to `gateway.controlUi.allowedOrigins`.
+
+For the current operating model, `https://iris.khzaw.dev` is the primary UI origin and local tunnel/browser origins are optional break-glass paths only.
+
+## Proxy Behavior
+
+Web traffic reaches OpenClaw through ingress-nginx, so the gateway sees proxied requests rather than local loopback traffic.
+
+Operational implications:
+
+- proxied `iris.khzaw.dev` traffic is not automatically treated as local,
+- OpenClaw may log `Proxy headers detected from untrusted address` unless `gateway.trustedProxies` is configured,
+- this does not break the dedicated VIP design, but it does explain why proxied browser sessions do not get any special local treatment.
+
+`gateway.trustedProxies` is optional. Only add it if OpenClaw features actually depend on local-client detection behind ingress.
+
 ## Operational Notes
 
 - `IRIS_MAC_MINI_IP` must stay stable; use a DHCP reservation.
@@ -105,3 +134,9 @@ OpenClaw does not need to own the certificate or the public hostname edge.
   - `Service/Endpoints iris-ssh-edge`
   - Mac mini `sshd`
   - Tailscale route advertisement for `10.0.0.235/32`
+- If the OpenClaw UI loads but login does not complete, check in this order:
+  - the browser origin is `https://iris.khzaw.dev`
+  - the gateway token was entered for that exact origin
+  - the device is approved on the Mac mini with `openclaw devices list` / `openclaw devices approve`
+  - `gateway.controlUi.allowedOrigins` still contains `https://iris.khzaw.dev`
+  - recent gateway logs for `token_missing`, `pairing required`, `origin not allowed`, or proxy warnings

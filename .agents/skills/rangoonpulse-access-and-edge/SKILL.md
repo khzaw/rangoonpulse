@@ -30,6 +30,7 @@ Open the smallest relevant subset:
   - dedicated VIP `10.0.0.235`
   - `443` fronts ingress-nginx for OpenClaw web
   - `22` forwards directly to the Mac mini SSH service
+  - OpenClaw still enforces token auth, device pairing, and per-origin Control UI settings after the network path is correct
 
 ## Guardrails
 
@@ -53,6 +54,7 @@ Open the smallest relevant subset:
   - DNS ownership lives on `Service/ingress-nginx-iris-controller`, not the Ingress.
   - Keep `10.0.0.235/32` advertised in the Tailscale subnet-router.
   - Do not point the hostname back at the shared ingress VIP `10.0.0.231`.
+  - Do not misdiagnose OpenClaw login failures as ingress failures before checking token state, device approval, and `gateway.controlUi.allowedOrigins`.
 - Transmission VPN routing has GitOps control config plus runtime-owned state:
   - GitOps control file: `/Users/khz/Code/rangoonpulse/apps/transmission/transmission-vpn-control.yaml`
   - runtime-owned ConfigMap: `default/transmission-vpn-state`

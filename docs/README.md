@@ -43,7 +43,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 - [`docs/networking-current-state-and-simplification.md`](./networking-current-state-and-simplification.md) for the current cluster access model.
 - [`docs/lan-access-current-state-and-lean-plan.md`](./lan-access-current-state-and-lean-plan.md) for LAN and Tailscale ingress access.
-- [`docs/iris-dedicated-vip.md`](./iris-dedicated-vip.md) for the dedicated `iris.khzaw.dev` SSH+HTTPS exception.
+- [`docs/iris-dedicated-vip.md`](./iris-dedicated-vip.md) for the dedicated `iris.khzaw.dev` SSH+HTTPS exception and OpenClaw-specific pairing/origin behavior.
 - [`docs/adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md) for LAN DNS architecture and router integration.
 - [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS, Flux, and Talos node DNS hardening.
 - [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) and [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for Cloudflare Tunnel and share-host exposure.

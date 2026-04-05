@@ -59,6 +59,7 @@ This repository now uses a unified destination model:
 - Gives one hostname a unique edge IP so HTTPS and SSH can coexist cleanly.
 - Web traffic still lands on the shared ingress-nginx controller.
 - SSH traffic forwards directly to the Mac mini host.
+- OpenClaw itself still enforces gateway token, device pairing, and allowed-origin checks after traffic reaches the backend.
 
 4. Cloudflare DNS + external-dns
 - Keeps public DNS records aligned with ingress state, pointing app hostnames to `10.0.0.231`.
@@ -138,6 +139,7 @@ sequenceDiagram
 - Easier to reason about when debugging (DNS always points to LAN IPs; connectivity depends on routes).
 - One intentional exception exists:
   - `iris.khzaw.dev` uses dedicated VIP `10.0.0.235` so the same hostname can support HTTPS and SSH.
+  - OpenClaw login behavior is still application-level: token auth and device approval are separate steps.
 
 ## Guardrails / Known Failure Modes
 - Keep host routes (`/32`) unless you explicitly want the blast radius of advertising the full LAN subnet.
