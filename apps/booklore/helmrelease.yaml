@@ -54,11 +54,11 @@ spec:
                     key: DATABASE_PASSWORD
             resources:
               requests:
-                cpu: "84m"
-                memory: "750Mi"
+                cpu: "63m"
+                memory: "938Mi"
               limits:
-                cpu: "422m"
-                memory: "1752Mi"
+                cpu: "316m"
+                memory: "1753Mi"
     service:
       main:
         controller: main
