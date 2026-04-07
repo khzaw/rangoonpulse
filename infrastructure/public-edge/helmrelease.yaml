@@ -89,6 +89,8 @@ spec:
           config.yaml: |
             # Static share host routes point to the in-cluster exposure-control backend.
             ingress:
+              - hostname: ${BASE_DOMAIN}
+                service: http://blog.default.svc.cluster.local:8080
               - hostname: blog.${BASE_DOMAIN}
                 service: http://blog.default.svc.cluster.local:8080
               - hostname: mmcal.${BASE_DOMAIN}
