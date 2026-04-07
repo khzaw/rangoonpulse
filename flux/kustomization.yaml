@@ -18,6 +18,8 @@ resources:
   - ./repositories/prometheus.yaml
   - ./repositories/metrics-server.yaml
   - ./repositories/immich-charts.yaml
+  - ./repositories/stakater-charts.yaml
+
 
   # tell Flux *what* directories in Git to sync
   - ./kustomizations/namespaces.yaml # non-default namespaces (has to come first before objects that make use of them)
@@ -26,6 +28,8 @@ resources:
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/tailscale-operator.yaml
   - ./kustomizations/tailscale-subnet-router.yaml
+  - ./kustomizations/reloader.yaml
+
   - ./kustomizations/cert-manager.yaml
   - ./kustomizations/cert-manager-config.yaml
   - ./kustomizations/external-dns.yaml
