@@ -37,8 +37,9 @@ spec:
     controllers:
       main:
         replicas: 1
-        annotations:
-          reloader.stakater.com/auto: "true"
+        pod:
+          annotations:
+            reloader.stakater.com/auto: "true"
         containers:
           main:
             image:

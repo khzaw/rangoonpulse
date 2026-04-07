@@ -36,8 +36,9 @@ spec:
         serviceAccount:
           name: exposure-control
         strategy: Recreate
-        annotations:
-          reloader.stakater.com/auto: "true"
+        pod:
+          annotations:
+            reloader.stakater.com/auto: "true"
         containers:
           main:
             image:
