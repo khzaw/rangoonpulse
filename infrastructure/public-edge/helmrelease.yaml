@@ -126,6 +126,8 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}calibre-manage.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: ${SHARE_HOST_PREFIX}controlpanel.${BASE_DOMAIN}
+                service: http://exposure-control.default.svc.cluster.local:8080
               - service: http_status:404
 
     persistence:

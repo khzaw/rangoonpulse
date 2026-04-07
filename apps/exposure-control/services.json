@@ -106,5 +106,11 @@
     "name": "Calibre Manage",
     "target": "https://calibre-manage.${BASE_DOMAIN}",
     "description": "Calibre GUI and content server paths"
+  },
+  {
+    "id": "controlpanel",
+    "name": "Control Panel",
+    "target": "https://controlpanel.${BASE_DOMAIN}",
+    "description": "Operator cockpit"
   }
 ]
