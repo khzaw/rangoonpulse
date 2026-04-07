@@ -111,6 +111,6 @@
     "id": "controlpanel",
     "name": "Control Panel",
     "target": "https://controlpanel.${BASE_DOMAIN}",
-    "description": "Operator cockpit"
+    "description": "Operator cockpit!"
   }
 ]
