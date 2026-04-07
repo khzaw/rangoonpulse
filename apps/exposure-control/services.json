@@ -112,5 +112,13 @@
     "name": "Control Panel",
     "target": "https://controlpanel.${BASE_DOMAIN}",
     "description": "Operator cockpit!"
+  },
+  {
+    "id": "iris",
+    "name": "Iris OpenClaw UI",
+    "target": "http://10.0.0.66:18789",
+    "description": "OpenClaw Control UI on Mac mini",
+    "publicHostOverride": "iris.${BASE_DOMAIN}",
+    "authMode": "cloudflare-access"
   }
 ]

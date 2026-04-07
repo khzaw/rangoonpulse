@@ -385,6 +385,9 @@ function effectiveEnabled(exposure) {
 }
 
 function servicePublicHost(service) {
+  if (service.publicHostOverride) {
+    return expandBaseDomainTokens(service.publicHostOverride);
+  }
   return SHARE_HOST_PREFIX + service.id + "." + PUBLIC_DOMAIN;
 }
 
