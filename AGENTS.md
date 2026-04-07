@@ -20,6 +20,7 @@ focused docs under `docs/`, and project-local skills under `.agents/skills/`.
 - Timezone standard: `Asia/Singapore`
 
 ## Repo Invariants
+- Commit Message Format: For monorepos, use the "xxx: commit msg" pattern, where "xxx" is the subsystem or component being changed (e.g., `iris:`, `feat:`).
 - Use GitOps. Do not rely on direct `kubectl apply` for permanent state.
 - `kubectl apply --dry-run=client` is fine for validation.
 - Prefer `HelmRelease` changes over raw manifests.
