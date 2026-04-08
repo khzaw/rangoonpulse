@@ -245,7 +245,7 @@ Implementation status (GitOps DNS ownership):
   - `infrastructure/public-edge/helmrelease.yaml` (`hostname: khzaw.dev` -> `blog.default.svc.cluster.local:8080`)
   - `infrastructure/public-edge/helmrelease.yaml` (`hostname: blog.khzaw.dev` -> `blog.default.svc.cluster.local:8080`)
 - DNS alias ownership:
-  - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/root-cname`, `Service/blog-cname`)
+  - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/root-cname` points apex at the tunnel endpoint; `Service/blog-cname` aliases `blog.khzaw.dev` to `khzaw.dev`)
 - Important:
   - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev`.
   - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: khzaw.dev`.
@@ -255,7 +255,7 @@ Validation target after reconcile:
 - Cloudflare DNS for `khzaw.dev` is `CNAME`/flattened to the tunnel endpoint with external-dns TXT ownership.
 - `dig @1.1.1.1 khzaw.dev` resolves to Cloudflare edge IPs.
 - `https://khzaw.dev` returns `200`.
-- Cloudflare DNS for `blog.khzaw.dev` is `CNAME` to the tunnel endpoint with external-dns TXT ownership.
+- Cloudflare DNS for `blog.khzaw.dev` is a proxied `CNAME` to `khzaw.dev`.
 - `dig @1.1.1.1 blog.khzaw.dev` resolves to Cloudflare edge IPs.
 - `https://blog.khzaw.dev` returns `200`.
 

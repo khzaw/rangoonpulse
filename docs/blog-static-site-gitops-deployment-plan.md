@@ -51,6 +51,7 @@ flowchart LR
 - `khzaw.dev`
 - `blog.khzaw.dev`
 - Public DNS points at Cloudflare Tunnel for internet reachability.
+- `blog.khzaw.dev` is a DNS alias to `khzaw.dev`; this does not itself redirect the browser URL.
 - Private ingress remains on `blog.khzaw.dev` for LAN/Tailscale access.
 
 ### Private
@@ -119,6 +120,7 @@ Pros:
 - Ingress host: `blog.khzaw.dev` for the private/LAN path only.
 - TLS secret: `blog-tls` with cert-manager issuer `letsencrypt-prod`.
 - Do not attach public apex/blog external-dns annotations to the Ingress; public DNS is owned by `infrastructure/public-edge/share-hosts-cname.yaml`.
+- Keep the cloudflared hostname route for `blog.khzaw.dev` even when public DNS aliases it to `khzaw.dev`, because requests still arrive with `Host: blog.khzaw.dev`.
 
 ### Flux Image Automation Resources
 - `ImageRepository`: points to GHCR blog image.
