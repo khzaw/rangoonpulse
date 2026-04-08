@@ -4,14 +4,14 @@
 This document defines a practical deployment architecture for a static blog (Hugo assumed) that:
 - deploys automatically on Git push,
 - runs on the homelab Kubernetes cluster,
-- exposes only `blog.khzaw.dev` publicly,
+- exposes `khzaw.dev` and `blog.khzaw.dev` publicly,
 - keeps other app subdomains tailnet-only,
 - remains cost-conscious and resilient to traffic spikes.
 
 ## Desired Outcome
 - Source content and theme live in a separate `blog` GitHub repository.
 - Deployment to Kubernetes is automated and GitOps-aligned.
-- Blog is reachable at `https://blog.khzaw.dev` publicly.
+- Blog is reachable at `https://khzaw.dev` and `https://blog.khzaw.dev` publicly.
 - Other services remain private via Tailscale access pattern.
 
 ## High-Level Architecture
@@ -34,7 +34,7 @@ This document defines a practical deployment architecture for a static blog (Hug
 5. Flux image automation in cluster detects new image on interval (`6h`).
 6. Flux updates image reference in `rangoonpulse` manifest (Git commit).
 7. Flux reconciles and rolls out updated pod.
-8. `blog.khzaw.dev` serves the new version.
+8. `khzaw.dev` and `blog.khzaw.dev` serve the new version.
 9. Workflow optionally purges Cloudflare update-critical URLs if cache purge secrets are configured.
 
 ### Request Path (Runtime)
@@ -48,9 +48,10 @@ flowchart LR
 ## Public vs Private Routing Policy
 
 ### Public
+- `khzaw.dev`
 - `blog.khzaw.dev`
-- Public DNS and ingress routing enabled.
-- TLS via cert-manager (`letsencrypt-prod`).
+- Public DNS points at Cloudflare Tunnel for internet reachability.
+- Private ingress remains on `blog.khzaw.dev` for LAN/Tailscale access.
 
 ### Private
 - Existing app subdomains remain tailnet-only.
@@ -66,7 +67,7 @@ flowchart LR
 ## HN Hug-of-Death Strategy (Low Cost)
 
 ### Baseline Controls (Recommended)
-1. Cloudflare proxied DNS for `blog.khzaw.dev`.
+1. Cloudflare proxied DNS for `khzaw.dev` and `blog.khzaw.dev`.
 2. Cache rules:
 - Bypass cache for update-critical HTML/routes (`/`, `index.html`, feed/sitemap paths, other `.html` pages).
 - Long TTL for hashed CSS/JS/image assets.
@@ -115,9 +116,9 @@ Pros:
 - Container: `ghcr.io/<owner>/<blog-image>:<tag-or-digest>`.
 - Resources: lightweight static serving defaults.
 - Service: ClusterIP.
-- Ingress host: `blog.khzaw.dev`.
+- Ingress host: `blog.khzaw.dev` for the private/LAN path only.
 - TLS secret: `blog-tls` with cert-manager issuer `letsencrypt-prod`.
-- External-DNS annotation for `blog.khzaw.dev`.
+- Do not attach public apex/blog external-dns annotations to the Ingress; public DNS is owned by `infrastructure/public-edge/share-hosts-cname.yaml`.
 
 ### Flux Image Automation Resources
 - `ImageRepository`: points to GHCR blog image.
@@ -140,16 +141,17 @@ Pros:
 ## Rollback Strategy
 1. Revert image update commit in `rangoonpulse`.
 2. Flux reconciles previous image.
-3. Verify `blog.khzaw.dev` response and content health.
+3. Verify `khzaw.dev` and `blog.khzaw.dev` response and content health.
 
 No data-plane rollback complexity exists for static content beyond image/version change.
 
 ## Verification Checklist
-1. `blog.khzaw.dev` resolves publicly.
-2. TLS is valid and trusted.
-3. Non-blog apps are still tailnet-only.
-4. Push test commit to `blog` repo updates live site automatically.
-5. Cloudflare cache headers and hit ratio behave as expected.
+1. `khzaw.dev` resolves publicly.
+2. `blog.khzaw.dev` resolves publicly.
+3. TLS is valid and trusted.
+4. Non-blog apps are still tailnet-only.
+5. Push test commit to `blog` repo updates live site automatically.
+6. Cloudflare cache headers and hit ratio behave as expected.
 
 ## Cost Profile
 - Cluster hosting: existing sunk cost (homelab).
@@ -161,6 +163,6 @@ No data-plane rollback complexity exists for static content beyond image/version
 Proceed with this two-repo GitOps model:
 1. Blog source/build in `blog` repo.
 2. Flux-managed deployment in `rangoonpulse`.
-3. Public exposure only for `blog.khzaw.dev`.
+3. Public exposure only for `khzaw.dev` and `blog.khzaw.dev`.
 4. Add Cloudflare caching policy from day one.
 5. Consider R2 for media if article/photo traffic grows.

@@ -24,7 +24,7 @@ Relevant files:
 Two public-exposure classes:
 
 1. Permanent public
-- `blog.khzaw.dev` is always public.
+- `khzaw.dev` and `blog.khzaw.dev` are always public and both route to the blog service.
 - Cloudflare edge caching and WAF are enabled.
 - Origin is reached via Cloudflare Tunnel (not direct inbound to home network).
 
@@ -94,7 +94,7 @@ Important: avoid fighting current private `external-dns` records.
 Recommended convention:
 - Keep canonical private hostnames unchanged (example `seerr.khzaw.dev` remains private).
 - Use dedicated public aliases for temporary shares (example `share-seerr.khzaw.dev`).
-- Keep `blog.khzaw.dev` as dedicated permanent public hostname.
+- Keep `khzaw.dev` and `blog.khzaw.dev` as permanent public blog hostnames.
 
 This avoids private/public DNS contention on the same FQDN.
 
@@ -120,7 +120,7 @@ This avoids private/public DNS contention on the same FQDN.
 
 ## Blog-Specific Integration
 
-`blog.khzaw.dev` becomes the first permanent `PublicExposure` record:
+The blog service becomes the first permanent public exposure and is reachable on both `khzaw.dev` and `blog.khzaw.dev`:
 - `enabled: true`
 - `expiresAt: null`
 - `authMode: none`
@@ -129,7 +129,7 @@ This avoids private/public DNS contention on the same FQDN.
 Operationally:
 - Blog deployment stays GitOps-managed.
 - Public reachability is via tunnel route and DNS record controlled by exposure controller.
-- Cloudflare cache rules apply to `blog.khzaw.dev` for HN-style bursts.
+- Cloudflare cache rules apply to `khzaw.dev` and `blog.khzaw.dev` for HN-style bursts.
 
 ## Proposed Repo Layout
 
@@ -235,31 +235,36 @@ Operational note:
 
 ### Phase 5: Blog Permanent-Public Onboarding
 1. Deploy blog service in-cluster (GitOps-managed app path).
-2. Create permanent public exposure policy for `blog.khzaw.dev`:
+2. Create permanent public exposure policy for the blog apex + subdomain:
 - `enabled: true`, no expiry, locked in control panel
 3. Enable Cloudflare cache strategy tuned for burst traffic (HN-style spikes).
 4. Keep non-blog services private-by-default unless explicitly shared.
 
 Implementation status (GitOps DNS ownership):
 - Cloudflare Tunnel route:
+  - `infrastructure/public-edge/helmrelease.yaml` (`hostname: khzaw.dev` -> `blog.default.svc.cluster.local:8080`)
   - `infrastructure/public-edge/helmrelease.yaml` (`hostname: blog.khzaw.dev` -> `blog.default.svc.cluster.local:8080`)
 - DNS alias ownership:
-  - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/blog-cname`)
+  - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/root-cname`, `Service/blog-cname`)
 - Important:
   - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev`.
-  - public DNS should resolve to Cloudflare edge for `blog.khzaw.dev`, not private `10.0.0.231`.
+  - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: khzaw.dev`.
+  - public DNS should resolve to Cloudflare edge for `khzaw.dev` and `blog.khzaw.dev`, not private `10.0.0.231`.
 
-Validation status:
-- Verified on February 22, 2026:
-  - Cloudflare DNS for `blog.khzaw.dev` is `CNAME` to tunnel endpoint with external-dns TXT ownership,
-  - `dig @1.1.1.1 blog.khzaw.dev` resolves to Cloudflare edge IPs,
-  - `https://blog.khzaw.dev` returns `200`.
+Validation target after reconcile:
+- Cloudflare DNS for `khzaw.dev` is `CNAME`/flattened to the tunnel endpoint with external-dns TXT ownership.
+- `dig @1.1.1.1 khzaw.dev` resolves to Cloudflare edge IPs.
+- `https://khzaw.dev` returns `200`.
+- Cloudflare DNS for `blog.khzaw.dev` is `CNAME` to the tunnel endpoint with external-dns TXT ownership.
+- `dig @1.1.1.1 blog.khzaw.dev` resolves to Cloudflare edge IPs.
+- `https://blog.khzaw.dev` returns `200`.
 
 ## Operational Guardrails
 - Keep exposure runtime state controller-owned; avoid manual `kubectl` drift.
 - Keep secrets only in SOPS-managed manifests.
 - Preserve existing private ingress pattern for non-public services.
 - Do not repoint existing private canonical hostnames for temporary sharing.
+- Keep apex/public blog DNS ownership in `infrastructure/public-edge/share-hosts-cname.yaml`; do not move it onto the blog Ingress.
 
 ## Open Decisions
 1. Hostname strategy:
