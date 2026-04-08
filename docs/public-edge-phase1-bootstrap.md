@@ -1,7 +1,19 @@
+---
+title: Public Edge Phase 1 Bootstrap
+summary: Historical bootstrap record for the initial Cloudflare Tunnel rollout before exposure-control became the living public-edge design.
+status: historical
+owner: homelab
+last_reviewed: 2026-04-08
+---
+
 # Public Edge Phase 1 Bootstrap
 
 Status:
 - Completed on February 19, 2026.
+
+Current living docs:
+- [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md)
+- [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md)
 
 ## Purpose
 Bootstrap a lean Cloudflare Tunnel foundation for future public exposure control.

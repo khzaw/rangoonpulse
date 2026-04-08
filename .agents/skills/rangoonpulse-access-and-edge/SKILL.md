@@ -12,8 +12,9 @@ Use this skill only when the active workspace is `/Users/khz/Code/rangoonpulse`.
 Open the smallest relevant subset:
 - `/Users/khz/Code/rangoonpulse/docs/networking-current-state-and-simplification.md`
 - `/Users/khz/Code/rangoonpulse/docs/lan-access-current-state-and-lean-plan.md`
-- `/Users/khz/Code/rangoonpulse/docs/public-edge-phase1-bootstrap.md`
 - `/Users/khz/Code/rangoonpulse/docs/public-exposure-control-panel-plan.md`
+- `/Users/khz/Code/rangoonpulse/docs/exposure-control-phase2-phase3-mvp.md` when touching implemented public-share behavior
+- `/Users/khz/Code/rangoonpulse/docs/public-edge-phase1-bootstrap.md` only for historical rollout context
 - `/Users/khz/Code/rangoonpulse/docs/cloudflare-access-share-hosts-email-otp-plan.md` when share-host auth changes
 - `/Users/khz/Code/rangoonpulse/docs/travel-center.md` when the operator cockpit travel flow changes
 - `/Users/khz/Code/rangoonpulse/docs/transmission-optional-vpn.md` when touching Gluetun or Transmission routing

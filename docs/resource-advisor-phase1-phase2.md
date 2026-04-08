@@ -1,4 +1,12 @@
-# Resource Advisor (Phase 1 + Phase 2 + Phase 3)
+---
+title: Resource Advisor Automation
+summary: Living reference for the resource-advisor report/apply workflow, exporter surface, guardrails, and operator checks.
+status: active
+owner: homelab
+last_reviewed: 2026-04-08
+---
+
+# Resource Advisor Automation
 
 ## Overview
 This component provides policy-driven resource tuning recommendations for the homelab cluster.

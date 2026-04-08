@@ -46,7 +46,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/iris-dedicated-vip.md`](./iris-dedicated-vip.md) for the dedicated `iris.khzaw.dev` SSH+HTTPS exception and OpenClaw-specific pairing/origin behavior.
 - [`docs/adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md) for LAN DNS architecture and router integration.
 - [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS, Flux, and Talos node DNS hardening.
-- [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) and [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for Cloudflare Tunnel and share-host exposure.
+- [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for the current Cloudflare Tunnel and permanent-public/share-host design.
 - [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md) for the implemented exposure-control backend/UI behavior and security hardening path.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) when public share-host auth changes.
 - [`docs/travel-center.md`](./travel-center.md) when changing the control panel's travel readiness and remote-life workflow.
@@ -70,7 +70,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Monitoring, dashboards, and resource tuning
 
-- [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the tuning workflow and apply-PR model.
+- [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the current tuning workflow, apply-PR model, and cockpit/exporter contract.
 - [`docs/homelab-operations-dashboards.md`](./homelab-operations-dashboards.md) for the Grafana operations dashboards.
 - [`docs/dashboards-homepage-glance.md`](./dashboards-homepage-glance.md) for the Glance dashboard, monitors, and widget-specific gotchas.
 - [`docs/gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md) for rollout/change timeline interpretation.
@@ -102,8 +102,9 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Historical analysis and migration context
 
-- [`docs/pangolin-fit-analysis.md`](./pangolin-fit-analysis.md)
-- [`docs/networking-simplified-migration-todo.md`](./networking-simplified-migration-todo.md)
+- [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) for the initial public-edge bootstrap record before the current exposure-control design.
+- [`docs/networking-simplified-migration-todo.md`](./networking-simplified-migration-todo.md) for the completed Tailscale ingress-proxy migration checklist and rollback notes.
+- [`docs/pangolin-fit-analysis.md`](./pangolin-fit-analysis.md) for historical Pangolin fit analysis against the access stack at the time.
 
 ## Minimum Reading Standard
 

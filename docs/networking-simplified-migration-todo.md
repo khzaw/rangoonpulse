@@ -1,6 +1,18 @@
+---
+title: Unified LAN IP Access Migration Checklist
+summary: Historical migration checklist and rollback notes for the retired Tailscale ingress-proxy to unified-destination cutover.
+status: historical
+owner: homelab
+last_reviewed: 2026-04-08
+---
+
 # Migration TODO: Unified LAN IP Access over Tailscale
 
 > Status: Completed. This file is kept as an audit + rollback checklist.
+
+Current baseline:
+- [`docs/networking-current-state-and-simplification.md`](./networking-current-state-and-simplification.md)
+- [`docs/lan-access-current-state-and-lean-plan.md`](./lan-access-current-state-and-lean-plan.md)
 
 The repository baseline is now the unified destination model:
 - App hostnames resolve to ingress VIP `10.0.0.231` (MetalLB).

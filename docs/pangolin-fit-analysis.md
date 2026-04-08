@@ -1,3 +1,11 @@
+---
+title: Pangolin Fit and Replacement Analysis
+summary: Historical evaluation of where Pangolin could fit into the repo's access architecture and what it would replace.
+status: historical
+owner: homelab
+last_reviewed: 2026-04-08
+---
+
 # Pangolin Fit and Replacement Analysis for `rangoonpulse`
 
 Date:
@@ -35,7 +43,7 @@ This is the current baseline because it avoids:
 Repo references:
 - [AGENTS.md](../AGENTS.md)
 - [networking-current-state-and-simplification.md](./networking-current-state-and-simplification.md)
-- [networking-simplified-migration-todo.md](./networking-simplified-migration-todo.md)
+- [lan-access-current-state-and-lean-plan.md](./lan-access-current-state-and-lean-plan.md)
 
 ### Public access path
 
@@ -47,7 +55,6 @@ Public access today is intentionally separate from the private path:
 - `exposure-control` decides whether a share is enabled, expired, gated, or disabled
 
 Repo references:
-- [public-edge-phase1-bootstrap.md](./public-edge-phase1-bootstrap.md)
 - [public-exposure-control-panel-plan.md](./public-exposure-control-panel-plan.md)
 - [exposure-control-phase2-phase3-mvp.md](./exposure-control-phase2-phase3-mvp.md)
 

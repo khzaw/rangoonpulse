@@ -331,10 +331,10 @@ make deploy-mmcal
 | [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
 | [`gitops-change-timeline-dashboard.md`](docs/gitops-change-timeline-dashboard.md) | Flux activity and reconcile timeline |
 | [`dns-access-path-dashboard.md`](docs/dns-access-path-dashboard.md) | DNS health and access surface |
-| [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource tuning automation |
+| [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource advisor automation and apply-PR model |
 | [`node-capacity-dashboard.md`](docs/node-capacity-dashboard.md) | Whole-host node CPU/RAM dashboard |
 | [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |
-| [`pangolin-fit-analysis.md`](docs/pangolin-fit-analysis.md) | Where Pangolin could fit in the current access model |
+| [`pangolin-fit-analysis.md`](docs/pangolin-fit-analysis.md) | Historical analysis of where Pangolin could fit in the access model |
 | [`secrets-inventory.md`](docs/secrets-inventory.md) | Secrets reference |
 | [`backup-plan.md`](docs/backup-plan.md) | Backup strategy |
 
