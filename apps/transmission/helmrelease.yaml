@@ -42,11 +42,11 @@ spec:
               GUID: "1000"
             resources:
               requests:
-                cpu: "150m"
-                memory: "512Mi"
+                cpu: "112m"
+                memory: "384Mi"
               limits:
-                cpu: "1000m"
-                memory: "2Gi"
+                cpu: "750m"
+                memory: "1536Mi"
           gluetun:
             enabled: false
             image:
