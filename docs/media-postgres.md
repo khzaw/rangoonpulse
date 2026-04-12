@@ -15,11 +15,11 @@ Immich uses its own Postgres and is intentionally not consolidated here.
 ## Runtime tuning
 - `timescaledb.telemetry_level=off`
 - `max_locks_per_transaction=2048`
-- resources: `requests.memory=2Gi`, `limits.memory=4Gi`
+- resources: `requests.memory=4Gi`, `limits.memory=8Gi`
 
 The higher lock budget is intentional. `tracearr.library_snapshots` is a Timescale hypertable with thousands of chunks, and overview/retention queries can exhaust the default lock table and fail with `out of shared memory` unless Postgres is sized for that fan-out.
 
-The higher memory ceiling is also intentional. Large Tracearr backfills and continuous aggregate refreshes can spike memory usage high enough to OOM a 2Gi Timescale pod.
+The higher memory ceiling is also intentional. Large Tracearr backfills and continuous aggregate refreshes can spike memory usage high enough to OOM even a 4Gi Timescale pod during multi-year refreshes.
 
 ## Storage
 Data is stored on `local-path` (node-local).
