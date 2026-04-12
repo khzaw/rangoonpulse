@@ -39,7 +39,8 @@ spec:
               - |
                 set -eu
                 exec /usr/local/bin/docker-entrypoint.sh postgres \
-                  -c timescaledb.telemetry_level=off
+                  -c timescaledb.telemetry_level=off \
+                  -c max_locks_per_transaction=512
             env:
               # Required secret (not in Git): media-postgres-secret (POSTGRES_PASSWORD)
               - name: POSTGRES_USER
