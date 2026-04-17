@@ -108,7 +108,7 @@ spec:
           printer:
             image:
               repository: ghcr.io/browserless/chromium
-              tag: "v2.46.0"
+              tag: "v2.47.0"
             env:
               - name: PORT
                 value: "3001"
