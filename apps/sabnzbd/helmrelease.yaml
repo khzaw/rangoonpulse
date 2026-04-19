@@ -37,11 +37,11 @@ spec:
               SABNZBD__HOST_WHITELIST: "sabnzbd.${BASE_DOMAIN}"
             resources:
               requests:
-                cpu: "112m"
-                memory: "640Mi"
+                cpu: "84m"
+                memory: "480Mi"
               limits:
-                cpu: "1125m"
-                memory: "1606Mi"
+                cpu: "844m"
+                memory: "1204Mi"
     service:
       main:
         ports:
