@@ -60,12 +60,6 @@ spec:
               limits:
                 cpu: "1000m"
                 memory: "1Gi"
-            securityContext:
-              allowPrivilegeEscalation: false
-              capabilities:
-                drop:
-                  - ALL
-              readOnlyRootFilesystem: false
             probes:
               startup:
                 spec:
