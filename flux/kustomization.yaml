@@ -59,7 +59,9 @@ resources:
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml
+  - ./kustomizations/multica-postgres.yaml
   - ./kustomizations/actualbudget.yaml
+  - ./kustomizations/multica.yaml
   - ./kustomizations/reactive-resume.yaml
   - ./kustomizations/democratic-csi.yaml
   - ./kustomizations/flaresolverr.yaml
