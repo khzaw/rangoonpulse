@@ -68,11 +68,11 @@ spec:
                     key: COOKIE_SECRET
             resources:
               requests:
-                cpu: "150m"
-                memory: "384Mi"
+                cpu: "112m"
+                memory: "341Mi"
               limits:
-                cpu: "600m"
-                memory: "1152Mi"
+                cpu: "450m"
+                memory: "864Mi"
             probes:
               startup:
                 spec:
