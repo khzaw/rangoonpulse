@@ -145,6 +145,11 @@ spec:
         ports:
           http:
             port: 3000
+      backend:
+        controller: main
+        ports:
+          http:
+            port: 8080
 
     ingress:
       main:
@@ -159,6 +164,31 @@ spec:
         hosts:
           - host: multica.${BASE_DOMAIN}
             paths:
+              - path: /api
+                pathType: Prefix
+                service:
+                  identifier: backend
+                  port: http
+              - path: /auth
+                pathType: Prefix
+                service:
+                  identifier: backend
+                  port: http
+              - path: /uploads
+                pathType: Prefix
+                service:
+                  identifier: backend
+                  port: http
+              - path: /ws
+                pathType: Prefix
+                service:
+                  identifier: backend
+                  port: http
+              - path: /health
+                pathType: Prefix
+                service:
+                  identifier: backend
+                  port: http
               - path: /
                 pathType: Prefix
                 service:
