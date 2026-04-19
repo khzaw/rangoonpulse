@@ -182,6 +182,8 @@ The primary rollout is gated on the secondary Flux `Kustomization` being Ready:
 - both Kustomizations use `wait: true`
 - each Kustomization health-checks its own `HelmRelease`
 - `adguard-primary` has `dependsOn: adguard-secondary`
+- Renovate uses file-specific branch prefixes so the same `adguard/adguardhome` tag bump opens separate PRs for
+  `apps/adguard/primary/helmrelease.yaml` and `apps/adguard/secondary/helmrelease.yaml`
 
 Use that split to avoid restarting both DNS services in the same rollout window. Recommended order:
 1. reconcile `adguard-secondary`

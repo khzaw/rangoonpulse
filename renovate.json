@@ -45,6 +45,40 @@
       "enabled": false
     },
     {
+      "description": "Keep AdGuard primary image updates in their own branch and PR.",
+      "matchManagers": [
+        "helm-values"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "adguard/adguardhome"
+      ],
+      "matchFileNames": [
+        "apps/adguard/primary/helmrelease.yaml"
+      ],
+      "additionalBranchPrefix": "adguard-primary-",
+      "commitMessageSuffix": " (adguard primary)"
+    },
+    {
+      "description": "Keep AdGuard secondary image updates in their own branch and PR.",
+      "matchManagers": [
+        "helm-values"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "adguard/adguardhome"
+      ],
+      "matchFileNames": [
+        "apps/adguard/secondary/helmrelease.yaml"
+      ],
+      "additionalBranchPrefix": "adguard-secondary-",
+      "commitMessageSuffix": " (adguard secondary)"
+    },
+    {
       "description": "Group Helm chart patch and minor updates.",
       "matchManagers": [
         "flux"
