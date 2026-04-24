@@ -25,7 +25,7 @@ spec:
   storageClassName: truenas-hdd-media
   resources:
     requests:
-      storage: 8Ti
+      storage: 9Ti
 
 ---
 apiVersion: v1
