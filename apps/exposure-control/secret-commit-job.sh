@@ -1,22 +1,22 @@
 #!/bin/sh
 set -eu
 
-operation="${OPERATION:-upsert}"
-branch="${GITHUB_BRANCH:-master}"
-repo="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
-token="${GITHUB_TOKEN:?GITHUB_TOKEN is required}"
-secret_file="${SECRET_FILE_PATH:?SECRET_FILE_PATH is required}"
-kustomization_file="${KUSTOMIZATION_FILE_PATH:-}"
-commit_message="${COMMIT_MESSAGE:-secrets: update managed secret}"
-author_name="${GIT_AUTHOR_NAME:-rangoonpulse controlpanel}"
-author_email="${GIT_AUTHOR_EMAIL:-controlpanel@khzaw.dev}"
-recipient="${SOPS_AGE_RECIPIENT:-}"
+operation="$${OPERATION:-upsert}"
+branch="$${GITHUB_BRANCH:-master}"
+repo="$${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
+token="$${GITHUB_TOKEN:?GITHUB_TOKEN is required}"
+secret_file="$${SECRET_FILE_PATH:?SECRET_FILE_PATH is required}"
+kustomization_file="$${KUSTOMIZATION_FILE_PATH:-}"
+commit_message="$${COMMIT_MESSAGE:-secrets: update managed secret}"
+author_name="$${GIT_AUTHOR_NAME:-rangoonpulse controlpanel}"
+author_email="$${GIT_AUTHOR_EMAIL:-controlpanel@khzaw.dev}"
+recipient="$${SOPS_AGE_RECIPIENT:-}"
 
 apk add --no-cache git sops >/dev/null
 
 workdir="/tmp/secret-editor"
 rm -rf "$workdir"
-git clone --depth 1 --branch "$branch" "https://x-access-token:${token}@github.com/${repo}.git" "$workdir" >/dev/null 2>&1
+git clone --depth 1 --branch "$branch" "https://x-access-token:$${token}@github.com/$${repo}.git" "$workdir" >/dev/null 2>&1
 
 cd "$workdir"
 git config user.name "$author_name"
@@ -52,4 +52,4 @@ fi
 
 git commit -m "$commit_message" >/dev/null
 git push origin "$branch" >/dev/null 2>&1
-echo "Committed and pushed secret change to ${repo}@${branch}."
+echo "Committed and pushed secret change to $${repo}@$${branch}."

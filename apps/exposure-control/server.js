@@ -1076,7 +1076,7 @@ function addKustomizationResource(content, filename) {
 function removeKustomizationResource(content, filename) {
   return String(content || "")
     .split("\n")
-    .filter((line) => !new RegExp("^\\s*-\\s+" + filename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$").test(line))
+    .filter((line) => !new RegExp("^\\s*-\\s+" + filename.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") + "\\s*$").test(line))
     .join("\n")
     .replace(/\n?$/, "\n");
 }
