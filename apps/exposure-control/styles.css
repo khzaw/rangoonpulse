@@ -1047,70 +1047,128 @@
       }
       .secrets-layout {
         display: grid;
-        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        grid-template-columns: minmax(330px, 430px) minmax(0, 1fr);
         border-top: 1px solid var(--border);
+        background:
+          radial-gradient(circle at 22% 0%, rgba(255, 255, 255, 0.03), transparent 32%),
+          rgba(255, 255, 255, 0.004);
       }
       .secrets-list-panel,
       .secret-editor-panel {
         min-width: 0;
       }
       .secrets-list-panel {
-        border-right: 1px solid var(--border);
-        padding: 18px;
+        border-right: 1px solid rgba(255, 255, 255, 0.055);
+        padding: 22px 20px 24px;
       }
       .secret-editor-panel {
-        padding: 18px;
+        padding: 22px 24px 24px;
       }
       .secrets-toolbar {
         padding: 0;
         border-bottom: none;
-        align-items: stretch;
+        align-items: center;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(128px, 160px) auto;
+        gap: 10px;
       }
       .secrets-toolbar .search-shell {
-        flex: 1;
+        width: 100%;
+        min-height: 42px;
+        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+      }
+      .secrets-toolbar .search-shell:focus-within {
+        transform: translateY(-1px);
+      }
+      #secretsRefreshBtn {
+        min-height: 42px;
+        padding-inline: 14px;
       }
       .new-secret-row {
         display: grid;
-        grid-template-columns: minmax(110px, 0.8fr) minmax(140px, 1fr) auto;
-        gap: 8px;
-        margin-top: 12px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.045);
       }
       .secret-name-input,
       .secret-key-name,
       .secret-key-value {
         min-height: 38px;
         width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-        background: #0f0f0f;
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.035);
         color: var(--text-1);
         padding: 0 12px;
         font-family: var(--font-mono);
         font-size: 12px;
+        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+      }
+      .secret-name-input:focus,
+      .secret-key-name:focus,
+      .secret-key-value:focus {
+        outline: none;
+        border-color: rgba(31, 111, 235, 0.48);
+        background: rgba(31, 111, 235, 0.055);
+        transform: translateY(-1px);
       }
       .secret-key-value {
         min-width: 0;
       }
       .secrets-list {
         display: grid;
-        gap: 6px;
-        margin-top: 16px;
+        gap: 4px;
+        margin-top: 18px;
         max-height: 680px;
         overflow: auto;
+        scrollbar-width: thin;
+        transition: filter 160ms ease, opacity 160ms ease;
+      }
+      .secrets-list.is-filtering {
+        filter: saturate(1.12) brightness(1.06);
       }
       .secret-list-item {
-        min-height: 58px;
+        min-height: 62px;
         width: 100%;
-        padding: 10px 12px;
+        padding: 11px 12px 11px 16px;
         display: grid;
         align-items: center;
         justify-content: stretch;
         text-align: left;
         gap: 2px;
+        border-color: transparent;
+        background: transparent;
+        position: relative;
+        overflow: hidden;
+        animation: secretRowIn 180ms ease both;
+        transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, color 180ms ease;
+      }
+      .secret-list-item::before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 12px;
+        bottom: 12px;
+        width: 2px;
+        border-radius: 2px;
+        background: transparent;
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .secret-list-item:hover {
+        background: rgba(255, 255, 255, 0.035);
+        transform: translateX(2px);
       }
       .secret-list-item.active {
-        border-color: rgba(31, 111, 235, 0.5);
-        background: rgba(31, 111, 235, 0.08);
+        border-color: transparent;
+        background: rgba(31, 111, 235, 0.075);
+      }
+      .secret-list-item.active::before {
+        background: rgba(31, 111, 235, 0.92);
+        transform: scaleY(1.12);
       }
       .secret-list-name {
         color: var(--text-1);
@@ -1129,7 +1187,7 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
-        padding-bottom: 16px;
+        padding: 0 0 20px;
         border-bottom: 1px solid var(--border);
       }
       .secret-editor-title {
@@ -1145,14 +1203,33 @@
       }
       .secret-key-rows {
         display: grid;
-        gap: 8px;
-        padding: 16px 0;
+        gap: 10px;
+        padding: 20px 0;
       }
       .secret-key-row {
         display: grid;
         grid-template-columns: minmax(160px, 0.35fr) minmax(180px, 1fr) auto auto;
-        gap: 8px;
+        gap: 10px;
         align-items: center;
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.018);
+        animation: secretRowIn 180ms ease both;
+        transition: background 180ms ease, transform 180ms ease;
+      }
+      .secret-key-row:focus-within {
+        background: rgba(255, 255, 255, 0.035);
+        transform: translateY(-1px);
+      }
+      @keyframes secretRowIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       @keyframes shimmer {
         0% { background-position: -600px 0; }

@@ -62,10 +62,10 @@
       const helmUpdatesRefreshBtn = document.getElementById('helmUpdatesRefreshBtn');
       const secretsSummaryEl = document.getElementById('secretsSummary');
       const secretsSearchInputEl = document.getElementById('secretsSearchInput');
+      const secretsNamespaceFilterEl = document.getElementById('secretsNamespaceFilter');
       const secretsRefreshBtn = document.getElementById('secretsRefreshBtn');
       const secretsListEl = document.getElementById('secretsList');
       const secretsMsgEl = document.getElementById('secretsMsg');
-      const newSecretNamespaceEl = document.getElementById('newSecretNamespace');
       const newSecretNameEl = document.getElementById('newSecretName');
       const newSecretBtn = document.getElementById('newSecretBtn');
       const secretEditorTitleEl = document.getElementById('secretEditorTitle');
@@ -1313,11 +1313,12 @@
       }
 
       function renderSecretNamespaceOptions(namespaces) {
-        const current = newSecretNamespaceEl.value;
-        newSecretNamespaceEl.innerHTML = (namespaces || [])
-          .map((namespace) => '<option value="' + escapeHtml(namespace) + '">' + escapeHtml(namespace) + '</option>')
+        const current = secretsNamespaceFilterEl.value || 'all';
+        const options = ['all'].concat(namespaces || []);
+        secretsNamespaceFilterEl.innerHTML = options
+          .map((namespace) => '<option value="' + escapeHtml(namespace) + '">' + escapeHtml(namespace === 'all' ? 'all namespaces' : namespace) + '</option>')
           .join('');
-        if (current && (namespaces || []).includes(current)) newSecretNamespaceEl.value = current;
+        secretsNamespaceFilterEl.value = options.includes(current) ? current : 'all';
       }
 
       function renderSecretsList(payload) {
@@ -1326,12 +1327,17 @@
         renderSecretNamespaceOptions(data.namespaces || []);
         const items = Array.isArray(data.items) ? data.items : [];
         const query = String(secretsSearchInputEl.value || '').trim().toLowerCase();
-        const visible = items.filter((item) => !query || secretFilterText(item).includes(query));
+        const namespaceFilter = secretsNamespaceFilterEl.value || 'all';
+        const visible = items.filter((item) =>
+          (namespaceFilter === 'all' || item.namespace === namespaceFilter) &&
+          (!query || secretFilterText(item).includes(query))
+        );
         secretsSummaryEl.textContent = data.configured
           ? String(items.length) + ' managed secret' + (items.length === 1 ? '' : 's') + ' · branch ' + (data.branch || 'master')
           : (data.reason || 'Secret editor is not configured.');
         if (!visible.length) {
           secretsListEl.innerHTML = '<div class="empty-state">No managed secrets match.</div>';
+          secretsListEl.classList.remove('is-filtering');
           return;
         }
         const current = selectedSecretId();
@@ -1344,6 +1350,7 @@
             '</button>'
           );
         }).join('');
+        window.setTimeout(() => secretsListEl.classList.remove('is-filtering'), 180);
       }
 
       function renderSecretEditor(secret) {
@@ -1442,7 +1449,8 @@
       }
 
       async function createSecret() {
-        const namespace = newSecretNamespaceEl.value;
+        const selectedNamespace = secretsNamespaceFilterEl.value || 'all';
+        const namespace = selectedNamespace === 'all' ? 'default' : selectedNamespace;
         const name = String(newSecretNameEl.value || '').trim();
         if (!namespace || !name) {
           setSecretsMsg('Namespace and secret name are required.', true);
@@ -1621,7 +1629,14 @@
         if (empty) secretKeyRowsEl.innerHTML = '';
         secretKeyRowsEl.insertAdjacentHTML('beforeend', secretKeyRowHtml('', ''));
       };
-      secretsSearchInputEl.addEventListener('input', () => renderSecretsList(dashboardState.secrets));
+      secretsSearchInputEl.addEventListener('input', () => {
+        secretsListEl.classList.add('is-filtering');
+        renderSecretsList(dashboardState.secrets);
+      });
+      secretsNamespaceFilterEl.addEventListener('change', () => {
+        secretsListEl.classList.add('is-filtering');
+        renderSecretsList(dashboardState.secrets);
+      });
       secretsListEl.addEventListener('click', (event) => {
         const item = event.target.closest('[data-secret-namespace][data-secret-name]');
         if (!item) return;
