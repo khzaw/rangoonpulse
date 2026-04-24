@@ -1308,8 +1308,43 @@
           item.namespace,
           item.name,
           item.repoPath,
+          secretAppName(item),
           Array.isArray(item.keys) ? item.keys.join(' ') : '',
         ].join(' ').toLowerCase();
+      }
+
+      function secretAppName(item) {
+        const name = String(item && item.name || '');
+        const namespace = String(item && item.namespace || '');
+        const platformNames = {
+          'cloudflare-api-token': namespace === 'cert-manager' ? 'cert-manager' : 'external-dns',
+          'ghcr-pull-secret': namespace === 'flux-system' ? 'image automation' : 'registry auth',
+          'truenas-credentials': 'storage',
+          'resource-advisor-github': 'resource-advisor',
+          'cloudflared-tunnel-token': 'public-edge',
+          'operator-oauth': 'tailscale',
+        };
+        if (platformNames[name]) return platformNames[name];
+        return name
+          .replace(/-(secret|app-secret|db-secret|github|credentials|token)$/i, '')
+          .replace(/-postgres$/i, '')
+          .replace(/-tracker$/i, '')
+          .replace(/-gluetun-control$/i, '')
+          .replace(/-vpn$/i, '');
+      }
+
+      function groupSecretsByApp(items) {
+        const groups = (items || []).reduce((acc, item) => {
+          const appName = secretAppName(item);
+          const current = acc[appName] || [];
+          return { ...acc, [appName]: current.concat(item) };
+        }, {});
+        return Object.entries(groups)
+          .map(([appName, secrets]) => ({
+            appName,
+            secrets: secrets.slice().sort((left, right) => left.name.localeCompare(right.name)),
+          }))
+          .sort((left, right) => left.appName.localeCompare(right.appName));
       }
 
       function renderSecretNamespaceOptions(namespaces) {
@@ -1341,13 +1376,26 @@
           return;
         }
         const current = selectedSecretId();
-        secretsListEl.innerHTML = visible.map((item) => {
-          const id = secretId(item.namespace, item.name);
+        secretsListEl.innerHTML = groupSecretsByApp(visible).map((group) => {
+          const count = group.secrets.length;
+          const totalKeys = group.secrets.reduce((sum, item) => sum + Number(item.keyCount || 0), 0);
+          const children = group.secrets.map((item) => {
+            const id = secretId(item.namespace, item.name);
+            return (
+              '<button class="secret-list-item ' + (id === current ? 'active' : '') + '" type="button" data-secret-namespace="' + escapeHtml(item.namespace) + '" data-secret-name="' + escapeHtml(item.name) + '">' +
+                '<span class="secret-list-name">' + escapeHtml(item.name) + '</span>' +
+                '<span class="secret-list-meta">' + escapeHtml(item.namespace) + ' · ' + String(item.keyCount || 0) + ' key(s)' + (item.existsLive ? '' : ' · not live') + '</span>' +
+              '</button>'
+            );
+          }).join('');
           return (
-            '<button class="secret-list-item ' + (id === current ? 'active' : '') + '" type="button" data-secret-namespace="' + escapeHtml(item.namespace) + '" data-secret-name="' + escapeHtml(item.name) + '">' +
-              '<span class="secret-list-name">' + escapeHtml(item.name) + '</span>' +
-              '<span class="secret-list-meta">' + escapeHtml(item.namespace) + ' · ' + String(item.keyCount || 0) + ' key(s)' + (item.existsLive ? '' : ' · not live') + '</span>' +
-            '</button>'
+            '<section class="secret-app-group">' +
+              '<div class="secret-app-head">' +
+                '<span class="secret-app-name">' + escapeHtml(group.appName) + '</span>' +
+                '<span class="secret-app-meta">' + count + ' secret' + (count === 1 ? '' : 's') + ' · ' + totalKeys + ' key' + (totalKeys === 1 ? '' : 's') + '</span>' +
+              '</div>' +
+              '<div class="secret-app-children">' + children + '</div>' +
+            '</section>'
           );
         }).join('');
         window.setTimeout(() => secretsListEl.classList.remove('is-filtering'), 180);

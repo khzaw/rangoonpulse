@@ -1131,10 +1131,42 @@
       .secrets-list.is-filtering {
         filter: saturate(1.12) brightness(1.06);
       }
+      .secret-app-group {
+        display: grid;
+        gap: 3px;
+        padding: 8px 0 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+        animation: secretRowIn 180ms ease both;
+      }
+      .secret-app-group:last-child {
+        border-bottom: none;
+      }
+      .secret-app-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 4px 8px 6px;
+      }
+      .secret-app-name {
+        color: var(--text-1);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .secret-app-meta {
+        color: var(--text-3);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .secret-app-children {
+        display: grid;
+        gap: 2px;
+      }
       .secret-list-item {
-        min-height: 62px;
+        min-height: 50px;
         width: 100%;
-        padding: 11px 12px 11px 16px;
+        padding: 8px 12px 8px 18px;
         display: grid;
         align-items: center;
         justify-content: stretch;
@@ -1144,7 +1176,6 @@
         background: transparent;
         position: relative;
         overflow: hidden;
-        animation: secretRowIn 180ms ease both;
         transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, color 180ms ease;
       }
       .secret-list-item::before {
@@ -1173,7 +1204,7 @@
       .secret-list-name {
         color: var(--text-1);
         font-family: var(--font-mono);
-        font-size: 12px;
+        font-size: 11px;
       }
       .secret-list-meta,
       .secret-editor-meta {
