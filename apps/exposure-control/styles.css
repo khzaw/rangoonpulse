@@ -1075,9 +1075,38 @@
       .secrets-toolbar .search-shell {
         width: 100%;
         min-height: 42px;
-        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+        padding-inline: 0;
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 0;
+        background: transparent;
+        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
       }
       .secrets-toolbar .search-shell:focus-within {
+        border-color: rgba(31, 111, 235, 0.62);
+        background: linear-gradient(180deg, transparent, rgba(31, 111, 235, 0.035));
+        box-shadow: 0 1px 0 rgba(31, 111, 235, 0.2);
+        transform: translateY(-1px);
+      }
+      .secrets-toolbar .search-shell:hover:not(:focus-within) {
+        border-color: rgba(255, 255, 255, 0.24);
+        background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.025));
+      }
+      .secrets-toolbar .control-select {
+        min-height: 42px;
+        padding-inline: 0 24px;
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 0;
+        background-color: transparent;
+        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+      }
+      .secrets-toolbar .control-select:hover,
+      .secrets-toolbar .control-select:focus {
+        border-color: rgba(31, 111, 235, 0.62);
+        background-color: rgba(31, 111, 235, 0.035);
+        box-shadow: 0 1px 0 rgba(31, 111, 235, 0.2);
+        outline: none;
         transform: translateY(-1px);
       }
       #secretsRefreshBtn {
@@ -1089,32 +1118,38 @@
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 10px;
         margin-top: 14px;
-        padding: 10px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.025);
-        border: 1px solid rgba(255, 255, 255, 0.045);
+        padding: 10px 0 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.055);
       }
       .secret-name-input,
       .secret-key-name,
       .secret-key-value {
         min-height: 38px;
         width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.075);
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.035);
+        border: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.115);
+        border-radius: 0;
+        background: transparent;
         color: var(--text-1);
-        padding: 0 12px;
+        padding: 0 2px;
         font-family: var(--font-mono);
         font-size: 12px;
-        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+        transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
       }
       .secret-name-input:focus,
       .secret-key-name:focus,
       .secret-key-value:focus {
         outline: none;
-        border-color: rgba(31, 111, 235, 0.48);
-        background: rgba(31, 111, 235, 0.055);
+        border-color: rgba(31, 111, 235, 0.66);
+        background: linear-gradient(180deg, transparent 35%, rgba(31, 111, 235, 0.05));
+        box-shadow: 0 1px 0 rgba(31, 111, 235, 0.24);
         transform: translateY(-1px);
+      }
+      .secret-name-input:hover:not(:focus),
+      .secret-key-name:hover:not(:focus),
+      .secret-key-value:hover:not(:focus) {
+        border-color: rgba(255, 255, 255, 0.22);
+        background: linear-gradient(180deg, transparent 35%, rgba(255, 255, 255, 0.024));
       }
       .secret-key-value {
         min-width: 0;
@@ -1242,14 +1277,14 @@
         grid-template-columns: minmax(160px, 0.35fr) minmax(180px, 1fr) auto auto;
         gap: 10px;
         align-items: center;
-        padding: 10px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.018);
+        padding: 10px 0 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.045);
         animation: secretRowIn 180ms ease both;
-        transition: background 180ms ease, transform 180ms ease;
+        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
       }
       .secret-key-row:focus-within {
-        background: rgba(255, 255, 255, 0.035);
+        border-color: rgba(31, 111, 235, 0.24);
+        background: rgba(31, 111, 235, 0.018);
         transform: translateY(-1px);
       }
       @keyframes secretRowIn {
