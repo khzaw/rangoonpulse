@@ -1,5 +1,6 @@
 const http = require("node:http");
 const https = require("node:https");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { URL } = require("node:url");
@@ -170,6 +171,51 @@ const RENOVATE_STATUS_CACHE_TTL_SECONDS = clampInt(
   10,
   600,
 );
+const SECRET_EDITOR_BRANCH = String(
+  process.env.SECRET_EDITOR_BRANCH || RENOVATE_WORKFLOW_REF || "master",
+).trim();
+const SECRET_EDITOR_NAMESPACES = String(
+  process.env.SECRET_EDITOR_NAMESPACES ||
+    "default,cert-manager,democratic-csi,flux-system,monitoring,public-edge,tailscale",
+)
+  .split(",")
+  .map((v) => v.trim())
+  .filter(Boolean);
+const SECRET_EDITOR_NAMESPACE_SET = new Set(SECRET_EDITOR_NAMESPACES);
+const SECRET_EDITOR_REPO_ROOT = String(
+  process.env.SECRET_EDITOR_REPO_ROOT || "infrastructure/secrets",
+).replace(/^\/+|\/+$/g, "");
+const SECRET_EDITOR_SOPS_RECIPIENT = String(
+  process.env.SECRET_EDITOR_SOPS_RECIPIENT ||
+    "age1hz8ustuz5mtmuc744xg7rllqew9z6yc99607fhuva3n79s7769sqj4jlkz",
+).trim();
+const SECRET_EDITOR_JOB_IMAGE = String(
+  process.env.SECRET_EDITOR_JOB_IMAGE || "alpine:3.22",
+).trim();
+const SECRET_EDITOR_HELPER_CONFIGMAP = String(
+  process.env.SECRET_EDITOR_HELPER_CONFIGMAP || "exposure-control-app-files",
+).trim();
+const SECRET_EDITOR_GIT_AUTHOR_NAME = String(
+  process.env.SECRET_EDITOR_GIT_AUTHOR_NAME || "rangoonpulse controlpanel",
+).trim();
+const SECRET_EDITOR_GIT_AUTHOR_EMAIL = String(
+  process.env.SECRET_EDITOR_GIT_AUTHOR_EMAIL || "controlpanel@khzaw.dev",
+).trim();
+const SECRET_EDITOR_JOB_TIMEOUT_SECONDS = clampInt(
+  process.env.SECRET_EDITOR_JOB_TIMEOUT_SECONDS,
+  180,
+  30,
+  600,
+);
+const SECRET_EDITOR_FLUX_SOURCE_NAME = String(
+  process.env.SECRET_EDITOR_FLUX_SOURCE_NAME || "flux-system",
+).trim();
+const SECRET_EDITOR_FLUX_KUSTOMIZATION_NAME = String(
+  process.env.SECRET_EDITOR_FLUX_KUSTOMIZATION_NAME || "secrets",
+).trim();
+const SECRET_EDITOR_FLUX_NAMESPACE = String(
+  process.env.SECRET_EDITOR_FLUX_NAMESPACE || "flux-system",
+).trim();
 
 const metrics = {
   enableTotal: 0,
@@ -203,6 +249,12 @@ const renovateStatusCache = {
   snapshot: null,
   ts: 0,
 };
+const secretsTreeCache = {
+  promise: null,
+  snapshot: null,
+  ts: 0,
+};
+let secretEditorInFlight = false;
 let imageUpdateRefreshPromise = null;
 let helmUpdateRefreshPromise = null;
 const helmRepoIndexCache = new Map();
@@ -825,6 +877,10 @@ function githubConfigured() {
   return Boolean(GITHUB_TOKEN && GITHUB_REPOSITORY && RENOVATE_WORKFLOW_FILE);
 }
 
+function secretEditorConfigured() {
+  return Boolean(GITHUB_TOKEN && GITHUB_REPOSITORY && SECRET_EDITOR_SOPS_RECIPIENT);
+}
+
 async function githubRequest(pathname, options) {
   if (!githubConfigured()) {
     throw new Error("GitHub workflow integration is not configured.");
@@ -854,6 +910,471 @@ async function githubRequest(pathname, options) {
   }
 
   return parsed;
+}
+
+function assertSecretNamespace(namespace) {
+  const ns = String(namespace || "").trim();
+  if (!SECRET_EDITOR_NAMESPACE_SET.has(ns)) {
+    throw new Error("namespace is not managed by the secret editor");
+  }
+  return ns;
+}
+
+function assertSecretName(name) {
+  const value = String(name || "").trim();
+  if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value)) {
+    throw new Error("secret name must be a valid DNS label");
+  }
+  return value;
+}
+
+function assertSecretKey(key) {
+  const value = String(key || "").trim();
+  if (!value || value.length > 253 || !/^[A-Za-z0-9._-]+$/.test(value)) {
+    throw new Error("secret key contains unsupported characters");
+  }
+  return value;
+}
+
+function secretFilePath(namespace, name) {
+  return SECRET_EDITOR_REPO_ROOT + "/" + namespace + "/" + name + ".yaml";
+}
+
+function secretNamespaceKustomizationPath(namespace) {
+  return SECRET_EDITOR_REPO_ROOT + "/" + namespace + "/kustomization.yaml";
+}
+
+function yamlKey(value) {
+  const text = String(value || "");
+  return /^[A-Za-z0-9._-]+$/.test(text) ? text : JSON.stringify(text);
+}
+
+function yamlScalar(value) {
+  const text = String(value ?? "");
+  if (text.includes("\n")) {
+    return "|-\n" + text.split("\n").map((line) => "    " + line).join("\n");
+  }
+  return JSON.stringify(text);
+}
+
+function renderPlainSecretYaml(namespace, name, type, stringData) {
+  const secretType = String(type || "Opaque").trim() || "Opaque";
+  const keys = Object.keys(stringData || {}).sort();
+  const keyLines = keys.length
+    ? keys.map((key) => "  " + yamlKey(key) + ": " + yamlScalar(stringData[key]))
+    : ["  {}"];
+  return [
+    "apiVersion: v1",
+    "kind: Secret",
+    "metadata:",
+    "  name: " + name,
+    "  namespace: " + namespace,
+    "type: " + secretType,
+    "stringData:",
+    ...keyLines,
+  ].join("\n") + "\n";
+}
+
+function decodeSecretData(secret) {
+  const data = (secret && secret.data) || {};
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [
+      key,
+      Buffer.from(String(value || ""), "base64").toString("utf8"),
+    ]),
+  );
+}
+
+function normalizeSecretStringData(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("stringData must be an object");
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([rawKey, rawValue]) => [
+      assertSecretKey(rawKey),
+      String(rawValue ?? ""),
+    ]),
+  );
+}
+
+function sanitizeSecretSummary(namespace, name, repoPath, secret) {
+  const data = decodeSecretData(secret || {});
+  return {
+    namespace,
+    name,
+    repoPath,
+    type: String((secret && secret.type) || "Opaque"),
+    keyCount: Object.keys(data).length,
+    keys: Object.keys(data).sort(),
+    existsLive: Boolean(secret),
+  };
+}
+
+async function getKubeSecret(namespace, name) {
+  return await kubeGetJson(
+    "/api/v1/namespaces/" + namespace + "/secrets/" + name,
+  );
+}
+
+async function listSecretEditorTree(force) {
+  const now = Date.now();
+  if (!force && secretsTreeCache.snapshot && now - secretsTreeCache.ts < 60000) {
+    return secretsTreeCache.snapshot;
+  }
+  if (!secretsTreeCache.promise) {
+    secretsTreeCache.promise = (async () => {
+      const payload = await githubRequest(
+        githubRepositoryPath() +
+          "/git/trees/" +
+          encodeURIComponent(SECRET_EDITOR_BRANCH) +
+          "?recursive=1",
+      );
+      const tree = Array.isArray(payload && payload.tree) ? payload.tree : [];
+      const paths = tree
+        .filter((item) => item && item.type === "blob" && item.path)
+        .map((item) => String(item.path));
+      const snapshot = { paths, checkedAt: nowIso() };
+      secretsTreeCache.snapshot = snapshot;
+      secretsTreeCache.ts = Date.now();
+      return snapshot;
+    })().finally(() => {
+      secretsTreeCache.promise = null;
+    });
+  }
+  return await secretsTreeCache.promise;
+}
+
+async function githubFileText(repoPath) {
+  const payload = await githubRequest(
+    githubRepositoryPath() +
+      "/contents/" +
+      repoPath.split("/").map(encodeURIComponent).join("/") +
+      "?ref=" +
+      encodeURIComponent(SECRET_EDITOR_BRANCH),
+  );
+  if (!payload || payload.type !== "file" || !payload.content) {
+    throw new Error("repository file not found: " + repoPath);
+  }
+  return Buffer.from(String(payload.content).replace(/\s/g, ""), "base64").toString("utf8");
+}
+
+function parseKustomizationResources(content) {
+  return String(content || "")
+    .split("\n")
+    .map((line) => line.match(/^\s*-\s+(.+?)\s*$/))
+    .filter(Boolean)
+    .map((match) => match[1].trim());
+}
+
+function addKustomizationResource(content, filename) {
+  const source = String(content || "");
+  if (parseKustomizationResources(source).includes(filename)) return source;
+  if (source.endsWith("\n")) return source + "  - " + filename + "\n";
+  return source + "\n  - " + filename + "\n";
+}
+
+function removeKustomizationResource(content, filename) {
+  return String(content || "")
+    .split("\n")
+    .filter((line) => !new RegExp("^\\s*-\\s+" + filename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$").test(line))
+    .join("\n")
+    .replace(/\n?$/, "\n");
+}
+
+async function listManagedSecrets(force) {
+  if (!secretEditorConfigured()) {
+    return {
+      configured: false,
+      reason: "GitHub token, repository, or SOPS recipient is not configured.",
+      namespaces: SECRET_EDITOR_NAMESPACES,
+      items: [],
+    };
+  }
+  const tree = await listSecretEditorTree(force);
+  const prefix = SECRET_EDITOR_REPO_ROOT + "/";
+  const candidates = tree.paths
+    .filter((repoPath) => repoPath.startsWith(prefix))
+    .filter((repoPath) => repoPath.endsWith(".yaml"))
+    .filter((repoPath) => !repoPath.endsWith("/kustomization.yaml"))
+    .map((repoPath) => ({
+      repoPath,
+      parts: repoPath.slice(prefix.length).split("/"),
+    }))
+    .filter(({ parts }) => parts.length === 2)
+    .map(({ repoPath, parts }) => ({
+      repoPath,
+      namespace: parts[0],
+      name: parts[1].replace(/\.yaml$/, ""),
+    }))
+    .filter((item) => SECRET_EDITOR_NAMESPACE_SET.has(item.namespace));
+  const items = (await Promise.all(
+    candidates.map(async (item) => {
+      const secret = await getKubeSecret(item.namespace, item.name).catch(() => null);
+      return sanitizeSecretSummary(item.namespace, item.name, item.repoPath, secret);
+    }),
+  )).sort((left, right) =>
+    (left.namespace + "/" + left.name).localeCompare(right.namespace + "/" + right.name),
+  );
+  return {
+    configured: true,
+    namespaces: SECRET_EDITOR_NAMESPACES,
+    branch: SECRET_EDITOR_BRANCH,
+    checkedAt: tree.checkedAt,
+    items,
+  };
+}
+
+async function waitForSecretEditorJob(jobName) {
+  const deadline = Date.now() + SECRET_EDITOR_JOB_TIMEOUT_SECONDS * 1000;
+  let lastJob = null;
+  while (Date.now() < deadline) {
+    lastJob = await kubeGetJson("/apis/batch/v1/namespaces/default/jobs/" + jobName);
+    const status = (lastJob && lastJob.status) || {};
+    if (Number(status.succeeded || 0) > 0) return lastJob;
+    if (Number(status.failed || 0) > 0) break;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  let logs = "";
+  try {
+    const pods = await kubeGetJson(
+      "/api/v1/namespaces/default/pods?labelSelector=" +
+        encodeURIComponent("job-name=" + jobName),
+    );
+    const pod = pods && Array.isArray(pods.items) ? pods.items[0] : null;
+    if (pod && pod.metadata && pod.metadata.name) {
+      const logRes = await kubeRequest(
+        "/api/v1/namespaces/default/pods/" + pod.metadata.name + "/log?container=commit&tailLines=80",
+      );
+      logs = logRes.body || "";
+    }
+  } catch {
+    logs = "";
+  }
+  throw new Error(
+    "secret commit job failed or timed out" + (logs ? ": " + logs.slice(-1200) : ""),
+  );
+}
+
+async function cleanupSecretEditorJob(jobName, payloadName) {
+  await kubeRequest(
+    "/apis/batch/v1/namespaces/default/jobs/" + jobName + "?propagationPolicy=Background",
+    { method: "DELETE", body: {} },
+  ).catch(() => {});
+  await kubeRequest("/api/v1/namespaces/default/secrets/" + payloadName, {
+    method: "DELETE",
+    body: {},
+  }).catch(() => {});
+}
+
+async function reconcileSecretsFlux() {
+  const requestedAt = nowIso();
+  const patch = {
+    metadata: {
+      annotations: {
+        "reconcile.fluxcd.io/requestedAt": requestedAt,
+      },
+    },
+  };
+  await kubeRequest(
+    "/apis/source.toolkit.fluxcd.io/v1/namespaces/" +
+      SECRET_EDITOR_FLUX_NAMESPACE +
+      "/gitrepositories/" +
+      SECRET_EDITOR_FLUX_SOURCE_NAME,
+    {
+      method: "PATCH",
+      body: patch,
+      contentType: "application/merge-patch+json",
+    },
+  );
+  await kubeRequest(
+    "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/" +
+      SECRET_EDITOR_FLUX_NAMESPACE +
+      "/kustomizations/" +
+      SECRET_EDITOR_FLUX_KUSTOMIZATION_NAME,
+    {
+      method: "PATCH",
+      body: patch,
+      contentType: "application/merge-patch+json",
+    },
+  );
+  return requestedAt;
+}
+
+async function runSecretGitOperation(operation) {
+  if (secretEditorInFlight) {
+    throw new Error("another secret edit is already running");
+  }
+  secretEditorInFlight = true;
+  const suffix = crypto.randomBytes(4).toString("hex");
+  const payloadName = "secret-editor-payload-" + suffix;
+  const jobName = "secret-editor-commit-" + suffix;
+  const payloadData = {
+    ...(operation.secretYaml ? { "secret.yaml": operation.secretYaml } : {}),
+    ...(operation.kustomizationYaml ? { "kustomization.yaml": operation.kustomizationYaml } : {}),
+  };
+
+  try {
+    const payloadSecret = {
+      apiVersion: "v1",
+      kind: "Secret",
+      metadata: {
+        name: payloadName,
+        namespace: "default",
+        labels: {
+          "app.kubernetes.io/name": "exposure-control",
+          "app.kubernetes.io/component": "secret-editor",
+        },
+      },
+      type: "Opaque",
+      stringData: payloadData,
+    };
+    const createdSecret = await kubeRequest("/api/v1/namespaces/default/secrets", {
+      method: "POST",
+      body: payloadSecret,
+    });
+    if (createdSecret.statusCode !== 201) {
+      throw new Error("failed to create secret editor payload (" + createdSecret.statusCode + ")");
+    }
+
+    const job = {
+      apiVersion: "batch/v1",
+      kind: "Job",
+      metadata: {
+        name: jobName,
+        namespace: "default",
+        labels: {
+          "app.kubernetes.io/name": "exposure-control",
+          "app.kubernetes.io/component": "secret-editor",
+        },
+      },
+      spec: {
+        backoffLimit: 0,
+        ttlSecondsAfterFinished: 600,
+        template: {
+          metadata: {
+            labels: {
+              "app.kubernetes.io/name": "exposure-control",
+              "app.kubernetes.io/component": "secret-editor",
+            },
+          },
+          spec: {
+            restartPolicy: "Never",
+            containers: [
+              {
+                name: "commit",
+                image: SECRET_EDITOR_JOB_IMAGE,
+                imagePullPolicy: "IfNotPresent",
+                command: ["/bin/sh", "/app-files/secret-commit-job.sh"],
+                env: [
+                  { name: "OPERATION", value: operation.mode },
+                  { name: "GITHUB_REPOSITORY", value: GITHUB_REPOSITORY },
+                  { name: "GITHUB_BRANCH", value: SECRET_EDITOR_BRANCH },
+                  { name: "SECRET_FILE_PATH", value: operation.secretFilePath },
+                  { name: "KUSTOMIZATION_FILE_PATH", value: operation.kustomizationFilePath || "" },
+                  { name: "COMMIT_MESSAGE", value: operation.commitMessage },
+                  { name: "SOPS_AGE_RECIPIENT", value: SECRET_EDITOR_SOPS_RECIPIENT },
+                  { name: "GIT_AUTHOR_NAME", value: SECRET_EDITOR_GIT_AUTHOR_NAME },
+                  { name: "GIT_AUTHOR_EMAIL", value: SECRET_EDITOR_GIT_AUTHOR_EMAIL },
+                  {
+                    name: "GITHUB_TOKEN",
+                    valueFrom: {
+                      secretKeyRef: {
+                        name: "exposure-control-github",
+                        key: "GITHUB_TOKEN",
+                      },
+                    },
+                  },
+                ],
+                volumeMounts: [
+                  { name: "payload", mountPath: "/payload", readOnly: true },
+                  { name: "app-files", mountPath: "/app-files", readOnly: true },
+                ],
+                securityContext: {
+                  allowPrivilegeEscalation: false,
+                  capabilities: { drop: ["ALL"] },
+                  readOnlyRootFilesystem: false,
+                },
+              },
+            ],
+            volumes: [
+              { name: "payload", secret: { secretName: payloadName } },
+              {
+                name: "app-files",
+                configMap: {
+                  name: SECRET_EDITOR_HELPER_CONFIGMAP,
+                  defaultMode: 365,
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+    const createdJob = await kubeRequest("/apis/batch/v1/namespaces/default/jobs", {
+      method: "POST",
+      body: job,
+    });
+    if (createdJob.statusCode !== 201) {
+      throw new Error("failed to create secret commit job (" + createdJob.statusCode + ")");
+    }
+    await waitForSecretEditorJob(jobName);
+    secretsTreeCache.snapshot = null;
+    secretsTreeCache.ts = 0;
+    const requestedAt = await reconcileSecretsFlux();
+    return { jobName, requestedAt };
+  } finally {
+    await cleanupSecretEditorJob(jobName, payloadName);
+    secretEditorInFlight = false;
+  }
+}
+
+async function upsertManagedSecret(namespace, name, stringData, options) {
+  const ns = assertSecretNamespace(namespace);
+  const secretName = assertSecretName(name);
+  const data = normalizeSecretStringData(stringData);
+  const existing = await getKubeSecret(ns, secretName);
+  const type = String((options && options.type) || (existing && existing.type) || "Opaque");
+  const secretYaml = renderPlainSecretYaml(ns, secretName, type, data);
+  const tree = await listSecretEditorTree(true);
+  const filePath = secretFilePath(ns, secretName);
+  const fileExists = tree.paths.includes(filePath);
+  const kustomizationPath = secretNamespaceKustomizationPath(ns);
+  let kustomizationYaml = "";
+  if (!fileExists) {
+    kustomizationYaml = addKustomizationResource(
+      await githubFileText(kustomizationPath),
+      secretName + ".yaml",
+    );
+  }
+  const result = await runSecretGitOperation({
+    mode: "upsert",
+    secretYaml,
+    kustomizationYaml,
+    secretFilePath: filePath,
+    kustomizationFilePath: kustomizationYaml ? kustomizationPath : "",
+    commitMessage: "secrets: update " + secretName,
+  });
+  return { namespace: ns, name: secretName, repoPath: filePath, ...result };
+}
+
+async function deleteManagedSecret(namespace, name) {
+  const ns = assertSecretNamespace(namespace);
+  const secretName = assertSecretName(name);
+  const filePath = secretFilePath(ns, secretName);
+  const kustomizationPath = secretNamespaceKustomizationPath(ns);
+  const kustomizationYaml = removeKustomizationResource(
+    await githubFileText(kustomizationPath),
+    secretName + ".yaml",
+  );
+  const result = await runSecretGitOperation({
+    mode: "delete",
+    kustomizationYaml,
+    secretFilePath: filePath,
+    kustomizationFilePath: kustomizationPath,
+    commitMessage: "secrets: remove " + secretName,
+  });
+  return { namespace: ns, name: secretName, repoPath: filePath, ...result };
 }
 
 function pickRenovateDashboardIssue(issues) {
@@ -2855,6 +3376,79 @@ async function handleApi(req, res, parsedUrl) {
   if (req.method === "GET" && pathname === "/api/audit") {
     const entries = loadAuditEntries(100);
     return sendJson(res, 200, { entries });
+  }
+
+  if (req.method === "GET" && pathname === "/api/secrets") {
+    const force =
+      parsedUrl.searchParams.get("force") === "1" ||
+      parsedUrl.searchParams.get("refresh") === "1";
+    try {
+      const payload = await listManagedSecrets(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/secrets") {
+    try {
+      const body = await parseBody(req);
+      const namespace = assertSecretNamespace(body.namespace);
+      const name = assertSecretName(body.name);
+      const result = await upsertManagedSecret(namespace, name, body.stringData || {}, {
+        type: body.type || "Opaque",
+      });
+      appendAuditEntry({ action: "secret-upsert", serviceId: namespace + "/" + name });
+      return sendJson(res, 200, result);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  const secretMatch = pathname.match(/^\/api\/secrets\/([^/]+)\/([^/]+)$/);
+  if (secretMatch && req.method === "GET") {
+    try {
+      const namespace = assertSecretNamespace(decodeURIComponent(secretMatch[1]));
+      const name = assertSecretName(decodeURIComponent(secretMatch[2]));
+      const secret = await getKubeSecret(namespace, name);
+      if (!secret) return sendJson(res, 404, { error: "secret not found in cluster" });
+      return sendJson(res, 200, {
+        namespace,
+        name,
+        repoPath: secretFilePath(namespace, name),
+        type: String(secret.type || "Opaque"),
+        stringData: decodeSecretData(secret),
+      });
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  if (secretMatch && req.method === "PUT") {
+    try {
+      const body = await parseBody(req);
+      const namespace = assertSecretNamespace(decodeURIComponent(secretMatch[1]));
+      const name = assertSecretName(decodeURIComponent(secretMatch[2]));
+      const result = await upsertManagedSecret(namespace, name, body.stringData || {}, {
+        type: body.type || "Opaque",
+      });
+      appendAuditEntry({ action: "secret-upsert", serviceId: namespace + "/" + name });
+      return sendJson(res, 200, result);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  if (secretMatch && req.method === "DELETE") {
+    try {
+      const namespace = assertSecretNamespace(decodeURIComponent(secretMatch[1]));
+      const name = assertSecretName(decodeURIComponent(secretMatch[2]));
+      const result = await deleteManagedSecret(namespace, name);
+      appendAuditEntry({ action: "secret-delete", serviceId: namespace + "/" + name });
+      return sendJson(res, 200, result);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
   }
 
   if (req.method === "GET" && pathname === "/api/image-updates") {

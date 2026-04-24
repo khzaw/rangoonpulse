@@ -94,8 +94,25 @@ Best fit:
 ## Agreed Plan (Now In Progress)
 The direction is:
 1. Phase 1: `SOPS + age` with Flux (implemented).
-2. Phase 2 (UX-focused): add lightweight UI for cluster resource ops (Headlamp or Dashboard) with strict RBAC (in progress).
+2. Phase 2 (UX-focused): add lightweight UI for GitOps-managed secret CRUD in the existing control panel (implemented).
 3. Phase 3 (optional, if needed): evaluate ESO with Vaultwarden/Bitwarden path for centralized source-of-truth secrets.
+
+## Control Panel Secret Editor
+
+The canonical UI for managed secret edits is the `Secrets` section of `https://controlpanel.khzaw.dev`.
+
+Important behavior:
+- It edits only SOPS-managed files under `infrastructure/secrets/**`.
+- It reads current values from live Kubernetes `Secret` objects for the allowlisted managed namespaces.
+- It writes changes by generating a plaintext Secret manifest in a short-lived in-cluster helper Job, encrypting it with SOPS+age, committing to `master`, pushing to GitHub, and requesting a Flux reconcile of `flux-system/secrets`.
+- It does not make permanent live-only Secret patches. Flux remains the source of truth.
+- Delete actions remove the Git-managed Secret file and namespace kustomization entry, then rely on the `secrets` Flux Kustomization with `prune: true`.
+
+Security notes:
+- The control panel can read managed runtime Secrets and can create short-lived helper Jobs containing plaintext payloads.
+- Do not expose `controlpanel.khzaw.dev` publicly.
+- The helper Job must avoid logging secret values; logs should contain only operation status.
+- Keep the GitHub token scoped to this repository and rotate it if the control panel is compromised.
 
 ## Phase 1 Outline (What Was Done)
 1. Generated an `age` keypair.

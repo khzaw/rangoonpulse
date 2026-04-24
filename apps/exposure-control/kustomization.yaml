@@ -12,6 +12,7 @@ configMapGenerator:
       - app.js
       - index.html
       - server.js
+      - secret-commit-job.sh
       - services.json
       - styles.css
       - travel.json

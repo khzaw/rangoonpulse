@@ -60,6 +60,20 @@
       const helmUpdatesMsgEl = document.getElementById('helmUpdatesMsg');
       const helmUpdatesMetaEl = document.getElementById('helmUpdatesMeta');
       const helmUpdatesRefreshBtn = document.getElementById('helmUpdatesRefreshBtn');
+      const secretsSummaryEl = document.getElementById('secretsSummary');
+      const secretsSearchInputEl = document.getElementById('secretsSearchInput');
+      const secretsRefreshBtn = document.getElementById('secretsRefreshBtn');
+      const secretsListEl = document.getElementById('secretsList');
+      const secretsMsgEl = document.getElementById('secretsMsg');
+      const newSecretNamespaceEl = document.getElementById('newSecretNamespace');
+      const newSecretNameEl = document.getElementById('newSecretName');
+      const newSecretBtn = document.getElementById('newSecretBtn');
+      const secretEditorTitleEl = document.getElementById('secretEditorTitle');
+      const secretEditorMetaEl = document.getElementById('secretEditorMeta');
+      const secretAddKeyBtn = document.getElementById('secretAddKeyBtn');
+      const secretSaveBtn = document.getElementById('secretSaveBtn');
+      const secretDeleteBtn = document.getElementById('secretDeleteBtn');
+      const secretKeyRowsEl = document.getElementById('secretKeyRows');
       const pageSections = Array.from(document.querySelectorAll('[data-page-section]'));
       const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
 
@@ -76,6 +90,8 @@
         helmUpdates: null,
         travel: null,
         tuning: null,
+        secrets: null,
+        selectedSecret: null,
       };
 
       function setMessage(target, text, isError) {
@@ -111,10 +127,14 @@
         setMessage(helmUpdatesMsgEl, text, isError);
       }
 
+      function setSecretsMsg(text, isError) {
+        setMessage(secretsMsgEl, text, isError);
+      }
+
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
         if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['updates', 'travel', 'exposure', 'tuning']);
+        const knownPages = new Set(['updates', 'travel', 'exposure', 'tuning', 'secrets']);
         if (knownPages.has(candidate)) return candidate;
         return 'updates';
       }
@@ -1274,6 +1294,209 @@
         }
       }
 
+      function secretId(namespace, name) {
+        return String(namespace || '') + '/' + String(name || '');
+      }
+
+      function selectedSecretId() {
+        const selected = dashboardState.selectedSecret;
+        return selected ? secretId(selected.namespace, selected.name) : '';
+      }
+
+      function secretFilterText(item) {
+        return [
+          item.namespace,
+          item.name,
+          item.repoPath,
+          Array.isArray(item.keys) ? item.keys.join(' ') : '',
+        ].join(' ').toLowerCase();
+      }
+
+      function renderSecretNamespaceOptions(namespaces) {
+        const current = newSecretNamespaceEl.value;
+        newSecretNamespaceEl.innerHTML = (namespaces || [])
+          .map((namespace) => '<option value="' + escapeHtml(namespace) + '">' + escapeHtml(namespace) + '</option>')
+          .join('');
+        if (current && (namespaces || []).includes(current)) newSecretNamespaceEl.value = current;
+      }
+
+      function renderSecretsList(payload) {
+        const data = payload || { configured: false, items: [], namespaces: [] };
+        dashboardState.secrets = data;
+        renderSecretNamespaceOptions(data.namespaces || []);
+        const items = Array.isArray(data.items) ? data.items : [];
+        const query = String(secretsSearchInputEl.value || '').trim().toLowerCase();
+        const visible = items.filter((item) => !query || secretFilterText(item).includes(query));
+        secretsSummaryEl.textContent = data.configured
+          ? String(items.length) + ' managed secret' + (items.length === 1 ? '' : 's') + ' · branch ' + (data.branch || 'master')
+          : (data.reason || 'Secret editor is not configured.');
+        if (!visible.length) {
+          secretsListEl.innerHTML = '<div class="empty-state">No managed secrets match.</div>';
+          return;
+        }
+        const current = selectedSecretId();
+        secretsListEl.innerHTML = visible.map((item) => {
+          const id = secretId(item.namespace, item.name);
+          return (
+            '<button class="secret-list-item ' + (id === current ? 'active' : '') + '" type="button" data-secret-namespace="' + escapeHtml(item.namespace) + '" data-secret-name="' + escapeHtml(item.name) + '">' +
+              '<span class="secret-list-name">' + escapeHtml(item.name) + '</span>' +
+              '<span class="secret-list-meta">' + escapeHtml(item.namespace) + ' · ' + String(item.keyCount || 0) + ' key(s)' + (item.existsLive ? '' : ' · not live') + '</span>' +
+            '</button>'
+          );
+        }).join('');
+      }
+
+      function renderSecretEditor(secret) {
+        dashboardState.selectedSecret = secret || null;
+        const hasSecret = Boolean(secret);
+        secretAddKeyBtn.disabled = !hasSecret;
+        secretSaveBtn.disabled = !hasSecret;
+        secretDeleteBtn.disabled = !hasSecret;
+        if (!hasSecret) {
+          secretEditorTitleEl.textContent = 'Select a secret';
+          secretEditorMetaEl.textContent = 'Values stay hidden until a Secret is opened.';
+          secretKeyRowsEl.innerHTML = '<div class="empty-state">No secret selected.</div>';
+          renderSecretsList(dashboardState.secrets);
+          return;
+        }
+        const entries = Object.entries(secret.stringData || {}).sort((left, right) => left[0].localeCompare(right[0]));
+        secretEditorTitleEl.textContent = secret.namespace + '/' + secret.name;
+        secretEditorMetaEl.textContent = (secret.repoPath || '') + ' · type ' + (secret.type || 'Opaque');
+        secretKeyRowsEl.innerHTML = entries.length
+          ? entries.map(([key, value]) => secretKeyRowHtml(key, value)).join('')
+          : '<div class="empty-state">This Secret has no keys yet.</div>';
+        renderSecretsList(dashboardState.secrets);
+      }
+
+      function secretKeyRowHtml(key, value) {
+        return (
+          '<div class="secret-key-row">' +
+            '<input class="secret-key-name" type="text" value="' + escapeHtml(key) + '" placeholder="KEY_NAME" autocomplete="off" />' +
+            '<input class="secret-key-value" type="password" value="' + escapeHtml(value) + '" placeholder="value" autocomplete="off" />' +
+            '<button class="secret-reveal-btn" type="button" title="Reveal or hide value">Reveal</button>' +
+            '<button class="secret-remove-key-btn danger" type="button" title="Remove key">Remove</button>' +
+          '</div>'
+        );
+      }
+
+      function readSecretEditorForm() {
+        const rows = Array.from(secretKeyRowsEl.querySelectorAll('.secret-key-row'));
+        return rows.reduce((acc, row) => {
+          const key = row.querySelector('.secret-key-name').value.trim();
+          const value = row.querySelector('.secret-key-value').value;
+          if (!key) return acc;
+          if (!/^[A-Za-z0-9._-]+$/.test(key)) throw new Error('Unsupported key name: ' + key);
+          return { ...acc, [key]: value };
+        }, {});
+      }
+
+      async function loadSecrets(options) {
+        const force = Boolean(options && options.force);
+        if (force) {
+          setBtnLoading(secretsRefreshBtn, true);
+          setSecretsMsg('Refreshing managed secret inventory...');
+        }
+        try {
+          const payload = await request(force ? '/api/secrets?force=1' : '/api/secrets', 'GET');
+          renderSecretsList(payload);
+          if (force) setSecretsMsg('Secret inventory refreshed.');
+        } catch (err) {
+          setSecretsMsg(err.message, true);
+        } finally {
+          if (force) setBtnLoading(secretsRefreshBtn, false);
+        }
+      }
+
+      async function openSecret(namespace, name) {
+        setSecretsMsg('Loading ' + namespace + '/' + name + '...');
+        try {
+          const secret = await request('/api/secrets/' + encodeURIComponent(namespace) + '/' + encodeURIComponent(name), 'GET');
+          renderSecretEditor(secret);
+          setSecretsMsg('Secret loaded.');
+        } catch (err) {
+          setSecretsMsg(err.message, true);
+        }
+      }
+
+      async function saveSelectedSecret() {
+        const secret = dashboardState.selectedSecret;
+        if (!secret) return;
+        if (!confirm('Commit encrypted changes for ' + secret.namespace + '/' + secret.name + '?')) return;
+        try {
+          mutationInFlight += 1;
+          setBtnLoading(secretSaveBtn, true);
+          setSecretsMsg('Encrypting, committing, pushing, and requesting Flux reconcile...');
+          await request('/api/secrets/' + encodeURIComponent(secret.namespace) + '/' + encodeURIComponent(secret.name), 'PUT', {
+            type: secret.type || 'Opaque',
+            stringData: readSecretEditorForm(),
+          });
+          await loadSecrets({ force: true });
+          await openSecret(secret.namespace, secret.name);
+          setSecretsMsg('Secret change committed and Flux reconcile requested.');
+        } catch (err) {
+          setSecretsMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          setBtnLoading(secretSaveBtn, false);
+        }
+      }
+
+      async function createSecret() {
+        const namespace = newSecretNamespaceEl.value;
+        const name = String(newSecretNameEl.value || '').trim();
+        if (!namespace || !name) {
+          setSecretsMsg('Namespace and secret name are required.', true);
+          return;
+        }
+        if (!confirm('Create ' + namespace + '/' + name + ' in Git?')) return;
+        try {
+          mutationInFlight += 1;
+          setBtnLoading(newSecretBtn, true);
+          setSecretsMsg('Creating encrypted Secret file...');
+          await request('/api/secrets', 'POST', {
+            namespace,
+            name,
+            type: 'Opaque',
+            stringData: {},
+          });
+          newSecretNameEl.value = '';
+          await loadSecrets({ force: true });
+          renderSecretEditor({
+            namespace,
+            name,
+            repoPath: 'infrastructure/secrets/' + namespace + '/' + name + '.yaml',
+            type: 'Opaque',
+            stringData: {},
+          });
+          setSecretsMsg('Secret file created and Flux reconcile requested.');
+        } catch (err) {
+          setSecretsMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          setBtnLoading(newSecretBtn, false);
+        }
+      }
+
+      async function deleteSelectedSecret() {
+        const secret = dashboardState.selectedSecret;
+        if (!secret) return;
+        if (!confirm('Delete ' + secret.namespace + '/' + secret.name + ' from Git and let Flux prune it?')) return;
+        try {
+          mutationInFlight += 1;
+          setBtnLoading(secretDeleteBtn, true);
+          setSecretsMsg('Removing Secret file and requesting Flux prune...');
+          await request('/api/secrets/' + encodeURIComponent(secret.namespace) + '/' + encodeURIComponent(secret.name), 'DELETE');
+          renderSecretEditor(null);
+          await loadSecrets({ force: true });
+          setSecretsMsg('Secret removal committed and Flux reconcile requested.');
+        } catch (err) {
+          setSecretsMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          setBtnLoading(secretDeleteBtn, false);
+        }
+      }
+
       async function loadDashboard(options) {
         const silent = Boolean(options && options.silent);
         if (!silent) {
@@ -1291,10 +1514,11 @@
           updatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
+          secretsListEl.innerHTML = skeletonTableRows(1, 5);
         }
 
         try {
-          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData] = await Promise.allSettled([
+          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, secretsData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
             request('/api/transmission-vpn', 'GET'),
@@ -1303,6 +1527,7 @@
             request('/api/helm-updates', 'GET'),
             request('/api/renovate', 'GET'),
             request('/api/travel', 'GET'),
+            request('/api/secrets', 'GET'),
           ]);
 
           if (svcData.status !== 'fulfilled') throw svcData.reason;
@@ -1363,6 +1588,13 @@
             renderTravel(null);
             if (travelData && !silent) setTravelMsg(travelData.reason.message, true);
           }
+          if (secretsData && secretsData.status === 'fulfilled') {
+            renderSecretsList(secretsData.value);
+            if (!silent) setSecretsMsg('');
+          } else {
+            renderSecretsList({ configured: false, items: [], namespaces: [], reason: secretsData ? secretsData.reason.message : 'Secret inventory unavailable.' });
+            if (secretsData && !silent) setSecretsMsg(secretsData.reason.message, true);
+          }
 
           renderOverview();
           setLoadState((silent ? 'Last refresh ' : 'Updated ') + new Date().toLocaleTimeString());
@@ -1379,6 +1611,38 @@
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
+      secretsRefreshBtn.onclick = () => loadSecrets({ force: true });
+      newSecretBtn.onclick = () => createSecret();
+      secretSaveBtn.onclick = () => saveSelectedSecret();
+      secretDeleteBtn.onclick = () => deleteSelectedSecret();
+      secretAddKeyBtn.onclick = () => {
+        if (!dashboardState.selectedSecret) return;
+        const empty = secretKeyRowsEl.querySelector('.empty-state');
+        if (empty) secretKeyRowsEl.innerHTML = '';
+        secretKeyRowsEl.insertAdjacentHTML('beforeend', secretKeyRowHtml('', ''));
+      };
+      secretsSearchInputEl.addEventListener('input', () => renderSecretsList(dashboardState.secrets));
+      secretsListEl.addEventListener('click', (event) => {
+        const item = event.target.closest('[data-secret-namespace][data-secret-name]');
+        if (!item) return;
+        openSecret(item.dataset.secretNamespace, item.dataset.secretName);
+      });
+      secretKeyRowsEl.addEventListener('click', (event) => {
+        const reveal = event.target.closest('.secret-reveal-btn');
+        const remove = event.target.closest('.secret-remove-key-btn');
+        if (reveal) {
+          const input = reveal.closest('.secret-key-row').querySelector('.secret-key-value');
+          const visible = input.type === 'text';
+          input.type = visible ? 'password' : 'text';
+          reveal.textContent = visible ? 'Reveal' : 'Hide';
+        }
+        if (remove) {
+          remove.closest('.secret-key-row').remove();
+          if (!secretKeyRowsEl.querySelector('.secret-key-row')) {
+            secretKeyRowsEl.innerHTML = '<div class="empty-state">This Secret has no keys yet.</div>';
+          }
+        }
+      });
       updatesRowsEl.onclick = async (event) => {
         const button = event.target.closest('[data-renovate-scan]');
         if (!button) return;

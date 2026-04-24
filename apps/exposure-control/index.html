@@ -38,6 +38,7 @@
         <a class="nav-pill" data-page-link href="#travel">travel</a>
         <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
         <a class="nav-pill" data-page-link href="#tuning">tuning</a>
+        <a class="nav-pill" data-page-link href="#secrets">secrets</a>
       </nav>
 
       <section id="overviewPanel" class="section overview-shared">
@@ -374,6 +375,50 @@
           <div class="terminal-shell">
             <div id="runtimeLines" class="runtime-markdown"></div>
           </div>
+        </div>
+      </section>
+
+      <section id="secrets" class="section" data-page-section>
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">secrets</h2>
+            <p class="section-copy">GitOps-managed SOPS Secret keys from infrastructure/secrets, committed back to master and reconciled through Flux.</p>
+          </div>
+          <div id="secretsSummary" class="section-detail">Loading managed secrets...</div>
+        </div>
+        <div class="secrets-layout">
+          <aside class="secrets-list-panel">
+            <div class="toolbar secrets-toolbar">
+              <label class="search-shell">
+                <span class="input-prefix">&gt;</span>
+                <input id="secretsSearchInput" type="search" placeholder="Filter secrets..." />
+              </label>
+              <button id="secretsRefreshBtn" type="button">Refresh</button>
+            </div>
+            <div class="new-secret-row">
+              <select id="newSecretNamespace" class="control-select" aria-label="Secret namespace"></select>
+              <input id="newSecretName" class="secret-name-input" type="text" placeholder="new-secret-name" />
+              <button id="newSecretBtn" type="button">New</button>
+            </div>
+            <div id="secretsList" class="secrets-list"></div>
+          </aside>
+          <section class="secret-editor-panel">
+            <div class="secret-editor-head">
+              <div>
+                <div id="secretEditorTitle" class="secret-editor-title">Select a secret</div>
+                <div id="secretEditorMeta" class="secret-editor-meta">Values stay hidden until a Secret is opened.</div>
+              </div>
+              <div class="secret-editor-actions">
+                <button id="secretAddKeyBtn" type="button" disabled>Add key</button>
+                <button id="secretSaveBtn" type="button" disabled>Commit</button>
+                <button id="secretDeleteBtn" class="danger" type="button" disabled>Delete Secret</button>
+              </div>
+            </div>
+            <div id="secretKeyRows" class="secret-key-rows">
+              <div class="empty-state">No secret selected.</div>
+            </div>
+            <div id="secretsMsg" class="msg"></div>
+          </section>
         </div>
       </section>
 

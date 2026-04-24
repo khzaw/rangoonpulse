@@ -1045,6 +1045,115 @@
         text-align: center;
         color: var(--text-2);
       }
+      .secrets-layout {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        border-top: 1px solid var(--border);
+      }
+      .secrets-list-panel,
+      .secret-editor-panel {
+        min-width: 0;
+      }
+      .secrets-list-panel {
+        border-right: 1px solid var(--border);
+        padding: 18px;
+      }
+      .secret-editor-panel {
+        padding: 18px;
+      }
+      .secrets-toolbar {
+        padding: 0;
+        border-bottom: none;
+        align-items: stretch;
+      }
+      .secrets-toolbar .search-shell {
+        flex: 1;
+      }
+      .new-secret-row {
+        display: grid;
+        grid-template-columns: minmax(110px, 0.8fr) minmax(140px, 1fr) auto;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .secret-name-input,
+      .secret-key-name,
+      .secret-key-value {
+        min-height: 38px;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        background: #0f0f0f;
+        color: var(--text-1);
+        padding: 0 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .secret-key-value {
+        min-width: 0;
+      }
+      .secrets-list {
+        display: grid;
+        gap: 6px;
+        margin-top: 16px;
+        max-height: 680px;
+        overflow: auto;
+      }
+      .secret-list-item {
+        min-height: 58px;
+        width: 100%;
+        padding: 10px 12px;
+        display: grid;
+        align-items: center;
+        justify-content: stretch;
+        text-align: left;
+        gap: 2px;
+      }
+      .secret-list-item.active {
+        border-color: rgba(31, 111, 235, 0.5);
+        background: rgba(31, 111, 235, 0.08);
+      }
+      .secret-list-name {
+        color: var(--text-1);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .secret-list-meta,
+      .secret-editor-meta {
+        color: var(--text-2);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        overflow-wrap: anywhere;
+      }
+      .secret-editor-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .secret-editor-title {
+        color: var(--text-1);
+        font-family: var(--font-mono);
+        font-size: 14px;
+      }
+      .secret-editor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .secret-key-rows {
+        display: grid;
+        gap: 8px;
+        padding: 16px 0;
+      }
+      .secret-key-row {
+        display: grid;
+        grid-template-columns: minmax(160px, 0.35fr) minmax(180px, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
+      }
       @keyframes shimmer {
         0% { background-position: -600px 0; }
         100% { background-position: 600px 0; }
@@ -1093,7 +1202,8 @@
         .vpn-row,
         .toolbar-left,
         .toolbar-right,
-        .top-actions {
+        .top-actions,
+        .secret-editor-head {
           flex-direction: column;
           align-items: flex-start;
         }
@@ -1124,6 +1234,17 @@
         }
         .focus-card:last-child {
           border-bottom: none;
+        }
+        .secrets-layout {
+          grid-template-columns: 1fr;
+        }
+        .secrets-list-panel {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+        .secret-key-row,
+        .new-secret-row {
+          grid-template-columns: 1fr;
         }
       }
       @media (max-width: 820px) {
