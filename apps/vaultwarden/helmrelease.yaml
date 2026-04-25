@@ -30,7 +30,7 @@ spec:
           main:
             image:
               repository: vaultwarden/server
-              tag: "1.35.7"
+              tag: "1.35.8"
             env:
               TZ: "${TIMEZONE}"
               DOMAIN: "https://passwords.${BASE_DOMAIN}"
