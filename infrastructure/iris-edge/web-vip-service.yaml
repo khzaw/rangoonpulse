@@ -10,7 +10,7 @@ metadata:
     khzaw.dev/edge-host: iris
   annotations:
     metallb.universe.tf/allow-shared-ip: iris-edge-vip
-    external-dns.alpha.kubernetes.io/hostname: iris.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: iris.${BASE_DOMAIN},athena.${BASE_DOMAIN}
 spec:
   type: LoadBalancer
   loadBalancerIP: ${IRIS_VIP}

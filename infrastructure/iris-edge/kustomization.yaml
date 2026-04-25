@@ -5,5 +5,7 @@ kind: Kustomization
 resources:
   - openclaw-service.yaml
   - openclaw-ingress.yaml
+  - hermes-service.yaml
+  - hermes-ingress.yaml
   - web-vip-service.yaml
   - ssh-vip-service.yaml
