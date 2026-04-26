@@ -8,10 +8,12 @@ resources:
   - helmrelease-blackbox-exporter.yaml
   - monitoring-cname.yaml
   - servicemonitor-kubelet-resource.yaml
+  - servicemonitor-truenas-netdata.yaml
   - grafana-dashboard-gitops-change-timeline.yaml
   - grafana-dashboard-dns-access-paths.yaml
   - grafana-dashboard-node-power-estimation.yaml
   - grafana-dashboard-node-capacity-overview.yaml
+  - grafana-dashboard-truenas-host-overview.yaml
   - grafana-dashboard-homelab-control-room.yaml
   - grafana-dashboard-storage-risk-overview.yaml
   - grafana-dashboard-public-edge-overview.yaml

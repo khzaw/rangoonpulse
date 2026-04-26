@@ -1,0 +1,603 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-truenas-host-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: truenas-host-overview
+data:
+  truenas-host-overview.json: |
+    {
+      "uid": "truenas-host-overview",
+      "title": "TrueNAS Host Overview",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["truenas", "storage", "memory", "homelab"],
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "API Probe",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 0
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(probe_success{target=\"truenas-api\"})"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "textMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bool",
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "NFS Probe",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 0
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(probe_success{target=\"truenas-nfs\"})"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "textMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bool",
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Available Memory",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 8,
+            "y": 0
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(netdata_Available_memory_Bytes_average{job=\"truenas-netdata\",chart=\"truenas_meminfo.available\"})"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "textMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 536870912
+                  },
+                  {
+                    "color": "green",
+                    "value": 1073741824
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Memory Headroom",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 12,
+            "y": 0
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(netdata_Available_memory_Bytes_average{job=\"truenas-netdata\",chart=\"truenas_meminfo.available\"}) / max(netdata_Total_memory_Bytes_average{job=\"truenas-netdata\",chart=\"truenas_meminfo.total\"})"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "textMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 0.15
+                  },
+                  {
+                    "color": "green",
+                    "value": 0.25
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "middlewared Memory",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 16,
+            "y": 0
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(netdata_services_mem_usage_MiB_average{job=\"truenas-netdata\",chart=\"services.mem_usage\",dimension=\"middlewared\"})"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "textMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decmbytes",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1536
+                  },
+                  {
+                    "color": "red",
+                    "value": 2048
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "nginx Memory",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 20,
+            "y": 0
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(netdata_services_mem_usage_MiB_average{job=\"truenas-netdata\",chart=\"services.mem_usage\",dimension=\"nginx\"})"
+            }
+          ],
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "orientation": "auto",
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "textMode": "auto"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decmbytes",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 7,
+          "type": "timeseries",
+          "title": "Memory and ARC",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(netdata_Available_memory_Bytes_average{job=\"truenas-netdata\",chart=\"truenas_meminfo.available\"})",
+              "legendFormat": "available"
+            },
+            {
+              "refId": "B",
+              "expr": "max(netdata_ARC_size_Bytes_average{job=\"truenas-netdata\",chart=\"truenas_arcstats.size\"})",
+              "legendFormat": "arc"
+            },
+            {
+              "refId": "C",
+              "expr": "max(netdata_Total_memory_Bytes_average{job=\"truenas-netdata\",chart=\"truenas_meminfo.total\"})",
+              "legendFormat": "total"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": ["lastNotNull", "min"]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 8,
+          "type": "timeseries",
+          "title": "Service Memory",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 4
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by (dimension) (netdata_services_mem_usage_MiB_average{job=\"truenas-netdata\",chart=\"services.mem_usage\",dimension=~\"middlewared|nginx|netdata|docker|containerd|tailscaled\"})",
+              "legendFormat": "{{dimension}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decmbytes",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": ["lastNotNull", "max"]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "API and NFS Probe Success",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 13
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "probe_success{target=~\"truenas-api|truenas-ui|truenas-nfs\"}",
+              "legendFormat": "{{target}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bool",
+              "min": 0,
+              "max": 1,
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "showPoints": "never"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": ["lastNotNull"]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          }
+        },
+        {
+          "id": 10,
+          "type": "alertlist",
+          "title": "TrueNAS Alerts",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 13
+          },
+          "options": {
+            "showOptions": "current",
+            "maxItems": 20,
+            "sortOrder": 1,
+            "dashboardAlerts": false,
+            "alertName": "TrueNAS"
+          }
+        }
+      ]
+    }

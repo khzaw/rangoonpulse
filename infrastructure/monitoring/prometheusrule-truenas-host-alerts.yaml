@@ -25,6 +25,24 @@ spec:
             summary: "TrueNAS management plane is unavailable"
             description: "The unauthenticated TrueNAS API probe has been failing for 2 minutes. This usually means nginx or middlewared is unhealthy on the NAS, and democratic-csi may fail shortly after."
 
+        - alert: TrueNASManagementPlaneDownButNFSUp
+          expr: >
+            max(probe_success{
+              target="truenas-api",
+              instance="http://${NAS_IP}/api/v2.0/system/version/"
+            }) == 0
+            and
+            max(probe_success{
+              target="truenas-nfs",
+              instance="${NAS_IP}:2049"
+            }) == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "TrueNAS UI/API is down while NFS is still up"
+            description: "The NAS is reachable on NFS but the TrueNAS API probe is failing. This matches the nginx/middlewared management-plane failure pattern seen during NAS memory starvation."
+
         - alert: TrueNASNFSUnavailable
           expr: >
             probe_success{
@@ -37,3 +55,66 @@ spec:
           annotations:
             summary: "TrueNAS NFS endpoint is unavailable"
             description: "The NAS is not accepting TCP connections on port 2049 for 2 minutes. TrueNAS-backed mounts and PVC-backed workloads are at immediate risk."
+
+        - alert: TrueNASNetdataUnavailable
+          expr: up{job="truenas-netdata"} == 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TrueNAS Netdata scrape is unavailable"
+            description: "Prometheus cannot scrape Netdata on the NAS. Host memory and per-service memory panels may be stale, but blackbox API/NFS probes still cover reachability."
+
+        - alert: TrueNASMemoryHeadroomLow
+          expr: >
+            (
+              max(netdata_Available_memory_Bytes_average{
+                job="truenas-netdata",
+                chart="truenas_meminfo.available"
+              })
+              /
+              max(netdata_Total_memory_Bytes_average{
+                job="truenas-netdata",
+                chart="truenas_meminfo.total"
+              })
+            ) < 0.15
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TrueNAS memory headroom is low"
+            description: "Available memory on the NAS has been below 15% for 10 minutes. This host has no swap, so sustained low headroom can lead to OOM kills of nginx or other userspace services."
+
+        - alert: TrueNASMiddlewareMemoryHigh
+          expr: >
+            max(netdata_services_mem_usage_MiB_average{
+              job="truenas-netdata",
+              chart="services.mem_usage",
+              dimension="middlewared"
+            }) > 1536
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TrueNAS middlewared memory is high"
+            description: "Netdata reports middlewared using more than 1.5GiB for 10 minutes. Prior OOM incidents involved middlewared growing above 2GiB on this low-memory NAS."
+
+        - alert: TrueNASNginxServiceNotReported
+          expr: >
+            max(netdata_services_mem_usage_MiB_average{
+              job="truenas-netdata",
+              chart="services.mem_usage",
+              dimension="nginx"
+            }) < 1
+            or
+            absent(netdata_services_mem_usage_MiB_average{
+              job="truenas-netdata",
+              chart="services.mem_usage",
+              dimension="nginx"
+            })
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "TrueNAS nginx service is not visible in Netdata"
+            description: "Netdata no longer reports meaningful memory usage for nginx. If the API probe is also failing, nginx was likely stopped or killed and the TrueNAS UI will be unavailable."

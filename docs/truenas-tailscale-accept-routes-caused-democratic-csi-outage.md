@@ -191,6 +191,9 @@ That points to a memory-starvation event where NFSv4 server-side copy activity w
 - Preserve userspace headroom on low-memory TrueNAS hosts by capping ARC instead of leaving `zfs_arc_max` unlimited.
 - Avoid negotiating generic `nfsvers=4` from Kubernetes clients on this cluster. `nfsvers=4` allows Linux clients to negotiate up to `4.2`; pinning to `nfsvers=4.1` avoids the `nfsd4_copy` path implicated in this outage pattern.
 - Monitoring now also probes the TrueNAS management plane and NFS port directly, so alerting can fire before democratic-csi fan-out becomes the first obvious symptom.
+- Prometheus also scrapes the NAS Netdata endpoint on `${NAS_IP}:6999` via `ServiceMonitor/monitoring/truenas-netdata`. Grafana dashboard `TrueNAS Host Overview` tracks available memory, ARC size, and per-service memory for `nginx`, `middlewared`, and Netdata. Netdata is bound to the NAS LAN IP in `/etc/netdata/netdata.conf`; the pre-change backup from the 2026-04-26 incident follow-up is `/etc/netdata/netdata.conf.codex-backup-20260426-oom-monitoring`.
+- `TrueNASManagementPlaneDownButNFSUp` is the high-signal alert for this failure mode: it fires when the API probe is down while NFS still accepts connections.
+- `TrueNASNginxServiceNotReported`, `TrueNASMemoryHeadroomLow`, and `TrueNASMiddlewareMemoryHigh` provide earlier or more specific signals when host metrics are still scrapeable.
 
 ### Repo Guardrail Added
 

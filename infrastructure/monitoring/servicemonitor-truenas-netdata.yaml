@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: truenas-netdata
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: truenas-netdata
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 6999
+      targetPort: 6999
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: truenas-netdata
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: truenas-netdata
+subsets:
+  - addresses:
+      - ip: ${NAS_IP}
+    ports:
+      - name: http
+        port: 6999
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: truenas-netdata
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  jobLabel: app.kubernetes.io/name
+  namespaceSelector:
+    matchNames:
+      - monitoring
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: truenas-netdata
+  endpoints:
+    - port: http
+      path: /api/v1/allmetrics
+      params:
+        format:
+          - prometheus
+        help:
+          - "no"
+        types:
+          - "no"
+        timestamps:
+          - "no"
+      interval: 30s
+      scrapeTimeout: 10s

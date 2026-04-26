@@ -32,6 +32,10 @@ Additional GitOps-managed Grafana dashboards live under `infrastructure/monitori
   - file: `infrastructure/monitoring/grafana-dashboard-dns-access-paths.yaml`
   - purpose: CoreDNS health, DNS failure signals, ingress host inventory, TLS coverage, and public-edge access surfaces.
 
+- `TrueNAS Host Overview`
+  - file: `infrastructure/monitoring/grafana-dashboard-truenas-host-overview.yaml`
+  - purpose: NAS management-plane probes, NFS reachability, Netdata memory headroom, ARC size, and per-service memory for `nginx` and `middlewared`.
+
 ## Shared Recording Rules
 
 These dashboards rely on precomputed series in:
@@ -54,6 +58,7 @@ Current shared metrics:
 ## Notes
 
 - These dashboards are built from kubelet, kube-state-metrics, Flux controllers, exposure-control, Prometheus, Grafana, resource-advisor, and node-exporter.
+- `TrueNAS Host Overview` additionally depends on the NAS Netdata endpoint at `${NAS_IP}:6999`, scraped by `ServiceMonitor/monitoring/truenas-netdata`.
 - `nodeExporter` is enabled primarily to surface host hardware signals such as the utility node Raspberry Pi low-voltage alarm on the power dashboard.
 - The `monitoring` namespace now carries privileged PodSecurity labels because node-exporter requires host mounts and host networking.
 - Host-disk latency and broader hardware tuning are still mostly out of scope for these dashboards unless a panel explicitly uses those series.
@@ -72,6 +77,8 @@ kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-ef
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-stateful-services-risk.yaml
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-gitops-change-timeline.yaml
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-dns-access-paths.yaml
+kubectl apply --dry-run=client -f infrastructure/monitoring/servicemonitor-truenas-netdata.yaml
+kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-truenas-host-overview.yaml
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 
