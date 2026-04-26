@@ -44,11 +44,11 @@ spec:
               NODE_ENV: production
             resources:
               requests:
-                cpu: "112m"
-                memory: "288Mi"
+                cpu: "84m"
+                memory: "216Mi"
               limits:
-                cpu: "1125m"
-                memory: "1152Mi"
+                cpu: "844m"
+                memory: "864Mi"
             probes:
               liveness:
                 spec:
