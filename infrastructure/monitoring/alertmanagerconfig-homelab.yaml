@@ -20,6 +20,14 @@ spec:
           - name: severity
             matchType: "="
             value: critical
+      - receiver: critical-multi
+        matchers:
+          - name: severity
+            matchType: "="
+            value: warning
+          - name: alertname
+            matchType: "=~"
+            value: TrueNAS.*
       - receiver: "null"
   receivers:
     - name: critical-multi
