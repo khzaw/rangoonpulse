@@ -65,7 +65,7 @@ spec:
               SECRET_EDITOR_BRANCH: master
               SECRET_EDITOR_NAMESPACES: default,cert-manager,democratic-csi,flux-system,monitoring,public-edge,tailscale
               SECRET_EDITOR_SOPS_RECIPIENT: age1hz8ustuz5mtmuc744xg7rllqew9z6yc99607fhuva3n79s7769sqj4jlkz
-              SECRET_EDITOR_JOB_IMAGE: alpine:3.22
+              SECRET_EDITOR_JOB_IMAGE: alpine:3.23
               SECRET_EDITOR_JOB_TIMEOUT_SECONDS: "180"
               SECRET_EDITOR_FLUX_SOURCE_NAME: flux-system
               SECRET_EDITOR_FLUX_KUSTOMIZATION_NAME: secrets
