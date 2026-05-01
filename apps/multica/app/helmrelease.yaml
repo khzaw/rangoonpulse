@@ -6,7 +6,7 @@ metadata:
   name: multica
   namespace: default
 spec:
-  interval: 15m
+  interval: 1h
   timeout: 15m
   dependsOn:
     - name: multica-postgres

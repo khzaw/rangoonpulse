@@ -10,7 +10,7 @@ metadata:
 spec:
   groups:
     - name: truenas-host-alerts.rules
-      interval: 1m
+      interval: 2m
       rules:
         - alert: TrueNASManagementPlaneUnavailable
           expr: >

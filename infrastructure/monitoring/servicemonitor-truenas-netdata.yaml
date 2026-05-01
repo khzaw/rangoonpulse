@@ -55,5 +55,5 @@ spec:
           - "no"
         timestamps:
           - "no"
-      interval: 30s
+      interval: 60s
       scrapeTimeout: 10s

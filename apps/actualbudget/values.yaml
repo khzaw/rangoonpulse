@@ -2,7 +2,7 @@
 ---
 image:
   repository: actualbudget/actual-server
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   tag: "26.4.0"
 
 service:

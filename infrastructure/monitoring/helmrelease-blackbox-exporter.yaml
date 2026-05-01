@@ -6,7 +6,7 @@ metadata:
   name: blackbox-exporter
   namespace: monitoring
 spec:
-  interval: 30m
+  interval: 1h
   chart:
     spec:
       chart: prometheus-blackbox-exporter
@@ -62,7 +62,7 @@ spec:
       defaults:
         labels:
           release: kube-prometheus-stack
-        interval: 30s
+        interval: 60s
         scrapeTimeout: 10s
       targets:
         - name: truenas-ui

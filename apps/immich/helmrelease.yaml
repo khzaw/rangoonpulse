@@ -6,7 +6,7 @@ metadata:
   name: immich-postgres
   namespace: default
 spec:
-  interval: 15m
+  interval: 1h
   # Requires `immich-db-secret` (key: POSTGRES_PASSWORD) in namespace `default`.
   chart:
     spec:
@@ -74,7 +74,7 @@ metadata:
   name: immich
   namespace: default
 spec:
-  interval: 15m
+  interval: 1h
   # Requires `immich-db-secret` (key: POSTGRES_PASSWORD) in namespace `default`.
   dependsOn:
     - name: immich-postgres

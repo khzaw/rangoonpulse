@@ -6,7 +6,7 @@ metadata:
   name: tofu-controller
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   chart:
     spec:
       chart: tofu-controller

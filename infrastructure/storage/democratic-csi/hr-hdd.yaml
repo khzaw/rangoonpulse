@@ -6,7 +6,7 @@ metadata:
   name: democratic-csi-hdd
   namespace: democratic-csi
 spec:
-  interval: 15m
+  interval: 1h
   chart:
     spec:
       chart: democratic-csi

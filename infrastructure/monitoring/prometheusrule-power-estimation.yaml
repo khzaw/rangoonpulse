@@ -10,7 +10,7 @@ metadata:
 spec:
   groups:
     - name: node-power-estimation.rules
-      interval: 1m
+      interval: 2m
       rules:
         - record: homelab:node_cpu_usage_cores:rate5m
           expr: >

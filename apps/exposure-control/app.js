@@ -93,6 +93,8 @@
         secrets: null,
         selectedSecret: null,
       };
+      let activePage = normalizePage(window.location.hash || '#updates');
+      let hasLoadedDashboard = false;
 
       function setMessage(target, text, isError) {
         target.textContent = text || '';
@@ -143,6 +145,7 @@
         const requestedPage = String(page || '').replace(/^#/, '').trim().toLowerCase();
         const nextPage = normalizePage(page);
         const replace = Boolean(options && options.replace);
+        activePage = nextPage;
         pageSections.forEach((section) => {
           section.hidden = section.id !== nextPage;
           section.classList.toggle('page-active', section.id === nextPage);
@@ -159,9 +162,13 @@
         }
         if (requestedPage === 'transmission' && nextPage === 'exposure' && transmissionPanelEl) {
           transmissionPanelEl.scrollIntoView({ block: 'start', behavior: 'auto' });
-          return;
+        } else {
+          window.scrollTo({ top: 0, behavior: 'auto' });
         }
-        window.scrollTo({ top: 0, behavior: 'auto' });
+        if (nextPage === 'secrets' && hasLoadedDashboard && !dashboardState.secrets) {
+          secretsListEl.innerHTML = skeletonTableRows(1, 5);
+          loadSecrets();
+        }
       }
 
       function fmtDateTime(value) {
@@ -204,7 +211,7 @@
           pendingExpiryRefresh = true;
           setTimeout(async () => {
             try {
-              await loadDashboard({ silent: true });
+              await refreshServicesOnly();
             } finally {
               pendingExpiryRefresh = false;
             }
@@ -1553,6 +1560,14 @@
         }
       }
 
+      async function refreshServicesOnly() {
+        const payload = await request('/api/services', 'GET');
+        dashboardState.services = payload.services || [];
+        renderRows(dashboardState.services);
+        renderOverview();
+        setLoadState('Exposure state refreshed ' + new Date().toLocaleTimeString());
+      }
+
       async function loadDashboard(options) {
         const silent = Boolean(options && options.silent);
         if (!silent) {
@@ -1570,10 +1585,11 @@
           updatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
-          secretsListEl.innerHTML = skeletonTableRows(1, 5);
+          if (activePage === 'secrets') secretsListEl.innerHTML = skeletonTableRows(1, 5);
         }
 
         try {
+          const includeSecrets = activePage === 'secrets';
           const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, secretsData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
@@ -1583,7 +1599,7 @@
             request('/api/helm-updates', 'GET'),
             request('/api/renovate', 'GET'),
             request('/api/travel', 'GET'),
-            request('/api/secrets', 'GET'),
+            includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
           ]);
 
           if (svcData.status !== 'fulfilled') throw svcData.reason;
@@ -1644,15 +1660,21 @@
             renderTravel(null);
             if (travelData && !silent) setTravelMsg(travelData.reason.message, true);
           }
-          if (secretsData && secretsData.status === 'fulfilled') {
-            renderSecretsList(secretsData.value);
-            if (!silent) setSecretsMsg('');
-          } else {
-            renderSecretsList({ configured: false, items: [], namespaces: [], reason: secretsData ? secretsData.reason.message : 'Secret inventory unavailable.' });
-            if (secretsData && !silent) setSecretsMsg(secretsData.reason.message, true);
+          if (includeSecrets) {
+            if (secretsData && secretsData.status === 'fulfilled') {
+              renderSecretsList(secretsData.value);
+              if (!silent) setSecretsMsg('');
+            } else {
+              renderSecretsList({ configured: false, items: [], namespaces: [], reason: secretsData ? secretsData.reason.message : 'Secret inventory unavailable.' });
+              if (secretsData && !silent) setSecretsMsg(secretsData.reason.message, true);
+            }
+          } else if (!dashboardState.secrets) {
+            secretsSummaryEl.textContent = 'Secret inventory loads only when this page is opened.';
+            secretsListEl.innerHTML = '<div class="empty-state">Open the secrets page to load managed secret inventory.</div>';
           }
 
           renderOverview();
+          hasLoadedDashboard = true;
           setLoadState((silent ? 'Last refresh ' : 'Updated ') + new Date().toLocaleTimeString());
           if (!silent) setMsg('Exposure state updated.');
         } catch (err) {

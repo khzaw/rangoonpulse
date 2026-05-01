@@ -190,7 +190,7 @@ const SECRET_EDITOR_SOPS_RECIPIENT = String(
     "age1hz8ustuz5mtmuc744xg7rllqew9z6yc99607fhuva3n79s7769sqj4jlkz",
 ).trim();
 const SECRET_EDITOR_JOB_IMAGE = String(
-  process.env.SECRET_EDITOR_JOB_IMAGE || "alpine:3.22",
+  process.env.SECRET_EDITOR_JOB_IMAGE || "alpine:3.23",
 ).trim();
 const SECRET_EDITOR_HELPER_CONFIGMAP = String(
   process.env.SECRET_EDITOR_HELPER_CONFIGMAP || "exposure-control-app-files",
@@ -206,6 +206,12 @@ const SECRET_EDITOR_JOB_TIMEOUT_SECONDS = clampInt(
   180,
   30,
   600,
+);
+const SECRET_EDITOR_CACHE_TTL_SECONDS = clampInt(
+  process.env.SECRET_EDITOR_CACHE_TTL_SECONDS,
+  300,
+  30,
+  1800,
 );
 const SECRET_EDITOR_FLUX_SOURCE_NAME = String(
   process.env.SECRET_EDITOR_FLUX_SOURCE_NAME || "flux-system",
@@ -250,6 +256,11 @@ const renovateStatusCache = {
   ts: 0,
 };
 const secretsTreeCache = {
+  promise: null,
+  snapshot: null,
+  ts: 0,
+};
+const managedSecretsCache = {
   promise: null,
   snapshot: null,
   ts: 0,
@@ -1018,7 +1029,7 @@ async function getKubeSecret(namespace, name) {
 
 async function listSecretEditorTree(force) {
   const now = Date.now();
-  if (!force && secretsTreeCache.snapshot && now - secretsTreeCache.ts < 60000) {
+  if (!force && secretsTreeCache.snapshot && now - secretsTreeCache.ts < SECRET_EDITOR_CACHE_TTL_SECONDS * 1000) {
     return secretsTreeCache.snapshot;
   }
   if (!secretsTreeCache.promise) {
@@ -1081,47 +1092,71 @@ function removeKustomizationResource(content, filename) {
     .replace(/\n?$/, "\n");
 }
 
+function invalidateSecretInventoryCache() {
+  managedSecretsCache.promise = null;
+  managedSecretsCache.snapshot = null;
+  managedSecretsCache.ts = 0;
+  secretsTreeCache.promise = null;
+  secretsTreeCache.snapshot = null;
+  secretsTreeCache.ts = 0;
+}
+
 async function listManagedSecrets(force) {
-  if (!secretEditorConfigured()) {
-    return {
-      configured: false,
-      reason: "GitHub token, repository, or SOPS recipient is not configured.",
-      namespaces: SECRET_EDITOR_NAMESPACES,
-      items: [],
-    };
+  const now = Date.now();
+  const ttlMs = SECRET_EDITOR_CACHE_TTL_SECONDS * 1000;
+  if (!force && managedSecretsCache.snapshot && now - managedSecretsCache.ts < ttlMs) {
+    return managedSecretsCache.snapshot;
   }
-  const tree = await listSecretEditorTree(force);
-  const prefix = SECRET_EDITOR_REPO_ROOT + "/";
-  const candidates = tree.paths
-    .filter((repoPath) => repoPath.startsWith(prefix))
-    .filter((repoPath) => repoPath.endsWith(".yaml"))
-    .filter((repoPath) => !repoPath.endsWith("/kustomization.yaml"))
-    .map((repoPath) => ({
-      repoPath,
-      parts: repoPath.slice(prefix.length).split("/"),
-    }))
-    .filter(({ parts }) => parts.length === 2)
-    .map(({ repoPath, parts }) => ({
-      repoPath,
-      namespace: parts[0],
-      name: parts[1].replace(/\.yaml$/, ""),
-    }))
-    .filter((item) => SECRET_EDITOR_NAMESPACE_SET.has(item.namespace));
-  const items = (await Promise.all(
-    candidates.map(async (item) => {
-      const secret = await getKubeSecret(item.namespace, item.name).catch(() => null);
-      return sanitizeSecretSummary(item.namespace, item.name, item.repoPath, secret);
-    }),
-  )).sort((left, right) =>
-    (left.namespace + "/" + left.name).localeCompare(right.namespace + "/" + right.name),
-  );
-  return {
-    configured: true,
-    namespaces: SECRET_EDITOR_NAMESPACES,
-    branch: SECRET_EDITOR_BRANCH,
-    checkedAt: tree.checkedAt,
-    items,
-  };
+  if (!managedSecretsCache.promise) {
+    managedSecretsCache.promise = (async () => {
+      if (!secretEditorConfigured()) {
+        return {
+          configured: false,
+          reason: "GitHub token, repository, or SOPS recipient is not configured.",
+          namespaces: SECRET_EDITOR_NAMESPACES,
+          items: [],
+        };
+      }
+      const tree = await listSecretEditorTree(force);
+      const prefix = SECRET_EDITOR_REPO_ROOT + "/";
+      const candidates = tree.paths
+        .filter((repoPath) => repoPath.startsWith(prefix))
+        .filter((repoPath) => repoPath.endsWith(".yaml"))
+        .filter((repoPath) => !repoPath.endsWith("/kustomization.yaml"))
+        .map((repoPath) => ({
+          repoPath,
+          parts: repoPath.slice(prefix.length).split("/"),
+        }))
+        .filter(({ parts }) => parts.length === 2)
+        .map(({ repoPath, parts }) => ({
+          repoPath,
+          namespace: parts[0],
+          name: parts[1].replace(/\.yaml$/, ""),
+        }))
+        .filter((item) => SECRET_EDITOR_NAMESPACE_SET.has(item.namespace));
+      const items = (await Promise.all(
+        candidates.map(async (item) => {
+          const secret = await getKubeSecret(item.namespace, item.name).catch(() => null);
+          return sanitizeSecretSummary(item.namespace, item.name, item.repoPath, secret);
+        }),
+      )).sort((left, right) =>
+        (left.namespace + "/" + left.name).localeCompare(right.namespace + "/" + right.name),
+      );
+      const snapshot = {
+        configured: true,
+        namespaces: SECRET_EDITOR_NAMESPACES,
+        branch: SECRET_EDITOR_BRANCH,
+        checkedAt: nowIso(),
+        items,
+      };
+      managedSecretsCache.snapshot = snapshot;
+      managedSecretsCache.ts = Date.now();
+      return snapshot;
+    })().finally(() => {
+      managedSecretsCache.promise = null;
+    });
+  }
+  return await managedSecretsCache.promise;
 }
 
 async function waitForSecretEditorJob(jobName) {
@@ -1697,17 +1732,31 @@ function summarizeTravelTargets(targets) {
   return summary;
 }
 
+const tuningUiCache = { promise: null, snapshot: null, ts: 0 };
+const TUNING_UI_CACHE_TTL_MS = 10_000;
+
 async function getResourceAdvisorUi() {
-  const res = await requestUrl(RESOURCE_ADVISOR_UI_URL, {
-    headers: {
-      accept: "application/json",
-      "user-agent": "exposure-control/1.0",
-    },
-  });
-  if (res.statusCode !== 200) {
-    throw new Error("resource advisor ui request failed (" + res.statusCode + ")");
+  const now = Date.now();
+  if (tuningUiCache.snapshot && now - tuningUiCache.ts < TUNING_UI_CACHE_TTL_MS) {
+    return tuningUiCache.snapshot;
   }
-  return JSON.parse(res.body || "{}");
+  if (!tuningUiCache.promise) {
+    tuningUiCache.promise = requestUrl(RESOURCE_ADVISOR_UI_URL, {
+      headers: {
+        accept: "application/json",
+        "user-agent": "exposure-control/1.0",
+      },
+    }).then((res) => {
+      if (res.statusCode !== 200) {
+        throw new Error("resource advisor ui request failed (" + res.statusCode + ")");
+      }
+      const parsed = JSON.parse(res.body || "{}");
+      tuningUiCache.snapshot = parsed;
+      tuningUiCache.ts = Date.now();
+      return parsed;
+    }).finally(() => { tuningUiCache.promise = null; });
+  }
+  return tuningUiCache.promise;
 }
 
 function resourceAdvisorArtifactUrl(pathname) {
@@ -3261,7 +3310,6 @@ function renderMetrics() {
 async function handleApi(req, res, parsedUrl) {
   const pathname = parsedUrl.pathname;
   if (req.method === "GET" && pathname === "/api/services") {
-    disableExpiredExposures();
     return sendJson(res, 200, { services: snapshotServices() });
   }
 
@@ -3398,6 +3446,7 @@ async function handleApi(req, res, parsedUrl) {
       const result = await upsertManagedSecret(namespace, name, body.stringData || {}, {
         type: body.type || "Opaque",
       });
+      invalidateSecretInventoryCache();
       appendAuditEntry({ action: "secret-upsert", serviceId: namespace + "/" + name });
       return sendJson(res, 200, result);
     } catch (err) {
@@ -3432,6 +3481,7 @@ async function handleApi(req, res, parsedUrl) {
       const result = await upsertManagedSecret(namespace, name, body.stringData || {}, {
         type: body.type || "Opaque",
       });
+      invalidateSecretInventoryCache();
       appendAuditEntry({ action: "secret-upsert", serviceId: namespace + "/" + name });
       return sendJson(res, 200, result);
     } catch (err) {
@@ -3444,6 +3494,7 @@ async function handleApi(req, res, parsedUrl) {
       const namespace = assertSecretNamespace(decodeURIComponent(secretMatch[1]));
       const name = assertSecretName(decodeURIComponent(secretMatch[2]));
       const result = await deleteManagedSecret(namespace, name);
+      invalidateSecretInventoryCache();
       appendAuditEntry({ action: "secret-delete", serviceId: namespace + "/" + name });
       return sendJson(res, 200, result);
     } catch (err) {
@@ -3622,7 +3673,6 @@ function renderCombinedCockpitHtml() {
 
 const server = http.createServer(async (req, res) => {
   try {
-    disableExpiredExposures();
     const host = getHost(req);
     const parsed = new URL(req.url || "/", "http://" + (host || "localhost"));
     const isControlPanelHost =

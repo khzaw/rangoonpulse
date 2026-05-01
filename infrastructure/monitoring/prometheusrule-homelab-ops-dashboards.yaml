@@ -10,7 +10,7 @@ metadata:
 spec:
   groups:
     - name: homelab-ops-dashboards.rules
-      interval: 1m
+      interval: 2m
       rules:
         - record: homelab:pvc_used_bytes
           expr: >

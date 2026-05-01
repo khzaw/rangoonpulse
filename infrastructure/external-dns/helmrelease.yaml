@@ -6,7 +6,7 @@ metadata:
   name: external-dns
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   timeout: 10m
   chart:
     spec:
@@ -47,7 +47,7 @@ spec:
               # do things like CNAME aliases cleanly.
               - --ignore-ingress-rules-spec
               - --ignore-ingress-tls-spec
-              - --interval=1m
+              - --interval=5m
             env:
               - name: CF_API_TOKEN
                 valueFrom:
