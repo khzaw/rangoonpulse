@@ -6,7 +6,7 @@ metadata:
   name: chartsdb
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/chartsdb
   prune: true
   sourceRef:

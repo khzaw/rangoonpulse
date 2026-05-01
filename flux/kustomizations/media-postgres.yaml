@@ -6,7 +6,7 @@ metadata:
   name: media-postgres
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/media-postgres
   prune: true
   sourceRef:

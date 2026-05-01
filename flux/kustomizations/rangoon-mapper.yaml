@@ -6,7 +6,7 @@ metadata:
   name: rangoon-mapper
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/rangoon-mapper
   prune: true
   sourceRef:

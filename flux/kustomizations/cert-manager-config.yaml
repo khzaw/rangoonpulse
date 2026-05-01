@@ -6,7 +6,7 @@ metadata:
   name: cert-manager-config
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./infrastructure/cert-manager/config # Path to ClusterIssuer Kustomization
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }

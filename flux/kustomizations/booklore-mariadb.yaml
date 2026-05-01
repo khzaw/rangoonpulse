@@ -6,7 +6,7 @@ metadata:
   name: booklore-mariadb
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/booklore-mariadb
   prune: true
   sourceRef:

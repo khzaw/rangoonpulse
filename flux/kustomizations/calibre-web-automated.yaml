@@ -5,7 +5,7 @@ metadata:
   name: calibre-web-automated
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/calibre-web-automated # Path to the calibre-web-automated app's Kustomization
   prune: true
   sourceRef:

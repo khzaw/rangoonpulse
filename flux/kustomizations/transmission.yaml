@@ -6,7 +6,7 @@ metadata:
   name: transmission
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/transmission
   prune: true
   sourceRef:

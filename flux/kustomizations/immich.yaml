@@ -6,7 +6,7 @@ metadata:
   name: immich
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/immich
   prune: true
   sourceRef:

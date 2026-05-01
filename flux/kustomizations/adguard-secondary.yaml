@@ -6,7 +6,7 @@ metadata:
   name: adguard-secondary
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 30m
   path: ./apps/adguard/secondary
   prune: true
   wait: true
