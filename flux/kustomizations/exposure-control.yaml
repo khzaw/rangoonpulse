@@ -6,7 +6,7 @@ metadata:
   name: exposure-control
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   path: ./apps/exposure-control
   prune: true
   sourceRef:

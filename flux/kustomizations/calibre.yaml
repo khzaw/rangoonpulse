@@ -5,7 +5,7 @@ metadata:
   name: calibre
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   path: ./apps/calibre
   prune: true
   sourceRef:

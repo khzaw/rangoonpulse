@@ -6,7 +6,7 @@ metadata:
   name: tofu-controller
   namespace: flux-system
 spec:
-  interval: 15m
+  interval: 1h
   path: ./infrastructure/tofu-controller
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }

@@ -6,7 +6,7 @@ metadata:
   name: multica-postgres
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   path: ./apps/multica/postgres
   prune: true
   sourceRef:

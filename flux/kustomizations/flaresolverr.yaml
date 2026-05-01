@@ -6,7 +6,7 @@ metadata:
   name: flaresolverr
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   path: ./apps/flaresolverr
   prune: true
   sourceRef:

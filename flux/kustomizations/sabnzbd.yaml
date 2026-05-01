@@ -6,7 +6,7 @@ metadata:
   name: sabnzbd
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   path: ./apps/sabnzbd
   prune: true
   sourceRef:

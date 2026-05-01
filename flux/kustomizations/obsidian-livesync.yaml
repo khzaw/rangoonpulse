@@ -6,7 +6,7 @@ metadata:
   name: obsidian-livesync
   namespace: flux-system
 spec:
-  interval: 30m
+  interval: 1h
   path: ./apps/obsidian-livesync
   prune: true
   sourceRef:

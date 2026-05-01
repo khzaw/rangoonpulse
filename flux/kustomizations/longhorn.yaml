@@ -5,7 +5,7 @@ metadata:
   name: longhorn # Kustomization name
   namespace: flux-system
 spec:
-  interval: 15m # maybe longer for infrastructure like Longhorn
+  interval: 1h
   path: ./apps/longhorn
   prune: true
   sourceRef:

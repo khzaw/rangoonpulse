@@ -6,7 +6,7 @@ metadata:
   name: public-edge
   namespace: flux-system
 spec:
-  interval: 15m
+  interval: 1h
   path: ./infrastructure/public-edge
   prune: true
   sourceRef:
