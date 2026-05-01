@@ -32,13 +32,14 @@ spec:
               tag: 6.0.4.10291-ls295
             env:
               TZ: "${TIMEZONE}"
+              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               GUID: "1000"
               PATH: "/app/radarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             resources:
               requests:
                 cpu: "100m"
-                memory: "256Mi"
+                memory: "64Mi"
               limits:
                 cpu: "500m"
                 memory: "1Gi"

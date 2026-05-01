@@ -45,12 +45,13 @@ spec:
               tag: "v9.3.1-ls387"
             env:
               TZ: '${TIMEZONE}'
+              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               PGID: "1000"
             resources:
               requests:
                 cpu: "47m"
-                memory: "1250Mi"
+                memory: "256Mi"
               limits:
                 cpu: "316m"
                 memory: "2189Mi"

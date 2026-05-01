@@ -41,13 +41,14 @@ spec:
               tag: "1.2.15"
             env:
               TZ: "${TIMEZONE}"
+              NODE_OPTIONS: "--max-old-space-size=512"
               # Force the modern Intel driver
               LIBVA_DRIVER_NAME: "iHD"
               LIBVA_DRIVERS_PATH: "/usr/local/lib/x86_64-linux-gnu/dri"
             resources:
               requests:
                 cpu: "84m"
-                memory: "1000Mi"
+                memory: "256Mi"
               limits:
                 cpu: "633m"
                 memory: "1791Mi"

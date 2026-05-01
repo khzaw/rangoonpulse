@@ -32,13 +32,14 @@ spec:
               tag: 4.5.5-ls245
             env:
               TZ: "${TIMEZONE}"
+              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               PGID: "1000"
               SABNZBD__HOST_WHITELIST: "sabnzbd.${BASE_DOMAIN}"
             resources:
               requests:
                 cpu: "84m"
-                memory: "480Mi"
+                memory: "128Mi"
               limits:
                 cpu: "844m"
                 memory: "1204Mi"

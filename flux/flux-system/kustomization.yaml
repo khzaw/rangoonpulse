@@ -4,3 +4,134 @@ kind: Kustomization
 resources:
 - gotk-components.yaml
 - gotk-sync.yaml
+patches:
+  # The upstream bootstrap manifest gives every controller a 1Gi memory limit and
+  # wires GOMEMLIMIT to that limit. That is generous for this homelab and lets Go
+  # heaps grow larger than needed during idle periods. Keep the controllers roomy
+  # enough for normal reconciles, but cap the quiet background footprint.
+  - target:
+      kind: Deployment
+      name: source-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: source-controller
+        namespace: flux-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 512Mi
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+  - target:
+      kind: Deployment
+      name: kustomize-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: kustomize-controller
+        namespace: flux-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 512Mi
+                  requests:
+                    cpu: 100m
+                    memory: 64Mi
+  - target:
+      kind: Deployment
+      name: helm-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: helm-controller
+        namespace: flux-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 512Mi
+                  requests:
+                    cpu: 100m
+                    memory: 64Mi
+  - target:
+      kind: Deployment
+      name: notification-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification-controller
+        namespace: flux-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 192Mi
+                  requests:
+                    cpu: 100m
+                    memory: 64Mi
+  - target:
+      kind: Deployment
+      name: image-reflector-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: image-reflector-controller
+        namespace: flux-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 256Mi
+                  requests:
+                    cpu: 100m
+                    memory: 64Mi
+  - target:
+      kind: Deployment
+      name: image-automation-controller
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: image-automation-controller
+        namespace: flux-system
+      spec:
+        template:
+          spec:
+            containers:
+              - name: manager
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 192Mi
+                  requests:
+                    cpu: 100m
+                    memory: 64Mi

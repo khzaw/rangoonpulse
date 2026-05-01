@@ -49,11 +49,20 @@ spec:
               - --ignore-ingress-tls-spec
               - --interval=5m
             env:
+              - name: GOMEMLIMIT
+                value: 96MiB
               - name: CF_API_TOKEN
                 valueFrom:
                   secretKeyRef:
                     name: cloudflare-api-token
                     key: token
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:

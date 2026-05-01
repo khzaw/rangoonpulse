@@ -31,6 +31,16 @@ spec:
             image:
               repository: pgvector/pgvector
               tag: pg16
+            command:
+              - sh
+              - -c
+            args:
+              - |
+                set -eu
+                exec docker-entrypoint.sh postgres \
+                  -c shared_buffers=256MB \
+                  -c effective_cache_size=1GB \
+                  -c max_connections=50
             env:
               TZ: "${TIMEZONE}"
               POSTGRES_USER: "immich"
@@ -44,10 +54,10 @@ spec:
             resources:
               requests:
                 cpu: "150m"
-                memory: "1Gi"
+                memory: "256Mi"
               limits:
                 cpu: "500m"
-                memory: "2Gi"
+                memory: "1Gi"
 
     service:
       main:
@@ -148,7 +158,7 @@ spec:
               resources:
                 requests:
                   cpu: "300m"
-                  memory: "1Gi"
+                  memory: "384Mi"
                 limits:
                   cpu: "1200m"
                   memory: "4Gi"
@@ -171,7 +181,7 @@ spec:
               resources:
                 requests:
                   cpu: "200m"
-                  memory: "768Mi"
+                  memory: "256Mi"
                 limits:
                   cpu: "1000m"
                   memory: "2Gi"

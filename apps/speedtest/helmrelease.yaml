@@ -37,6 +37,8 @@ spec:
             env:
               - name: TZ
                 value: "${TIMEZONE}"
+              - name: MALLOC_ARENA_MAX
+                value: "2"
               - name: PUID
                 value: "1000"
               - name: PGID
@@ -74,7 +76,7 @@ spec:
             resources:
               requests:
                 cpu: "25m"
-                memory: "256Mi"
+                memory: "128Mi"
               limits:
                 cpu: "500m"
                 memory: "768Mi"

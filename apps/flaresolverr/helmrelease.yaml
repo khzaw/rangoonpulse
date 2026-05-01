@@ -38,15 +38,15 @@ spec:
               tag: pr-1300
             env:
               TZ: "${TIMEZONE}"
-              LOG_LEVEL: "debug"
-              LOG_HTML: "true"
+              LOG_LEVEL: "info"
+              LOG_HTML: "false"
             resources:
               requests:
                 cpu: "84m"
-                memory: "800Mi"
+                memory: "128Mi"
               limits:
                 cpu: "562m"
-                memory: "2468Mi"
+                memory: "1024Mi"
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:

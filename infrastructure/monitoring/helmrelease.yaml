@@ -26,7 +26,10 @@ spec:
       retries: 3
   values:
     alertmanager:
-      enabled: true
+      # Alertmanager is not wired to a real receiver here; the route points at a
+      # null receiver. Keep Prometheus rules, but do not spend idle memory on a
+      # separate no-op Alertmanager pod.
+      enabled: false
       alertmanagerSpec:
         nodeSelector:
           kubernetes.io/hostname: ${PRIMARY_NODE_NAME}

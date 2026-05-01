@@ -23,5 +23,13 @@ spec:
     remediation: { retries: 3 }
 
   values:
+    operatorConfig:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 256Mi
     apiServerProxyConfig:
       mode: "true"

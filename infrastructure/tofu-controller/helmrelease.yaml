@@ -19,3 +19,22 @@ spec:
     remediation: { retries: 3 }
   upgrade:
     remediation: { retries: 3 }
+
+  values:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    extraEnv:
+      GOMEMLIMIT: 384MiB
+    runner:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 192Mi
+        limits:
+          cpu: 600m
+          memory: 768Mi

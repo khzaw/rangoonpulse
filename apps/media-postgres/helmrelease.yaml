@@ -40,7 +40,10 @@ spec:
                 set -eu
                 exec /usr/local/bin/docker-entrypoint.sh postgres \
                   -c timescaledb.telemetry_level=off \
-                  -c max_locks_per_transaction=2048
+                  -c max_locks_per_transaction=2048 \
+                  -c shared_buffers=256MB \
+                  -c effective_cache_size=1GB \
+                  -c max_connections=60
             env:
               # Required secret (not in Git): media-postgres-secret (POSTGRES_PASSWORD)
               - name: POSTGRES_USER
@@ -72,10 +75,10 @@ spec:
             resources:
               requests:
                 cpu: "300m"
-                memory: "4Gi"
+                memory: "1Gi"
               limits:
                 cpu: "2000m"
-                memory: "8Gi"
+                memory: "4Gi"
 
     service:
       main:
