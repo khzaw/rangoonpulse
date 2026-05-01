@@ -32,7 +32,6 @@ spec:
               tag: 2.3.0.5236-ls139
             env:
               TZ: "${TIMEZONE}"
-              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               GUID: "1000"
             resources:

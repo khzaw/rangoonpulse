@@ -32,13 +32,12 @@ spec:
               tag: 4.0.16.2944-ls304
             env:
               TZ: "${TIMEZONE}"
-              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               GUID: "1000"
               PATH: "/app/sonarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             resources:
               requests:
-                memory: "64Mi"
+                memory: "256Mi"
                 cpu: "100m"
               limits:
                 memory: "1Gi"

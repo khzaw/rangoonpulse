@@ -32,13 +32,12 @@ spec:
               tag: v1.5.6-ls340
             env:
               TZ: "${TIMEZONE}"
-              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               GUID: "1000"
             resources:
               requests:
                 cpu: "56m"
-                memory: "64Mi"
+                memory: "400Mi"
               limits:
                 cpu: "281m"
                 memory: "954Mi"

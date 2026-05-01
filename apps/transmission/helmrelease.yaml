@@ -38,13 +38,12 @@ spec:
               tag: 4.1.1-r1-ls333
             env:
               TZ: "${TIMEZONE}"
-              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               GUID: "1000"
             resources:
               requests:
                 cpu: "84m"
-                memory: "64Mi"
+                memory: "288Mi"
               limits:
                 cpu: "562m"
                 memory: "1152Mi"

@@ -36,7 +36,6 @@ spec:
               tag: "11.4.9-r0-ls208"
             env:
               TZ: "${TIMEZONE}"
-              MALLOC_ARENA_MAX: "2"
               PUID: "1000"
               PGID: "1000"
               MYSQL_ROOT_PASSWORD:
