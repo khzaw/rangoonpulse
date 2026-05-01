@@ -45,6 +45,17 @@
       "enabled": false
     },
     {
+      "description": "Keep private Multica app images manual; GHCR package lookup is not available to Renovate.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/khzaw/multica-web",
+        "ghcr.io/khzaw/multica-backend"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Keep AdGuard primary image updates in their own branch and PR.",
       "matchManagers": [
         "helm-values"
