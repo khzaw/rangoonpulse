@@ -44,8 +44,7 @@ spec:
           main:
             image:
               repository: cloudflare/cloudflared
-              # Keep latest for pilot bootstrap; pin exact version before broad rollout.
-              tag: latest
+              tag: "2026.3.0"
             args:
               - tunnel
               - --no-autoupdate
