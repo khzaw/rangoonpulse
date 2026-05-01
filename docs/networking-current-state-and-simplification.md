@@ -17,7 +17,7 @@ This repository now uses a unified destination model:
   - Type `LoadBalancer`
   - MetalLB external IP: `10.0.0.231`
   - Primary ports: `80` and `443`
-  - Additional scoped listener: `Service/ingress-nginx-calibre-controller` exposes `9090` on the same VIP (`10.0.0.231`) using MetalLB shared-IP, for `calibre-manage` content path only
+  - Additional service port: `9090` on the same controller service, preserving explicit `calibre-manage` content-server access without a second ingress controller
 - Dedicated edge exception:
   - `iris.khzaw.dev` uses dedicated MetalLB VIP `10.0.0.235`
   - `443` fronts the ordinary ingress-nginx controller through `Service/ingress-nginx-iris-controller`
@@ -51,28 +51,26 @@ This repository now uses a unified destination model:
 ### Components And Their Roles
 1. `ingress-nginx-controller` (MetalLB VIP `10.0.0.231`)
 - Primary entrypoint for all Kubernetes apps (`80/443`).
+- Also exposes `9090` on the same Service for `calibre-manage` content-server clients, routed by the normal `nginx` ingress class.
 
-2. `ingress-nginx-calibre-controller` (same MetalLB VIP `10.0.0.231`, port `9090`)
-- Dedicated ingress class `nginx-calibre` for `calibre-manage` explicit `:9090` access to `/content` only.
-
-3. `iris.khzaw.dev` dedicated VIP (`10.0.0.235`)
+2. `iris.khzaw.dev` dedicated VIP (`10.0.0.235`)
 - Gives one hostname a unique edge IP so HTTPS and SSH can coexist cleanly.
 - Web traffic still lands on the shared ingress-nginx controller.
 - SSH traffic forwards directly to the Mac mini host.
 - OpenClaw itself still enforces gateway token, device pairing, and allowed-origin checks after traffic reaches the backend.
 
-4. Cloudflare DNS + external-dns
+3. Cloudflare DNS + external-dns
 - Keeps public DNS records aligned with ingress state, pointing app hostnames to `10.0.0.231`.
 
-5. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`; `Service/adguard-secondary-dns`, `10.0.0.234`)
+4. AdGuard DNS (`Service/adguard-dns`, `10.0.0.233`; `Service/adguard-secondary-dns`, `10.0.0.234`)
 - Primary + secondary LAN recursive resolvers/filters for client DNS queries.
 - Forwards upstream while preserving the same app destination IP model.
 
-6. Tailscale subnet router + exit node (`Connector`)
+5. Tailscale subnet router + exit node (`Connector`)
 - Enables tailnet clients to reach `10.0.0.x` LAN destinations without a separate ingress proxy.
 - Also provides optional full-tunnel home egress for travel devices while keeping the same private destination model.
 
-7. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
+6. LAN gateway ingresses for NAS/router (`infrastructure/lan-gateway/`)
 - Allows `nas.khzaw.dev` / `router.khzaw.dev` to terminate trusted TLS at ingress while proxying to LAN IPs.
 
 ### Data Flow
