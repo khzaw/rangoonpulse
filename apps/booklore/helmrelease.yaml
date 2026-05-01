@@ -39,7 +39,6 @@ spec:
               USER_ID: "1000"
               GROUP_ID: "1000"
               DISK_TYPE: "NETWORK"
-              JAVA_TOOL_OPTIONS: "-XX:InitialRAMPercentage=10.0 -XX:MaxRAMPercentage=70.0 -XX:+UseStringDeduplication"
               SWAGGER_ENABLED: "false"
               FORCE_DISABLE_OIDC: "false"
               DATABASE_URL: "jdbc:mariadb://booklore-mariadb.default.svc.cluster.local:3306/booklore"
@@ -59,7 +58,7 @@ spec:
                 memory: "384Mi"
               limits:
                 cpu: "316m"
-                memory: "1024Mi"
+                memory: "1753Mi"
     service:
       main:
         controller: main

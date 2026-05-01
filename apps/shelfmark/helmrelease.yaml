@@ -35,7 +35,6 @@ spec:
               tag: v1.2.1
             env:
               TZ: "${TIMEZONE}"
-              NODE_OPTIONS: "--max-old-space-size=256"
               PUID: "1000"
               PGID: "1000"
               SESSION_COOKIE_SECURE: "true"

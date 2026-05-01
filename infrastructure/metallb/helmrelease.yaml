@@ -21,21 +21,3 @@ spec:
   upgrade:
     remediation:
       retries: 3
-
-  values:
-    controller:
-      resources:
-        requests:
-          cpu: 10m
-          memory: 32Mi
-        limits:
-          cpu: 100m
-          memory: 128Mi
-    speaker:
-      resources:
-        requests:
-          cpu: 10m
-          memory: 64Mi
-        limits:
-          cpu: 100m
-          memory: 128Mi

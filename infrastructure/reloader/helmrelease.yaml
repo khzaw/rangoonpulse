@@ -25,12 +25,3 @@ spec:
       isArgoRollouts: false
       watchGlobally: true
       reloadStrategy: default
-      deployment:
-        gomemlimitOverride: 96MiB
-        resources:
-          requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
-            cpu: 100m
-            memory: 128Mi
