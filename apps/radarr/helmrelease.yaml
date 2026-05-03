@@ -37,12 +37,11 @@ spec:
               PATH: "/app/radarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             resources:
               requests:
-                cpu: "100m"
-                memory: "256Mi"
+                cpu: "75m"
+                memory: "320Mi"
               limits:
-                cpu: "500m"
-                memory: "1Gi"
-
+                cpu: "375m"
+                memory: "768Mi"
     service:
       main:
         ports:
