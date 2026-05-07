@@ -499,34 +499,66 @@ function checkShareRateLimit(req, serviceId) {
   return true;
 }
 
+const SECURITY_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "same-origin",
+  "x-frame-options": "DENY",
+};
+
+const HTML_CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data:",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "connect-src 'self'",
+].join("; ");
+
+function securityHeadersFor(contentType) {
+  const headers = { ...SECURITY_HEADERS };
+  if (String(contentType || "").toLowerCase().startsWith("text/html")) {
+    headers["content-security-policy"] = HTML_CONTENT_SECURITY_POLICY;
+  }
+  return headers;
+}
+
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
+    ...securityHeadersFor("application/json; charset=utf-8"),
   });
   res.end(JSON.stringify(payload));
 }
 
 function sendText(res, statusCode, body) {
+  const contentType = "text/plain; charset=utf-8";
   res.writeHead(statusCode, {
-    "content-type": "text/plain; charset=utf-8",
+    "content-type": contentType,
     "cache-control": "no-store",
+    ...securityHeadersFor(contentType),
   });
   res.end(body);
 }
 
 function sendBody(res, statusCode, body, contentType) {
+  const resolvedContentType = contentType || "application/octet-stream";
   res.writeHead(statusCode, {
-    "content-type": contentType || "application/octet-stream",
+    "content-type": resolvedContentType,
     "cache-control": "no-store",
+    ...securityHeadersFor(resolvedContentType),
   });
   res.end(body);
 }
 
 function sendHtml(res, statusCode, body) {
+  const contentType = "text/html; charset=utf-8";
   res.writeHead(statusCode, {
-    "content-type": "text/html; charset=utf-8",
+    "content-type": contentType,
     "cache-control": "no-store",
+    ...securityHeadersFor(contentType),
   });
   res.end(body);
 }

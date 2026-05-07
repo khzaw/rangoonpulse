@@ -1,0 +1,11 @@
+{
+  "name": "rangoonpulse",
+  "private": true,
+  "description": "Validation helpers for rangoonpulse GitOps and control-panel code.",
+  "scripts": {
+    "check": "node --check apps/exposure-control/server.js && node --check apps/exposure-control/app.js"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

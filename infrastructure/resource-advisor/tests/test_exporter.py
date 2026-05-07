@@ -168,6 +168,16 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("https://example.invalid/pr/2", html)
         self.assertIn("/apply-plan.json", html)
 
+    def test_security_headers_include_nosniff_and_html_csp(self):
+        html_headers = exporter.security_headers_for("text/html; charset=utf-8")
+        json_headers = exporter.security_headers_for("application/json; charset=utf-8")
+
+        self.assertEqual(html_headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(html_headers["Referrer-Policy"], "same-origin")
+        self.assertIn("frame-ancestors 'none'", html_headers["Content-Security-Policy"])
+        self.assertIn("style-src 'self' 'unsafe-inline'", html_headers["Content-Security-Policy"])
+        self.assertNotIn("Content-Security-Policy", json_headers)
+
 
 if __name__ == "__main__":
     unittest.main()

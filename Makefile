@@ -2,7 +2,7 @@
 .PHONY: reconcile reconcile-all deploy-blog deploy-mmcal
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
-.PHONY: check-docs
+.PHONY: validate validate-kustomize validate-all check-docs check-node check-shell test-python
 
 CLUSTER_SETTINGS_FILE ?= flux/cluster-settings.yaml
 PRIMARY_NODE := $(shell awk '/^  PRIMARY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))
@@ -93,5 +93,20 @@ talos-dashboard-pi: ## Open Talos dashboard for Pi node
 validate: ## Dry-run validate a manifest (usage: make validate FILE=apps/blog/helmrelease.yaml)
 	kubectl apply --dry-run=client -f $(FILE)
 
+validate-kustomize: ## Render the Flux entrypoint with Kustomize
+	kubectl kustomize flux >/tmp/rangoonpulse-flux-rendered.yaml
+
 check-docs: ## Validate docs and skill structure
 	python3 scripts/check_docs.py
+
+check-node: ## Syntax-check exposure-control JavaScript
+	npm run check --silent
+
+check-shell: ## Syntax-check shell scripts
+	bash -n scripts/storage-sunset-cleanup.sh
+	bash -n apps/exposure-control/secret-commit-job.sh
+
+test-python: ## Run Python unit tests
+	python3 -m unittest discover -s infrastructure/resource-advisor/tests -p 'test_*.py'
+
+validate-all: check-docs test-python check-node check-shell validate-kustomize ## Run all repository checks safe for local/CI use

@@ -1307,11 +1307,40 @@ def build_index_html() -> str:
     })
 
 
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "same-origin",
+    "X-Frame-Options": "DENY",
+}
+
+HTML_CONTENT_SECURITY_POLICY = "; ".join(
+    [
+        "default-src 'self'",
+        "base-uri 'none'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "img-src 'self' data:",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+    ]
+)
+
+
+def security_headers_for(content_type: str) -> dict[str, str]:
+    headers = dict(SECURITY_HEADERS)
+    if content_type.lower().startswith("text/html"):
+        headers["Content-Security-Policy"] = HTML_CONTENT_SECURITY_POLICY
+    return headers
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code: int, content_type: str, body: bytes, *, include_body: bool = True) -> None:
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        for header, value in security_headers_for(content_type).items():
+            self.send_header(header, value)
         self.end_headers()
         if include_body:
             self.wfile.write(body)

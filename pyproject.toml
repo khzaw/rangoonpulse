@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["infrastructure/resource-advisor/tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = [
+  ".git",
+]
