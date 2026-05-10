@@ -37,11 +37,11 @@ spec:
               PATH: "/app/sonarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             resources:
               requests:
-                cpu: "75m"
-                memory: "320Mi"
+                cpu: "56m"
+                memory: "400Mi"
               limits:
-                cpu: "375m"
-                memory: "1070Mi"
+                cpu: "281m"
+                memory: "806Mi"
     service:
       main:
         ports:
