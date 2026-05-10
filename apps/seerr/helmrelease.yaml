@@ -43,11 +43,11 @@ spec:
               LOG_LEVEL: "info"
             resources:
               requests:
-                cpu: "56m"
-                memory: "240Mi"
+                cpu: "42m"
+                memory: "300Mi"
               limits:
-                cpu: "375m"
-                memory: "774Mi"
+                cpu: "281m"
+                memory: "690Mi"
     service:
       main:
         ports:
