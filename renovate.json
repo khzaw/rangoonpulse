@@ -56,6 +56,53 @@
       "enabled": false
     },
     {
+      "description": "Track LinuxServer images with four-part app versions and moving ls build tags.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/jackett",
+        "lscr.io/linuxserver/prowlarr",
+        "lscr.io/linuxserver/radarr",
+        "lscr.io/linuxserver/sonarr"
+      ],
+      "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)(?:-ls(?<revision>\\d+))?$"
+    },
+    {
+      "description": "Track LinuxServer images with three-part app versions and moving ls build tags.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/bazarr",
+        "lscr.io/linuxserver/calibre",
+        "lscr.io/linuxserver/sabnzbd",
+        "lscr.io/linuxserver/speedtest-tracker"
+      ],
+      "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-ls(?<build>\\d+)$"
+    },
+    {
+      "description": "Track LinuxServer Jellyfin while preserving the Ubuntu base compatibility suffix.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/jellyfin"
+      ],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?<compatibility>ubu\\d+)-ls(?<build>\\d+)$"
+    },
+    {
+      "description": "Track LinuxServer images with r and ls build components.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/mariadb",
+        "lscr.io/linuxserver/transmission"
+      ],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-r(?<build>\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
       "description": "Keep AdGuard primary image updates in their own branch and PR.",
       "matchManagers": [
         "helm-values"

@@ -30,6 +30,8 @@ This doc defines the current split between service update automation and static-
   - `/Users/khz/Code/rangoonpulse/apps/mmcal/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/rangoon-mapper/helmrelease.yaml`
 - The intentionally pinned `alexfozor/flaresolverr` image is excluded from Renovate
+- LinuxServer images use explicit regex versioning rules so Renovate can update tags with moving `-ls###`
+  build suffixes instead of treating that suffix as immutable Docker compatibility
 - The two AdGuard Home image references are intentionally split into file-specific branches and PRs:
   - `/Users/khz/Code/rangoonpulse/apps/adguard/primary/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/adguard/secondary/helmrelease.yaml`
@@ -48,6 +50,8 @@ This doc defines the current split between service update automation and static-
 - Do not let Renovate and Flux image automation manage the same image tag field.
 - Use Flux image automation only for self-built static-site style artifacts that should promote directly after image publish.
 - Use Renovate for ordinary service image and chart maintenance where PR review is desired.
+- When the control panel detects updates for a tag family, confirm Renovate has a matching versioning rule before expecting
+  PRs. Docker tags with suffixes are especially sensitive because Renovate preserves compatibility suffixes by default.
 - For dual AdGuard, keep Renovate updates one instance per PR even when both files track the same upstream tag.
 
 ## Verification
