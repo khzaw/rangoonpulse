@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/sonarr
-              tag: 4.0.16.2944-ls304
+              tag: 4.0.17.2952-ls311
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
