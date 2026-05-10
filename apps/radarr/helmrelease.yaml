@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/radarr
-              tag: 6.0.4.10291-ls295
+              tag: 6.1.1.10360-ls301
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
