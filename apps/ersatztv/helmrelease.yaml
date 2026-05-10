@@ -36,11 +36,11 @@ spec:
               TZ: "${TIMEZONE}"
             resources:
               requests:
-                cpu: "75m"
-                memory: "320Mi"
+                cpu: "56m"
+                memory: "400Mi"
               limits:
-                cpu: "1500m"
-                memory: "768Mi"
+                cpu: "1125m"
+                memory: "745Mi"
     service:
       main:
         controller: main
