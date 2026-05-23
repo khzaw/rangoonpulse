@@ -33,7 +33,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/mariadb
-              tag: "11.4.10-r0-ls216"
+              tag: "11.4.10-r0-ls217"
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
