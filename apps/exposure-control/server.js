@@ -222,6 +222,24 @@ const SECRET_EDITOR_FLUX_KUSTOMIZATION_NAME = String(
 const SECRET_EDITOR_FLUX_NAMESPACE = String(
   process.env.SECRET_EDITOR_FLUX_NAMESPACE || "flux-system",
 ).trim();
+const MANAGED_JOBS = [
+  {
+    id: "truenas-management-plane-refresh",
+    title: "TrueNAS management refresh",
+    namespace: "democratic-csi",
+    cronJob: "truenas-management-plane-refresh",
+    description: "Refreshes TrueNAS middlewared and Netdata before memory pressure turns into a management-plane outage.",
+    repoPath: "infrastructure/storage/democratic-csi/truenas-maintenance-cronjob.yaml",
+    fluxKustomization: "democratic-csi",
+  },
+];
+const MANAGED_JOB_BY_ID = new Map(MANAGED_JOBS.map((job) => [job.id, job]));
+const MANAGED_JOB_LOG_TAIL_LINES = clampInt(
+  process.env.MANAGED_JOB_LOG_TAIL_LINES,
+  160,
+  20,
+  500,
+);
 
 const metrics = {
   enableTotal: 0,
@@ -931,7 +949,10 @@ async function githubRequest(pathname, options) {
 
   const response = await requestHttps(githubApiPath(pathname), {
     method: (options && options.method) || "GET",
-    headers: githubHeaders((options && options.headers) || {}),
+    headers: githubHeaders({
+      ...(options && options.body ? { "content-type": "application/json" } : {}),
+      ...((options && options.headers) || {}),
+    }),
     body: options && options.body ? JSON.stringify(options.body) : undefined,
     timeoutMs: 10000,
   });
@@ -1101,6 +1122,41 @@ async function githubFileText(repoPath) {
   return Buffer.from(String(payload.content).replace(/\s/g, ""), "base64").toString("utf8");
 }
 
+async function githubFileInfo(repoPath) {
+  const payload = await githubRequest(
+    githubRepositoryPath() +
+      "/contents/" +
+      repoPath.split("/").map(encodeURIComponent).join("/") +
+      "?ref=" +
+      encodeURIComponent(SECRET_EDITOR_BRANCH),
+  );
+  if (!payload || payload.type !== "file" || !payload.content || !payload.sha) {
+    throw new Error("repository file not found: " + repoPath);
+  }
+  return {
+    sha: payload.sha,
+    text: Buffer.from(String(payload.content).replace(/\s/g, ""), "base64").toString("utf8"),
+  };
+}
+
+async function githubPutFileText(repoPath, text, message, sha) {
+  const payload = await githubRequest(
+    githubRepositoryPath() +
+      "/contents/" +
+      repoPath.split("/").map(encodeURIComponent).join("/"),
+    {
+      method: "PUT",
+      body: {
+        message,
+        content: Buffer.from(String(text || ""), "utf8").toString("base64"),
+        branch: SECRET_EDITOR_BRANCH,
+        sha,
+      },
+    },
+  );
+  return payload;
+}
+
 function parseKustomizationResources(content) {
   return String(content || "")
     .split("\n")
@@ -1259,6 +1315,35 @@ async function reconcileSecretsFlux() {
       SECRET_EDITOR_FLUX_NAMESPACE +
       "/kustomizations/" +
       SECRET_EDITOR_FLUX_KUSTOMIZATION_NAME,
+    {
+      method: "PATCH",
+      body: patch,
+      contentType: "application/merge-patch+json",
+    },
+  );
+  return requestedAt;
+}
+
+async function reconcileFluxKustomization(name) {
+  const requestedAt = nowIso();
+  const patch = {
+    metadata: {
+      annotations: {
+        "reconcile.fluxcd.io/requestedAt": requestedAt,
+      },
+    },
+  };
+  await kubeRequest(
+    "/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/flux-system",
+    {
+      method: "PATCH",
+      body: patch,
+      contentType: "application/merge-patch+json",
+    },
+  );
+  await kubeRequest(
+    "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/" +
+      encodeURIComponent(name),
     {
       method: "PATCH",
       body: patch,
@@ -2068,6 +2153,341 @@ async function kubeUpsertConfigMap(namespace, name, data, labels) {
     throw new Error("failed to update configmap " + name + " (" + updated.statusCode + ")");
   }
   return JSON.parse(updated.body || "{}");
+}
+
+function managedJobPath(job, suffix) {
+  return "/apis/batch/v1/namespaces/" +
+    encodeURIComponent(job.namespace) +
+    suffix;
+}
+
+function sanitizeCronSchedule(value) {
+  const schedule = String(value || "").trim().replace(/\s+/g, " ");
+  const parts = schedule.split(" ");
+  if (parts.length !== 5) return null;
+  if (!parts.every((part) => /^[A-Za-z0-9*,/:-]+$/.test(part))) return null;
+  if (schedule.length > 80) return null;
+  return schedule;
+}
+
+function sanitizeTimeZone(value) {
+  const zone = String(value || "").trim();
+  if (!zone) return null;
+  if (zone.length > 64) return null;
+  if (!/^[A-Za-z0-9_+\-./]+$/.test(zone)) return null;
+  return zone;
+}
+
+function assertManagedJob(id) {
+  const normalized = String(id || "").trim();
+  const job = MANAGED_JOB_BY_ID.get(normalized);
+  if (!job) throw new Error("managed job not found");
+  return job;
+}
+
+function k8sObjectMeta(obj) {
+  const metadata = (obj && obj.metadata) || {};
+  return {
+    name: metadata.name || "",
+    namespace: metadata.namespace || "",
+    createdAt: metadata.creationTimestamp || null,
+    labels: metadata.labels || {},
+    annotations: metadata.annotations || {},
+  };
+}
+
+function jobStatus(job) {
+  const status = (job && job.status) || {};
+  const conditions = Array.isArray(status.conditions) ? status.conditions : [];
+  const failed = conditions.find((item) => item && item.type === "Failed" && item.status === "True");
+  const complete = conditions.find((item) => item && item.type === "Complete" && item.status === "True");
+  const active = Number(status.active || 0);
+  if (failed) return "failed";
+  if (complete || Number(status.succeeded || 0) > 0) return "succeeded";
+  if (active > 0) return "running";
+  return "pending";
+}
+
+function summarizeJob(job, pods, logs) {
+  const status = (job && job.status) || {};
+  const spec = (job && job.spec) || {};
+  const meta = k8sObjectMeta(job);
+  const startedAt = status.startTime || meta.createdAt || null;
+  const completedAt = status.completionTime || null;
+  return {
+    ...meta,
+    status: jobStatus(job),
+    startedAt,
+    completedAt,
+    durationSeconds:
+      startedAt && completedAt
+        ? Math.max(0, Math.round((Date.parse(completedAt) - Date.parse(startedAt)) / 1000))
+        : null,
+    succeeded: Number(status.succeeded || 0),
+    failed: Number(status.failed || 0),
+    active: Number(status.active || 0),
+    backoffLimit: spec.backoffLimit ?? null,
+    podNames: (pods || []).map((pod) => pod && pod.metadata && pod.metadata.name).filter(Boolean),
+    logs: logs || "",
+  };
+}
+
+function sortJobsNewestFirst(items) {
+  return items.slice().sort((left, right) => {
+    const leftStatus = (left && left.status) || {};
+    const rightStatus = (right && right.status) || {};
+    const leftMeta = (left && left.metadata) || {};
+    const rightMeta = (right && right.metadata) || {};
+    const leftTs = Date.parse(leftStatus.startTime || leftMeta.creationTimestamp || "") || 0;
+    const rightTs = Date.parse(rightStatus.startTime || rightMeta.creationTimestamp || "") || 0;
+    return rightTs - leftTs;
+  });
+}
+
+async function listPodsForJob(namespace, jobName) {
+  const pods = await kubeGetJson(
+    "/api/v1/namespaces/" +
+      encodeURIComponent(namespace) +
+      "/pods?labelSelector=" +
+      encodeURIComponent("job-name=" + jobName),
+  );
+  return pods && Array.isArray(pods.items) ? pods.items : [];
+}
+
+async function getPodLogTail(namespace, pod, tailLines) {
+  const podName = pod && pod.metadata && pod.metadata.name;
+  if (!podName) return "";
+  const containers = (pod && pod.spec && pod.spec.containers) || [];
+  const basePath =
+    "/api/v1/namespaces/" +
+    encodeURIComponent(namespace) +
+    "/pods/" +
+    encodeURIComponent(podName) +
+    "/log?tailLines=" +
+    encodeURIComponent(String(tailLines || MANAGED_JOB_LOG_TAIL_LINES));
+  let res = await kubeRequest(basePath);
+  if (res.statusCode === 200) return res.body || "";
+  if (containers.length > 0) {
+    res = await kubeRequest(
+      basePath + "&container=" + encodeURIComponent(containers[0].name),
+    );
+    if (res.statusCode === 200) return res.body || "";
+  }
+  return "";
+}
+
+async function getJobLogTail(namespace, jobName, tailLines) {
+  const pods = await listPodsForJob(namespace, jobName);
+  if (!pods.length) return { pods: [], logs: "" };
+  const picked = pods.slice().sort((left, right) => podTimestampMs(right) - podTimestampMs(left))[0];
+  const logs = await getPodLogTail(namespace, picked, tailLines);
+  return { pods, logs };
+}
+
+function cronJobStatus(cronJob) {
+  const spec = (cronJob && cronJob.spec) || {};
+  const status = (cronJob && cronJob.status) || {};
+  return {
+    schedule: spec.schedule || "",
+    timeZone: spec.timeZone || "",
+    suspend: Boolean(spec.suspend),
+    concurrencyPolicy: spec.concurrencyPolicy || "Allow",
+    activeCount: Array.isArray(status.active) ? status.active.length : 0,
+    lastScheduleTime: status.lastScheduleTime || null,
+    lastSuccessfulTime: status.lastSuccessfulTime || null,
+  };
+}
+
+async function managedJobSnapshot(job) {
+  const cronJob = await kubeGetJson(managedJobPath(job, "/cronjobs/" + encodeURIComponent(job.cronJob)));
+  if (!cronJob) {
+    return {
+      ...job,
+      found: false,
+      status: "missing",
+      cronJobStatus: null,
+      recentRuns: [],
+    };
+  }
+
+  const jobsList = await kubeGetJson(
+    managedJobPath(job, "/jobs"),
+  );
+  const recentJobs = sortJobsNewestFirst((Array.isArray(jobsList && jobsList.items) ? jobsList.items : []).filter((item) => {
+    const labels = (item && item.metadata && item.metadata.labels) || {};
+    const owners = (item && item.metadata && item.metadata.ownerReferences) || [];
+    return (
+      labels["cronjob-name"] === job.cronJob ||
+      labels["batch.kubernetes.io/cronjob-name"] === job.cronJob ||
+      owners.some((owner) => owner && owner.kind === "CronJob" && owner.name === job.cronJob)
+    );
+  })).slice(0, 8);
+  const recentRuns = [];
+  for (const item of recentJobs) {
+    const name = item && item.metadata && item.metadata.name;
+    const podLog = name ? await getJobLogTail(job.namespace, name, MANAGED_JOB_LOG_TAIL_LINES).catch(() => ({ pods: [], logs: "" })) : { pods: [], logs: "" };
+    recentRuns.push(summarizeJob(item, podLog.pods, podLog.logs));
+  }
+
+  return {
+    ...job,
+    found: true,
+    status: cronJobStatus(cronJob),
+    recentRuns,
+    checkedAt: nowIso(),
+  };
+}
+
+async function listManagedJobsSnapshot() {
+  const items = await Promise.all(MANAGED_JOBS.map((job) => managedJobSnapshot(job)));
+  return {
+    checkedAt: nowIso(),
+    items,
+    summary: {
+      total: items.length,
+      found: items.filter((item) => item.found).length,
+      suspended: items.filter((item) => item.status && item.status.suspend).length,
+      running: items.reduce((sum, item) => sum + Number(item.status && item.status.activeCount || 0), 0),
+    },
+  };
+}
+
+function yamlQuoted(value) {
+  return JSON.stringify(String(value ?? ""));
+}
+
+function repoTimeZoneValue(timeZone) {
+  const normalized = String(timeZone || "").trim();
+  if (normalized === "Asia/Singapore") return "${TIMEZONE}";
+  return normalized;
+}
+
+function updateCronJobRepoYaml(content, spec) {
+  let next = String(content || "");
+  if (spec.schedule) {
+    if (!/^\s{2}schedule:\s*.+$/m.test(next)) throw new Error("cronjob yaml does not contain spec.schedule");
+    next = next.replace(/^(\s{2}schedule:\s*).+$/m, "$1" + yamlQuoted(spec.schedule));
+  }
+  if (spec.timeZone) {
+    const repoZone = repoTimeZoneValue(spec.timeZone);
+    if (/^\s{2}timeZone:\s*.+$/m.test(next)) {
+      next = next.replace(/^(\s{2}timeZone:\s*).+$/m, "$1" + yamlQuoted(repoZone));
+    } else if (/^\s{2}schedule:\s*.+$/m.test(next)) {
+      next = next.replace(/^(\s{2}schedule:\s*.+)$/m, "$1\n  timeZone: " + yamlQuoted(repoZone));
+    } else {
+      throw new Error("cronjob yaml does not contain a schedule anchor for timeZone");
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(spec, "suspend")) {
+    const line = "  suspend: " + (spec.suspend ? "true" : "false");
+    if (/^\s{2}suspend:\s*(true|false)\s*$/m.test(next)) {
+      next = next.replace(/^\s{2}suspend:\s*(true|false)\s*$/m, line);
+    } else if (/^\s{2}concurrencyPolicy:\s*.+$/m.test(next)) {
+      next = next.replace(/^(\s{2}concurrencyPolicy:\s*.+)$/m, line + "\n$1");
+    } else if (/^\s{2}timeZone:\s*.+$/m.test(next)) {
+      next = next.replace(/^(\s{2}timeZone:\s*.+)$/m, "$1\n" + line);
+    } else {
+      throw new Error("cronjob yaml does not contain a spec anchor for suspend");
+    }
+  }
+  return next;
+}
+
+async function patchManagedJob(id, body) {
+  const job = assertManagedJob(id);
+  const spec = {};
+  if (Object.prototype.hasOwnProperty.call(body || {}, "suspend")) {
+    spec.suspend = Boolean(body.suspend);
+  }
+  if (Object.prototype.hasOwnProperty.call(body || {}, "schedule")) {
+    const schedule = sanitizeCronSchedule(body.schedule);
+    if (!schedule) throw new Error("schedule must be a 5-field cron expression");
+    spec.schedule = schedule;
+  }
+  if (Object.prototype.hasOwnProperty.call(body || {}, "timeZone")) {
+    const timeZone = sanitizeTimeZone(body.timeZone);
+    if (!timeZone) throw new Error("timeZone is invalid");
+    spec.timeZone = timeZone;
+  }
+  if (Object.keys(spec).length === 0) throw new Error("no supported job config fields provided");
+
+  if (!job.repoPath || !job.fluxKustomization) {
+    throw new Error("managed job is missing GitOps metadata");
+  }
+  const file = await githubFileInfo(job.repoPath);
+  const nextText = updateCronJobRepoYaml(file.text, spec);
+  if (nextText === file.text) {
+    return { ...(await managedJobSnapshot(job)), gitops: { changed: false } };
+  }
+  const result = await githubPutFileText(
+    job.repoPath,
+    nextText,
+    "jobs: update " + job.id,
+    file.sha,
+  );
+  const requestedAt = await reconcileFluxKustomization(job.fluxKustomization);
+  appendAuditEntry({ action: "managed-job-config", serviceId: job.namespace + "/" + job.cronJob });
+  return {
+    ...(await managedJobSnapshot(job)),
+    gitops: {
+      changed: true,
+      commitSha: result && result.commit && result.commit.sha ? result.commit.sha : null,
+      requestedAt,
+      repoPath: job.repoPath,
+    },
+  };
+}
+
+async function runManagedJobNow(id) {
+  const job = assertManagedJob(id);
+  const cronJob = await kubeGetJson(managedJobPath(job, "/cronjobs/" + encodeURIComponent(job.cronJob)));
+  if (!cronJob) throw new Error("cronjob not found");
+  const templateSpec = JSON.parse(JSON.stringify((((cronJob.spec || {}).jobTemplate || {}).spec) || {}));
+  if (!templateSpec.template) throw new Error("cronjob jobTemplate is missing a pod template");
+
+  const suffix = Date.now().toString(36);
+  const jobName = (job.cronJob + "-manual-" + suffix).slice(0, 63).replace(/-+$/, "");
+  const labels = {
+    ...((((cronJob.spec || {}).jobTemplate || {}).metadata || {}).labels || {}),
+    "app.kubernetes.io/managed-by": "exposure-control",
+    "controlpanel.khzaw.dev/job-id": job.id,
+    "cronjob-name": job.cronJob,
+  };
+  templateSpec.ttlSecondsAfterFinished = templateSpec.ttlSecondsAfterFinished || 21600;
+  const payload = {
+    apiVersion: "batch/v1",
+    kind: "Job",
+    metadata: {
+      name: jobName,
+      namespace: job.namespace,
+      labels,
+      annotations: {
+        "controlpanel.khzaw.dev/triggered-at": nowIso(),
+        "controlpanel.khzaw.dev/source-cronjob": job.cronJob,
+      },
+    },
+    spec: templateSpec,
+  };
+  payload.spec.template.metadata = payload.spec.template.metadata || {};
+  payload.spec.template.metadata.labels = {
+    ...(payload.spec.template.metadata.labels || {}),
+    "controlpanel.khzaw.dev/job-id": job.id,
+  };
+
+  const created = await kubeRequest(managedJobPath(job, "/jobs"), {
+    method: "POST",
+    body: payload,
+  });
+  if (created.statusCode !== 201) {
+    throw new Error("failed to create manual job " + jobName + " (" + created.statusCode + ")");
+  }
+  appendAuditEntry({ action: "managed-job-run", serviceId: job.namespace + "/" + job.cronJob });
+  return {
+    jobName,
+    namespace: job.namespace,
+    createdAt: nowIso(),
+    snapshot: await managedJobSnapshot(job),
+  };
 }
 
 async function listNamespacePods(namespace) {
@@ -3588,6 +4008,58 @@ async function handleApi(req, res, parsedUrl) {
       return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/jobs") {
+    try {
+      const payload = await listManagedJobsSnapshot();
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  const managedJobMatch = pathname.match(/^\/api\/jobs\/([^/]+)$/);
+  if (managedJobMatch && req.method === "PATCH") {
+    try {
+      const id = decodeURIComponent(managedJobMatch[1]);
+      const body = await parseBody(req);
+      const payload = await patchManagedJob(id, body);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  const managedJobRunMatch = pathname.match(/^\/api\/jobs\/([^/]+)\/run$/);
+  if (managedJobRunMatch && req.method === "POST") {
+    try {
+      const id = decodeURIComponent(managedJobRunMatch[1]);
+      const payload = await runManagedJobNow(id);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  const managedJobLogsMatch = pathname.match(/^\/api\/jobs\/([^/]+)\/runs\/([^/]+)\/logs$/);
+  if (managedJobLogsMatch && req.method === "GET") {
+    try {
+      const job = assertManagedJob(decodeURIComponent(managedJobLogsMatch[1]));
+      const jobName = decodeURIComponent(managedJobLogsMatch[2]);
+      if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(jobName)) {
+        return sendJson(res, 400, { error: "invalid job name" });
+      }
+      const payload = await getJobLogTail(job.namespace, jobName, MANAGED_JOB_LOG_TAIL_LINES);
+      return sendJson(res, 200, {
+        namespace: job.namespace,
+        jobName,
+        podNames: payload.pods.map((pod) => pod && pod.metadata && pod.metadata.name).filter(Boolean),
+        logs: payload.logs || "",
+      });
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
     }
   }
 

@@ -30,6 +30,13 @@
       const tuningEmptyEl = document.getElementById('tuningEmpty');
       const runtimeLinesEl = document.getElementById('runtimeLines');
       const tuningRuntimeMetaEl = document.getElementById('tuningRuntimeMeta');
+      const jobsSummaryEl = document.getElementById('jobsSummary');
+      const jobsOverviewStripEl = document.getElementById('jobsOverviewStrip');
+      const jobsOverviewMetaEl = document.getElementById('jobsOverviewMeta');
+      const jobsOverviewDetailEl = document.getElementById('jobsOverviewDetail');
+      const jobsRefreshBtn = document.getElementById('jobsRefreshBtn');
+      const jobsMsgEl = document.getElementById('jobsMsg');
+      const jobsListEl = document.getElementById('jobsList');
       const exposureMetaEl = document.getElementById('exposureMeta');
       const vpnSectionMetaEl = document.getElementById('vpnSectionMeta');
       const auditMetaEl = document.getElementById('auditMeta');
@@ -90,6 +97,7 @@
         helmUpdates: null,
         travel: null,
         tuning: null,
+        jobs: null,
         secrets: null,
         selectedSecret: null,
       };
@@ -133,10 +141,14 @@
         setMessage(secretsMsgEl, text, isError);
       }
 
+      function setJobsMsg(text, isError) {
+        setMessage(jobsMsgEl, text, isError);
+      }
+
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
         if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['updates', 'travel', 'exposure', 'tuning', 'secrets']);
+        const knownPages = new Set(['updates', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
         if (knownPages.has(candidate)) return candidate;
         return 'updates';
       }
@@ -168,6 +180,11 @@
         if (nextPage === 'secrets' && hasLoadedDashboard && !dashboardState.secrets) {
           secretsListEl.innerHTML = skeletonTableRows(1, 5);
           loadSecrets();
+        }
+        if (nextPage === 'jobs' && hasLoadedDashboard && !dashboardState.jobs) {
+          jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
+          loadJobs();
         }
       }
 
@@ -647,6 +664,177 @@
         exposureMetaEl.textContent = activeExposures + ' active exposure' + (activeExposures === 1 ? '' : 's');
         vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
         auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';
+      }
+
+      function jobTone(status) {
+        const value = String(status || '').toLowerCase();
+        if (value === 'succeeded') return 'ok';
+        if (value === 'running') return 'warning';
+        if (value === 'failed') return 'excluded';
+        return 'neutral';
+      }
+
+      function renderJobs(payload) {
+        const data = payload || { items: [], summary: {} };
+        const items = Array.isArray(data.items) ? data.items : [];
+        const summary = data.summary || {};
+        const totalRuns = items.reduce((sum, item) => sum + (Array.isArray(item.recentRuns) ? item.recentRuns.length : 0), 0);
+        const failedRuns = items.reduce((sum, item) => sum + (Array.isArray(item.recentRuns) ? item.recentRuns.filter((run) => run.status === 'failed').length : 0), 0);
+        const running = Number(summary.running || 0);
+        const suspended = Number(summary.suspended || 0);
+
+        dashboardState.jobs = data;
+        jobsSummaryEl.textContent = String(summary.found || 0) + '/' + String(summary.total || items.length) + ' managed job' + ((summary.total || items.length) === 1 ? '' : 's') + ' found';
+        jobsOverviewStripEl.innerHTML =
+          overviewSegment('managed jobs', String(summary.total || items.length), String(summary.found || 0) + ' found in cluster', {
+            eyebrow: 'inventory',
+            barPct: summary.total ? Number(summary.found || 0) / Number(summary.total || 1) * 100 : 0,
+            tone: Number(summary.found || 0) === Number(summary.total || 0) ? 'status' : 'danger',
+          }) +
+          overviewSegment('active runs', String(running), 'currently running pods from managed CronJobs', {
+            eyebrow: 'runtime',
+            barPct: running ? 100 : 0,
+            tone: running ? 'warning' : 'status',
+          }) +
+          overviewSegment('suspended', String(suspended), 'CronJobs paused from schedule', {
+            eyebrow: 'configuration',
+            barPct: items.length ? suspended / items.length * 100 : 0,
+            tone: suspended ? 'warning' : 'status',
+          }) +
+          overviewSegment('recent failures', String(failedRuns), String(totalRuns) + ' recent run' + (totalRuns === 1 ? '' : 's') + ' loaded', {
+            eyebrow: 'logs',
+            barPct: totalRuns ? failedRuns / totalRuns * 100 : 0,
+            tone: failedRuns ? 'danger' : 'status',
+          });
+        jobsOverviewMetaEl.innerHTML =
+          '<span>checked ' + fmtDateTime(data.checkedAt) + '</span>' +
+          '<span>' + String(totalRuns) + ' run log tail' + (totalRuns === 1 ? '' : 's') + '</span>';
+        jobsOverviewDetailEl.textContent = items.length ? 'managed CronJob inventory loaded' : 'no managed jobs configured';
+
+        if (!items.length) {
+          jobsListEl.innerHTML = '<div class="empty-state">No managed jobs configured.</div>';
+          return;
+        }
+
+        jobsListEl.innerHTML = items.map((job) => {
+          const status = job.status || {};
+          const runs = Array.isArray(job.recentRuns) ? job.recentRuns : [];
+          const latest = runs[0] || null;
+          const scheduleValue = escapeHtml(status.schedule || '');
+          const timeZoneValue = escapeHtml(status.timeZone || '');
+          const runRows = runs.length
+            ? runs.map((run) =>
+              '<tr>' +
+                '<td><div class="svc-name">' + escapeHtml(run.name || 'run') + '</div><div class="svc-id">' + escapeHtml((run.podNames || []).join(', ') || 'no pod yet') + '</div></td>' +
+                '<td><span class="stat-pill ' + jobTone(run.status) + '"><strong>' + escapeHtml(run.status || 'unknown') + '</strong></span></td>' +
+                '<td>' + fmtDateTime(run.startedAt) + '</td>' +
+                '<td>' + (run.completedAt ? fmtDateTime(run.completedAt) : 'n/a') + '</td>' +
+                '<td>' + (run.durationSeconds == null ? 'n/a' : String(run.durationSeconds) + 's') + '</td>' +
+                '<td><button class="updates-action-btn" type="button" data-job-log="' + escapeHtml(job.id) + '" data-job-run="' + escapeHtml(run.name || '') + '">Logs</button></td>' +
+              '</tr>'
+            ).join('')
+            : '<tr><td colspan="6" class="empty-state">No recent runs found.</td></tr>';
+          const logText = latest && latest.logs ? escapeHtml(latest.logs) : 'No logs loaded for the latest run.';
+          return (
+            '<article class="job-card" data-job-card="' + escapeHtml(job.id) + '">' +
+              '<div class="job-card-head">' +
+                '<div><div class="job-title">' + escapeHtml(job.title || job.id) + '</div><div class="job-meta">' + escapeHtml(job.namespace || '') + '/' + escapeHtml(job.cronJob || '') + ' · ' + escapeHtml(job.repoPath || '') + '</div></div>' +
+                '<div class="job-status-cluster">' +
+                  '<span class="stat-pill ' + (job.found ? 'ok' : 'excluded') + '"><strong>' + (job.found ? 'found' : 'missing') + '</strong></span>' +
+                  '<span class="stat-pill ' + (status.suspend ? 'guarded' : 'ok') + '"><strong>' + (status.suspend ? 'suspended' : 'scheduled') + '</strong></span>' +
+                '</div>' +
+              '</div>' +
+              '<p class="support-copy">' + escapeHtml(job.description || '') + '</p>' +
+              '<div class="job-config-grid">' +
+                '<label><span>schedule</span><input class="job-input" data-job-schedule="' + escapeHtml(job.id) + '" type="text" value="' + scheduleValue + '" /></label>' +
+                '<label><span>timezone</span><input class="job-input" data-job-timezone="' + escapeHtml(job.id) + '" type="text" value="' + timeZoneValue + '" /></label>' +
+                '<label class="job-checkbox"><input data-job-suspend="' + escapeHtml(job.id) + '" type="checkbox" ' + (status.suspend ? 'checked' : '') + ' /><span>suspend</span></label>' +
+                '<div class="job-actions">' +
+                  '<button type="button" data-job-save="' + escapeHtml(job.id) + '">Save config</button>' +
+                  '<button type="button" data-job-run="' + escapeHtml(job.id) + '">Run now</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="job-runtime-line">' +
+                '<span>last schedule ' + fmtDateTime(status.lastScheduleTime) + '</span>' +
+                '<span>last success ' + fmtDateTime(status.lastSuccessfulTime) + '</span>' +
+                '<span>policy ' + escapeHtml(status.concurrencyPolicy || 'Allow') + '</span>' +
+              '</div>' +
+              '<div class="table-shell job-runs-shell"><table><thead><tr><th>run</th><th>status</th><th>started</th><th>completed</th><th>duration</th><th>logs</th></tr></thead><tbody>' + runRows + '</tbody></table></div>' +
+              '<div class="terminal-shell job-log-shell"><pre data-job-log-output="' + escapeHtml(job.id) + '">' + logText + '</pre></div>' +
+            '</article>'
+          );
+        }).join('');
+      }
+
+      async function loadJobs(options) {
+        const force = Boolean(options && options.force);
+        if (force) {
+          setBtnLoading(jobsRefreshBtn, true);
+          setJobsMsg('Refreshing managed jobs...');
+        }
+        try {
+          const payload = await request('/api/jobs', 'GET');
+          renderJobs(payload);
+          if (force) setJobsMsg('Managed jobs refreshed.');
+        } catch (err) {
+          jobsSummaryEl.textContent = 'Managed jobs unavailable';
+          jobsListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
+          setJobsMsg(err.message, true);
+        } finally {
+          if (force) setBtnLoading(jobsRefreshBtn, false);
+        }
+      }
+
+      async function saveJobConfig(jobId, button) {
+        const scheduleEl = jobsListEl.querySelector('[data-job-schedule="' + CSS.escape(jobId) + '"]');
+        const timeZoneEl = jobsListEl.querySelector('[data-job-timezone="' + CSS.escape(jobId) + '"]');
+        const suspendEl = jobsListEl.querySelector('[data-job-suspend="' + CSS.escape(jobId) + '"]');
+        setBtnLoading(button, true);
+        setJobsMsg('Saving ' + jobId + '...');
+        try {
+          const payload = await request('/api/jobs/' + encodeURIComponent(jobId), 'PATCH', {
+            schedule: scheduleEl ? scheduleEl.value : undefined,
+            timeZone: timeZoneEl ? timeZoneEl.value : undefined,
+            suspend: suspendEl ? suspendEl.checked : false,
+          });
+          setJobsMsg(payload.gitops && payload.gitops.changed ? 'Committed ' + jobId + ' config and requested Flux reconcile.' : 'No config change for ' + jobId + '.');
+          await loadJobs();
+        } catch (err) {
+          setJobsMsg(err.message, true);
+        } finally {
+          setBtnLoading(button, false);
+        }
+      }
+
+      async function runJobNow(jobId, button) {
+        if (!confirm('Run ' + jobId + ' now?')) return;
+        setBtnLoading(button, true);
+        setJobsMsg('Creating manual run for ' + jobId + '...');
+        try {
+          const payload = await request('/api/jobs/' + encodeURIComponent(jobId) + '/run', 'POST', {});
+          setJobsMsg('Created ' + (payload.jobName || 'manual job') + '.');
+          await loadJobs();
+        } catch (err) {
+          setJobsMsg(err.message, true);
+        } finally {
+          setBtnLoading(button, false);
+        }
+      }
+
+      async function loadJobLogs(jobId, jobName, button) {
+        const output = jobsListEl.querySelector('[data-job-log-output="' + CSS.escape(jobId) + '"]');
+        setBtnLoading(button, true);
+        if (output) output.textContent = 'Loading logs for ' + jobName + '...';
+        try {
+          const payload = await request('/api/jobs/' + encodeURIComponent(jobId) + '/runs/' + encodeURIComponent(jobName) + '/logs', 'GET');
+          if (output) output.textContent = payload.logs || 'No logs available for ' + jobName + '.';
+          setJobsMsg('Loaded logs for ' + jobName + '.');
+        } catch (err) {
+          if (output) output.textContent = err.message;
+          setJobsMsg(err.message, true);
+        } finally {
+          setBtnLoading(button, false);
+        }
       }
 
       function renderTravel(travel) {
@@ -1580,17 +1768,20 @@
           overviewStripEl.innerHTML = skeletonOverviewStrip(7);
           travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           tuningOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
           updatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
+          if (activePage === 'jobs') jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           if (activePage === 'secrets') secretsListEl.innerHTML = skeletonTableRows(1, 5);
         }
 
         try {
           const includeSecrets = activePage === 'secrets';
-          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, secretsData] = await Promise.allSettled([
+          const includeJobs = activePage === 'jobs';
+          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, jobsData, secretsData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
             request('/api/transmission-vpn', 'GET'),
@@ -1599,6 +1790,7 @@
             request('/api/helm-updates', 'GET'),
             request('/api/renovate', 'GET'),
             request('/api/travel', 'GET'),
+            includeJobs ? request('/api/jobs', 'GET') : Promise.resolve(null),
             includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
           ]);
 
@@ -1660,6 +1852,23 @@
             renderTravel(null);
             if (travelData && !silent) setTravelMsg(travelData.reason.message, true);
           }
+          if (includeJobs) {
+            if (jobsData && jobsData.status === 'fulfilled') {
+              renderJobs(jobsData.value);
+              if (!silent) setJobsMsg('');
+            } else {
+              dashboardState.jobs = null;
+              jobsSummaryEl.textContent = 'Managed jobs unavailable';
+              jobsListEl.innerHTML = '<div class="empty-state">' + escapeHtml(jobsData ? jobsData.reason.message : 'Managed jobs unavailable.') + '</div>';
+              if (jobsData && !silent) setJobsMsg(jobsData.reason.message, true);
+            }
+          } else if (!dashboardState.jobs) {
+            jobsSummaryEl.textContent = 'Managed job inventory loads only when this page is opened.';
+            jobsOverviewStripEl.innerHTML = '';
+            jobsOverviewMetaEl.innerHTML = '';
+            jobsOverviewDetailEl.textContent = 'open jobs to load cron state';
+            jobsListEl.innerHTML = '<div class="empty-state">Open the jobs page to load managed CronJob state.</div>';
+          }
           if (includeSecrets) {
             if (secretsData && secretsData.status === 'fulfilled') {
               renderSecretsList(secretsData.value);
@@ -1689,6 +1898,7 @@
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
+      jobsRefreshBtn.onclick = () => loadJobs({ force: true });
       secretsRefreshBtn.onclick = () => loadSecrets({ force: true });
       newSecretBtn.onclick = () => createSecret();
       secretSaveBtn.onclick = () => saveSelectedSecret();
@@ -1746,6 +1956,22 @@
           await runRenovateScan(button.dataset.itemLabel || 'chart update');
         } finally {
           button.disabled = false;
+        }
+      };
+      jobsListEl.onclick = async (event) => {
+        const saveButton = event.target.closest('[data-job-save]');
+        const runButton = event.target.closest('[data-job-run]:not([data-job-log])');
+        const logButton = event.target.closest('[data-job-log][data-job-run]');
+        if (saveButton) {
+          await saveJobConfig(saveButton.dataset.jobSave, saveButton);
+          return;
+        }
+        if (runButton) {
+          await runJobNow(runButton.dataset.jobRun, runButton);
+          return;
+        }
+        if (logButton) {
+          await loadJobLogs(logButton.dataset.jobLog, logButton.dataset.jobRun, logButton);
         }
       };
 

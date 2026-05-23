@@ -195,6 +195,7 @@ That points to a memory-starvation event where NFSv4 server-side copy activity w
 - `TrueNASManagementPlaneDownButNFSUp` is the high-signal alert for this failure mode: it fires when the API probe is down while NFS still accepts connections.
 - `TrueNASNginxServiceNotReported`, `TrueNASMemoryHeadroomLow`, and `TrueNASMiddlewareMemoryHigh` provide earlier or more specific signals when host metrics are still scrapeable.
 - `CronJob/democratic-csi/truenas-management-plane-refresh` proactively restarts `middlewared` and Netdata from Kubernetes at `02:00` on the 1st and 15th of each month. It uses the SOPS-managed `democratic-csi/truenas-ssh-credentials` Secret and opens only a short SSH session to the NAS, avoiding any additional resident process on the TrueNAS host.
+- The `Jobs` tab in `https://controlpanel.khzaw.dev` shows this CronJob's schedule, suspend state, recent run statuses, and log tails. It can also commit narrow schedule/timezone/suspend changes back to GitOps and create a manual run from the CronJob template.
 
 ### Repo Guardrail Added
 
