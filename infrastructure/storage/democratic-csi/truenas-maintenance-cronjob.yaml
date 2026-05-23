@@ -1,0 +1,83 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/cronjob-batch-v1.json
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: truenas-management-plane-refresh
+  namespace: democratic-csi
+spec:
+  schedule: "0 2 1,15 * *"
+  timeZone: "${TIMEZONE}"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 21600
+      template:
+        spec:
+          nodeSelector:
+            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+          restartPolicy: OnFailure
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: refresh
+              image: alpine:3.22
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -ec
+              args:
+                - |
+                  apk add --no-cache curl openssh-client sshpass
+
+                  check_truenas_api() {
+                    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time "$1" "http://${NAS_IP}/api/v2.0/system/version/" || true)"
+                    test "${code}" = "200" || test "${code}" = "401"
+                  }
+
+                  echo "Preflight: TrueNAS API and NFS reachability"
+                  check_truenas_api 10 || echo "TrueNAS API preflight did not return 200/401; continuing with refresh"
+                  nc -z -w 5 "${NAS_IP}" 2049
+
+                  echo "Restarting TrueNAS middlewared and netdata"
+                  export SSHPASS="${TRUENAS_PASSWORD}"
+                  printf '%s\n' "${TRUENAS_PASSWORD}" | sshpass -e ssh \
+                    -o StrictHostKeyChecking=no \
+                    -o UserKnownHostsFile=/dev/null \
+                    -o ConnectTimeout=10 \
+                    "${TRUENAS_USERNAME}@${NAS_IP}" \
+                    'sudo -S -p "" systemctl restart middlewared netdata'
+
+                  echo "Waiting for management plane to settle"
+                  sleep 45
+
+                  echo "Post-check: TrueNAS API, NFS, and Netdata"
+                  check_truenas_api 15
+                  nc -z -w 5 "${NAS_IP}" 2049
+                  curl -fsS --max-time 15 "http://${NAS_IP}:6999/api/v1/allmetrics?format=prometheus&help=no&types=no&timestamps=no" >/dev/null
+              env:
+                - name: NAS_IP
+                  value: "${NAS_IP}"
+                - name: TRUENAS_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: truenas-ssh-credentials
+                      key: username
+                - name: TRUENAS_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: truenas-ssh-credentials
+                      key: password
+              securityContext:
+                allowPrivilegeEscalation: false
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  cpu: 250m
+                  memory: 256Mi

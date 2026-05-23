@@ -7,3 +7,4 @@ resources:
   - namespace.yaml
   - hr-hdd.yaml
   - hr-nvme.yaml
+  - truenas-maintenance-cronjob.yaml
