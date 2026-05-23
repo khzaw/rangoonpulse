@@ -42,6 +42,8 @@ The HelmRelease also sets:
 - Deployment: `apps/ersatztv/`
 - URL: `https://ersatztv.khzaw.dev`
 
+ErsatzTV is not live right now. Its manifests remain in the repo, but `flux/kustomization.yaml` no longer includes the parent `flux/kustomizations/ersatztv.yaml` entry, so Flux does not reconcile it.
+
 ### Persistence
 ErsatzTV stores config/state in `/config` and uses an NFS-backed PVC:
 - StorageClass: `truenas-nfs`

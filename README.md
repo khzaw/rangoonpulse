@@ -148,7 +148,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **nodecast-tv** | Live TV streaming |
 | **iSponsorBlockTV** | SponsorBlock for TV clients |
 | **Tunarr** | Channel scheduling |
-| **ErsatzTV** | Custom TV channels |
+| **ErsatzTV** | Custom TV channels (not live right now) |
 
 ### Productivity
 
