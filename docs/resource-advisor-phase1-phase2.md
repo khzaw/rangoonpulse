@@ -76,6 +76,7 @@ Apply PR cleanliness:
 ## What It Analyzes
 - Deployments and StatefulSets in namespaces configured by `TARGET_NAMESPACES`.
 - Per-container p95 CPU and memory from Prometheus over a 14-day window (`METRICS_WINDOW=14d`).
+- CPU CFS throttling from `container_cpu_cfs_throttled_periods_total` / `container_cpu_cfs_periods_total`.
 - Restart trends from `kube_pod_container_status_restarts_total`.
 - Current requests/limits from workload specs.
 
@@ -125,6 +126,7 @@ Operational expectation:
   - `DEADBAND_CPU_M` (default 25m)
   - `DEADBAND_MEM_MI` (default 64Mi)
 - Memory downscaling is blocked when restart activity is detected.
+- CPU throttling above `CPU_THROTTLE_RATIO_UPSIZE_THRESHOLD` with at least `CPU_THROTTLE_MIN_PERIODS` throttled periods adds a `cpu_throttle_guard`, raises CPU recommendations incrementally, and prevents throttled services from looking safe just because usage p95 is artificially low.
 - High-variance workloads can be excluded from automatic downscaling.
 - Apply mode is allowlisted to app-template-backed releases only.
 - The auto-apply allowlist defaults to `APP_TEMPLATE_RELEASE_FILE_MAP` in `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/advisor.py`.

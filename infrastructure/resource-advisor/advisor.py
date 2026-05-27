@@ -787,6 +787,8 @@ def build_report() -> tuple[dict, str]:
     deadband_percent = max(0.0, env_float("DEADBAND_PERCENT", 10.0))
     deadband_cpu_m = max(0.0, env_float("DEADBAND_CPU_M", 25.0))
     deadband_mem_mi = max(0.0, env_float("DEADBAND_MEM_MI", 64.0))
+    cpu_throttle_ratio_upsize_threshold = max(0.0, env_float("CPU_THROTTLE_RATIO_UPSIZE_THRESHOLD", 0.20))
+    cpu_throttle_min_periods = max(0.0, env_float("CPU_THROTTLE_MIN_PERIODS", 100.0))
 
     metrics_window = os.getenv("METRICS_WINDOW", "14d").strip()
     metrics_resolution = os.getenv("METRICS_RESOLUTION", "1h").strip()
@@ -855,10 +857,21 @@ def build_report() -> tuple[dict, str]:
                         f'sum(increase(kube_pod_container_status_restarts_total{{namespace="{namespace}",'
                         f'pod=~"{pod_regex}",container="{container_name}"}}[{metrics_window}]))'
                     )
+                    throttled_periods_query = (
+                        f'sum(increase(container_cpu_cfs_throttled_periods_total{{namespace="{namespace}",'
+                        f'pod=~"{pod_regex}",container="{container_name}"}}[{metrics_window}]))'
+                    )
+                    cpu_periods_query = (
+                        f'sum(increase(container_cpu_cfs_periods_total{{namespace="{namespace}",'
+                        f'pod=~"{pod_regex}",container="{container_name}"}}[{metrics_window}]))'
+                    )
 
                     cpu_p95_cores = prom.query_scalar(cpu_query)
                     mem_p95_bytes = prom.query_scalar(mem_query)
                     restart_lookback = prom.query_scalar(restart_query) or 0.0
+                    cpu_throttled_periods = prom.query_scalar(throttled_periods_query) or 0.0
+                    cpu_periods = prom.query_scalar(cpu_periods_query) or 0.0
+                    cpu_throttle_ratio = cpu_throttled_periods / cpu_periods if cpu_periods > 0.0 else 0.0
 
                     if cpu_p95_cores is None and mem_p95_bytes is None:
                         skipped_no_metrics += 1
@@ -876,12 +889,23 @@ def build_report() -> tuple[dict, str]:
                     target_lim_cpu = max(target_req_cpu * 2.0, cpu_p95_m * (1.0 + limit_buffer_percent / 100.0))
                     target_lim_mem = max(target_req_mem * 1.5, mem_p95_mi * (1.0 + limit_buffer_percent / 100.0))
 
+                    notes: list[str] = []
+                    cpu_throttle_guard = (
+                        cur_lim_cpu > 0.0
+                        and cpu_throttle_ratio >= cpu_throttle_ratio_upsize_threshold
+                        and cpu_throttled_periods >= cpu_throttle_min_periods
+                    )
+                    if cpu_throttle_guard:
+                        throttle_step = 1.0 + (max_step_percent / 100.0)
+                        target_lim_cpu = max(target_lim_cpu, cur_lim_cpu * throttle_step)
+                        if cur_req_cpu > 0.0:
+                            target_req_cpu = max(target_req_cpu, min(cur_lim_cpu, cur_req_cpu * throttle_step))
+                        notes.append("cpu_throttle_guard")
+
                     rec_req_cpu = recommend(cur_req_cpu, target_req_cpu, max_step_percent)
                     rec_req_mem = recommend(cur_req_mem, target_req_mem, max_step_percent)
                     rec_lim_cpu = recommend(cur_lim_cpu, target_lim_cpu, max_step_percent)
                     rec_lim_mem = recommend(cur_lim_mem, target_lim_mem, max_step_percent)
-
-                    notes: list[str] = []
 
                     if restart_lookback > 0:
                         if rec_req_mem < cur_req_mem:
@@ -980,7 +1004,25 @@ def build_report() -> tuple[dict, str]:
                         )
                     )
 
-                    if up_signal:
+                    limit_up_signal = (
+                        (rec_lim_cpu > cur_lim_cpu)
+                        and is_material_delta(
+                            lim_cpu_delta,
+                            lim_cpu_abs_delta,
+                            deadband_percent,
+                            deadband_cpu_m,
+                        )
+                    ) or (
+                        (rec_lim_mem > cur_lim_mem)
+                        and is_material_delta(
+                            lim_mem_delta,
+                            lim_mem_abs_delta,
+                            deadband_percent,
+                            deadband_mem_mi,
+                        )
+                    )
+
+                    if up_signal or limit_up_signal:
                         action = "upsize"
                     elif down_signal:
                         action = "downsize"
@@ -998,6 +1040,8 @@ def build_report() -> tuple[dict, str]:
                             "restarts_window": round(restart_lookback, 2),
                             "cpu_p95_m": round(cpu_p95_m, 1),
                             "mem_p95_mi": round(mem_p95_mi, 1),
+                            "cpu_throttle_ratio": round(cpu_throttle_ratio, 3),
+                            "cpu_throttled_periods": round(cpu_throttled_periods, 1),
                             "current": {
                                 "requests": {
                                     "cpu": fmt_cpu_m(cur_req_cpu),
@@ -1070,6 +1114,8 @@ def build_report() -> tuple[dict, str]:
             "deadband_percent": round(deadband_percent, 2),
             "deadband_cpu_m": round(deadband_cpu_m, 2),
             "deadband_mem_mi": round(deadband_mem_mi, 2),
+            "cpu_throttle_ratio_upsize_threshold": round(cpu_throttle_ratio_upsize_threshold, 3),
+            "cpu_throttle_min_periods": round(cpu_throttle_min_periods, 1),
         },
         "summary": {
             "containers_analyzed": containers_analyzed,
@@ -1310,6 +1356,9 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         container = rec.get("container", "")
         notes = rec.get("notes", [])
 
+        if rec.get("action") == "no-change":
+            continue
+
         if release not in allowlist:
             skipped.append({"reason": "not_allowlisted", "release": release, "container": container})
             continue
@@ -1328,11 +1377,17 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         cur_lim_mem = rec.get("current", {}).get("limits", {}).get("memory", "0Mi")
         rec_lim_cpu = rec.get("recommended", {}).get("limits", {}).get("cpu", "0m")
         rec_lim_mem = rec.get("recommended", {}).get("limits", {}).get("memory", "0Mi")
+        cur_lim_cpu_m = parse_cpu_to_m(cur_lim_cpu)
+        cur_lim_mem_mi = parse_mem_to_mi(cur_lim_mem)
+        rec_lim_cpu_m = parse_cpu_to_m(rec_lim_cpu)
+        rec_lim_mem_mi = parse_mem_to_mi(rec_lim_mem)
 
         delta_cpu = rec_req_cpu - cur_req_cpu
         delta_mem = rec_req_mem - cur_req_mem
+        delta_lim_cpu = rec_lim_cpu_m - cur_lim_cpu_m
+        delta_lim_mem = rec_lim_mem_mi - cur_lim_mem_mi
 
-        if abs(delta_cpu) < 1.0 and abs(delta_mem) < 1.0:
+        if all(abs(delta) < 1.0 for delta in (delta_cpu, delta_mem, delta_lim_cpu, delta_lim_mem)):
             continue
 
         placement = placement_index.get((release, container), {})
@@ -1373,6 +1428,8 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                 # Per-pod deltas (these are the values that get written into HelmRelease YAML).
                 "requests_cpu_m": round(delta_cpu, 1),
                 "requests_memory_mi": round(delta_mem, 1),
+                "limits_cpu_m": round(delta_lim_cpu, 1),
+                "limits_memory_mi": round(delta_lim_mem, 1),
                 # Total deltas based on current replica placement; used for budget + node-fit simulation.
                 "requests_cpu_m_total": round(delta_cpu * float(replicas_estimate), 1),
                 "requests_memory_mi_total": round(delta_mem * float(replicas_estimate), 1),
@@ -1380,13 +1437,18 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             "priority": {
                 "restart_guard": 1 if "restart_guard" in notes else 0,
                 "restarts_window": float(rec.get("restarts_window", 0.0) or 0.0),
-                "impact_score": abs(delta_mem * float(replicas_estimate)) + abs((delta_cpu * float(replicas_estimate)) / 10.0),
-                "cpu_non_increasing": 1 if delta_cpu <= 0.0 else 0,
-                "mem_non_increasing": 1 if delta_mem <= 0.0 else 0,
+                "impact_score": (
+                    abs(delta_mem * float(replicas_estimate))
+                    + abs((delta_cpu * float(replicas_estimate)) / 10.0)
+                    + abs(delta_lim_mem / 10.0)
+                    + abs(delta_lim_cpu / 20.0)
+                ),
+                "cpu_non_increasing": 1 if delta_cpu <= 0.0 and delta_lim_cpu <= 0.0 else 0,
+                "mem_non_increasing": 1 if delta_mem <= 0.0 and delta_lim_mem <= 0.0 else 0,
             },
         }
 
-        is_upsize = delta_cpu > 0 or delta_mem > 0
+        is_upsize = delta_cpu > 0 or delta_mem > 0 or delta_lim_cpu > 0 or delta_lim_mem > 0
 
         if is_upsize:
             if coverage_days < min_days_upsize and "restart_guard" not in notes:

@@ -69,6 +69,10 @@ spec:
                   value: "25"
                 - name: DEADBAND_MEM_MI
                   value: "64"
+                - name: CPU_THROTTLE_RATIO_UPSIZE_THRESHOLD
+                  value: "0.20"
+                - name: CPU_THROTTLE_MIN_PERIODS
+                  value: "100"
               volumeMounts:
                 - name: advisor-script
                   mountPath: /opt/resource-advisor
