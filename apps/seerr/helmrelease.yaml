@@ -43,6 +43,7 @@ spec:
             env:
               TZ: "${TIMEZONE}"
               LOG_LEVEL: "debug"
+              NODE_OPTIONS: "--dns-result-order=ipv4first"
             resources:
               requests:
                 cpu: "500m"
