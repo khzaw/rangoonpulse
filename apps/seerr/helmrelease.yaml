@@ -43,7 +43,7 @@ spec:
               LOG_LEVEL: "info"
             resources:
               requests:
-                cpu: "50m"
+                cpu: "100m"
                 memory: "454Mi"
               limits:
                 cpu: "500m"
