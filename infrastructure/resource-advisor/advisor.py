@@ -792,6 +792,7 @@ def build_report() -> tuple[dict, str]:
 
     metrics_window = os.getenv("METRICS_WINDOW", "14d").strip()
     metrics_resolution = os.getenv("METRICS_RESOLUTION", "1h").strip()
+    cpu_throttle_window = os.getenv("CPU_THROTTLE_WINDOW", "1d").strip() or metrics_window
 
     prom = PromClient(
         os.getenv("PROMETHEUS_URL", "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090")
@@ -859,11 +860,11 @@ def build_report() -> tuple[dict, str]:
                     )
                     throttled_periods_query = (
                         f'sum(increase(container_cpu_cfs_throttled_periods_total{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}"}}[{metrics_window}]))'
+                        f'pod=~"{pod_regex}",container="{container_name}"}}[{cpu_throttle_window}]))'
                     )
                     cpu_periods_query = (
                         f'sum(increase(container_cpu_cfs_periods_total{{namespace="{namespace}",'
-                        f'pod=~"{pod_regex}",container="{container_name}"}}[{metrics_window}]))'
+                        f'pod=~"{pod_regex}",container="{container_name}"}}[{cpu_throttle_window}]))'
                     )
 
                     cpu_p95_cores = prom.query_scalar(cpu_query)
@@ -1116,6 +1117,7 @@ def build_report() -> tuple[dict, str]:
             "deadband_mem_mi": round(deadband_mem_mi, 2),
             "cpu_throttle_ratio_upsize_threshold": round(cpu_throttle_ratio_upsize_threshold, 3),
             "cpu_throttle_min_periods": round(cpu_throttle_min_periods, 1),
+            "cpu_throttle_window": cpu_throttle_window,
         },
         "summary": {
             "containers_analyzed": containers_analyzed,

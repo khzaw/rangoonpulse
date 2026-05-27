@@ -77,6 +77,8 @@ spec:
                   value: "0.20"
                 - name: CPU_THROTTLE_MIN_PERIODS
                   value: "100"
+                - name: CPU_THROTTLE_WINDOW
+                  value: 1d
                 - name: MAX_REQUESTS_PERCENT_CPU
                   value: "60"
                 - name: MAX_REQUESTS_PERCENT_MEMORY

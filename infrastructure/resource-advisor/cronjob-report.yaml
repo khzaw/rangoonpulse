@@ -73,6 +73,8 @@ spec:
                   value: "0.20"
                 - name: CPU_THROTTLE_MIN_PERIODS
                   value: "100"
+                - name: CPU_THROTTLE_WINDOW
+                  value: 1d
               volumeMounts:
                 - name: advisor-script
                   mountPath: /opt/resource-advisor
