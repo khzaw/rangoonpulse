@@ -25,6 +25,8 @@ spec:
 
     controllers:
       main:
+        replicas: 1
+        strategy: RollingUpdate
         containers:
           main:
             securityContext:
@@ -40,14 +42,14 @@ spec:
               tag: "v3.2.0"
             env:
               TZ: "${TIMEZONE}"
-              LOG_LEVEL: "info"
+              LOG_LEVEL: "debug"
             resources:
               requests:
-                cpu: "250m"
-                memory: "454Mi"
+                cpu: "500m"
+                memory: "1Gi"
               limits:
-                cpu: "2"
-                memory: "681Mi"
+                cpu: "4"
+                memory: "2Gi"
             probes:
               startup:
                 enabled: true
