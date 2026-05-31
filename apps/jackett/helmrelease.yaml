@@ -37,12 +37,11 @@ spec:
               AUTO_UPDATE: "false"
             resources:
               requests:
-                cpu: "100m"
-                memory: "256Mi"
+                cpu: "75m"
+                memory: "222Mi"
               limits:
-                cpu: "500m"
-                memory: "768Mi"
-
+                cpu: "375m"
+                memory: "576Mi"
     service:
       main:
         controller: main
