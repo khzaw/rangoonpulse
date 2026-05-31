@@ -21,6 +21,8 @@ This doc defines the current split between service update automation and static-
   - `flux` for `HelmRelease` chart version updates
   - `helm-values` for container image tags in Helm values style YAML
   - `github-actions` for workflow action updates
+- Helm chart and service image updates are intentionally not broadly grouped.
+  Each chart/image dependency should get its own Renovate branch and PR so a bad rollout can be reverted without backing out unrelated services.
 
 ## Renovate Guardrails
 - PR concurrency limited to avoid large first-run floods
@@ -35,6 +37,7 @@ This doc defines the current split between service update automation and static-
 - The two AdGuard Home image references are intentionally split into file-specific branches and PRs:
   - `/Users/khz/Code/rangoonpulse/apps/adguard/primary/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/adguard/secondary/helmrelease.yaml`
+- GitHub Actions patch/minor updates may be grouped because they only touch workflow dependencies.
 - Generated Flux install manifests under `flux/flux-system/**` are ignored
 - `controlpanel.khzaw.dev` can dispatch the Renovate workflow and link matching open PRs from the updates tab
 
@@ -53,6 +56,7 @@ This doc defines the current split between service update automation and static-
 - When the control panel detects updates for a tag family, confirm Renovate has a matching versioning rule before expecting
   PRs. Docker tags with suffixes are especially sensitive because Renovate preserves compatibility suffixes by default.
 - For dual AdGuard, keep Renovate updates one instance per PR even when both files track the same upstream tag.
+- Do not add a broad `groupName` package rule for the `flux` or `helm-values` managers. That recreates oversized "helm chart patch and minor updates" PRs and hides standalone service PRs.
 
 ## Verification
 ```bash
