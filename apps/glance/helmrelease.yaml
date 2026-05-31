@@ -277,9 +277,6 @@ spec:
                               - title: Tunarr
                                 url: https://tunarr.${BASE_DOMAIN}
                                 icon: di:tunarr
-                              - title: ErsatzTV
-                                url: https://ersatztv.${BASE_DOMAIN}
-                                icon: di:ersatztv
                               - title: Nodecast TV
                                 url: https://tv.${BASE_DOMAIN}
                                 icon: mdi:television-classic
@@ -303,6 +300,12 @@ spec:
                               - title: ChartsDB
                                 url: https://chartsdb.${BASE_DOMAIN}
                                 icon: mdi:database-outline
+                              - title: Diagrams
+                                url: https://diagrams.${BASE_DOMAIN}
+                                icon: mdi:vector-polyline
+                              - title: Multica
+                                url: https://multica.${BASE_DOMAIN}
+                                icon: mdi:certificate-outline
                               - title: SponsorBlock TV
                                 url: https://sponsorblocktv.${BASE_DOMAIN}
                                 icon: mdi:skip-forward-outline
@@ -705,6 +708,14 @@ spec:
                             url: https://chartsdb.${BASE_DOMAIN}
                             check-url: http://chartsdb.default.svc.cluster.local
                             icon: mdi:database-outline
+                          - title: Diagrams
+                            url: https://diagrams.${BASE_DOMAIN}
+                            check-url: http://kroki.default.svc.cluster.local:8000
+                            icon: mdi:vector-polyline
+                          - title: Multica
+                            url: https://multica.${BASE_DOMAIN}
+                            check-url: http://multica-backend.default.svc.cluster.local:8080/health
+                            icon: mdi:certificate-outline
                           - title: Immich
                             url: https://photos.${BASE_DOMAIN}
                             check-url: http://immich-server.default.svc.cluster.local:2283/server-info/ping
@@ -1237,10 +1248,6 @@ spec:
                             url: https://tunarr.${BASE_DOMAIN}
                             check-url: http://tunarr.default.svc.cluster.local:8000
                             icon: di:tunarr
-                          - title: ErsatzTV
-                            url: https://ersatztv.${BASE_DOMAIN}
-                            check-url: http://ersatztv.default.svc.cluster.local:8409
-                            icon: di:ersatztv
                           - title: Transmission
                             url: https://torrent.${BASE_DOMAIN}
                             check-url: http://transmission-main.default.svc.cluster.local:9091/transmission/web/
