@@ -48,12 +48,11 @@ spec:
                     key: COUCHDB_PASSWORD
             resources:
               requests:
-                cpu: "100m"
-                memory: "256Mi"
+                cpu: "75m"
+                memory: "192Mi"
               limits:
-                cpu: "500m"
-                memory: "1Gi"
-
+                cpu: "375m"
+                memory: "768Mi"
     service:
       main:
         controller: main
