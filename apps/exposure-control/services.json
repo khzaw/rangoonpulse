@@ -120,5 +120,13 @@
     "description": "OpenClaw Control UI on Mac mini",
     "publicHostOverride": "iris.${BASE_DOMAIN}",
     "authMode": "cloudflare-access"
+  },
+  {
+    "id": "athena",
+    "name": "Athena Hermes",
+    "target": "http://10.0.0.66:9119",
+    "description": "Hermes dashboard on Mac mini",
+    "publicHostOverride": "athena.${BASE_DOMAIN}",
+    "authMode": "cloudflare-access"
   }
 ]
