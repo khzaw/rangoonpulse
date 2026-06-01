@@ -306,7 +306,7 @@ fi
 
 PV_SUMMARY="$(
   kubectl get pv -o json \
-    | jq -r '"total=\(.items|length) bound=\([.items[] | select(.status.phase=="Bound")]|length) released=\([.items[] | select(.status.phase=="Released")]|length)'
+    | jq -r '"total=\(.items|length) bound=\([.items[] | select(.status.phase=="Bound")]|length) released=\([.items[] | select(.status.phase=="Released")]|length)"'
 )"
 echo
 echo "post_cleanup_pv_summary: $PV_SUMMARY"

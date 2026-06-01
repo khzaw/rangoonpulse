@@ -29,23 +29,12 @@
   ],
   "targets": [
     {
-      "id": "hq",
-      "name": "HQ",
-      "url": "https://hq.${BASE_DOMAIN}",
-      "access": "tailnet-private",
-      "bundle": "essentials",
-      "priority": 10,
-      "probe": {
-        "expectStatus": [200]
-      }
-    },
-    {
       "id": "controlpanel",
       "name": "Control Panel",
       "url": "https://controlpanel.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "essentials",
-      "priority": 20,
+      "priority": 10,
       "probe": {
         "expectStatus": [200]
       }
@@ -56,7 +45,7 @@
       "url": "https://nas.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "essentials",
-      "priority": 30,
+      "priority": 20,
       "probe": {
         "expectStatus": [200, 302, 401]
       }
@@ -67,7 +56,7 @@
       "url": "https://router.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "essentials",
-      "priority": 40,
+      "priority": 30,
       "probe": {
         "expectStatus": [200, 302, 401]
       }
@@ -78,7 +67,7 @@
       "url": "https://jellyfin.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "media",
-      "priority": 50,
+      "priority": 40,
       "probe": {
         "expectStatus": [200, 302]
       }
@@ -89,7 +78,7 @@
       "url": "https://torrent.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "media",
-      "priority": 60,
+      "priority": 50,
       "probe": {
         "expectStatus": [200, 302]
       }
@@ -100,7 +89,7 @@
       "url": "https://torrent-vpn.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "media",
-      "priority": 70,
+      "priority": 60,
       "probe": {
         "expectStatus": [200, 302, 503]
       }
@@ -111,7 +100,7 @@
       "url": "https://photos.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "life",
-      "priority": 80,
+      "priority": 70,
       "probe": {
         "expectStatus": [200, 302]
       }
@@ -119,10 +108,10 @@
     {
       "id": "vaultwarden",
       "name": "Vaultwarden",
-      "url": "https://vaultwarden.${BASE_DOMAIN}",
+      "url": "https://passwords.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "life",
-      "priority": 90,
+      "priority": 80,
       "probe": {
         "expectStatus": [200, 302]
       }
@@ -133,7 +122,7 @@
       "url": "https://booklore.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "life",
-      "priority": 100,
+      "priority": 90,
       "probe": {
         "expectStatus": [200, 302]
       }

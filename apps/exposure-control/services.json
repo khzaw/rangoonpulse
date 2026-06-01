@@ -108,12 +108,6 @@
     "description": "Calibre GUI and content server paths"
   },
   {
-    "id": "controlpanel",
-    "name": "Control Panel",
-    "target": "https://controlpanel.${BASE_DOMAIN}",
-    "description": "Operator cockpit!"
-  },
-  {
     "id": "iris",
     "name": "Iris OpenClaw UI",
     "target": "http://10.0.0.66:18789",
