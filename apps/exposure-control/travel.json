@@ -80,7 +80,7 @@
       "bundle": "media",
       "priority": 50,
       "probe": {
-        "expectStatus": [200, 302]
+        "expectStatus": [200, 301, 302]
       }
     },
     {
