@@ -95,6 +95,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/study-services-livesync-anki-booklore.md`](./study-services-livesync-anki-booklore.md)
 - [`docs/reactive-resume.md`](./reactive-resume.md)
 - [`docs/shelfmark.md`](./shelfmark.md)
+- [`docs/subarr.md`](./subarr.md)
 - [`docs/tracerr.md`](./tracerr.md)
 - [`docs/isponsorblocktv.md`](./isponsorblocktv.md)
 - [`docs/tv-channels-tunarr-ersatztv.md`](./tv-channels-tunarr-ersatztv.md)

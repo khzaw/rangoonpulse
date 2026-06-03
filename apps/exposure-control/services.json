@@ -66,6 +66,12 @@
     "description": "Jackett"
   },
   {
+    "id": "subarr",
+    "name": "Subarr",
+    "target": "http://subarr.default.svc.cluster.local:9922",
+    "description": "Subtitle management"
+  },
+  {
     "id": "tracerr",
     "name": "Tracerr",
     "target": "http://tracerr.default.svc.cluster.local:3000",

@@ -29,6 +29,11 @@ Keep the user-facing `url` pointing at the public hostname, but keep Glance's ow
 where possible. This avoids ingress/TLS overhead, reduces page render latency, and keeps the monitor widget's response
 times closer to the actual service path Glance is testing.
 
+### Service Breadcrumbs
+When adding a user-facing app, update both the dashboard link groups and the relevant monitor group in
+`apps/glance/helmrelease.yaml`. For media automation apps such as Subarr, that means the `Arr Stack` bookmarks, the
+`Arr and Download Health` monitor, and the GitHub `releases` widget when the upstream repository has releases.
+
 ### Health Page
 The `Health` page is intentionally lighter than `Home` and is the preferred place for Glance monitor widgets that show
 response times.
