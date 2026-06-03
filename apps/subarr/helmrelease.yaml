@@ -1,0 +1,114 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: subarr
+  namespace: default
+spec:
+  interval: 1h
+  timeout: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: "5.0.1"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+
+    controllers:
+      main:
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: ghcr.io/coaxk/subarr
+              tag: "1.0.2"
+            env:
+              TZ: "${TIMEZONE}"
+              PUID: "1000"
+              PGID: "1000"
+              UMASK: "022"
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "256Mi"
+              limits:
+                cpu: "1"
+                memory: "1Gi"
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: 9922
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: 9922
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+
+    service:
+      main:
+        ports:
+          http:
+            port: 9922
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        hosts:
+          - host: subarr.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: subarr.${BASE_DOMAIN}
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/proxy-body-size: "0"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        tls:
+          - secretName: subarr-tls
+            hosts:
+              - subarr.${BASE_DOMAIN}
+
+    persistence:
+      config:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: local-path
+        size: 2Gi
+        accessMode: ReadWriteOnce
+        globalMounts:
+          - path: /config
+
+      media:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: media
+        globalMounts:
+          - path: /media

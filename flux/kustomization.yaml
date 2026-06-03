@@ -72,6 +72,7 @@ resources:
   - ./kustomizations/radarr.yaml
   - ./kustomizations/sonarr.yaml
   - ./kustomizations/bazarr.yaml
+  - ./kustomizations/subarr.yaml
   - ./kustomizations/jellyfin.yaml
   - ./kustomizations/seerr.yaml
   - ./kustomizations/immich.yaml
