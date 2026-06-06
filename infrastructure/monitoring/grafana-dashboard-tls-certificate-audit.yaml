@@ -1,0 +1,682 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/configmap-v1.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-tls-certificate-audit
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: tls-certificate-audit
+data:
+  tls-certificate-audit.json: |
+    {
+      "uid": "tls-certificate-audit",
+      "title": "TLS Certificate Audit",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "5m",
+      "tags": ["homelab", "cert-manager", "tls", "letsencrypt"],
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {
+              "text": "Prometheus",
+              "value": "prometheus"
+            },
+            "refresh": 1
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "Focus",
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "TLS certificate lifecycle audit for all Let's Encrypt / cert-manager certificates. Shows expiration countdowns, renewal scheduling, and issuance history across all domains."
+          }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Total Certificates",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 3 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(certmanager_certificate_expiration_timestamp_seconds)",
+              "instant": true,
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Expiring < 14 days",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 3 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count((certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 14)",
+              "instant": true,
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 1 },
+                  { "color": "red", "value": 3 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Expiring < 7 days",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 3 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count((certmanager_certificate_expiration_timestamp_seconds - time()) / 86400 < 7)",
+              "instant": true,
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 1 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Not Ready",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 3 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(certmanager_certificate_ready_status{condition=\"False\"})",
+              "instant": true,
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 1 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "Pending Renewal",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 3 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(certmanager_certificate_ready_status{condition=\"Unknown\"})",
+              "instant": true,
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 1 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "Issuer Status",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 3 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "certmanager_clusterissuer_ready_status{condition=\"True\"}",
+              "instant": true,
+              "legendFormat": "{{name}}",
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "mappings": [
+                { "type": "value", "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Ready", "color": "green" } } }
+              ]
+            }
+          },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+
+        {
+          "id": 10,
+          "type": "table",
+          "title": "Certificate Expiration Audit",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 16, "w": 24, "x": 0, "y": 7 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(certmanager_certificate_expiration_timestamp_seconds - time()) / 86400",
+              "instant": true,
+              "format": "table",
+              "legendFormat": "",
+              "datasource": { "uid": "$datasource" }
+            },
+            {
+              "refId": "B",
+              "expr": "certmanager_certificate_ready_status{condition=\"True\"}",
+              "instant": true,
+              "format": "table",
+              "legendFormat": "",
+              "datasource": { "uid": "$datasource" }
+            },
+            {
+              "refId": "C",
+              "expr": "(certmanager_certificate_not_before_timestamp_seconds)",
+              "instant": true,
+              "format": "table",
+              "legendFormat": "",
+              "datasource": { "uid": "$datasource" }
+            },
+            {
+              "refId": "D",
+              "expr": "certmanager_certificate_renewal_timestamp_seconds",
+              "instant": true,
+              "format": "table",
+              "legendFormat": "",
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "condition": true,
+                  "issuer_group": true,
+                  "issuer_kind": true,
+                  "job": true,
+                  "instance": true
+                },
+                "renameByName": {
+                  "Value #A": "Days Until Expiry",
+                  "Value #B": "Ready",
+                  "Value #C": "Issued At",
+                  "Value #D": "Renewal Scheduled",
+                  "name": "Certificate",
+                  "namespace": "Namespace",
+                  "issuer_name": "Issuer"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "mode": "reduceRow",
+                "reduce": { "reducer": "sum" },
+                "alias": "Cert Age (days)",
+                "source": "Issued At"
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left",
+                "filterable": true,
+                "inspect": false
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": { "text": "✗ No", "color": "red" },
+                    "1": { "text": "✓ Yes", "color": "green" }
+                  }
+                }
+              ]
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Days Until Expiry" },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-background",
+                      "mode": "basic"
+                    }
+                  },
+                  {
+                    "id": "thresholds",
+                    "value": {
+                      "mode": "absolute",
+                      "steps": [
+                        { "color": "red", "value": null },
+                        { "color": "orange", "value": 7 },
+                        { "color": "yellow", "value": 14 },
+                        { "color": "super-light-green", "value": 21 },
+                        { "color": "green", "value": 30 }
+                      ]
+                    }
+                  },
+                  { "id": "decimals", "value": 1 },
+                  { "id": "unit", "value": "d" }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Ready" },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "0": { "text": "✗ No", "color": "red" },
+                          "1": { "text": "✓ Yes", "color": "green" }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Issued At" },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  },
+                  { "id": "custom.width", "value": 180 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Renewal Scheduled" },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "dateTimeAsIso"
+                  },
+                  { "id": "custom.width", "value": 180 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Certificate" },
+                "properties": [
+                  { "id": "custom.width", "value": 250 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Issuer" },
+                "properties": [
+                  { "id": "custom.width", "value": 170 }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "footer": {
+              "show": true,
+              "reducer": ["count"],
+              "countRows": true,
+              "fields": ""
+            },
+            "sortBy": [
+              { "displayName": "Days Until Expiry", "desc": false }
+            ]
+          }
+        },
+
+        {
+          "id": 20,
+          "type": "bargauge",
+          "title": "Days Until Expiry by Domain",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 12, "w": 12, "x": 0, "y": 23 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(certmanager_certificate_expiration_timestamp_seconds - time()) / 86400",
+              "instant": true,
+              "legendFormat": "{{name}}",
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "d",
+              "decimals": 1,
+              "min": 0,
+              "max": 90,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "orange", "value": 7 },
+                  { "color": "yellow", "value": 14 },
+                  { "color": "green", "value": 30 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "showUnfilled": true,
+            "namePlacement": "auto",
+            "valueMode": "text"
+          }
+        },
+
+        {
+          "id": 30,
+          "type": "bargauge",
+          "title": "Days Until Scheduled Renewal",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 12, "w": 12, "x": 12, "y": 23 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(certmanager_certificate_renewal_timestamp_seconds - time()) / 86400",
+              "instant": true,
+              "legendFormat": "{{name}}",
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "d",
+              "decimals": 1,
+              "min": 0,
+              "max": 60,
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "orange", "value": 3 },
+                  { "color": "yellow", "value": 7 },
+                  { "color": "green", "value": 14 }
+                ]
+              }
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "gradient",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+            "showUnfilled": true,
+            "namePlacement": "auto",
+            "valueMode": "text"
+          }
+        },
+
+        {
+          "id": 40,
+          "type": "table",
+          "title": "Renewal History (Last Issued)",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 35 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "certmanager_certificate_not_before_timestamp_seconds",
+              "instant": true,
+              "format": "table",
+              "legendFormat": "",
+              "datasource": { "uid": "$datasource" }
+            },
+            {
+              "refId": "B",
+              "expr": "certmanager_certificate_not_after_timestamp_seconds",
+              "instant": true,
+              "format": "table",
+              "legendFormat": "",
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "transformations": [
+            {
+              "id": "merge",
+              "options": {}
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "__name__": true,
+                  "issuer_group": true,
+                  "issuer_kind": true
+                },
+                "renameByName": {
+                  "Value #A": "Issued",
+                  "Value #B": "Expires",
+                  "name": "Certificate",
+                  "namespace": "Namespace",
+                  "issuer_name": "Issuer"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "mode": "reduceRow",
+                "reduce": { "reducer": "diff" },
+                "alias": "Validity (days)",
+                "source": ["Expires", "Issued"]
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "left",
+                "filterable": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Issued" },
+                "properties": [
+                  { "id": "unit", "value": "dateTimeAsIso" },
+                  { "id": "custom.width", "value": 200 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Expires" },
+                "properties": [
+                  { "id": "unit", "value": "dateTimeAsIso" },
+                  { "id": "custom.width", "value": 200 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Validity (days)" },
+                "properties": [
+                  { "id": "unit", "value": "d" },
+                  { "id": "decimals", "value": 1 },
+                  { "id": "custom.width", "value": 120 }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "Certificate" },
+                "properties": [
+                  { "id": "custom.width", "value": 250 }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              { "displayName": "Issued", "desc": true }
+            ],
+            "footer": {
+              "show": false
+            }
+          }
+        },
+
+        {
+          "id": 50,
+          "type": "timeseries",
+          "title": "Certificate Expiration Timeline",
+          "datasource": { "uid": "$datasource" },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 45 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "certmanager_certificate_expiration_timestamp_seconds * 1000",
+              "legendFormat": "{{name}}",
+              "datasource": { "uid": "$datasource" }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "dateTimeAsIso",
+              "custom": {
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "pointSize": 6,
+                "spanNulls": false,
+                "showPoints": "always"
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            }
+          },
+          "options": {
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            },
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "calcs": ["lastNotNull"]
+            }
+          }
+        }
+      ]
+    }

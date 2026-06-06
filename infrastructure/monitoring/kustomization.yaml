@@ -19,6 +19,8 @@ resources:
   - grafana-dashboard-public-edge-overview.yaml
   - grafana-dashboard-efficiency-and-placement.yaml
   - grafana-dashboard-stateful-services-risk.yaml
+  - grafana-dashboard-tls-certificate-audit.yaml
+  - servicemonitor-cert-manager.yaml
   - prometheusrule-power-estimation.yaml
   - prometheusrule-node-capacity-overview.yaml
   - prometheusrule-homelab-ops-dashboards.yaml
