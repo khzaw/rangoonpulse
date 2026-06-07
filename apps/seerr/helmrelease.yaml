@@ -46,11 +46,11 @@ spec:
               NODE_OPTIONS: "--dns-result-order=ipv4first"
             resources:
               requests:
-                cpu: "375m"
-                memory: "768Mi"
+                cpu: "281m"
+                memory: "576Mi"
               limits:
-                cpu: "3000m"
-                memory: "1536Mi"
+                cpu: "2250m"
+                memory: "1152Mi"
             probes:
               startup:
                 enabled: true
