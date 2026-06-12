@@ -21,6 +21,9 @@ spec:
   values:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
+      # app-template v5 defaults this to false for externally referenced
+      # ServiceAccounts; the backend needs the in-cluster API token.
+      automountServiceAccountToken: true
       nodeSelector:
         kubernetes.io/hostname: ${UTILITY_NODE_NAME}
       securityContext:
