@@ -35,30 +35,30 @@ spec:
                   apk add --no-cache curl openssh-client sshpass
 
                   check_truenas_api() {
-                    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time "$1" "http://${NAS_IP}/api/v2.0/system/version/" || true)"
-                    test "${code}" = "200" || test "${code}" = "401"
+                    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time "$1" "http://$${NAS_IP}/api/v2.0/system/version/" || true)"
+                    test "$${code}" = "200" || test "$${code}" = "401"
                   }
 
                   echo "Preflight: TrueNAS API and NFS reachability"
                   check_truenas_api 10 || echo "TrueNAS API preflight did not return 200/401; continuing with refresh"
-                  nc -z -w 5 "${NAS_IP}" 2049
+                  nc -z -w 5 "$${NAS_IP}" 2049
 
-                  echo "Restarting TrueNAS middlewared and netdata"
-                  export SSHPASS="${TRUENAS_PASSWORD}"
-                  printf '%s\n' "${TRUENAS_PASSWORD}" | sshpass -e ssh \
+                  echo "Restarting TrueNAS middlewared, nginx, and netdata"
+                  export SSHPASS="$${TRUENAS_PASSWORD}"
+                  printf '%s\n' "$${TRUENAS_PASSWORD}" | sshpass -e ssh \
                     -o StrictHostKeyChecking=no \
                     -o UserKnownHostsFile=/dev/null \
                     -o ConnectTimeout=10 \
-                    "${TRUENAS_USERNAME}@${NAS_IP}" \
-                    'sudo -S -p "" systemctl restart middlewared netdata'
+                    "$${TRUENAS_USERNAME}@$${NAS_IP}" \
+                    'sudo -S -p "" systemctl restart middlewared nginx netdata'
 
                   echo "Waiting for management plane to settle"
                   sleep 45
 
                   echo "Post-check: TrueNAS API, NFS, and Netdata"
                   check_truenas_api 15
-                  nc -z -w 5 "${NAS_IP}" 2049
-                  curl -fsS --max-time 15 "http://${NAS_IP}:6999/api/v1/allmetrics?format=prometheus&help=no&types=no&timestamps=no" >/dev/null
+                  nc -z -w 5 "$${NAS_IP}" 2049
+                  curl -fsS --max-time 15 "http://$${NAS_IP}:6999/api/v1/allmetrics?format=prometheus&help=no&types=no&timestamps=no" >/dev/null
               env:
                 - name: NAS_IP
                   value: "${NAS_IP}"

@@ -228,7 +228,7 @@ const MANAGED_JOBS = [
     title: "TrueNAS management refresh",
     namespace: "democratic-csi",
     cronJob: "truenas-management-plane-refresh",
-    description: "Refreshes TrueNAS middlewared and Netdata before memory pressure turns into a management-plane outage.",
+    description: "Refreshes TrueNAS middlewared, nginx, and Netdata before memory pressure turns into a management-plane outage.",
     repoPath: "infrastructure/storage/democratic-csi/truenas-maintenance-cronjob.yaml",
     fluxKustomization: "democratic-csi",
   },
