@@ -32,6 +32,22 @@ spec:
           kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
         replicas: 1
         retention: 120h
+        resources:
+          requests:
+            cpu: 20m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        containers:
+          - name: config-reloader
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                cpu: 50m
+                memory: 64Mi
         alertmanagerConfiguration:
           name: homelab-alerting
       config:
@@ -59,6 +75,24 @@ spec:
           limits:
             cpu: 200m
             memory: 800Mi
+        containers:
+          - name: config-reloader
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                cpu: 50m
+                memory: 64Mi
+        initContainers:
+          - name: init-config-reloader
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+              limits:
+                cpu: 50m
+                memory: 64Mi
         securityContext:
           fsGroup: 2000
           runAsGroup: 2000
@@ -88,6 +122,15 @@ spec:
         storageClassName: local-path
         size: 1Gi
 
+      downloadDashboards:
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+
       resources:
         requests:
           cpu: 100m
@@ -95,6 +138,15 @@ spec:
         limits:
           cpu: 500m
           memory: 512Mi
+
+      sidecar:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
 
       defaultDashboardsTimezone: browser
 

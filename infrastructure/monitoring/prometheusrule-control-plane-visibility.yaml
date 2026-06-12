@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: control-plane-visibility
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: control-plane-visibility.rules
+      interval: 1m
+      rules:
+        - alert: ControlPlaneStaticPodRestarted
+          expr: >
+            sum by (namespace, pod, container) (
+              increase(kube_pod_container_status_restarts_total{
+                namespace="kube-system",
+                pod=~"kube-apiserver-.*|kube-controller-manager-.*|kube-scheduler-.*"
+              }[15m])
+            ) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: "Control-plane static pod restarted"
+            description: "{{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} restarted in the last 15 minutes. Check Talos OOM actions, kubelet logs, and static pod cgroup limits on the control-plane node."
+
+        - alert: MonitoringStackContainerRestarted
+          expr: >
+            sum by (namespace, pod, container) (
+              increase(kube_pod_container_status_restarts_total{
+                namespace="monitoring",
+                pod=~"prometheus-kube-prometheus-stack-prometheus-.*|alertmanager-kube-prometheus-stack-alertmanager-.*|kube-prometheus-stack-operator-.*"
+              }[15m])
+            ) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: "Monitoring stack container restarted"
+            description: "{{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} restarted in the last 15 minutes. This can hide or delay other alerts, so inspect pod status and recent Talos OOM actions."
+
+        - alert: CriticalPodContainerNotReady
+          expr: >
+            max by (namespace, pod, container) (
+              kube_pod_container_status_ready{
+                namespace=~"kube-system|monitoring",
+                pod=~"kube-apiserver-.*|kube-controller-manager-.*|kube-scheduler-.*|prometheus-kube-prometheus-stack-prometheus-.*|alertmanager-kube-prometheus-stack-alertmanager-.*|kube-prometheus-stack-operator-.*"
+              } == 0
+            ) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Critical control-plane or monitoring container is not ready"
+            description: "{{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} has been unready for at least 2 minutes. Check CrashLoopBackOff, exit code 137, and Talos OOM actions."

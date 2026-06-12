@@ -23,6 +23,7 @@ resources:
   - servicemonitor-cert-manager.yaml
   - prometheusrule-power-estimation.yaml
   - prometheusrule-node-capacity-overview.yaml
+  - prometheusrule-control-plane-visibility.yaml
   - prometheusrule-homelab-ops-dashboards.yaml
   - servicemonitor-exposure-control.yaml
   - prometheusrule-exposure-control.yaml

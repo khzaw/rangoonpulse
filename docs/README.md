@@ -56,6 +56,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 ### Cluster incidents and recovery
 
 - [`docs/arm64-node-canal-flexvol-exec-format-error.md`](./arm64-node-canal-flexvol-exec-format-error.md) for the historical ARM64 Canal crashloop incident and recovery steps.
+- [`docs/talos-userspace-oom-control-plane-cgroups.md`](./talos-userspace-oom-control-plane-cgroups.md) when Talos userspace OOM kills control-plane or other pod cgroups and `kubectl` cannot reach the API server.
 
 ### Storage, stateful services, and recovery
 
