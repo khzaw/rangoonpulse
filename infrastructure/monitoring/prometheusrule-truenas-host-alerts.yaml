@@ -77,13 +77,13 @@ spec:
                 job="truenas-netdata",
                 chart="truenas_meminfo.total"
               })
-            ) < 0.15
+            ) < 0.10
           for: 10m
           labels:
             severity: warning
           annotations:
             summary: "TrueNAS memory headroom is low"
-            description: "Available memory on the NAS has been below 15% for 10 minutes. This host has no swap, so sustained low headroom can lead to OOM kills of nginx or other userspace services."
+            description: "Available memory on the NAS has been below 10% for 10 minutes. This host has no swap, so sustained low headroom can lead to OOM kills of nginx or other userspace services."
 
         - alert: TrueNASMiddlewareMemoryHigh
           expr: >
