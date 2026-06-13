@@ -168,3 +168,8 @@ Proceed with this two-repo GitOps model:
 3. Public exposure only for `khzaw.dev` and `blog.khzaw.dev`.
 4. Add Cloudflare caching policy from day one.
 5. Consider R2 for media if article/photo traffic grows.
+
+## Related Static Sites
+- `mmcal.${BASE_DOMAIN}` and `rangoonmapper.${BASE_DOMAIN}` follow the same source-repo image publish plus Flux image automation pattern.
+- `ericaknight.me` follows the same GitOps deployment pattern, but uses its own Cloudflare zone and permanent public-edge tunnel routes for `ericaknight.me` and `www.ericaknight.me` instead of `${BASE_DOMAIN}` subdomains.
+- Pages CMS edits `github.com/khzaw/ericaknight` directly. Simple publishing means Pages CMS commits to `master`, GitHub Actions publishes `ghcr.io/khzaw/ericaknight`, and Flux image automation promotes that image into the cluster.

@@ -241,21 +241,23 @@ kubectl top pods -A
 talosctl -n 10.0.0.197 dashboard
 ```
 
-### Static Sites (`blog`, `mmcal`)
+### Static Sites (`blog`, `mmcal`, `ericaknight`)
 
 ```bash
 # Normal mode:
-# 1) push in source repo (blog/mmcal)
+# 1) push in source repo (blog/mmcal/ericaknight)
 # 2) image gets published
 # 3) Flux image automation updates this repo on interval (6h)
 
 # Fast path (deploy now)
 make deploy-blog
 make deploy-mmcal
+make deploy-ericaknight
 ```
 
 - `make deploy-*` forces image repository scan, image policy resolution, image update automation, source reconcile, and app kustomization reconcile.
 - Cloudflare cache policy should bypass HTML/update-critical routes (`/`, `index.html`, service worker/manifest/feed paths) and cache static assets aggressively.
+- `ericaknight.me` is a separate Cloudflare zone routed through the existing public-edge tunnel to the `ericaknight` service.
 
 > [Full ops cheatsheet →](docs/ops-command-cheatsheet.md)
 >

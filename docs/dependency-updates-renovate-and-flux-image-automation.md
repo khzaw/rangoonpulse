@@ -31,6 +31,7 @@ This doc defines the current split between service update automation and static-
   - `/Users/khz/Code/rangoonpulse/apps/blog/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/mmcal/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/rangoon-mapper/helmrelease.yaml`
+  - `/Users/khz/Code/rangoonpulse/apps/ericaknight/helmrelease.yaml`
 - The intentionally pinned `alexfozor/flaresolverr` image is excluded from Renovate
 - LinuxServer images use explicit regex versioning rules so Renovate can update tags with moving `-ls###`
   build suffixes instead of treating that suffix as immutable Docker compatibility
@@ -48,6 +49,7 @@ This doc defines the current split between service update automation and static-
   - `blog`
   - `mmcal`
   - `rangoon-mapper`
+  - `ericaknight`
 
 ## Operating Rule
 - Do not let Renovate and Flux image automation manage the same image tag field.

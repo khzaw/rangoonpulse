@@ -90,6 +90,7 @@ resources:
   - ./kustomizations/blog.yaml
   - ./kustomizations/mmcal.yaml
   - ./kustomizations/rangoon-mapper.yaml
+  - ./kustomizations/ericaknight.yaml
   - ./kustomizations/kroki.yaml
   # - ./kustomizations/grafana.yaml
   # - ./kustomizations/loki.yaml

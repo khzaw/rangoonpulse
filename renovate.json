@@ -18,7 +18,8 @@
     "flux/flux-system/**",
     "apps/blog/**",
     "apps/mmcal/**",
-    "apps/rangoon-mapper/**"
+    "apps/rangoon-mapper/**",
+    "apps/ericaknight/**"
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,

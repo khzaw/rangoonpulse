@@ -1,5 +1,5 @@
 .PHONY: help status flux-status hr-status events nodes pods
-.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal
+.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate validate-kustomize validate-all check-docs check-node check-shell test-python
@@ -68,6 +68,14 @@ deploy-mmcal: ## Force deploy latest mmcal image now
 	flux reconcile image update flux-system -n flux-system
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization mmcal -n flux-system --with-source
+
+deploy-ericaknight: ## Force deploy latest Erica Knight portfolio image now
+	flux reconcile image repository ericaknight -n flux-system
+	@sleep 2
+	flux reconcile image policy ericaknight -n flux-system
+	flux reconcile image update flux-system -n flux-system
+	flux reconcile source git flux-system -n flux-system
+	flux reconcile kustomization ericaknight -n flux-system --with-source
 
 # --- Logs ---
 

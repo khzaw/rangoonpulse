@@ -8,4 +8,6 @@ resources:
   - mmcal-image-policy.yaml
   - rangoon-mapper-image-repository.yaml
   - rangoon-mapper-image-policy.yaml
+  - ericaknight-image-repository.yaml
+  - ericaknight-image-policy.yaml
   - image-update-automation.yaml
