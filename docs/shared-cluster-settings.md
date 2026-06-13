@@ -16,6 +16,7 @@ many manifests.
 
 Current keys:
 - `BASE_DOMAIN`
+- `ERICAKNIGHT_DOMAIN`
 - `SHARE_HOST_PREFIX`
 - `TIMEZONE`
 - `PRIMARY_NODE_NAME`

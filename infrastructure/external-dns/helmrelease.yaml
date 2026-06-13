@@ -43,6 +43,7 @@ spec:
               - --policy=sync
               - --registry=txt
               - --domain-filter=${BASE_DOMAIN}
+              - --domain-filter=${ERICAKNIGHT_DOMAIN}
               # We declare hostnames explicitly via the external-dns annotation on each Ingress.
               # This avoids accidentally publishing DNS for every Ingress rule/TLS host and lets us
               # do things like CNAME aliases cleanly.

@@ -96,9 +96,9 @@ spec:
                 service: http://mmcal.default.svc.cluster.local:8080
               - hostname: rangoonmapper.${BASE_DOMAIN}
                 service: http://rangoon-mapper.default.svc.cluster.local:8080
-              - hostname: ericaknight.me
+              - hostname: ${ERICAKNIGHT_DOMAIN}
                 service: http://ericaknight.default.svc.cluster.local:8080
-              - hostname: www.ericaknight.me
+              - hostname: www.${ERICAKNIGHT_DOMAIN}
                 service: http://ericaknight.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}speedtest.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
