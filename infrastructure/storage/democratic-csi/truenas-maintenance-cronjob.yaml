@@ -8,6 +8,7 @@ metadata:
 spec:
   schedule: "0 4 * * 1"
   timeZone: "${TIMEZONE}"
+  startingDeadlineSeconds: 3600
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3
