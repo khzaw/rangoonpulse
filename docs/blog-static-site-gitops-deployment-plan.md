@@ -5,6 +5,7 @@ This document defines a practical deployment architecture for a static blog (Hug
 - deploys automatically on Git push,
 - runs on the homelab Kubernetes cluster,
 - exposes `khzaw.dev` and `blog.khzaw.dev` publicly,
+- redirects `www.khzaw.dev` to `khzaw.dev`,
 - keeps other app subdomains tailnet-only,
 - remains cost-conscious and resilient to traffic spikes.
 
@@ -12,6 +13,7 @@ This document defines a practical deployment architecture for a static blog (Hug
 - Source content and theme live in a separate `blog` GitHub repository.
 - Deployment to Kubernetes is automated and GitOps-aligned.
 - Blog is reachable at `https://khzaw.dev` and `https://blog.khzaw.dev` publicly.
+- `https://www.khzaw.dev` redirects permanently to `https://khzaw.dev`.
 - Other services remain private via Tailscale access pattern.
 
 ## High-Level Architecture
@@ -50,8 +52,10 @@ flowchart LR
 ### Public
 - `khzaw.dev`
 - `blog.khzaw.dev`
+- `www.khzaw.dev` redirects to `khzaw.dev`
 - Public DNS points at Cloudflare Tunnel for internet reachability.
 - `blog.khzaw.dev` is a DNS alias to `khzaw.dev`; this does not itself redirect the browser URL.
+- `www.khzaw.dev` is also a DNS alias to `khzaw.dev`; the browser URL changes only because a Cloudflare Redirect Rule handles the HTTP redirect.
 - Private ingress remains on `blog.khzaw.dev` for LAN/Tailscale access.
 
 ### Private
@@ -68,7 +72,7 @@ flowchart LR
 ## HN Hug-of-Death Strategy (Low Cost)
 
 ### Baseline Controls (Recommended)
-1. Cloudflare proxied DNS for `khzaw.dev` and `blog.khzaw.dev`.
+1. Cloudflare proxied DNS for `khzaw.dev`, `blog.khzaw.dev`, and `www.khzaw.dev`.
 2. Cache rules:
 - Bypass cache for update-critical HTML/routes (`/`, `index.html`, feed/sitemap paths, other `.html` pages).
 - Long TTL for hashed CSS/JS/image assets.
@@ -121,6 +125,7 @@ Pros:
 - TLS secret: `blog-tls` with cert-manager issuer `letsencrypt-prod`.
 - Do not attach public apex/blog external-dns annotations to the Ingress; public DNS is owned by `infrastructure/public-edge/share-hosts-cname.yaml`.
 - Keep the cloudflared hostname route for `blog.khzaw.dev` even when public DNS aliases it to `khzaw.dev`, because requests still arrive with `Host: blog.khzaw.dev`.
+- Keep `www.khzaw.dev` redirect-only at Cloudflare edge. Do not add it to the blog Ingress or cloudflared origin routes unless the redirect is intentionally moved into the cluster.
 
 ### Flux Image Automation Resources
 - `ImageRepository`: points to GHCR blog image.
@@ -150,10 +155,11 @@ No data-plane rollback complexity exists for static content beyond image/version
 ## Verification Checklist
 1. `khzaw.dev` resolves publicly.
 2. `blog.khzaw.dev` resolves publicly.
-3. TLS is valid and trusted.
-4. Non-blog apps are still tailnet-only.
-5. Push test commit to `blog` repo updates live site automatically.
-6. Cloudflare cache headers and hit ratio behave as expected.
+3. `www.khzaw.dev` resolves publicly and returns `301` to `https://khzaw.dev`.
+4. TLS is valid and trusted.
+5. Non-blog apps are still tailnet-only.
+6. Push test commit to `blog` repo updates live site automatically.
+7. Cloudflare cache headers and hit ratio behave as expected.
 
 ## Cost Profile
 - Cluster hosting: existing sunk cost (homelab).
@@ -165,7 +171,7 @@ No data-plane rollback complexity exists for static content beyond image/version
 Proceed with this two-repo GitOps model:
 1. Blog source/build in `blog` repo.
 2. Flux-managed deployment in `rangoonpulse`.
-3. Public exposure only for `khzaw.dev` and `blog.khzaw.dev`.
+3. Public exposure only for `khzaw.dev` and `blog.khzaw.dev`, with `www.khzaw.dev` redirecting to the apex.
 4. Add Cloudflare caching policy from day one.
 5. Consider R2 for media if article/photo traffic grows.
 

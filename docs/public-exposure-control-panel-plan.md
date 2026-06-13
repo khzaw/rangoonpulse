@@ -25,6 +25,7 @@ Two public-exposure classes:
 
 1. Permanent public
 - `khzaw.dev` and `blog.khzaw.dev` are always public and both route to the blog service.
+- `www.khzaw.dev` is a proxied DNS alias that should redirect to `khzaw.dev` at the Cloudflare edge.
 - Cloudflare edge caching and WAF are enabled.
 - Origin is reached via Cloudflare Tunnel (not direct inbound to home network).
 
@@ -95,6 +96,7 @@ Recommended convention:
 - Keep canonical private hostnames unchanged (example `seerr.khzaw.dev` remains private).
 - Use dedicated public aliases for temporary shares (example `share-seerr.khzaw.dev`).
 - Keep `khzaw.dev` and `blog.khzaw.dev` as permanent public blog hostnames.
+- Keep `www.khzaw.dev` as a redirect-only alias to the apex, not a separate blog origin hostname.
 
 This avoids private/public DNS contention on the same FQDN.
 
@@ -239,6 +241,7 @@ Operational note:
 - `enabled: true`, no expiry, locked in control panel
 3. Enable Cloudflare cache strategy tuned for burst traffic (HN-style spikes).
 4. Keep non-blog services private-by-default unless explicitly shared.
+5. Add `www.khzaw.dev` only as a proxied DNS alias plus Cloudflare Redirect Rule to the apex.
 
 Implementation status (GitOps DNS ownership):
 - Cloudflare Tunnel route:
@@ -246,10 +249,14 @@ Implementation status (GitOps DNS ownership):
   - `infrastructure/public-edge/helmrelease.yaml` (`hostname: blog.khzaw.dev` -> `blog.default.svc.cluster.local:8080`)
 - DNS alias ownership:
   - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/root-cname` points apex at the tunnel endpoint; `Service/blog-cname` aliases `blog.khzaw.dev` to `khzaw.dev`)
+  - `infrastructure/public-edge/share-hosts-cname.yaml` (`Service/www-root-cname` aliases `www.khzaw.dev` to `khzaw.dev` so Cloudflare can process the redirect)
+- Redirect ownership:
+  - Cloudflare Redirect Rule should match `http.host eq "www.khzaw.dev"` and return a permanent redirect with target expression `concat("https://khzaw.dev", http.request.uri)`.
 - Important:
   - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: blog.khzaw.dev`.
   - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: khzaw.dev`.
-  - public DNS should resolve to Cloudflare edge for `khzaw.dev` and `blog.khzaw.dev`, not private `10.0.0.231`.
+  - blog Ingress must not publish `external-dns.alpha.kubernetes.io/hostname: www.khzaw.dev`.
+  - public DNS should resolve to Cloudflare edge for `khzaw.dev`, `blog.khzaw.dev`, and `www.khzaw.dev`, not private `10.0.0.231`.
 
 Validation target after reconcile:
 - Cloudflare DNS for `khzaw.dev` is `CNAME`/flattened to the tunnel endpoint with external-dns TXT ownership.
@@ -258,6 +265,8 @@ Validation target after reconcile:
 - Cloudflare DNS for `blog.khzaw.dev` is a proxied `CNAME` to `khzaw.dev`.
 - `dig @1.1.1.1 blog.khzaw.dev` resolves to Cloudflare edge IPs.
 - `https://blog.khzaw.dev` returns `200`.
+- Cloudflare DNS for `www.khzaw.dev` is a proxied `CNAME` to `khzaw.dev`.
+- `https://www.khzaw.dev/some/path?x=1` returns `301` with `Location: https://khzaw.dev/some/path?x=1`.
 
 ## Operational Guardrails
 - Keep exposure runtime state controller-owned; avoid manual `kubectl` drift.
@@ -265,6 +274,7 @@ Validation target after reconcile:
 - Preserve existing private ingress pattern for non-public services.
 - Do not repoint existing private canonical hostnames for temporary sharing.
 - Keep apex/public blog DNS ownership in `infrastructure/public-edge/share-hosts-cname.yaml`; do not move it onto the blog Ingress.
+- Keep `www.khzaw.dev` redirect-only; do not add a `www` cloudflared origin route unless the redirect moves from Cloudflare edge into the cluster.
 
 ## Open Decisions
 1. Hostname strategy:

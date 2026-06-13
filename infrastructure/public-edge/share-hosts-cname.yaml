@@ -27,6 +27,18 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: www-root-cname
+  namespace: public-edge
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: www.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+spec:
+  type: ExternalName
+  externalName: ${BASE_DOMAIN}
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: mmcal-cname
   namespace: public-edge
   annotations:
