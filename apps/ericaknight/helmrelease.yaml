@@ -37,7 +37,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/ericaknight
-              tag: 1781343679-5745ac691eaa848ee98a2e28e7448ae36c93495b # {"$imagepolicy": "flux-system:ericaknight:tag"}
+              tag: 1781346093-2fee384ba0688c37327ded7431fb1f6bbcc8b2ac # {"$imagepolicy": "flux-system:ericaknight:tag"}
             probes:
               liveness:
                 enabled: true
