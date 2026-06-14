@@ -117,9 +117,9 @@
       }
     },
     {
-      "id": "booklore",
-      "name": "BookLore",
-      "url": "https://booklore.${BASE_DOMAIN}",
+      "id": "stump",
+      "name": "Stump",
+      "url": "https://books.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "life",
       "priority": 90,

@@ -1,4 +1,4 @@
-# Study Services: Obsidian LiveSync, Anki Sync, and BookLore
+# Study Services: Obsidian LiveSync, Anki Sync, and Stump
 
 This document records the GitOps deployment and operational decisions for study-related services.
 
@@ -20,19 +20,21 @@ Current rollout note:
 - Image: `jeankhawand/anki-sync-server:25.07` (official sync-server Dockerfile lineage)
 - Purpose: private Anki sync endpoint (alternative to AnkiWeb)
 
-### 3) BookLore (`booklore` + `booklore-mariadb`)
-- Paths:
-  - `apps/booklore/helmrelease.yaml`
-  - `apps/booklore-mariadb/helmrelease.yaml`
-- Hostname: `https://booklore.khzaw.dev`
-- App image: `ghcr.io/booklore-app/booklore:v2.0.5`
-- DB image: `lscr.io/linuxserver/mariadb:11.4.9-r0-ls208`
-- Purpose: book library management/reader that can index existing Calibre books.
+### 3) Stump (`stump`)
+- Path: `apps/stump/helmrelease.yaml`
+- Hostnames:
+  - `https://books.khzaw.dev`
+  - `https://stump.khzaw.dev`
+- Image: `aaronleopold/stump:0.1.4`
+- Purpose: digital book library management/reader that imports the existing Calibre books.
+
+BookLore and its MariaDB sidecar were retired in favor of Stump. The old BookLore app database is not reused because
+Stump has its own SQLite data model; the actual book files are preserved by mounting the shared Calibre library PVC.
 
 ## Mochi Cards Status (Important)
 
 `Mochi` (`app.mochi.cards`) is not currently published as a self-hostable server stack.
-It is a hosted SaaS/local-first app model, so there is no supported Kubernetes backend deployment equivalent to Anki sync or BookLore.
+It is a hosted SaaS/local-first app model, so there is no supported Kubernetes backend deployment equivalent to Anki sync or Stump.
 
 Operational decision:
 - Keep Mochi out of cluster GitOps for now.
@@ -40,7 +42,7 @@ Operational decision:
 
 ## Storage Design
 
-All new writable app state is on expandable NFS storage (`truenas-nfs`).
+All new writable app state is on expandable NFS storage (`truenas-nfs`), except where a service explicitly needs node-local state.
 
 - `obsidian-livesync`
   - `/opt/couchdb/data` -> dedicated PVC (`5Gi`, `local-path`, node-affined)
@@ -48,17 +50,14 @@ All new writable app state is on expandable NFS storage (`truenas-nfs`).
 - `anki-server`
   - `/anki_data` -> dedicated PVC (`5Gi`, expandable)
 
-- `booklore-mariadb`
-  - `/config` -> dedicated PVC (`5Gi`, expandable)
-
-- `booklore`
-  - `/app/data` + `/bookdrop` -> dedicated PVC (`8Gi`, expandable)
-  - `/books` -> existing claim `calibre-books-nfs` (mounted read-only)
+- `stump`
+  - `/config` -> dedicated PVC (`8Gi`, expandable)
+  - `/data` -> existing claim `calibre-books-nfs`
 
 Notes:
-- `DISK_TYPE=NETWORK` is set for BookLore to reflect NFS usage and avoid local-disk assumptions.
-- Existing Calibre books data is mounted read-only on BookLore to avoid accidental mutation during evaluation.
-- Calibre config PVC is intentionally not mounted in the initial stable rollout; add it later only if a specific integration requires it.
+- Stump stores its config and SQLite database on `/config` via `STUMP_CONFIG_DIR=/config` and `STUMP_DB_PATH=/config`.
+- The existing Calibre books are mounted at Stump's library root (`/data`) so Stump scans the same files instead of duplicating them.
+- Shelfmark's `/bookdrop` staging path is also on `calibre-books-nfs` (subPath `bookdrop`) and can be scanned by Stump when used.
 
 ## Node Placement and Resource Policy
 
@@ -69,35 +68,36 @@ Reason:
 - Consistent with default userland policy.
 - Avoid accidental ARM-only/AMD64-only image mismatches during evaluation.
 
-Requests/limits were intentionally conservative and bounded to avoid starving media workloads.
+Requests/limits are intentionally bounded to avoid starving media workloads while allowing Stump scans and thumbnailing to finish.
 
 ## Secrets
 
 Managed with SOPS under `infrastructure/secrets/default/`:
 - `obsidian-livesync-secret.yaml`
 - `anki-server-secret.yaml`
-- `booklore-secret.yaml`
 
 Consumed by:
 - `obsidian-livesync` (`COUCHDB_USER`, `COUCHDB_PASSWORD`)
 - `anki-server` (`SYNC_USER1`)
-- `booklore` + `booklore-mariadb` (DB credentials)
+
+Stump does not currently require a Git-managed Kubernetes Secret.
 
 ## Flux Wiring
 
-Added Flux Kustomizations:
+Flux Kustomizations:
 - `flux/kustomizations/obsidian-livesync.yaml`
 - `flux/kustomizations/anki-server.yaml`
-- `flux/kustomizations/booklore-mariadb.yaml`
-- `flux/kustomizations/booklore.yaml`
+- `flux/kustomizations/stump.yaml`
 
-And included them in:
+And included in:
 - `flux/kustomization.yaml`
 
 ## Quick Checks
 
 ```bash
-flux get kustomizations | rg 'obsidian-livesync|anki-server|booklore'
-kubectl get hr -n default | rg 'obsidian-livesync|anki-server|booklore'
-kubectl get pods -n default | rg 'obsidian-livesync|anki-server|booklore'
+flux get kustomizations | rg 'obsidian-livesync|anki-server|stump'
+kubectl get hr -n default | rg 'obsidian-livesync|anki-server|stump'
+kubectl get pods -n default | rg 'obsidian-livesync|anki-server|stump'
+curl -I --max-time 20 https://books.khzaw.dev/
+curl -I --max-time 20 https://stump.khzaw.dev/
 ```

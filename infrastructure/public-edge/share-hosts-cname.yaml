@@ -112,10 +112,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-booklore-cname
+  name: share-stump-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}booklore.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}stump.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName

@@ -163,7 +163,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **ChartDB** | Database schema diagrams |
 | **Obsidian LiveSync** | Note sync via CouchDB |
 | **Anki Server** | Flashcard sync |
-| **BookLore** | E-book reader & manager |
+| **Stump** | E-book and comics library reader |
 
 ---
 

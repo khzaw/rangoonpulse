@@ -233,8 +233,8 @@ spec:
                               - title: Calibre VNC
                                 url: https://calibre-manage.${BASE_DOMAIN}
                                 icon: di:calibre
-                              - title: Booklore
-                                url: https://booklore.${BASE_DOMAIN}
+                              - title: Stump
+                                url: https://books.${BASE_DOMAIN}
                                 icon: mdi:book-open-page-variant
                               - title: Anki
                                 url: https://anki.${BASE_DOMAIN}
@@ -724,9 +724,9 @@ spec:
                             url: https://photos.${BASE_DOMAIN}
                             check-url: http://immich-server.default.svc.cluster.local:2283/server-info/ping
                             icon: di:immich
-                          - title: Booklore
-                            url: https://booklore.${BASE_DOMAIN}
-                            check-url: http://booklore.default.svc.cluster.local:6060
+                          - title: Stump
+                            url: https://books.${BASE_DOMAIN}
+                            check-url: http://stump.default.svc.cluster.local:10801
                             icon: mdi:book-open-page-variant
                           - title: Shelfmark
                             url: https://shelfmark.${BASE_DOMAIN}
@@ -799,9 +799,9 @@ spec:
                             url: https://seerr.${BASE_DOMAIN}
                             check-url: http://jellyseerr.default.svc.cluster.local:5055
                             icon: di:jellyseerr
-                          - title: Booklore
-                            url: https://booklore.${BASE_DOMAIN}
-                            check-url: http://booklore.default.svc.cluster.local:6060
+                          - title: Stump
+                            url: https://books.${BASE_DOMAIN}
+                            check-url: http://stump.default.svc.cluster.local:10801
                             icon: mdi:book-open-page-variant
                           - title: Shelfmark
                             url: https://shelfmark.${BASE_DOMAIN}

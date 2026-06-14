@@ -12,10 +12,10 @@
     "description": "ChartDB"
   },
   {
-    "id": "booklore",
-    "name": "BookLore",
-    "target": "http://booklore.default.svc.cluster.local:6060",
-    "description": "BookLore"
+    "id": "stump",
+    "name": "Stump",
+    "target": "http://stump.default.svc.cluster.local:10801",
+    "description": "Digital book library"
   },
   {
     "id": "shelfmark",

@@ -33,10 +33,6 @@ Notes:
   - `default/anki-server-secret`
     - key: `SYNC_USER1` (format `username:password`)
 
-- **booklore + booklore-mariadb** (`apps/booklore/helmrelease.yaml`, `apps/booklore-mariadb/helmrelease.yaml`)
-  - `default/booklore-secret`
-    - keys: `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `MYSQL_ROOT_PASSWORD`
-
 ### DNS / TLS
 - **external-dns** (`infrastructure/external-dns/helmrelease.yaml`)
   - `flux-system/cloudflare-api-token`

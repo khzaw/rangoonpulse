@@ -13,7 +13,7 @@ existing book and audiobook stack.
 ## Storage Mapping
 - `/config` -> `app-configs-pvc-nfs` (subPath `shelfmark`)
 - `/books` -> `calibre-books-nfs`
-- `/bookdrop` -> `booklore` PVC (subPath `bookdrop`)
+- `/bookdrop` -> `calibre-books-nfs` (subPath `bookdrop`)
 - `/audiobooks` -> `books` PVC (subPath `audiobooks`)
 - `/integrations/calibre` -> `app-configs-pvc-nfs` (subPath `calibre`, read-only)
 - `/integrations/calibre-web-automated` -> `app-configs-pvc-nfs` (subPath `calibre-web-automated`, read-only)
@@ -21,7 +21,7 @@ existing book and audiobook stack.
 Operational intent:
 - Shelfmark shares the Calibre/CWA config PVC family without writing into their subpaths.
 - Ebook downloads can land on the shared Calibre library PVC.
-- BookLore handoff can target `/bookdrop`.
+- Stump can scan the same shared Calibre library PVC, including `/bookdrop` if ebook handoff uses that staging path.
 - Audiobookshelf handoff can target `/audiobooks`.
 
 ## Runtime Defaults
@@ -46,7 +46,7 @@ Operational intent:
 
 ## Quick Checks
 ```bash
-flux get kustomizations | rg 'shelfmark|booklore|public-edge|exposure-control'
+flux get kustomizations | rg 'shelfmark|stump|public-edge|exposure-control'
 kubectl get hr -n default shelfmark
 kubectl get pods -n default | rg shelfmark
 kubectl logs -n default deploy/shelfmark --tail=120

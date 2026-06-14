@@ -79,9 +79,9 @@ This file tracks ideas explicitly rated `good` or better that are still active, 
 - The operator cockpit foundation already exists.
 - Remaining scope: safe restart, Flux reconcile, and guided diagnostics actions with audit trail and tight RBAC.
 
-4. `good` - Database Consolidation (BookLore MariaDB)
-- Evaluate whether the current BookLore release supports Postgres cleanly enough to move from `booklore-mariadb` to `media-postgres`.
-- Goal remains to reclaim standalone MariaDB overhead without creating a higher-risk migration than the saved RAM is worth.
+4. `good` - Stump Library Import Hardening
+- After the Stump replacement settles, audit scan behavior, thumbnail generation, OPDS use, and first-user setup.
+- Goal is to keep Stump pointed at the shared Calibre library without duplicating book files or adding avoidable database overhead.
 
 5. `good` - ARM Node Utilization (Remaining Headroom Work)
 - This is no longer a greenfield idea: `autobrr`, `prowlarr`, `jackett`, `flaresolverr`, `profilarr`, `glance`, and `uptime-kuma` are already on the utility node.

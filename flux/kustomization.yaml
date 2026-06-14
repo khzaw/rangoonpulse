@@ -54,8 +54,7 @@ resources:
   - ./kustomizations/exposure-control.yaml
   - ./kustomizations/obsidian-livesync.yaml
   - ./kustomizations/anki-server.yaml
-  - ./kustomizations/booklore-mariadb.yaml
-  - ./kustomizations/booklore.yaml
+  - ./kustomizations/stump.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml

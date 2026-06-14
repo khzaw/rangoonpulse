@@ -27,7 +27,7 @@ Default exposure expiry:
 - Current hosts:
   - `share-speedtest.khzaw.dev`
   - `share-chartsdb.khzaw.dev`
-  - `share-booklore.khzaw.dev`
+  - `share-stump.khzaw.dev`
   - `share-shelfmark.khzaw.dev`
   - `share-jellyfin.khzaw.dev`
   - `share-seerr.khzaw.dev`
