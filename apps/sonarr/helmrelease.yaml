@@ -36,14 +36,12 @@ spec:
               GUID: "1000"
               PATH: "/app/sonarr/bin:/lsiopy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             resources:
-              # Interactive searches fan out through Prowlarr and can burst well
-              # above p95 automation data; keep CPU headroom for manual search.
               requests:
-                cpu: "100m"
-                memory: "562Mi"
+                cpu: "75m"
+                memory: "537Mi"
               limits:
-                cpu: "500m"
-                memory: "844Mi"
+                cpu: "375m"
+                memory: "805Mi"
     service:
       main:
         ports:
