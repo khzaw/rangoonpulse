@@ -130,16 +130,10 @@ spec:
         enabled: true
         type: persistentVolumeClaim
         existingClaim: calibre-books-nfs
-        globalMounts:
-          - path: /books
-
-      ebook-bookdrop:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: calibre-books-nfs
         advancedMounts:
           main:
             main:
+              - path: /books
               - path: /bookdrop
                 subPath: bookdrop
 
