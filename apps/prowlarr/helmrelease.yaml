@@ -35,14 +35,12 @@ spec:
               PUID: "1000"
               GUID: "1000"
             resources:
-              # Manual searches can stack many indexer requests at once; keep
-              # CPU headroom above p95 automation data for burst handling.
               requests:
-                cpu: "100m"
-                memory: "234Mi"
+                cpu: "75m"
+                memory: "225Mi"
               limits:
-                cpu: "500m"
-                memory: "768Mi"
+                cpu: "375m"
+                memory: "576Mi"
     service:
       main:
         ports:
