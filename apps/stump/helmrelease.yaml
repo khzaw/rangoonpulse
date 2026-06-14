@@ -81,12 +81,11 @@ spec:
                   failureThreshold: 6
             resources:
               requests:
-                cpu: "100m"
-                memory: "512Mi"
+                cpu: "75m"
+                memory: "464Mi"
               limits:
-                cpu: "1000m"
-                memory: "2Gi"
-
+                cpu: "750m"
+                memory: "1536Mi"
     service:
       main:
         controller: main
