@@ -35,7 +35,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/transmission
-              tag: 4.1.2-r0-ls348
+              tag: 4.1.2-r0-ls349
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
