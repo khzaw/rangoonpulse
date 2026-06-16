@@ -219,7 +219,7 @@ class BuildApplyPlanTests(unittest.TestCase):
         self.assertEqual(plan["selected"][0]["release"], "calibre")
         self.assertEqual(plan["selected"][0]["path"], "apps/calibre/helmrelease.yaml")
 
-    def test_build_apply_plan_blocks_default_bursty_media_downscale(self):
+    def test_build_apply_plan_applies_bursty_media_floor_before_downsize(self):
         report = make_report(
             [
                 make_recommendation(
@@ -228,6 +228,73 @@ class BuildApplyPlanTests(unittest.TestCase):
                     recommended_cpu="75m",
                     current_memory="562Mi",
                     recommended_memory="537Mi",
+                    action="downsize",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(plan["selected"], [])
+        self.assertEqual(plan["skipped_reason_counts"].get("downsize_below_apply_floor"), 1)
+        self.assertNotIn("downscale_excluded", plan["skipped_reason_counts"])
+
+    def test_build_apply_plan_allows_bursty_media_downsize_back_to_floor(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "sonarr",
+                    current_cpu="150m",
+                    recommended_cpu="100m",
+                    current_memory="768Mi",
+                    recommended_memory="512Mi",
+                    action="downsize",
+                    notes=["downscale_excluded"],
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(len(plan["selected"]), 1)
+        selected = plan["selected"][0]
+        self.assertEqual(selected["recommended"]["requests"], {"cpu": "100m", "memory": "512Mi"})
+        self.assertEqual(selected["recommended"]["limits"], selected["current"]["limits"])
+        self.assertEqual(selected["selection_reason"], "downsize_with_mature_data")
+        self.assertIn("profile_burst_request_floor", selected["notes"])
+        self.assertNotIn("downscale_excluded", selected["notes"])
+
+    def test_build_apply_plan_still_blocks_hard_excluded_downscale(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "jellyfin",
+                    current_cpu="256m",
+                    recommended_cpu="192m",
+                    current_memory="2560Mi",
+                    recommended_memory="2048Mi",
                     action="downsize",
                 )
             ]

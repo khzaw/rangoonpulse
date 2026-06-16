@@ -56,16 +56,62 @@ DEFAULT_DOWNSCALE_EXCLUDE = (
     "machine-learning",
     "prometheus",
     "kube-prometheus-stack",
-    # Manual media search/request paths are bursty and p95 automation data has
-    # repeatedly underrepresented their interactive CPU headroom needs.
-    "jellyseerr",
-    "sonarr",
-    "radarr",
-    "prowlarr",
-    "jackett",
-    "flaresolverr",
-    "sabnzbd",
 )
+BURST_REQUEST_FLOOR_PROFILE = "burst_request_floor"
+DEFAULT_SERVICE_TUNING_POLICIES = {
+    # These services are bursty during manual search/request flows. Let the
+    # advisor remove excess headroom after a later upsize, but never tune below
+    # the known-good interactive floors captured in the manifests.
+    "jellyseerr": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 281.0,
+        "min_request_memory_mi": 576.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+    "sonarr": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 100.0,
+        "min_request_memory_mi": 512.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+    "radarr": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 100.0,
+        "min_request_memory_mi": 320.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+    "prowlarr": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 100.0,
+        "min_request_memory_mi": 234.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+    "jackett": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 75.0,
+        "min_request_memory_mi": 222.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+    "flaresolverr": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 84.0,
+        "min_request_memory_mi": 800.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+    "sabnzbd": {
+        "profile": BURST_REQUEST_FLOOR_PROFILE,
+        "min_request_cpu_m": 84.0,
+        "min_request_memory_mi": 480.0,
+        "min_downsize_cpu_m_total": 100.0,
+        "min_downsize_memory_mi_total": 256.0,
+    },
+}
 
 
 def log(message: str) -> None:
@@ -131,6 +177,74 @@ def count_by(items: list[dict], key: str) -> dict[str, int]:
         value = str(item.get(key) or "unknown")
         counts[value] = counts.get(value, 0) + 1
     return counts
+
+
+def append_note(notes: list[str], note: str) -> None:
+    if note not in notes:
+        notes.append(note)
+
+
+def service_tuning_policy(release: str) -> dict:
+    return DEFAULT_SERVICE_TUNING_POLICIES.get(release, {})
+
+
+def policy_float(policy: dict, key: str, default: float) -> float:
+    value = policy.get(key)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def apply_service_tuning_policy(
+    release: str,
+    notes: list[str],
+    cur_req_cpu: float,
+    cur_req_mem: float,
+    cur_lim_cpu: float,
+    cur_lim_mem: float,
+    rec_req_cpu: float,
+    rec_req_mem: float,
+    rec_lim_cpu: float,
+    rec_lim_mem: float,
+) -> tuple[float, float, float, float]:
+    policy = service_tuning_policy(release)
+    if not policy:
+        return rec_req_cpu, rec_req_mem, rec_lim_cpu, rec_lim_mem
+
+    profile = str(policy.get("profile") or "")
+    if profile != BURST_REQUEST_FLOOR_PROFILE:
+        return rec_req_cpu, rec_req_mem, rec_lim_cpu, rec_lim_mem
+
+    append_note(notes, "profile_burst_request_floor")
+    request_floor_guard = False
+    limit_guard = False
+
+    min_req_cpu = max(0.0, policy_float(policy, "min_request_cpu_m", 0.0))
+    min_req_mem = max(0.0, policy_float(policy, "min_request_memory_mi", 0.0))
+
+    if rec_req_cpu < cur_req_cpu and rec_req_cpu < min_req_cpu:
+        rec_req_cpu = min(cur_req_cpu, max(rec_req_cpu, min_req_cpu))
+        request_floor_guard = True
+    if rec_req_mem < cur_req_mem and rec_req_mem < min_req_mem:
+        rec_req_mem = min(cur_req_mem, max(rec_req_mem, min_req_mem))
+        request_floor_guard = True
+
+    if rec_lim_cpu < cur_lim_cpu:
+        rec_lim_cpu = cur_lim_cpu
+        limit_guard = True
+    if rec_lim_mem < cur_lim_mem:
+        rec_lim_mem = cur_lim_mem
+        limit_guard = True
+
+    if request_floor_guard:
+        append_note(notes, "request_floor_guard")
+    if limit_guard:
+        append_note(notes, "profile_limit_downsize_guard")
+
+    return rec_req_cpu, rec_req_mem, rec_lim_cpu, rec_lim_mem
 
 
 def parse_cpu_to_m(value: str | None) -> float:
@@ -982,6 +1096,19 @@ def build_report() -> tuple[dict, str]:
                             rec_lim_mem = cur_lim_mem
                         notes.append("restart_guard")
 
+                    rec_req_cpu, rec_req_mem, rec_lim_cpu, rec_lim_mem = apply_service_tuning_policy(
+                        release,
+                        notes,
+                        cur_req_cpu,
+                        cur_req_mem,
+                        cur_lim_cpu,
+                        cur_lim_mem,
+                        rec_req_cpu,
+                        rec_req_mem,
+                        rec_lim_cpu,
+                        rec_lim_mem,
+                    )
+
                     if release in downscale_exclude:
                         if rec_req_cpu < cur_req_cpu:
                             rec_req_cpu = cur_req_cpu
@@ -1185,6 +1312,11 @@ def build_report() -> tuple[dict, str]:
             "cpu_throttle_ratio_upsize_threshold": round(cpu_throttle_ratio_upsize_threshold, 3),
             "cpu_throttle_min_periods": round(cpu_throttle_min_periods, 1),
             "cpu_throttle_window": cpu_throttle_window,
+            "downscale_exclude": sorted(downscale_exclude),
+            "service_tuning_profiles": {
+                release: policy.get("profile")
+                for release, policy in sorted(DEFAULT_SERVICE_TUNING_POLICIES.items())
+            },
         },
         "summary": {
             "containers_analyzed": containers_analyzed,
@@ -1430,6 +1562,9 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         release = rec.get("release", "")
         container = rec.get("container", "")
         notes = list(rec.get("notes", []) or [])
+        policy = service_tuning_policy(release)
+        if release not in downscale_exclude:
+            notes = [note for note in notes if note != "downscale_excluded"]
 
         if rec.get("action") == "no-change":
             continue
@@ -1456,6 +1591,22 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         cur_lim_mem_mi = parse_mem_to_mi(cur_lim_mem)
         rec_lim_cpu_m = parse_cpu_to_m(rec_lim_cpu)
         rec_lim_mem_mi = parse_mem_to_mi(rec_lim_mem)
+
+        if policy:
+            rec_req_cpu, rec_req_mem, rec_lim_cpu_m, rec_lim_mem_mi = apply_service_tuning_policy(
+                release,
+                notes,
+                cur_req_cpu,
+                cur_req_mem,
+                cur_lim_cpu_m,
+                cur_lim_mem_mi,
+                rec_req_cpu,
+                rec_req_mem,
+                rec_lim_cpu_m,
+                rec_lim_mem_mi,
+            )
+            rec_lim_cpu = fmt_cpu_m(rec_lim_cpu_m)
+            rec_lim_mem = fmt_mem_mi(rec_lim_mem_mi)
 
         if not allow_limit_downsize:
             limit_downsize_blocked = False
@@ -1596,7 +1747,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         if "restart_guard" in notes:
             skipped.append({"reason": "restart_guard_blocks_downsize", "release": release, "container": container})
             continue
-        if "downscale_excluded" in notes:
+        if "downscale_excluded" in notes and release in downscale_exclude:
             skipped.append({"reason": "downscale_excluded", "release": release, "container": container})
             continue
         if coverage_days < min_days_downsize:
@@ -1610,15 +1761,26 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             continue
         saved_cpu_m_total = max(0.0, -(item["delta"].get("requests_cpu_m_total", 0.0) or 0.0))
         saved_mem_mi_total = max(0.0, -(item["delta"].get("requests_memory_mi_total", 0.0) or 0.0))
-        if saved_cpu_m_total < min_downsize_cpu_m_total and saved_mem_mi_total < min_downsize_mem_mi_total:
+        service_min_downsize_cpu_m_total = max(
+            min_downsize_cpu_m_total,
+            policy_float(policy, "min_downsize_cpu_m_total", min_downsize_cpu_m_total),
+        )
+        service_min_downsize_mem_mi_total = max(
+            min_downsize_mem_mi_total,
+            policy_float(policy, "min_downsize_memory_mi_total", min_downsize_mem_mi_total),
+        )
+        if (
+            saved_cpu_m_total < service_min_downsize_cpu_m_total
+            and saved_mem_mi_total < service_min_downsize_mem_mi_total
+        ):
             skipped.append({
                 "reason": "downsize_below_apply_floor",
                 "release": release,
                 "container": container,
                 "saved_cpu_m_total": round(saved_cpu_m_total, 1),
                 "saved_memory_mi_total": round(saved_mem_mi_total, 1),
-                "min_cpu_m_total": min_downsize_cpu_m_total,
-                "min_memory_mi_total": min_downsize_mem_mi_total,
+                "min_cpu_m_total": service_min_downsize_cpu_m_total,
+                "min_memory_mi_total": service_min_downsize_mem_mi_total,
             })
             continue
         downsizes.append(item)
@@ -1714,6 +1876,11 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             "min_apply_upsize_cpu_m_total": min_upsize_cpu_m_total,
             "min_apply_upsize_memory_mi_total": min_upsize_mem_mi_total,
             "allow_apply_limit_downsize": allow_limit_downsize,
+            "downscale_exclude": sorted(downscale_exclude),
+            "service_tuning_profiles": {
+                release: policy.get("profile")
+                for release, policy in sorted(DEFAULT_SERVICE_TUNING_POLICIES.items())
+            },
             "deadband_percent": report.get("policy", {}).get("deadband_percent"),
             "deadband_cpu_m": report.get("policy", {}).get("deadband_cpu_m"),
             "deadband_mem_mi": report.get("policy", {}).get("deadband_mem_mi"),

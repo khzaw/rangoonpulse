@@ -52,7 +52,7 @@ spec:
                 - name: CONFIGMAP_NAME
                   value: resource-advisor-latest
                 - name: DOWNSCALE_EXCLUDE
-                  value: jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack,jellyseerr,sonarr,radarr,prowlarr,jackett,flaresolverr,sabnzbd
+                  value: jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack
                 - name: MAX_STEP_PERCENT
                   value: "25"
                 - name: REQUEST_BUFFER_PERCENT

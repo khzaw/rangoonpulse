@@ -134,7 +134,10 @@ Operational expectation:
 - Mixed apply proposals keep the growing dimensions and pin shrinking request dimensions back to their current values.
 - Memory downscaling is blocked when restart activity is detected.
 - CPU throttling over `CPU_THROTTLE_WINDOW` above `CPU_THROTTLE_RATIO_UPSIZE_THRESHOLD` with at least `CPU_THROTTLE_MIN_PERIODS` throttled periods adds a `cpu_throttle_guard`, raises CPU recommendations incrementally, and prevents throttled services from looking safe just because usage p95 is artificially low.
-- High-variance and bursty workloads can be excluded from automatic downscaling.
+- High-variance and bursty workloads can either be excluded from automatic downscaling or assigned a service
+  tuning profile with explicit request floors.
+- The `burst_request_floor` service profile allows request-only downscaling above known-good interactive floors,
+  blocks CPU/memory request reductions below those floors, and keeps limit downsizes out of generated PRs.
 - Apply mode is allowlisted to app-template-backed releases only.
 - The auto-apply allowlist defaults to `APP_TEMPLATE_RELEASE_FILE_MAP` in `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/advisor.py`.
   - `APPLY_ALLOWLIST` can still override it, but the default source of truth is now the advisor mapping itself.
@@ -151,11 +154,17 @@ Auto-apply (Phase 3 PR commits) is currently enabled for:
 - `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `stump`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`
 
-Automatic downscaling is disabled for bursty/manual media paths where p95 automation metrics have underrepresented
-interactive headroom needs:
+Service-aware tuning profiles are enabled for bursty/manual media paths where p95 automation metrics have
+underrepresented interactive headroom needs:
 - `jellyseerr`, `sonarr`, `radarr`, `prowlarr`, `jackett`, `flaresolverr`, `sabnzbd`
 
-These services can still receive automatic upsizing recommendations and PRs.
+These services can still receive automatic upsizing recommendations and PRs. They can also receive automatic
+request-only downsize PRs after a later upsize, but only down to their configured interactive floors and only when
+the total saved request is large enough to pass the apply floor. They are not hard-excluded from tuning.
+
+Automatic downscaling remains disabled for critical/manual services where the safe floor is not represented by the
+advisor policy:
+- `jellyfin`, `immich`, `immich-postgres`, `machine-learning`, `prometheus`, `kube-prometheus-stack`
 
 Analyzed but intentionally excluded from auto-apply (manual-only adjustments):
 - `actualbudget` (non-`app-template` chart), `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,
