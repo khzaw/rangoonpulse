@@ -49,6 +49,23 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
 }
 
 DEFAULT_APPLY_ALLOWLIST = tuple(APP_TEMPLATE_RELEASE_FILE_MAP.keys())
+DEFAULT_DOWNSCALE_EXCLUDE = (
+    "jellyfin",
+    "immich",
+    "immich-postgres",
+    "machine-learning",
+    "prometheus",
+    "kube-prometheus-stack",
+    # Manual media search/request paths are bursty and p95 automation data has
+    # repeatedly underrepresented their interactive CPU headroom needs.
+    "jellyseerr",
+    "sonarr",
+    "radarr",
+    "prowlarr",
+    "jackett",
+    "flaresolverr",
+    "sabnzbd",
+)
 
 
 def log(message: str) -> None:
@@ -81,6 +98,19 @@ def env_int(name: str, default: int) -> int:
     except ValueError:
         log(f"Invalid int for {name}: {value!r}; using default {default}")
         return default
+
+
+def env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None or value.strip() == "":
+        return default
+    normalized = value.strip().lower()
+    if normalized in ("1", "true", "yes", "on"):
+        return True
+    if normalized in ("0", "false", "no", "off"):
+        return False
+    log(f"Invalid bool for {name}: {value!r}; using default {default}")
+    return default
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -257,20 +287,58 @@ def patch_app_template_resources(
         "resources",
     )
 
-    new_block = resources_block(container_indent + 2, req_cpu, req_mem, lim_cpu, lim_mem)
-
     if idx_resources is None:
+        new_block = resources_block(container_indent + 2, req_cpu, req_mem, lim_cpu, lim_mem)
         lines[container_end:container_end] = new_block
         return "".join(lines), True, "resources_inserted"
 
-    resources_end = block_end(lines, idx_resources, container_indent + 2)
-    old_block = lines[idx_resources:resources_end]
+    resources_indent = container_indent + 2
+    resource_value_indent = resources_indent + 4
+    changed = False
 
-    if old_block == new_block:
+    def set_scalar(start: int, end: int, key: str, value: str) -> bool:
+        pattern = re.compile(rf"^ {{{resource_value_indent}}}{re.escape(key)}:\s*.*$")
+        new_line = " " * resource_value_indent + f'{key}: "{value}"\n'
+        for idx in range(start, end):
+            if pattern.match(lines[idx]):
+                if lines[idx] == new_line:
+                    return False
+                lines[idx] = new_line
+                return True
+        lines[end:end] = [new_line]
+        return True
+
+    def ensure_subblock(key: str, cpu: str, memory: str) -> bool:
+        sub_changed = False
+        resources_end = block_end(lines, idx_resources, resources_indent)
+        idx_sub = find_key_line(lines, idx_resources + 1, resources_end, resources_indent + 2, key)
+
+        if idx_sub is None:
+            insert_at = resources_end
+            if key == "requests":
+                idx_limits = find_key_line(lines, idx_resources + 1, resources_end, resources_indent + 2, "limits")
+                if idx_limits is not None:
+                    insert_at = idx_limits
+            lines[insert_at:insert_at] = [
+                " " * (resources_indent + 2) + f"{key}:\n",
+                " " * resource_value_indent + f'cpu: "{cpu}"\n',
+                " " * resource_value_indent + f'memory: "{memory}"\n',
+            ]
+            return True
+
+        sub_end = block_end(lines, idx_sub, resources_indent + 2)
+        sub_changed = set_scalar(idx_sub + 1, sub_end, "cpu", cpu) or sub_changed
+        sub_end = block_end(lines, idx_sub, resources_indent + 2)
+        sub_changed = set_scalar(idx_sub + 1, sub_end, "memory", memory) or sub_changed
+        return sub_changed
+
+    changed = ensure_subblock("requests", req_cpu, req_mem) or changed
+    changed = ensure_subblock("limits", lim_cpu, lim_mem) or changed
+
+    if not changed:
         return content, False, "resources_unchanged"
 
-    lines[idx_resources:resources_end] = new_block
-    return "".join(lines), True, "resources_replaced"
+    return "".join(lines), True, "resources_updated"
 
 
 class KubeClient:
@@ -774,7 +842,7 @@ def build_report() -> tuple[dict, str]:
     downscale_exclude = set(
         env_list(
             "DOWNSCALE_EXCLUDE",
-            "jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack",
+            ",".join(DEFAULT_DOWNSCALE_EXCLUDE),
         )
     )
 
@@ -1222,9 +1290,15 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     max_changes = env_int("MAX_APPLY_CHANGES_PER_RUN", 5)
     min_days_upsize = env_float("MIN_DATA_DAYS_FOR_UPSIZE", 14.0)
     min_days_downsize = env_float("MIN_DATA_DAYS_FOR_DOWNSIZE", 14.0)
+    min_downsize_cpu_m_total = max(0.0, env_float("MIN_APPLY_DOWNSIZE_CPU_M_TOTAL", 50.0))
+    min_downsize_mem_mi_total = max(0.0, env_float("MIN_APPLY_DOWNSIZE_MEMORY_MI_TOTAL", 256.0))
+    min_upsize_cpu_m_total = max(0.0, env_float("MIN_APPLY_UPSIZE_CPU_M_TOTAL", 25.0))
+    min_upsize_mem_mi_total = max(0.0, env_float("MIN_APPLY_UPSIZE_MEMORY_MI_TOTAL", 128.0))
+    allow_limit_downsize = env_bool("ALLOW_APPLY_LIMIT_DOWNSIZE", False)
 
     allowlist_default = ",".join(DEFAULT_APPLY_ALLOWLIST)
     allowlist = set(env_list("APPLY_ALLOWLIST", allowlist_default))
+    downscale_exclude = set(env_list("DOWNSCALE_EXCLUDE", ",".join(DEFAULT_DOWNSCALE_EXCLUDE)))
 
     # Phase 2 (Capacity-Aware v2):
     # Use live pod request footprint for budget and headroom checks (includes replicas + all namespaces),
@@ -1355,7 +1429,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     for rec in recommendations:
         release = rec.get("release", "")
         container = rec.get("container", "")
-        notes = rec.get("notes", [])
+        notes = list(rec.get("notes", []) or [])
 
         if rec.get("action") == "no-change":
             continue
@@ -1383,10 +1457,43 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         rec_lim_cpu_m = parse_cpu_to_m(rec_lim_cpu)
         rec_lim_mem_mi = parse_mem_to_mi(rec_lim_mem)
 
+        if not allow_limit_downsize:
+            limit_downsize_blocked = False
+            if rec_lim_cpu_m < cur_lim_cpu_m:
+                rec_lim_cpu = cur_lim_cpu
+                rec_lim_cpu_m = cur_lim_cpu_m
+                limit_downsize_blocked = True
+            if rec_lim_mem_mi < cur_lim_mem_mi:
+                rec_lim_mem = cur_lim_mem
+                rec_lim_mem_mi = cur_lim_mem_mi
+                limit_downsize_blocked = True
+            if limit_downsize_blocked:
+                notes.append("limit_downsize_guard")
+
         delta_cpu = rec_req_cpu - cur_req_cpu
         delta_mem = rec_req_mem - cur_req_mem
         delta_lim_cpu = rec_lim_cpu_m - cur_lim_cpu_m
         delta_lim_mem = rec_lim_mem_mi - cur_lim_mem_mi
+        has_upsize_delta = delta_cpu > 0.0 or delta_mem > 0.0 or delta_lim_cpu > 0.0 or delta_lim_mem > 0.0
+
+        if has_upsize_delta:
+            mixed_request_downsize_blocked = False
+            if delta_cpu < 0.0:
+                rec_req_cpu = cur_req_cpu
+                mixed_request_downsize_blocked = True
+            if delta_mem < 0.0:
+                rec_req_mem = cur_req_mem
+                mixed_request_downsize_blocked = True
+            if mixed_request_downsize_blocked:
+                notes.append("mixed_request_downsize_guard")
+                delta_cpu = rec_req_cpu - cur_req_cpu
+                delta_mem = rec_req_mem - cur_req_mem
+
+        has_downsize_delta = delta_cpu < 0.0 or delta_mem < 0.0 or delta_lim_cpu < 0.0 or delta_lim_mem < 0.0
+
+        if release in downscale_exclude and has_downsize_delta:
+            skipped.append({"reason": "downscale_excluded", "release": release, "container": container})
+            continue
 
         if all(abs(delta) < 1.0 for delta in (delta_cpu, delta_mem, delta_lim_cpu, delta_lim_mem)):
             continue
@@ -1417,8 +1524,8 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             },
             "recommended": {
                 "requests": {
-                    "cpu": rec.get("recommended", {}).get("requests", {}).get("cpu", "0m"),
-                    "memory": rec.get("recommended", {}).get("requests", {}).get("memory", "0Mi"),
+                    "cpu": fmt_cpu_m(rec_req_cpu),
+                    "memory": fmt_mem_mi(rec_req_mem),
                 },
                 "limits": {
                     "cpu": rec_lim_cpu,
@@ -1461,6 +1568,27 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                     "container": container,
                 })
                 continue
+            grown_cpu_m_total = max(
+                0.0,
+                (item["delta"].get("requests_cpu_m_total", 0.0) or 0.0),
+                (item["delta"].get("limits_cpu_m", 0.0) or 0.0) * float(replicas_estimate),
+            )
+            grown_mem_mi_total = max(
+                0.0,
+                (item["delta"].get("requests_memory_mi_total", 0.0) or 0.0),
+                (item["delta"].get("limits_memory_mi", 0.0) or 0.0) * float(replicas_estimate),
+            )
+            if grown_cpu_m_total < min_upsize_cpu_m_total and grown_mem_mi_total < min_upsize_mem_mi_total:
+                skipped.append({
+                    "reason": "upsize_below_apply_floor",
+                    "release": release,
+                    "container": container,
+                    "grown_cpu_m_total": round(grown_cpu_m_total, 1),
+                    "grown_memory_mi_total": round(grown_mem_mi_total, 1),
+                    "min_cpu_m_total": min_upsize_cpu_m_total,
+                    "min_memory_mi_total": min_upsize_mem_mi_total,
+                })
+                continue
             upsizes.append(item)
             continue
 
@@ -1478,6 +1606,19 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                 "min_days": min_days_downsize,
                 "release": release,
                 "container": container,
+            })
+            continue
+        saved_cpu_m_total = max(0.0, -(item["delta"].get("requests_cpu_m_total", 0.0) or 0.0))
+        saved_mem_mi_total = max(0.0, -(item["delta"].get("requests_memory_mi_total", 0.0) or 0.0))
+        if saved_cpu_m_total < min_downsize_cpu_m_total and saved_mem_mi_total < min_downsize_mem_mi_total:
+            skipped.append({
+                "reason": "downsize_below_apply_floor",
+                "release": release,
+                "container": container,
+                "saved_cpu_m_total": round(saved_cpu_m_total, 1),
+                "saved_memory_mi_total": round(saved_mem_mi_total, 1),
+                "min_cpu_m_total": min_downsize_cpu_m_total,
+                "min_memory_mi_total": min_downsize_mem_mi_total,
             })
             continue
         downsizes.append(item)
@@ -1568,6 +1709,11 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             "min_data_days_for_upsize": min_days_upsize,
             "min_data_days_for_downsize": min_days_downsize,
             "max_apply_changes_per_run": max_changes,
+            "min_apply_downsize_cpu_m_total": min_downsize_cpu_m_total,
+            "min_apply_downsize_memory_mi_total": min_downsize_mem_mi_total,
+            "min_apply_upsize_cpu_m_total": min_upsize_cpu_m_total,
+            "min_apply_upsize_memory_mi_total": min_upsize_mem_mi_total,
+            "allow_apply_limit_downsize": allow_limit_downsize,
             "deadband_percent": report.get("policy", {}).get("deadband_percent"),
             "deadband_cpu_m": report.get("policy", {}).get("deadband_cpu_m"),
             "deadband_mem_mi": report.get("policy", {}).get("deadband_mem_mi"),
@@ -1640,6 +1786,17 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             f"`>= {plan['constraints']['deadband_cpu_m']}m` or Memory delta "
             f"`>= {plan['constraints']['deadband_mem_mi']}Mi`"
         ),
+        (
+            "- Apply downsize floor: CPU request savings "
+            f"`>= {plan['constraints']['min_apply_downsize_cpu_m_total']}m` or "
+            f"Memory request savings `>= {plan['constraints']['min_apply_downsize_memory_mi_total']}Mi`"
+        ),
+        (
+            "- Apply upsize floor: CPU growth "
+            f"`>= {plan['constraints']['min_apply_upsize_cpu_m_total']}m` or "
+            f"Memory growth `>= {plan['constraints']['min_apply_upsize_memory_mi_total']}Mi`"
+        ),
+        f"- Apply limit downsizes allowed: `{plan['constraints']['allow_apply_limit_downsize']}`",
         f"- Advisory CPU request ceiling: `{plan['budgets']['cpu_m']}m`",
         f"- Advisory memory request ceiling: `{plan['budgets']['memory_mi']}Mi`",
         f"- Current CPU requests: `{plan['current_requests']['cpu_m']}m`",
@@ -1922,8 +2079,6 @@ def build_apply_pr_title(selected: list[dict]) -> str:
 
 
 def build_apply_branch_name(branch_hint: str, selected: list[dict]) -> str:
-    now_tag = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S%f")
-
     if "/" in branch_hint:
         prefix = sanitize_tune_subject(branch_hint.split("/", 1)[0])
     else:
@@ -1937,13 +2092,10 @@ def build_apply_branch_name(branch_hint: str, selected: list[dict]) -> str:
     else:
         base = f"{prefix}/resource-advisor-refresh-apply-plan"
 
-    suffix = f"-{now_tag}"
     max_len = 120
-    allowed_base_len = max_len - len(suffix)
-    if len(base) > allowed_base_len:
-        base = base[:allowed_base_len].rstrip("-")
-    branch = f"{base}{suffix}"
-    return branch
+    if len(base) > max_len:
+        base = base[:max_len].rstrip("-")
+    return base
 
 
 def build_apply_commit_message(release: str) -> str:
@@ -2050,6 +2202,22 @@ def build_apply_pr_body(report: dict, plan: dict, selected: list[dict]) -> str:
             f"- Deadband policy: `{report.get('policy', {}).get('deadband_percent')}%` "
             f"or CPU delta `>= {report.get('policy', {}).get('deadband_cpu_m')}m` "
             f"or Memory delta `>= {report.get('policy', {}).get('deadband_mem_mi')}Mi`\n"
+        ),
+        (
+            "- Apply downsize floor: CPU request savings "
+            f"`>= {plan.get('constraints', {}).get('min_apply_downsize_cpu_m_total')}m` "
+            "or Memory request savings "
+            f"`>= {plan.get('constraints', {}).get('min_apply_downsize_memory_mi_total')}Mi`\n"
+        ),
+        (
+            "- Apply upsize floor: CPU growth "
+            f"`>= {plan.get('constraints', {}).get('min_apply_upsize_cpu_m_total')}m` "
+            "or Memory growth "
+            f"`>= {plan.get('constraints', {}).get('min_apply_upsize_memory_mi_total')}Mi`\n"
+        ),
+        (
+            "- Apply limit downsizes allowed: "
+            f"`{plan.get('constraints', {}).get('allow_apply_limit_downsize')}`\n"
         ),
         f"- Advisory CPU request ceiling: `{plan.get('budgets', {}).get('cpu_m')}m`\n",
         f"- Advisory memory request ceiling: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n",

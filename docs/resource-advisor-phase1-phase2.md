@@ -31,7 +31,7 @@ This is fully automated with Kubernetes CronJobs. No manual trigger is required 
   - runs weekly (`03:30` Monday, timezone `Asia/Singapore`)
   - computes safe, per-service apply plan
   - persists `apply-plan.json`, `apply-plan.md`, and `applyLastRunAt` into ConfigMap `monitoring/resource-advisor-latest`
-  - creates one unique `tune/...` branch per selected service from the latest `master`
+  - creates or updates one stable `tune/...` branch per selected service/action from the latest `master`
   - opens one apply PR per selected service when eligible changes exist
   - uses explicit GitHub API commit identity from `GITHUB_COMMIT_AUTHOR_NAME` and `GITHUB_COMMIT_AUTHOR_EMAIL`
   - assigns each apply PR to the configured GitHub user list (`GITHUB_PR_ASSIGNEES`, current default: `khzaw`)
@@ -125,9 +125,16 @@ Operational expectation:
   - `DEADBAND_PERCENT` (default 10%)
   - `DEADBAND_CPU_M` (default 25m)
   - `DEADBAND_MEM_MI` (default 64Mi)
+- Apply mode has a stricter downsize floor: request reductions must save at least `MIN_APPLY_DOWNSIZE_CPU_M_TOTAL`
+  (default 50m) or `MIN_APPLY_DOWNSIZE_MEMORY_MI_TOTAL` (default 256Mi) across live replicas.
+- Apply mode also filters tiny upsizes: CPU or limit growth must be at least `MIN_APPLY_UPSIZE_CPU_M_TOTAL`
+  (default 25m) or memory or limit growth must be at least `MIN_APPLY_UPSIZE_MEMORY_MI_TOTAL` (default 128Mi).
+- Apply mode does not lower CPU or memory limits by default (`ALLOW_APPLY_LIMIT_DOWNSIZE=false`); it can still raise limits
+  when throttling or restart signals require headroom.
+- Mixed apply proposals keep the growing dimensions and pin shrinking request dimensions back to their current values.
 - Memory downscaling is blocked when restart activity is detected.
 - CPU throttling over `CPU_THROTTLE_WINDOW` above `CPU_THROTTLE_RATIO_UPSIZE_THRESHOLD` with at least `CPU_THROTTLE_MIN_PERIODS` throttled periods adds a `cpu_throttle_guard`, raises CPU recommendations incrementally, and prevents throttled services from looking safe just because usage p95 is artificially low.
-- High-variance workloads can be excluded from automatic downscaling.
+- High-variance and bursty workloads can be excluded from automatic downscaling.
 - Apply mode is allowlisted to app-template-backed releases only.
 - The auto-apply allowlist defaults to `APP_TEMPLATE_RELEASE_FILE_MAP` in `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/advisor.py`.
   - `APPLY_ALLOWLIST` can still override it, but the default source of truth is now the advisor mapping itself.
@@ -143,6 +150,12 @@ Auto-apply (Phase 3 PR commits) is currently enabled for:
 - `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`
 - `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `stump`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`
+
+Automatic downscaling is disabled for bursty/manual media paths where p95 automation metrics have underrepresented
+interactive headroom needs:
+- `jellyseerr`, `sonarr`, `radarr`, `prowlarr`, `jackett`, `flaresolverr`, `sabnzbd`
+
+These services can still receive automatic upsizing recommendations and PRs.
 
 Analyzed but intentionally excluded from auto-apply (manual-only adjustments):
 - `actualbudget` (non-`app-template` chart), `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,

@@ -219,6 +219,213 @@ class BuildApplyPlanTests(unittest.TestCase):
         self.assertEqual(plan["selected"][0]["release"], "calibre")
         self.assertEqual(plan["selected"][0]["path"], "apps/calibre/helmrelease.yaml")
 
+    def test_build_apply_plan_blocks_default_bursty_media_downscale(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "sonarr",
+                    current_cpu="100m",
+                    recommended_cpu="75m",
+                    current_memory="562Mi",
+                    recommended_memory="537Mi",
+                    action="downsize",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(plan["selected"], [])
+        self.assertEqual(plan["skipped_reason_counts"].get("downscale_excluded"), 1)
+
+    def test_build_apply_plan_blocks_small_downsize_below_apply_floor(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "stump",
+                    current_cpu="100m",
+                    recommended_cpu="75m",
+                    current_memory="512Mi",
+                    recommended_memory="464Mi",
+                    action="downsize",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(plan["selected"], [])
+        self.assertEqual(plan["skipped_reason_counts"].get("downsize_below_apply_floor"), 1)
+
+    def test_build_apply_plan_pins_limit_downsize_by_default(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "tunarr",
+                    current_cpu="100m",
+                    recommended_cpu="75m",
+                    current_memory="2048Mi",
+                    recommended_memory="1605Mi",
+                    action="downsize",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(len(plan["selected"]), 1)
+        selected = plan["selected"][0]
+        self.assertEqual(selected["recommended"]["limits"], selected["current"]["limits"])
+        self.assertIn("limit_downsize_guard", selected["notes"])
+
+    def test_build_apply_plan_blocks_tiny_upsize_below_apply_floor(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "glance",
+                    current_cpu="50m",
+                    recommended_cpu="55m",
+                    current_memory="128Mi",
+                    recommended_memory="135Mi",
+                    action="upsize",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(plan["selected"], [])
+        self.assertEqual(plan["skipped_reason_counts"].get("upsize_below_apply_floor"), 1)
+
+    def test_build_apply_plan_pins_mixed_request_downsize(self):
+        report = make_report(
+            [
+                make_recommendation(
+                    "calibre-web-automated",
+                    current_cpu="75m",
+                    recommended_cpu="56m",
+                    current_memory="256Mi",
+                    recommended_memory="384Mi",
+                    action="upsize",
+                )
+            ]
+        )
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+
+        with patch.dict(
+            os.environ,
+            {
+                "MAX_APPLY_CHANGES_PER_RUN": "5",
+                "MAX_REQUESTS_PERCENT_CPU": "100",
+                "MAX_REQUESTS_PERCENT_MEMORY": "100",
+            },
+            clear=True,
+        ):
+            with patch.object(advisor, "KubeClient", return_value=fake_kube):
+                plan, _markdown = advisor.build_apply_plan(report)
+
+        self.assertEqual(len(plan["selected"]), 1)
+        selected = plan["selected"][0]
+        self.assertEqual(selected["recommended"]["requests"]["cpu"], "75m")
+        self.assertEqual(selected["delta"]["requests_cpu_m"], 0.0)
+        self.assertIn("mixed_request_downsize_guard", selected["notes"])
+
+
+class PatchAppTemplateResourcesTests(unittest.TestCase):
+    def test_patch_existing_resources_preserves_comments(self):
+        content = """values:
+  controllers:
+    main:
+      containers:
+        main:
+          resources:
+            # Keep burst headroom for manual search.
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "768Mi"
+"""
+
+        patched, changed, reason = advisor.patch_app_template_resources(
+            content,
+            "main",
+            "150m",
+            "320Mi",
+            "500m",
+            "768Mi",
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(reason, "resources_updated")
+        self.assertIn("# Keep burst headroom for manual search.", patched)
+        self.assertIn('cpu: "150m"', patched)
+        self.assertIn('memory: "320Mi"', patched)
+        self.assertIn('cpu: "500m"', patched)
+        self.assertIn('memory: "768Mi"', patched)
+
+    def test_build_apply_branch_name_is_stable_per_service_action(self):
+        branch = advisor.build_apply_branch_name(
+            "tune/resource-advisor-apply",
+            [
+                make_apply_item(
+                    "tunarr",
+                    "apps/tunarr/helmrelease.yaml",
+                    current_cpu="100m",
+                    recommended_cpu="75m",
+                    current_memory="2048Mi",
+                    recommended_memory="1605Mi",
+                )
+            ],
+        )
+
+        self.assertEqual(branch, "tune/tunarr-decrease-cpu-and-memory")
+
 
 class ApplyPrTests(unittest.TestCase):
     def test_open_or_update_apply_pr_creates_one_pr_per_release(self):

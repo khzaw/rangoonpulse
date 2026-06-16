@@ -56,7 +56,7 @@ spec:
                 - name: CONFIGMAP_NAME
                   value: resource-advisor-latest
                 - name: DOWNSCALE_EXCLUDE
-                  value: jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack
+                  value: jellyfin,immich,immich-postgres,machine-learning,prometheus,kube-prometheus-stack,jellyseerr,sonarr,radarr,prowlarr,jackett,flaresolverr,sabnzbd
                 - name: MAX_STEP_PERCENT
                   value: "25"
                 - name: REQUEST_BUFFER_PERCENT
@@ -89,6 +89,16 @@ spec:
                   value: "14"
                 - name: MAX_APPLY_CHANGES_PER_RUN
                   value: "5"
+                - name: MIN_APPLY_DOWNSIZE_CPU_M_TOTAL
+                  value: "50"
+                - name: MIN_APPLY_DOWNSIZE_MEMORY_MI_TOTAL
+                  value: "256"
+                - name: MIN_APPLY_UPSIZE_CPU_M_TOTAL
+                  value: "25"
+                - name: MIN_APPLY_UPSIZE_MEMORY_MI_TOTAL
+                  value: "128"
+                - name: ALLOW_APPLY_LIMIT_DOWNSIZE
+                  value: "false"
                 - name: GITHUB_REPOSITORY
                   value: khzaw/rangoonpulse
                 - name: GITHUB_BASE_BRANCH
