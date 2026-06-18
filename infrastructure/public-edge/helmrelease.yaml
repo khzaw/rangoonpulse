@@ -44,7 +44,7 @@ spec:
           main:
             image:
               repository: cloudflare/cloudflared
-              tag: "2026.6.0"
+              tag: "2026.6.1"
             args:
               - tunnel
               - --no-autoupdate
