@@ -40,6 +40,26 @@ spec:
               TZ: "${TIMEZONE}"
               PUID: "1000"
               GUID: "1000"
+              PEERPORT: "51413"
+            lifecycle:
+              postStart:
+                exec:
+                  command:
+                    - sh
+                    - -c
+                    - |
+                      for i in $(seq 1 30); do
+                        if transmission-remote 127.0.0.1:9091 \
+                          --no-downlimit \
+                          --uplimit 1024 \
+                          --cache 128 \
+                          >/tmp/transmission-startup-tuning.log 2>&1; then
+                          exit 0
+                        fi
+                        sleep 2
+                      done
+                      cat /tmp/transmission-startup-tuning.log >&2
+                      exit 0
             resources:
               requests:
                 cpu: "63m"
@@ -113,6 +133,8 @@ spec:
       p2p:
         enabled: true
         type: LoadBalancer
+        loadBalancerIP: ${TRANSMISSION_P2P_VIP}
+        externalTrafficPolicy: Local
         ports:
           tcp:
             enabled: true
