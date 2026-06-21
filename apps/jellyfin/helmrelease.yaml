@@ -44,10 +44,10 @@ spec:
               JELLYFIN_PublishedServerUrl: "https://jellyfin.${BASE_DOMAIN}"
             resources:
               requests:
-                cpu: "256m"
-                memory: "2560Mi"
+                cpu: "320m"
+                memory: "2804Mi"
               limits:
-                cpu: "2500m"
+                cpu: "3125m"
                 memory: "4472Mi"
     service:
       main:
