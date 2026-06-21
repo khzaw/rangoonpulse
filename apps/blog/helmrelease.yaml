@@ -35,7 +35,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/blog
-              tag: 1781972485-aba8179579da8c22c1d605717ded9c73cf858bd8 # {"$imagepolicy": "flux-system:blog:tag"}
+              tag: 1782036820-0b67ecf2ce237d3f0a06e776737ea23b82c270ef # {"$imagepolicy": "flux-system:blog:tag"}
             probes:
               liveness:
                 enabled: true
