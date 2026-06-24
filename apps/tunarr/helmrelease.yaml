@@ -46,11 +46,11 @@ spec:
               LIBVA_DRIVERS_PATH: "/usr/local/lib/x86_64-linux-gnu/dri"
             resources:
               requests:
-                cpu: "100m"
-                memory: "2Gi"
+                cpu: "75m"
+                memory: "1616Mi"
               limits:
-                cpu: "1"
-                memory: "4Gi"
+                cpu: "1000m"
+                memory: "4096Mi"
             probes:
               liveness:
                 spec:
