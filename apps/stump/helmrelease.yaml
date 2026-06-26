@@ -19,6 +19,9 @@ spec:
     remediation:
       retries: 3
   upgrade:
+    # First boot after a DB reset/migration runs the full Calibre rescan
+    # before the new pod passes its startup probe. Default 5m is too short.
+    timeout: 20m
     remediation:
       retries: 3
   values:
