@@ -25,7 +25,7 @@ Current rollout note:
 - Hostnames:
   - `https://books.khzaw.dev`
   - `https://stump.khzaw.dev`
-- Image: `aaronleopold/stump:0.1.4`
+- Image: `aaronleopold/stump:0.1.5`
 - Purpose: digital book library management/reader that imports the existing Calibre books.
 
 BookLore and its MariaDB sidecar were retired in favor of Stump. The old BookLore app database is not reused because

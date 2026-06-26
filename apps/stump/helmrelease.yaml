@@ -56,7 +56,9 @@ spec:
                     port: 10801
                   periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 30
+                  # First boot after a DB reset/migration runs the full Calibre
+                  # library rescan before / responds. Give it ~20 min to finish.
+                  failureThreshold: 120
               liveness:
                 enabled: true
                 custom: true
