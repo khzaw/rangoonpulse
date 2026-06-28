@@ -55,6 +55,7 @@
       const travelMsgEl = document.getElementById('travelMsg');
       const refreshAllBtn = document.getElementById('refreshAllBtn');
       const emergencyBtn = document.getElementById('emergencyBtn');
+      const themeModeButtons = Array.from(document.querySelectorAll('[data-theme-mode]'));
       const vpnDirectBtn = document.getElementById('vpnDirectBtn');
       const vpnEnableBtn = document.getElementById('vpnEnableBtn');
       const travelDirectBtn = document.getElementById('travelDirectBtn');
@@ -103,6 +104,35 @@
       };
       let activePage = normalizePage(window.location.hash || '#updates');
       let hasLoadedDashboard = false;
+      const themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+      function storedThemeMode() {
+        const mode = localStorage.getItem('rp-theme-mode') || 'system';
+        return mode === 'light' || mode === 'dark' ? mode : 'system';
+      }
+
+      function resolvedThemeMode(mode) {
+        if (mode === 'dark' || mode === 'light') return mode;
+        return themeMedia && themeMedia.matches ? 'dark' : 'light';
+      }
+
+      function applyThemeMode(mode) {
+        const nextMode = mode === 'light' || mode === 'dark' ? mode : 'system';
+        if (nextMode === 'system') {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.removeItem('rp-theme-mode');
+        } else {
+          document.documentElement.dataset.theme = nextMode;
+          localStorage.setItem('rp-theme-mode', nextMode);
+        }
+        const resolved = resolvedThemeMode(nextMode);
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#000000' : '#ffffff');
+        themeModeButtons.forEach((button) => {
+          const active = button.dataset.themeMode === nextMode;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+      }
 
       function setMessage(target, text, isError) {
         target.textContent = text || '';
@@ -1909,6 +1939,14 @@
         if (empty) secretKeyRowsEl.innerHTML = '';
         secretKeyRowsEl.insertAdjacentHTML('beforeend', secretKeyRowHtml('', ''));
       };
+      themeModeButtons.forEach((button) => {
+        button.addEventListener('click', () => applyThemeMode(button.dataset.themeMode));
+      });
+      if (themeMedia) {
+        themeMedia.addEventListener('change', () => {
+          if (storedThemeMode() === 'system') applyThemeMode('system');
+        });
+      }
       secretsSearchInputEl.addEventListener('input', () => {
         secretsListEl.classList.add('is-filtering');
         renderSecretsList(dashboardState.secrets);
@@ -2074,5 +2112,6 @@
       });
 
       setInterval(tickExpiryCountdowns, 1000);
+      applyThemeMode(storedThemeMode());
       setActivePage(window.location.hash || '#updates', { replace: true });
       loadDashboard();

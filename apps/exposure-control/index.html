@@ -3,7 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f5f2" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      (() => {
+        const mode = localStorage.getItem('rp-theme-mode') || 'system';
+        if (mode === 'light' || mode === 'dark') {
+          document.documentElement.dataset.theme = mode;
+        }
+        const resolved = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#000000' : '#ffffff');
+      })();
+    </script>
     <title>rangoonpulse operator cockpit</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,6 +34,11 @@
           <span class="env-pill">production</span>
         </div>
         <div class="top-actions">
+          <div class="theme-switcher" role="group" aria-label="Theme mode">
+            <button type="button" data-theme-mode="system">System</button>
+            <button type="button" data-theme-mode="light">Light</button>
+            <button type="button" data-theme-mode="dark">Dark</button>
+          </div>
           <button id="refreshAllBtn" type="button">Refresh all</button>
           <button id="emergencyBtn" class="danger" type="button">Disable all exposures</button>
         </div>
