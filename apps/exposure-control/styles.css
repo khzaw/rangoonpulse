@@ -1,22 +1,22 @@
-/* rangoonpulse operator cockpit — editorial-minimal dark theme */
+/* rangoonpulse operator cockpit - editorial-minimal light theme */
 
 :root {
-  --bg-base: #070708;
-  --bg-panel: #0c0c0e;
-  --bg-panel-strong: #111114;
-  --bg-hover: #131316;
-  --text-1: #f2f2f0;
-  --text-2: #888892;
-  --text-3: #55555e;
-  --text-dim: #36363e;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --accent: #6c8cff;
-  --accent-soft: rgba(108, 140, 255, 0.1);
-  --accent-border: rgba(108, 140, 255, 0.38);
-  --green: #3ecf8e;
-  --yellow: #f0b35c;
-  --red: #ff6b81;
+  --bg-base: #f6f5f2;
+  --bg-panel: #ffffff;
+  --bg-panel-strong: #f0efeb;
+  --bg-hover: #eceae5;
+  --text-1: #191a1f;
+  --text-2: #5d616b;
+  --text-3: #8b909b;
+  --text-dim: #b6bbc5;
+  --border: rgba(26, 28, 35, 0.11);
+  --border-strong: rgba(26, 28, 35, 0.24);
+  --accent: #315bdc;
+  --accent-soft: rgba(49, 91, 220, 0.1);
+  --accent-border: rgba(49, 91, 220, 0.36);
+  --green: #138a5a;
+  --yellow: #a76516;
+  --red: #c9344e;
   --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
@@ -60,8 +60,8 @@ main,
 }
 
 ::selection {
-  background: rgba(108, 140, 255, 0.28);
-  color: #fff;
+  background: rgba(49, 91, 220, 0.18);
+  color: var(--text-1);
 }
 
 ::-webkit-scrollbar {
@@ -72,13 +72,13 @@ main,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(26, 28, 35, 0.13);
   border: 3px solid transparent;
   border-radius: 999px;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(26, 28, 35, 0.24);
   border: 3px solid transparent;
   background-clip: content-box;
 }
@@ -108,7 +108,7 @@ select {
   top: 0;
   z-index: 20;
   border-bottom: 1px solid var(--border);
-  background: rgba(7, 7, 8, 0.72);
+  background: rgba(246, 245, 242, 0.84);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   backdrop-filter: blur(16px) saturate(1.3);
 }
@@ -142,7 +142,7 @@ main {
 .brand-mark {
   width: 24px;
   height: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(26, 28, 35, 0.24);
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -151,7 +151,7 @@ main {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.02em;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .env-pill {
@@ -159,9 +159,9 @@ main {
   align-items: center;
   gap: 7px;
   padding: 3px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(26, 28, 35, 0.13);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.72);
   text-transform: lowercase;
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -200,8 +200,8 @@ main {
 button,
 .control-select,
 .search-shell {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: #101013;
+  border: 1px solid rgba(26, 28, 35, 0.13);
+  background: #ffffff;
   color: var(--text-1);
   transition:
     border-color 160ms var(--ease-snappy),
@@ -241,7 +241,7 @@ button:active {
 }
 
 button.danger {
-  color: #ffc9d2;
+  color: var(--red);
   border-color: rgba(255, 107, 129, 0.24);
 }
 
@@ -270,7 +270,7 @@ button:disabled {
   align-items: center;
   min-height: 34px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(26, 28, 35, 0.13);
   border-radius: var(--radius-control);
   color: var(--text-2);
   font-size: 12.5px;
@@ -299,8 +299,8 @@ button:disabled {
 }
 
 .primary-button:hover {
-  border-color: rgba(108, 140, 255, 0.6);
-  background: rgba(108, 140, 255, 0.16);
+  border-color: rgba(49, 91, 220, 0.54);
+  background: rgba(49, 91, 220, 0.14);
 }
 
 .control-select {
@@ -321,7 +321,7 @@ button:disabled {
 
 .search-shell:focus-within {
   border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.09);
+  box-shadow: 0 0 0 3px rgba(49, 91, 220, 0.1);
 }
 
 .input-prefix {
@@ -346,17 +346,17 @@ button:disabled {
 @keyframes statusPulse {
   0% {
     transform: scale(0.9);
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.03);
+    box-shadow: 0 0 0 0 rgba(26, 28, 35, 0.08);
     opacity: 0.65;
   }
   55% {
     transform: scale(1);
-    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0);
+    box-shadow: 0 0 0 7px rgba(26, 28, 35, 0);
     opacity: 1;
   }
   100% {
     transform: scale(0.9);
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    box-shadow: 0 0 0 0 rgba(26, 28, 35, 0);
     opacity: 0.65;
   }
 }
@@ -448,7 +448,7 @@ main {
   font-size: 52px;
   letter-spacing: -0.015em;
   line-height: 1;
-  color: #fdfdfc;
+  color: var(--text-1);
 }
 
 .hero-subtitle {
@@ -483,13 +483,13 @@ main {
 
 .vpn-meta a {
   color: var(--text-2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.18);
   transition: color 140ms ease, border-color 140ms ease;
 }
 
 .vpn-meta a:hover {
   color: var(--text-1);
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(26, 28, 35, 0.44);
 }
 
 /* --------------------------------------------------------- section nav */
@@ -503,7 +503,7 @@ main {
   position: sticky;
   top: var(--topbar-h);
   z-index: 15;
-  background: rgba(7, 7, 8, 0.78);
+  background: rgba(246, 245, 242, 0.88);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   backdrop-filter: blur(16px) saturate(1.3);
   padding-top: 10px;
@@ -669,7 +669,7 @@ main {
 }
 
 .overview-segment:hover {
-  background: rgba(255, 255, 255, 0.014);
+  background: rgba(26, 28, 35, 0.035);
 }
 
 .overview-segment:nth-child(2) {
@@ -737,7 +737,7 @@ main {
   margin-top: 20px;
   height: 2px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(26, 28, 35, 0.075);
   overflow: hidden;
 }
 
@@ -815,7 +815,7 @@ main {
 
 .support-card:hover,
 .focus-card:hover {
-  background: rgba(255, 255, 255, 0.012);
+  background: rgba(26, 28, 35, 0.03);
 }
 
 .support-card:last-child,
@@ -844,7 +844,7 @@ main {
   display: grid;
   gap: 2px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(26, 28, 35, 0.075);
 }
 
 .focus-list li:first-child {
@@ -863,10 +863,10 @@ main {
   align-items: baseline;
   gap: 8px;
   padding: 4px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(26, 28, 35, 0.12);
   border-radius: 999px;
   color: var(--text-2);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.72);
   font-size: 12px;
 }
 
@@ -914,7 +914,7 @@ th,
 td {
   text-align: left;
   padding: 13px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(26, 28, 35, 0.075);
   vertical-align: top;
 }
 
@@ -936,7 +936,7 @@ th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgba(9, 9, 11, 0.92);
+  background: rgba(255, 255, 255, 0.92);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   color: var(--text-3);
@@ -953,7 +953,7 @@ thead tr:first-child th {
 }
 
 tr:hover td {
-  background: rgba(255, 255, 255, 0.018);
+  background: rgba(26, 28, 35, 0.035);
 }
 
 .audit-scroll table td:first-child,
@@ -1064,9 +1064,9 @@ tr:hover td {
   align-items: baseline;
   gap: 8px;
   padding: 4px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(26, 28, 35, 0.12);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.76);
   color: var(--text-2);
   font-size: 12px;
   text-transform: lowercase;
@@ -1298,7 +1298,7 @@ tr:hover td {
 /* ------------------------------------------------------------- terminal */
 
 .terminal-shell {
-  background: #0a0a0c;
+  background: #ffffff;
 }
 
 .runtime-markdown {
@@ -1313,7 +1313,7 @@ tr:hover td {
   font-size: 11.5px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(26, 28, 35, 0.085);
 }
 
 .runtime-markdown strong {
@@ -1333,7 +1333,7 @@ tr:hover td {
 .md-heading.level-2 {
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(26, 28, 35, 0.12);
 }
 
 .md-heading.level-3 {
@@ -1359,7 +1359,7 @@ tr:hover td {
 
 .md-table-shell {
   overflow: auto;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(26, 28, 35, 0.085);
   border-radius: var(--radius-control);
 }
 
@@ -1372,14 +1372,14 @@ tr:hover td {
 .md-table th,
 .md-table td {
   padding: 10px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(26, 28, 35, 0.085);
   vertical-align: top;
 }
 
 .md-table th {
   position: sticky;
   top: 0;
-  background: rgba(9, 9, 11, 0.92);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -1425,7 +1425,7 @@ tr:hover td {
 
 .travel-grid .support-card:hover,
 .travel-support-grid .support-card:hover {
-  border-color: rgba(255, 255, 255, 0.13);
+  border-color: rgba(26, 28, 35, 0.2);
   transform: translateY(-2px);
 }
 
@@ -1603,9 +1603,9 @@ tr:hover td {
   min-height: 34px;
   width: 100%;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(26, 28, 35, 0.13);
   border-radius: var(--radius-control);
-  background: #0d0d0f;
+  background: #ffffff;
   color: var(--text-1);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -1615,8 +1615,8 @@ tr:hover td {
 .job-input:focus {
   outline: none;
   border-color: var(--accent-border);
-  background: rgba(108, 140, 255, 0.04);
-  box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.09);
+  background: rgba(49, 91, 220, 0.07);
+  box-shadow: 0 0 0 3px rgba(49, 91, 220, 0.1);
 }
 
 .job-checkbox {
@@ -1627,9 +1627,9 @@ tr:hover td {
   justify-content: flex-start;
   gap: 8px !important;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(26, 28, 35, 0.13);
   border-radius: var(--radius-control);
-  background: #0d0d0f;
+  background: #ffffff;
 }
 
 .job-checkbox input {
@@ -1672,7 +1672,7 @@ tr:hover td {
 }
 
 .secrets-list-panel {
-  border-right: 1px solid rgba(255, 255, 255, 0.055);
+  border-right: 1px solid rgba(26, 28, 35, 0.085);
   padding: 22px 20px 24px;
 }
 
@@ -1694,7 +1694,7 @@ tr:hover td {
   min-height: 40px;
   padding-inline: 0;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.17);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -1703,20 +1703,20 @@ tr:hover td {
 
 .secrets-toolbar .search-shell:focus-within {
   border-color: var(--accent-border);
-  background: rgba(108, 140, 255, 0.04);
+  background: rgba(49, 91, 220, 0.07);
   transform: translateY(-1px);
 }
 
 .secrets-toolbar .search-shell:hover:not(:focus-within) {
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(26, 28, 35, 0.28);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .secrets-toolbar .control-select {
   min-height: 40px;
   padding-inline: 0 24px;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.17);
   border-radius: 0;
   background-color: transparent;
   transition: border-color 200ms var(--ease-snappy), background 200ms var(--ease-snappy), transform 200ms var(--ease-snappy), box-shadow 200ms var(--ease-snappy);
@@ -1725,7 +1725,7 @@ tr:hover td {
 .secrets-toolbar .control-select:hover,
 .secrets-toolbar .control-select:focus {
   border-color: var(--accent-border);
-  background-color: rgba(108, 140, 255, 0.04);
+  background-color: rgba(49, 91, 220, 0.07);
   outline: none;
   transform: translateY(-1px);
 }
@@ -1741,7 +1741,7 @@ tr:hover td {
   gap: 10px;
   margin-top: 14px;
   padding: 10px 0 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.085);
 }
 
 .secret-name-input,
@@ -1750,7 +1750,7 @@ tr:hover td {
   min-height: 36px;
   width: 100%;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.115);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.16);
   border-radius: 0;
   background: transparent;
   color: var(--text-1);
@@ -1764,16 +1764,16 @@ tr:hover td {
 .secret-key-name:focus,
 .secret-key-value:focus {
   outline: none;
-  border-color: rgba(108, 140, 255, 0.66);
-  background: rgba(108, 140, 255, 0.04);
+  border-color: rgba(49, 91, 220, 0.62);
+  background: rgba(49, 91, 220, 0.07);
   transform: translateY(-1px);
 }
 
 .secret-name-input:hover:not(:focus),
 .secret-key-name:hover:not(:focus),
 .secret-key-value:hover:not(:focus) {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(26, 28, 35, 0.24);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .secret-key-value {
@@ -1798,7 +1798,7 @@ tr:hover td {
   display: grid;
   gap: 3px;
   padding: 8px 0 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.075);
   animation: secretRowIn 220ms var(--ease-out) both;
 }
 
@@ -1863,7 +1863,7 @@ tr:hover td {
 }
 
 .secret-list-item:hover {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(26, 28, 35, 0.055);
   transform: translateX(2px);
   box-shadow: none;
 }
@@ -1926,14 +1926,14 @@ tr:hover td {
   gap: 10px;
   align-items: center;
   padding: 10px 0 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  border-bottom: 1px solid rgba(26, 28, 35, 0.075);
   animation: secretRowIn 220ms var(--ease-out) both;
   transition: border-color 200ms var(--ease-snappy), background 200ms var(--ease-snappy), transform 200ms var(--ease-snappy);
 }
 
 .secret-key-row:focus-within {
-  border-color: rgba(108, 140, 255, 0.24);
-  background: rgba(108, 140, 255, 0.02);
+  border-color: rgba(49, 91, 220, 0.24);
+  background: rgba(49, 91, 220, 0.05);
   transform: translateY(-1px);
 }
 
@@ -1969,7 +1969,7 @@ tr:hover td {
 .skeleton-line {
   display: block;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(26, 28, 35, 0.085);
   animation: skeletonPulse 1.6s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1982,7 +1982,7 @@ button.is-loading::after {
   content: "";
   width: 11px;
   height: 11px;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(26, 28, 35, 0.17);
   border-top-color: var(--text-2);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
