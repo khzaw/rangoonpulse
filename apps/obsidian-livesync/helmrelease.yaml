@@ -53,6 +53,43 @@ spec:
               limits:
                 cpu: "375m"
                 memory: "768Mi"
+            lifecycle:
+              postStart:
+                exec:
+                  command:
+                    - sh
+                    - -c
+                    - |
+                      set_couchdb_config() {
+                        section="$1"
+                        key="$2"
+                        value="$3"
+                        curl -fsS -X PUT \
+                          -H "Content-Type: application/json" \
+                          -u "$COUCHDB_USER:$COUCHDB_PASSWORD" \
+                          "http://127.0.0.1:5984/_node/_local/_config/${section}/${key}" \
+                          -d "\"${value}\""
+                      }
+
+                      for i in $(seq 1 30); do
+                        if curl -fsS -u "$COUCHDB_USER:$COUCHDB_PASSWORD" \
+                          http://127.0.0.1:5984/ >/dev/null; then
+                          {
+                            set_couchdb_config chttpd enable_cors true
+                            set_couchdb_config httpd enable_cors true
+                            set_couchdb_config cors credentials true
+                            set_couchdb_config cors origins "app://obsidian.md,capacitor://localhost,http://localhost"
+                            set_couchdb_config cors methods "GET,PUT,POST,HEAD,DELETE"
+                            set_couchdb_config cors headers "accept,authorization,content-type,origin,referer,x-couchdb-requested-with"
+                          } >/tmp/obsidian-livesync-cors.log 2>&1
+                          exit 0
+                        fi
+                        sleep 2
+                      done
+
+                      echo "CouchDB did not become ready before CORS setup timed out" >/tmp/obsidian-livesync-cors.log
+                      exit 0
+
     service:
       main:
         controller: main
@@ -83,33 +120,7 @@ spec:
             hosts:
               - livesync.${BASE_DOMAIN}
 
-    configMaps:
-      config:
-        enabled: true
-        data:
-          livesync.ini: |
-            [chttpd]
-            enable_cors = true
-
-            [httpd]
-            enable_cors = true
-
-            [cors]
-            credentials = true
-            origins = app://obsidian.md,capacitor://localhost,http://localhost
-            methods = GET,PUT,POST,HEAD,DELETE
-            headers = accept,authorization,content-type,origin,referer,x-couchdb-requested-with
-
     persistence:
-      config:
-        enabled: true
-        type: configMap
-        identifier: config
-        globalMounts:
-          - path: /opt/couchdb/etc/local.d/livesync.ini
-            subPath: livesync.ini
-            readOnly: true
-
       data:
         enabled: true
         type: persistentVolumeClaim
