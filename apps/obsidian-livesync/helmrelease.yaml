@@ -83,7 +83,33 @@ spec:
             hosts:
               - livesync.${BASE_DOMAIN}
 
+    configMaps:
+      config:
+        enabled: true
+        data:
+          livesync.ini: |
+            [chttpd]
+            enable_cors = true
+
+            [httpd]
+            enable_cors = true
+
+            [cors]
+            credentials = true
+            origins = app://obsidian.md,capacitor://localhost,http://localhost
+            methods = GET,PUT,POST,HEAD,DELETE
+            headers = accept,authorization,content-type,origin,referer,x-couchdb-requested-with
+
     persistence:
+      config:
+        enabled: true
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /opt/couchdb/etc/local.d/livesync.ini
+            subPath: livesync.ini
+            readOnly: true
+
       data:
         enabled: true
         type: persistentVolumeClaim
