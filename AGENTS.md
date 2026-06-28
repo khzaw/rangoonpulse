@@ -51,3 +51,4 @@ If no skill applies, route through `docs/README.md` and read the smallest focuse
 ## Validation
 - Validate manifests before push using the smallest meaningful check for the change (`kubectl apply --dry-run=client`, `kubectl kustomize`, `flux build`, and task-specific checks).
 - Before commit/push, inspect `git status` and stage only your task's hunks.
+- For debugging, incident, or service-change work, include a concise learning summary in the final response: what failed, what evidence was gathered, which hypotheses were tested, what decision was made, and how it was verified. The detailed expectation lives in `.agents/skills/rangoonpulse-shared-worktree/`.

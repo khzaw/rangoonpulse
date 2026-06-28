@@ -29,6 +29,7 @@ It remains especially relevant when:
 - Commit on the current branch unless the user explicitly asks for a different branch flow.
 - If you are already on `master`, commit and push to `master`.
 - Verification is required. At minimum, prove the commit exists locally, the push succeeded, and the expected task-specific validation passed.
+- For debugging, incident, or service-change work, the final response must teach the operator what happened. Include the failure mode, the evidence gathered, the hypotheses considered, the decisions made, and the verification that proved the fix. Keep it concise, but do not reduce the answer to only "fixed/pushed".
 
 ## Workflow
 
@@ -120,6 +121,18 @@ Interpretation:
 
 Also run the task-specific verification that proves the change actually worked. For GitOps/service work, that usually means reconcile plus live checks from the relevant repo-local skill.
 
+### 7. Explain The Learning
+
+For debugging, incident, or service-change work, close with a short operator-learning summary:
+- issue: the concrete failure boundary and symptom
+- investigation: the commands or live checks that exposed the boundary
+- hypotheses: what you suspected, what confirmed or falsified it, and any hunch that changed
+- decision: why the chosen fix fits this repo's GitOps/Kubernetes model
+- verification: the exact rollout, health, and user-facing checks that passed
+- follow-up: only the remaining risk or cleanup that is actually useful
+
+Use this especially when Kubernetes behavior, Flux post-build substitution, ingress/DNS/TLS, storage, controller reconciliation, image entrypoints, or app runtime config is part of the lesson.
+
 ## Done Criteria
 
 The task is not done until all of these are true:
@@ -127,4 +140,5 @@ The task is not done until all of these are true:
 - the commit contains only your work
 - the push completed successfully
 - post-push verification passed
+- debugging or service-change work includes an operator-learning summary
 - unrelated concurrent edits, if any, were left untouched
