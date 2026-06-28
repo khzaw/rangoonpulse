@@ -67,8 +67,8 @@ spec:
                         curl -fsS -X PUT \
                           -H "Content-Type: application/json" \
                           -u "$COUCHDB_USER:$COUCHDB_PASSWORD" \
-                          "http://127.0.0.1:5984/_node/_local/_config/${section}/${key}" \
-                          -d "\"${value}\""
+                          "http://127.0.0.1:5984/_node/_local/_config/$${section}/$${key}" \
+                          -d "\"$${value}\""
                       }
 
                       for i in $(seq 1 30); do
