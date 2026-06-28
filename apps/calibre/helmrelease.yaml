@@ -50,10 +50,10 @@ spec:
             resources:
               requests:
                 cpu: "47m"
-                memory: "1250Mi"
+                memory: "1562Mi"
               limits:
                 cpu: "316m"
-                memory: "2189Mi"
+                memory: "2373Mi"
     service:
       main:
         ports:
