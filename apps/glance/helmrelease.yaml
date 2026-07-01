@@ -297,6 +297,9 @@ spec:
                               - title: Grafana
                                 url: https://grafana.${BASE_DOMAIN}
                                 icon: di:grafana
+                              - title: Flux UI
+                                url: https://fluxui.${BASE_DOMAIN}
+                                icon: di:flux
                               - title: Tracerr
                                 url: https://tracerr.${BASE_DOMAIN}
                                 icon: mdi:graph-box
@@ -602,6 +605,7 @@ spec:
                           - dani-garcia/vaultwarden
                           - louislam/uptime-kuma
                           - glanceapp/glance
+                          - controlplaneio-fluxcd/flux-operator
                           # Arr and download stack
                           - Sonarr/Sonarr
                           - Radarr/Radarr
@@ -770,6 +774,10 @@ spec:
                             url: https://grafana.${BASE_DOMAIN}
                             check-url: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local/api/health
                             icon: di:grafana
+                          - title: Flux UI
+                            url: https://fluxui.${BASE_DOMAIN}
+                            check-url: http://flux-operator.flux-system.svc.cluster.local:9080
+                            icon: di:flux
                           - title: Vaultwarden
                             url: https://passwords.${BASE_DOMAIN}
                             check-url: http://vaultwarden.default.svc.cluster.local

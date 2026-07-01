@@ -79,6 +79,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/node-capacity-dashboard.md`](./node-capacity-dashboard.md) for node fit and capacity views.
 - [`docs/power-estimation-dashboard.md`](./power-estimation-dashboard.md) for estimated node power and cost data.
 - [`docs/metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md) when working with the Metrics API or `kubectl top`.
+- [`docs/flux-web-ui.md`](./flux-web-ui.md) for the Flux Operator web UI at `fluxui.khzaw.dev`.
 - [`docs/kube-state-metrics-oomkills.md`](./kube-state-metrics-oomkills.md) for the known kube-state-metrics sizing issue.
 
 ### Secrets and auth

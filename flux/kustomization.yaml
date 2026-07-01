@@ -19,6 +19,7 @@ resources:
   - ./repositories/metrics-server.yaml
   - ./repositories/immich-charts.yaml
   - ./repositories/stakater-charts.yaml
+  - ./repositories/controlplaneio-fluxcd.yaml
 
 
   # tell Flux *what* directories in Git to sync
@@ -40,6 +41,7 @@ resources:
   - ./kustomizations/dns-reliability.yaml
   - ./kustomizations/resource-advisor.yaml
   - ./kustomizations/image-automation.yaml
+  - ./kustomizations/flux-operator.yaml
 
   - ./kustomizations/infra-storage-calibre.yaml
   - ./kustomizations/infra-storage-media.yaml

@@ -103,6 +103,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **Glance** | Dashboard & service hub |
 | **Uptime Kuma** | Uptime monitoring |
 | **Grafana** | Metrics & dashboards |
+| **Flux Web UI** | Browser view for GitOps sources, Kustomizations, HelmReleases, and controller status |
 | **Speedtest Tracker** | Network speed testing and historical results |
 | **Resource Advisor** | Automated resource tuning |
 
@@ -141,6 +142,8 @@ Current cluster status: both nodes are functional and schedulable.
 *Transmission can run direct or through a Gluetun sidecar, with the control toggle on `controlpanel.khzaw.dev` and the Gluetun WebUI at `torrent-vpn.khzaw.dev`.*
 
 *`controlpanel.khzaw.dev` is the combined operator cockpit for travel readiness, exposure control, Transmission routing, image updates, managed CronJobs, and the resource-advisor tuning view. The resource-advisor backend remains separate, but its public tuning hostname has been retired.*
+
+*`fluxui.khzaw.dev` exposes the Flux Operator web UI for GitOps status and reconciliation visibility.*
 
 *Flaresolverr currently tracks `alexfozor/flaresolverr:pr-1300` on the Raspberry Pi utility node.*
 
@@ -183,6 +186,7 @@ Current cluster status: both nodes are functional and schedulable.
 │   ├── external-dns/
 │   ├── metallb/
 │   ├── monitoring/
+│   ├── flux-operator/
 │   ├── resource-advisor/
 │   ├── secrets/
 │   ├── storage/
@@ -335,6 +339,7 @@ make deploy-ericaknight
 | [`ops-command-cheatsheet.md`](docs/ops-command-cheatsheet.md) | Full command reference |
 | [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
 | [`gitops-change-timeline-dashboard.md`](docs/gitops-change-timeline-dashboard.md) | Flux activity and reconcile timeline |
+| [`flux-web-ui.md`](docs/flux-web-ui.md) | Flux Operator web UI deployment and checks |
 | [`dns-access-path-dashboard.md`](docs/dns-access-path-dashboard.md) | DNS health and access surface |
 | [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource advisor automation and apply-PR model |
 | [`node-capacity-dashboard.md`](docs/node-capacity-dashboard.md) | Whole-host node CPU/RAM dashboard |
