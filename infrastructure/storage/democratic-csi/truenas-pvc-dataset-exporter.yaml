@@ -1,0 +1,318 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: truenas-pvc-dataset-exporter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: truenas-pvc-dataset-exporter
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: truenas-pvc-dataset-exporter
+subjects:
+  - kind: ServiceAccount
+    name: truenas-pvc-dataset-exporter
+    namespace: democratic-csi
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: truenas-pvc-dataset-exporter
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: truenas-pvc-dataset-exporter-script
+data:
+  exporter.py: |
+    #!/usr/bin/env python3
+    import base64
+    import json
+    import os
+    import ssl
+    import time
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    
+    PORT = int(os.environ.get("PORT", "9118"))
+    TRUENAS_API_BASE = os.environ.get("TRUENAS_API_BASE", "http://10.0.0.210/api/v2.0").rstrip("/")
+    TRUENAS_USERNAME = os.environ["TRUENAS_USERNAME"]
+    TRUENAS_PASSWORD = os.environ["TRUENAS_PASSWORD"]
+    KUBE_API = "https://{}:{}".format(
+        os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc"),
+        os.environ.get("KUBERNETES_SERVICE_PORT_HTTPS", "443"),
+    )
+    TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    
+    
+    def _read_token():
+        with open(TOKEN_PATH, "r", encoding="utf-8") as fh:
+            return fh.read().strip()
+    
+    
+    def _kube_get(path):
+        req = urllib.request.Request(KUBE_API + path)
+        req.add_header("Authorization", "Bearer " + _read_token())
+        ctx = ssl.create_default_context(cafile=CA_PATH)
+        with urllib.request.urlopen(req, timeout=20, context=ctx) as response:
+            return json.load(response)
+    
+    
+    def _truenas_get(path):
+        req = urllib.request.Request(TRUENAS_API_BASE + path)
+        auth = base64.b64encode(f"{TRUENAS_USERNAME}:{TRUENAS_PASSWORD}".encode("utf-8")).decode("ascii")
+        req.add_header("Authorization", "Basic " + auth)
+        with urllib.request.urlopen(req, timeout=20) as response:
+            return json.load(response)
+    
+    
+    def _prop(item, key, default=0):
+        value = item.get(key, default)
+        if isinstance(value, dict):
+            for field in ("parsed", "rawvalue", "value"):
+                if field in value and value[field] not in (None, ""):
+                    value = value[field]
+                    break
+            else:
+                return default
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+    
+    
+    def _label(value):
+        return str(value).replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
+    
+    
+    def _metric(name, labels, value):
+        label_text = ",".join(f'{key}="{_label(val)}"' for key, val in sorted(labels.items()))
+        return f"{name}{{{label_text}}} {value}\n"
+    
+    
+    def _collect():
+        lines = [
+            "# HELP truenas_pvc_dataset_used_bytes TrueNAS ZFS dataset bytes used by dataset for Kubernetes PVC-backed datasets.\n",
+            "# TYPE truenas_pvc_dataset_used_bytes gauge\n",
+            "# HELP truenas_pvc_dataset_available_bytes TrueNAS ZFS dataset available bytes for Kubernetes PVC-backed datasets.\n",
+            "# TYPE truenas_pvc_dataset_available_bytes gauge\n",
+            "# HELP truenas_pvc_dataset_capacity_bytes Effective dataset capacity bytes for Kubernetes PVC-backed datasets.\n",
+            "# TYPE truenas_pvc_dataset_capacity_bytes gauge\n",
+            "# HELP truenas_pvc_dataset_utilization_ratio TrueNAS ZFS dataset utilization ratio for Kubernetes PVC-backed datasets.\n",
+            "# TYPE truenas_pvc_dataset_utilization_ratio gauge\n",
+            "# HELP truenas_pvc_dataset_scrape_success TrueNAS dataset scrape success by PVC-backed dataset.\n",
+            "# TYPE truenas_pvc_dataset_scrape_success gauge\n",
+            "# HELP truenas_pvc_dataset_last_scrape_timestamp_seconds Last successful TrueNAS dataset scrape timestamp.\n",
+            "# TYPE truenas_pvc_dataset_last_scrape_timestamp_seconds gauge\n",
+        ]
+        now = int(time.time())
+        pvs = _kube_get("/api/v1/persistentvolumes").get("items", [])
+        datasets = {item.get("name"): item for item in _truenas_get("/pool/dataset")}
+        for pv in pvs:
+            spec = pv.get("spec", {})
+            csi = spec.get("csi") or {}
+            attrs = csi.get("volumeAttributes") or {}
+            share = attrs.get("share", "")
+            claim = spec.get("claimRef") or {}
+            namespace = claim.get("namespace")
+            pvc = claim.get("name")
+            if not namespace or not pvc or not share.startswith("/mnt/"):
+                continue
+            driver = csi.get("driver", "")
+            if not driver.startswith("org.democratic-csi"):
+                continue
+            dataset = share.removeprefix("/mnt/")
+            labels = {
+                "namespace": namespace,
+                "persistentvolumeclaim": pvc,
+                "persistentvolume": pv.get("metadata", {}).get("name", ""),
+                "storageclass": spec.get("storageClassName", ""),
+                "dataset": dataset,
+                "pool": dataset.split("/", 1)[0],
+            }
+            try:
+                item = datasets[dataset]
+                used = _prop(item, "usedbydataset")
+                available = _prop(item, "available")
+                refquota = _prop(item, "refquota")
+                quota = _prop(item, "quota")
+                capacity = refquota or quota or used + available
+                utilization = used / capacity if capacity > 0 else 0
+                lines.append(_metric("truenas_pvc_dataset_used_bytes", labels, used))
+                lines.append(_metric("truenas_pvc_dataset_available_bytes", labels, available))
+                lines.append(_metric("truenas_pvc_dataset_capacity_bytes", labels, capacity))
+                lines.append(_metric("truenas_pvc_dataset_utilization_ratio", labels, utilization))
+                lines.append(_metric("truenas_pvc_dataset_scrape_success", labels, 1))
+                lines.append(_metric("truenas_pvc_dataset_last_scrape_timestamp_seconds", labels, now))
+            except Exception as exc:  # Keep one broken dataset from hiding the rest.
+                error_labels = dict(labels)
+                error_labels["error"] = exc.__class__.__name__
+                lines.append(_metric("truenas_pvc_dataset_scrape_success", error_labels, 0))
+        return "".join(lines).encode("utf-8")
+
+    
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/healthz":
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"ok\n")
+                return
+            if self.path.split("?", 1)[0] != "/metrics":
+                self.send_response(404)
+                self.end_headers()
+                return
+            try:
+                body = _collect()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            except Exception as exc:
+                body = f"collector error: {exc.__class__.__name__}\n".encode("utf-8")
+                self.send_response(500)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+    
+        def log_message(self, fmt, *args):
+            print("{} - {}".format(self.address_string(), fmt % args), flush=True)
+    
+    
+    if __name__ == "__main__":
+        server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+        print(f"serving TrueNAS PVC dataset metrics on :{PORT}", flush=True)
+        server.serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: truenas-pvc-dataset-exporter
+  labels:
+    app.kubernetes.io/name: truenas-pvc-dataset-exporter
+    app.kubernetes.io/part-of: democratic-csi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: truenas-pvc-dataset-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: truenas-pvc-dataset-exporter
+        app.kubernetes.io/part-of: democratic-csi
+    spec:
+      serviceAccountName: truenas-pvc-dataset-exporter
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: exporter
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/opt/truenas-pvc-dataset-exporter/exporter.py"]
+          env:
+            - name: PORT
+              value: "9118"
+            - name: TRUENAS_API_BASE
+              value: http://${NAS_IP}/api/v2.0
+            - name: TRUENAS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: truenas-credentials
+                  key: username
+            - name: TRUENAS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: truenas-credentials
+                  key: password
+          ports:
+            - name: http
+              containerPort: 9118
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 30
+            timeoutSeconds: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: false
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: exporter-script
+              mountPath: /opt/truenas-pvc-dataset-exporter
+              readOnly: true
+      volumes:
+        - name: exporter-script
+          configMap:
+            name: truenas-pvc-dataset-exporter-script
+            defaultMode: 0555
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: truenas-pvc-dataset-exporter
+  labels:
+    app.kubernetes.io/name: truenas-pvc-dataset-exporter
+    app.kubernetes.io/part-of: democratic-csi
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: truenas-pvc-dataset-exporter
+  ports:
+    - name: http
+      port: 9118
+      targetPort: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: truenas-pvc-dataset-exporter
+  labels:
+    app.kubernetes.io/name: truenas-pvc-dataset-exporter
+    app.kubernetes.io/part-of: democratic-csi
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: truenas-pvc-dataset-exporter
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 120s
+      scrapeTimeout: 30s

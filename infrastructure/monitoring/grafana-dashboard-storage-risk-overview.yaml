@@ -15,9 +15,14 @@ data:
       "title": "Storage Risk Overview",
       "timezone": "browser",
       "schemaVersion": 41,
-      "version": 1,
+      "version": 2,
       "refresh": "1m",
-      "tags": ["storage", "pvc", "risk", "homelab"],
+      "tags": [
+        "storage",
+        "pvc",
+        "risk",
+        "homelab"
+      ],
       "time": {
         "from": "now-7d",
         "to": "now"
@@ -58,7 +63,7 @@ data:
               "uid": "$datasource"
             },
             "query": {
-              "query": "label_values(homelab:pvc_used_bytes, namespace)",
+              "query": "label_values({__name__=~\"homelab:pvc_used_bytes|truenas_pvc_dataset_used_bytes\"}, namespace)",
               "refId": "NamespaceVariableQuery"
             },
             "multi": true,
@@ -79,7 +84,7 @@ data:
               "uid": "$datasource"
             },
             "query": {
-              "query": "label_values(homelab:pvc_used_bytes, storageclass)",
+              "query": "label_values({__name__=~\"homelab:pvc_used_bytes|truenas_pvc_dataset_used_bytes\"}, storageclass)",
               "refId": "StorageClassVariableQuery"
             },
             "multi": true,
@@ -140,7 +145,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -175,7 +182,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -210,7 +219,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -245,7 +256,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -280,7 +293,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -315,7 +330,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -350,7 +367,9 @@ data:
           },
           "options": {
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             }
           }
@@ -390,7 +409,9 @@ data:
             "orientation": "horizontal",
             "displayMode": "basic",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             },
             "showUnfilled": true
@@ -429,7 +450,9 @@ data:
             "orientation": "horizontal",
             "displayMode": "basic",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             },
             "showUnfilled": true
@@ -497,7 +520,9 @@ data:
             "orientation": "horizontal",
             "displayMode": "basic",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             },
             "showUnfilled": true
@@ -538,7 +563,9 @@ data:
             "orientation": "horizontal",
             "displayMode": "basic",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             },
             "showUnfilled": true
@@ -579,10 +606,330 @@ data:
             "orientation": "horizontal",
             "displayMode": "basic",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "values": false
             },
             "showUnfilled": true
+          }
+        },
+        {
+          "id": 15,
+          "type": "text",
+          "title": "NAS-backed dataset truth",
+          "gridPos": {
+            "h": 3,
+            "w": 24,
+            "x": 0,
+            "y": 33
+          },
+          "options": {
+            "mode": "markdown",
+            "content": "TrueNAS-backed PVC panels below use the TrueNAS API via `truenas-pvc-dataset-exporter`, so large NAS media datasets still show up even when kubelet/CSI volume stats time out. The missing-stats panel is the Kubernetes telemetry smoke alarm."
+          }
+        },
+        {
+          "id": 16,
+          "type": "stat",
+          "title": "NAS Dataset Used",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 36
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(truenas_pvc_dataset_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 17,
+          "type": "stat",
+          "title": "NAS Dataset Capacity",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 4,
+            "y": 36
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(truenas_pvc_dataset_capacity_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 18,
+          "type": "stat",
+          "title": "NAS Datasets Above 80%",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 8,
+            "y": 36
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(truenas_pvc_dataset_utilization_ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\"} > 0.8)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 19,
+          "type": "stat",
+          "title": "NAS PVCs Missing Kubelet Stats",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 12,
+            "y": 36
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(((max by(namespace, persistentvolumeclaim)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\"}) * on(namespace, persistentvolumeclaim) group_left(storageclass) max by(namespace, persistentvolumeclaim, storageclass)(kube_persistentvolumeclaim_info{namespace=~\"$namespace\",storageclass=~\"truenas-.*\"})) unless on(namespace, persistentvolumeclaim) max by(namespace, persistentvolumeclaim)(kubelet_volume_stats_used_bytes{namespace=~\"$namespace\"})))",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 20,
+          "type": "stat",
+          "title": "TrueNAS Exporter Scrape Failures",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 6,
+            "x": 18,
+            "y": 36
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(truenas_pvc_dataset_scrape_success{namespace=~\"$namespace\",storageclass=~\"$storageclass\"} == 0)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 21,
+          "type": "bargauge",
+          "title": "NAS Dataset Utilization (TrueNAS API)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 41
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(12, truenas_pvc_dataset_utilization_ratio{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}} ({{storageclass}})",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 22,
+          "type": "bargauge",
+          "title": "NAS Dataset Used Bytes (TrueNAS API)",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 41
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(12, truenas_pvc_dataset_used_bytes{namespace=~\"$namespace\",storageclass=~\"$storageclass\"})",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            }
+          },
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "basic",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "showUnfilled": true
+          }
+        },
+        {
+          "id": 23,
+          "type": "table",
+          "title": "NAS PVCs Missing Kubelet Volume Stats",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 49
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((max by(namespace, persistentvolumeclaim)(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=~\"$namespace\"}) * on(namespace, persistentvolumeclaim) group_left(storageclass) max by(namespace, persistentvolumeclaim, storageclass)(kube_persistentvolumeclaim_info{namespace=~\"$namespace\",storageclass=~\"truenas-.*\"})) unless on(namespace, persistentvolumeclaim) max by(namespace, persistentvolumeclaim)(kubelet_volume_stats_used_bytes{namespace=~\"$namespace\"}))",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{namespace}}/{{persistentvolumeclaim}} ({{storageclass}})",
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            }
+          },
+          "options": {
+            "showHeader": true
           }
         }
       ]

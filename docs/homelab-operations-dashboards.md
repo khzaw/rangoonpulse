@@ -59,6 +59,7 @@ Current shared metrics:
 
 - These dashboards are built from kubelet, kube-state-metrics, Flux controllers, exposure-control, Prometheus, Grafana, resource-advisor, and node-exporter.
 - `TrueNAS Host Overview` additionally depends on the NAS Netdata endpoint at `${NAS_IP}:6999`, scraped by `ServiceMonitor/monitoring/truenas-netdata`.
+- `Storage Risk Overview` uses `truenas-pvc-dataset-exporter` for TrueNAS-backed PVC dataset usage, so NAS media datasets remain visible even when kubelet/CSI volume stats are missing.
 - `nodeExporter` is enabled primarily to surface host hardware signals such as the utility node Raspberry Pi low-voltage alarm on the power dashboard.
 - The `monitoring` namespace now carries privileged PodSecurity labels because node-exporter requires host mounts and host networking.
 - Host-disk latency and broader hardware tuning are still mostly out of scope for these dashboards unless a panel explicitly uses those series.
