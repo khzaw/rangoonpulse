@@ -116,6 +116,8 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}uptime.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: ${SHARE_HOST_PREFIX}fluxui.${BASE_DOMAIN}
+                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}sonarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}radarr.${BASE_DOMAIN}

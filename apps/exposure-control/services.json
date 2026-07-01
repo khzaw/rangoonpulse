@@ -48,6 +48,13 @@
     "description": "Uptime-kuma"
   },
   {
+    "id": "fluxui",
+    "name": "Flux UI",
+    "target": "http://flux-operator.flux-system.svc.cluster.local:9080",
+    "description": "Flux Operator web UI",
+    "authMode": "cloudflare-access"
+  },
+  {
     "id": "sonarr",
     "name": "Sonarr",
     "target": "http://sonarr.default.svc.cluster.local:8989",

@@ -14,12 +14,15 @@
 ## Access Path
 
 - Hostname: `https://fluxui.khzaw.dev`
+- Exposure-control share host: `https://share-fluxui.khzaw.dev` when enabled from `controlpanel.khzaw.dev`
 - Ingress class: `nginx`
 - DNS publisher: `external-dns`
 - TLS issuer: `letsencrypt-prod`
 - In-cluster service: `http://flux-operator.flux-system.svc.cluster.local:9080`
 
 This follows the normal private `*.khzaw.dev` model: public DNS points at the private ingress VIP, so access is intended for LAN or Tailscale clients, not arbitrary public internet.
+
+Temporary public access is available through exposure-control. The share route stays disabled by default and, when enabled, proxies through `exposure-control` with Cloudflare Access as the configured auth mode.
 
 ## Versioning
 
@@ -46,6 +49,7 @@ kubectl get certificate fluxui-tls -n flux-system
 
 dig @1.1.1.1 +short fluxui.khzaw.dev
 curl -Ik --max-time 20 https://fluxui.khzaw.dev
+curl -I --max-time 20 https://share-fluxui.khzaw.dev
 ```
 
 If DNS is stale but ingress is ready, separate DNS propagation from app health:
