@@ -5,7 +5,7 @@ metadata:
   name: actualbudget
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/actualbudget # Path to the app's Kustomization
   prune: true
   sourceRef:

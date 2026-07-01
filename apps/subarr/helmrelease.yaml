@@ -6,7 +6,7 @@ metadata:
   name: subarr
   namespace: default
 spec:
-  interval: 1h
+  interval: 6h
   timeout: 10m
   chart:
     spec:

@@ -6,7 +6,7 @@ metadata:
   name: anki-server
   namespace: default
 spec:
-  interval: 1h
+  interval: 6h
   chart:
     spec:
       chart: app-template

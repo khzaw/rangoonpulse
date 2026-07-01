@@ -6,7 +6,7 @@ metadata:
   name: autobrr
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/autobrr
   prune: true
   sourceRef:

@@ -6,7 +6,7 @@ metadata:
   name: subarr
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/subarr
   prune: true
   sourceRef:

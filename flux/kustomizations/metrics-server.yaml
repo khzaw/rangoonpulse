@@ -6,7 +6,7 @@ metadata:
   name: metrics-server
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./infrastructure/metrics-server
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }

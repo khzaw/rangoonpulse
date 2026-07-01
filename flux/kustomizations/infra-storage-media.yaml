@@ -6,7 +6,7 @@ metadata:
   name: infra-storage-media
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./infrastructure/storage/media
   prune: true
   sourceRef:

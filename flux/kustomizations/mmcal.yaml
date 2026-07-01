@@ -6,7 +6,7 @@ metadata:
   name: mmcal
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/mmcal
   prune: true
   sourceRef:

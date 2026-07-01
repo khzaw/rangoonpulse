@@ -6,7 +6,7 @@ metadata:
   name: reactive-resume
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/reactive-resume
   prune: true
   sourceRef:

@@ -6,7 +6,7 @@ metadata:
   name: anki-server
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/anki-server
   prune: true
   sourceRef:

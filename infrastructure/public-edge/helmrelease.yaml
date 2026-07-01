@@ -6,7 +6,7 @@ metadata:
   name: cloudflared
   namespace: public-edge
 spec:
-  interval: 1h
+  interval: 6h
   timeout: 10m
   chart:
     spec:

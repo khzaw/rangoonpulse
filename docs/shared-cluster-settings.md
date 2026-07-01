@@ -54,6 +54,18 @@ Examples:
 - `${PRIMARY_NODE_NAME}`
 - `${INGRESS_VIP}`
 
+## Reconciliation Cadence
+
+The root `GitRepository/flux-system` stays on a short poll interval so pushed Git changes are detected promptly.
+Ordinary child `Kustomization` objects and `HelmRelease` objects use a `6h` periodic interval by default.
+
+The longer default reduces background controller churn on a small cluster while still allowing explicit reconciles:
+
+```bash
+flux reconcile kustomization <name> -n flux-system --with-source
+flux reconcile helmrelease <name> -n <namespace>
+```
+
 ## Important Escaping Rule
 
 Some app configs intentionally need literal `${...}` at runtime:

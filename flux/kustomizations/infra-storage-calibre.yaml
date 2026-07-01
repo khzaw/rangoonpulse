@@ -5,7 +5,7 @@ metadata:
   name: infra-storage-calibre # Kustomization name for dependency graph
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./infrastructure/storage/calibre # Path to PVC definition Kustomization
   prune: true
   sourceRef:

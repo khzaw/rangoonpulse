@@ -6,7 +6,7 @@ metadata:
   name: audiobookshelf
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/audiobookshelf
   prune: true
   sourceRef:

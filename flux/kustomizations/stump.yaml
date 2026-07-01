@@ -6,7 +6,7 @@ metadata:
   name: stump
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/stump
   prune: true
   sourceRef:

@@ -6,7 +6,7 @@ metadata:
   name: tailscale-operator
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./infrastructure/tailscale-operator
   prune: true
   sourceRef: { kind: GitRepository, name: flux-system }

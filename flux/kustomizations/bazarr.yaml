@@ -6,7 +6,7 @@ metadata:
   name: bazarr
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/bazarr
   prune: true
   sourceRef:

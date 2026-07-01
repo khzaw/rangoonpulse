@@ -6,7 +6,7 @@ metadata:
   name: jackett
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./apps/jackett
   prune: true
   sourceRef:

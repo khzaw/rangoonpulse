@@ -7,7 +7,7 @@ metadata:
   namespace: default
 
 spec:
-  interval: 1h
+  interval: 6h
   chart:
     spec:
       chart: actualbudget
@@ -16,7 +16,7 @@ spec:
         kind: HelmRepository
         name: community-charts
         namespace: flux-system
-      interval: 1h
+      interval: 6h
   install: { remediation: { retries: 3 } }
   upgrade:
     remediation:

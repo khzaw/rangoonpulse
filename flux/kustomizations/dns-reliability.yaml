@@ -6,7 +6,7 @@ metadata:
   name: dns-reliability
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 6h
   path: ./infrastructure/dns-reliability
   prune: true
   sourceRef:
