@@ -202,10 +202,16 @@ spec:
       enabled: true
 
     prometheus-node-exporter:
+      livenessProbe:
+        failureThreshold: 6
+        timeoutSeconds: 5
+      readinessProbe:
+        failureThreshold: 6
+        timeoutSeconds: 5
       resources:
         requests:
-          cpu: 10m
-          memory: 32Mi
+          cpu: 20m
+          memory: 48Mi
         limits:
-          cpu: 50m
-          memory: 64Mi
+          cpu: 150m
+          memory: 128Mi

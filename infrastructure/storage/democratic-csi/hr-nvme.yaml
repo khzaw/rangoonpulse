@@ -82,17 +82,17 @@ spec:
         resources:
           requests:
             cpu: 50m
-            memory: 128Mi
+            memory: 256Mi
           limits:
             cpu: 500m
-            memory: 512Mi
+            memory: 1Gi
       driverRegistrar:
         resources:
           requests:
-            cpu: 10m
-            memory: 32Mi
+            cpu: 20m
+            memory: 48Mi
           limits:
-            cpu: 100m
+            cpu: 200m
             memory: 128Mi
 
     csiProxy:

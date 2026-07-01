@@ -24,6 +24,12 @@ spec:
   values:
     frr-k8s:
       frrk8s:
+        livenessProbe:
+          failureThreshold: 12
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 6
+          timeoutSeconds: 5
         resources:
           requests:
             cpu: 20m
@@ -50,11 +56,11 @@ spec:
         frrMetrics:
           resources:
             requests:
-              cpu: 10m
-              memory: 32Mi
+              cpu: 25m
+              memory: 64Mi
             limits:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 200m
+              memory: 256Mi
         frrStatus:
           resources:
             requests:
