@@ -60,3 +60,15 @@ patches:
       kind: ConfigMap
       name: ingress-nginx-controller
       namespace: ingress-nginx
+
+  # Patch 5: Keep ingress-nginx burstable, but bound runaway CPU/memory use.
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/resources/limits
+        value:
+          cpu: 500m
+          memory: 512Mi
+    target:
+      kind: Deployment
+      name: ingress-nginx-controller
+      namespace: ingress-nginx

@@ -22,6 +22,22 @@ spec:
     remediation:
       retries: 3
   values:
+    controller:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+    speaker:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
     frr-k8s:
       frrk8s:
         livenessProbe:

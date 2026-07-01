@@ -25,3 +25,11 @@ spec:
       isArgoRollouts: false
       watchGlobally: true
       reloadStrategy: default
+      deployment:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi

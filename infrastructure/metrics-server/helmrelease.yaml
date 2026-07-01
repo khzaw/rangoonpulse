@@ -28,3 +28,10 @@ spec:
       - --kubelet-insecure-tls
     nodeSelector:
       kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 200m
+        memory: 300Mi
