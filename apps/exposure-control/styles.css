@@ -56,6 +56,7 @@
   --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-snappy: cubic-bezier(0.3, 0.9, 0.4, 1);
+  --ease-spring: cubic-bezier(0.3, 1.28, 0.32, 1);
   --radius-shell: 12px;
   --radius-control: 8px;
   --topbar-h: 59px;
@@ -337,36 +338,253 @@ main {
   flex-wrap: wrap;
 }
 
-.theme-switcher {
+.seg-switch {
+  position: relative;
+  isolation: isolate;
   min-height: 34px;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
+  padding: 3px;
   border: 1px solid var(--control-border);
   border-radius: var(--radius-control);
   background: var(--chip-bg);
 }
 
-.theme-switcher button {
+.seg-switch > button {
+  position: relative;
+  z-index: 1;
   min-height: 28px;
-  padding: 0 10px;
-  border-color: transparent;
+  padding: 0 11px;
+  gap: 6px;
+  border: none;
+  border-radius: calc(var(--radius-control) - 3px);
   background: transparent;
   color: var(--text-3);
   font-size: 11.5px;
+  box-shadow: none;
+  transition:
+    color 220ms var(--ease-snappy),
+    background 220ms var(--ease-snappy),
+    opacity 220ms var(--ease-snappy);
 }
 
-.theme-switcher button:hover {
-  border-color: transparent;
-  background: var(--bg-hover);
+.seg-switch > button:hover {
+  background: var(--soft-hover);
+  color: var(--text-1);
+  transform: none;
+  box-shadow: none;
+}
+
+.seg-switch > button:active {
+  transform: none;
+}
+
+.seg-switch > button.active,
+.seg-switch > button.mode-active {
+  background: transparent;
   color: var(--text-1);
 }
 
-.theme-switcher button.active {
-  border-color: var(--accent-border);
+.seg-switch > button.active:disabled,
+.seg-switch > button.mode-active:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.seg-switch > button.is-loading::after {
+  content: none;
+}
+
+.seg-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.72;
+  transition:
+    opacity 220ms var(--ease-snappy),
+    transform 340ms var(--ease-spring);
+}
+
+.seg-switch > button:hover .seg-icon {
+  opacity: 0.9;
+}
+
+.seg-switch > button.active .seg-icon,
+.seg-switch > button.mode-active .seg-icon {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.seg-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: 0;
+  z-index: 0;
+  border-radius: calc(var(--radius-control) - 3px);
   background: var(--accent-soft);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-border),
+    0 2px 9px -4px var(--pulse-shadow);
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, width;
+  transition:
+    transform 420ms var(--ease-spring),
+    width 420ms var(--ease-spring),
+    opacity 240ms var(--ease-snappy),
+    background 300ms var(--ease-snappy),
+    box-shadow 300ms var(--ease-snappy);
+}
+
+.seg-switch.seg-ready .seg-thumb {
+  opacity: 1;
+}
+
+.seg-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+.seg-thumb .seg-glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.seg-switch.is-busy .seg-thumb {
+  animation: segBusyPulse 1.15s var(--ease-snappy) infinite;
+}
+
+@keyframes segBusyPulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ---------------------------------------------------------- vpn toggle */
+
+.vpn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vpn-toggle-label {
+  font-size: 11.5px;
+  color: var(--text-3);
+  cursor: pointer;
+  user-select: none;
+  transition: color 220ms var(--ease-snappy);
+}
+
+.vpn-toggle-label:hover {
+  color: var(--text-2);
+}
+
+.vpn-toggle-label.active {
   color: var(--text-1);
+}
+
+.toggle-switch {
+  position: relative;
+  isolation: isolate;
+  width: 46px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--meter-bg);
+  overflow: hidden;
+  transition:
+    border-color 300ms var(--ease-snappy),
+    background 300ms var(--ease-snappy);
+}
+
+.toggle-switch:hover {
+  border-color: var(--border-strong);
+  background: var(--meter-bg);
+  transform: none;
+  box-shadow: none;
+}
+
+.toggle-switch:active {
+  transform: none;
+}
+
+.toggle-switch.on,
+.toggle-switch.on:hover {
+  border-color: color-mix(in srgb, var(--yellow) 45%, transparent);
+  background: color-mix(in srgb, var(--yellow) 13%, transparent);
+}
+
+.toggle-switch .seg-glow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity 320ms var(--ease-snappy);
+}
+
+.toggle-switch.on .seg-glow {
+  opacity: 1;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  margin-top: -9px;
+  border-radius: 999px;
+  background: var(--text-3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 420ms var(--ease-spring),
+    width 200ms var(--ease-snappy),
+    background 300ms var(--ease-snappy);
+  will-change: transform;
+}
+
+.toggle-switch:not(:disabled):hover .toggle-knob {
+  background: var(--text-2);
+}
+
+.toggle-switch:not(:disabled):active .toggle-knob {
+  width: 22px;
+}
+
+.toggle-switch.on .toggle-knob,
+.toggle-switch.on:not(:disabled):hover .toggle-knob {
+  transform: translateX(20px);
+  background: #fffdf6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.toggle-switch.on:not(:disabled):active .toggle-knob {
+  transform: translateX(16px);
+}
+
+.toggle-switch.is-loading {
+  animation: segBusyPulse 1.15s var(--ease-snappy) infinite;
+}
+
+.toggle-switch.is-loading::after {
+  content: none;
 }
 
 /* ------------------------------------------------------------- controls */
