@@ -6,7 +6,7 @@ metadata:
   name: radarr
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/radarr
   prune: true
   sourceRef:

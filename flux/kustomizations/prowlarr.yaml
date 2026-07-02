@@ -6,7 +6,7 @@ metadata:
   name: prowlarr
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/prowlarr
   prune: true
   sourceRef:

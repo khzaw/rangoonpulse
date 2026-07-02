@@ -6,7 +6,7 @@ metadata:
   name: nodecast-tv
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/nodecast-tv
   prune: true
   sourceRef:

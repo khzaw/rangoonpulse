@@ -6,7 +6,7 @@ metadata:
   name: reloader
   namespace: kube-system
 spec:
-  interval: 6h
+  interval: 24h
   timeout: 10m
   chart:
     spec:

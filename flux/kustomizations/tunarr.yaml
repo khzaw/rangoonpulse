@@ -6,7 +6,7 @@ metadata:
   name: tunarr
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/tunarr
   prune: true
   sourceRef:

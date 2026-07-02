@@ -6,7 +6,7 @@ metadata:
   name: adguard-primary
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/adguard/primary
   prune: true
   wait: true

@@ -6,7 +6,7 @@ metadata:
   name: multica
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/multica/app
   prune: true
   sourceRef:

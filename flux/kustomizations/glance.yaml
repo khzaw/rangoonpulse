@@ -6,7 +6,7 @@ metadata:
   name: glance
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/glance
   prune: true
   sourceRef:

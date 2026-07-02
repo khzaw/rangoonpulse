@@ -6,7 +6,7 @@ metadata:
   name: democratic-csi
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./infrastructure/storage/democratic-csi
   prune: true
   sourceRef:

@@ -6,7 +6,7 @@ metadata:
   name: resource-advisor
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./infrastructure/resource-advisor
   prune: true
   sourceRef:

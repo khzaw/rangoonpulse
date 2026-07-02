@@ -6,7 +6,7 @@ metadata:
   name: tailscale-operator
   namespace: tailscale # Install into the namespace created manually
 spec:
-  interval: 6h
+  interval: 24h
   timeout: 15m
   chart:
     spec:

@@ -6,7 +6,7 @@ metadata:
   name: flux-operator
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./infrastructure/flux-operator
   prune: true
   sourceRef:

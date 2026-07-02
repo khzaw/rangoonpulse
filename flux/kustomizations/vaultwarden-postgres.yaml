@@ -6,7 +6,7 @@ metadata:
   name: vaultwarden-postgres
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/vaultwarden-postgres
   prune: true
   sourceRef:

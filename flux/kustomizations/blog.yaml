@@ -6,7 +6,7 @@ metadata:
   name: blog
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/blog
   prune: true
   sourceRef:

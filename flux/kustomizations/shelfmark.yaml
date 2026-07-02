@@ -6,7 +6,7 @@ metadata:
   name: shelfmark
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/shelfmark
   prune: true
   sourceRef:

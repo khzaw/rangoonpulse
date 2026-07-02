@@ -57,7 +57,8 @@ Examples:
 ## Reconciliation Cadence
 
 The root `GitRepository/flux-system` stays on a short poll interval so pushed Git changes are detected promptly.
-Ordinary child `Kustomization` objects and `HelmRelease` objects use a `6h` periodic interval by default.
+Ordinary child `Kustomization` objects and `HelmRelease` objects use a `24h` periodic interval by default.
+Flux image automation stays on a `6h` interval so unattended image tag discovery still happens within the same day.
 
 The longer default reduces background controller churn on a small cluster while still allowing explicit reconciles:
 

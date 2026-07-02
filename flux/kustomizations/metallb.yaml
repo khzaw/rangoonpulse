@@ -5,7 +5,7 @@ metadata:
   name: metallb # Name of this Flux Kustomization
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./infrastructure/metallb # Points to the component directory
   prune: true
   sourceRef:

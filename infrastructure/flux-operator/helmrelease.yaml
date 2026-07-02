@@ -6,7 +6,7 @@ metadata:
   name: flux-operator
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   timeout: 10m
   chart:
     spec:

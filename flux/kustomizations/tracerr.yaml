@@ -6,7 +6,7 @@ metadata:
   name: tracerr
   namespace: flux-system
 spec:
-  interval: 6h
+  interval: 24h
   path: ./apps/tracerr
   prune: true
   sourceRef:
