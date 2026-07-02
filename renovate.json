@@ -22,7 +22,7 @@
     "apps/ericaknight/**"
   ],
   "prConcurrentLimit": 5,
-  "prHourlyLimit": 2,
+  "prHourlyLimit": 5,
   "flux": {
     "managerFilePatterns": [
       "/(^|/)(apps|core|infrastructure)/.+\\.ya?ml$/",
@@ -136,6 +136,16 @@
       ],
       "additionalBranchPrefix": "adguard-secondary-",
       "commitMessageSuffix": " (adguard secondary)"
+    },
+    {
+      "description": "Prioritize Subarr image updates so the app does not sit behind the general media backlog.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/coaxk/subarr"
+      ],
+      "prPriority": 20
     },
     {
       "description": "Group GitHub Actions patch and minor updates.",

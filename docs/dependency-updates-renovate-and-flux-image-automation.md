@@ -25,7 +25,8 @@ This doc defines the current split between service update automation and static-
   Each chart/image dependency should get its own Renovate branch and PR so a bad rollout can be reverted without backing out unrelated services.
 
 ## Renovate Guardrails
-- PR concurrency limited to avoid large first-run floods
+- PR concurrency and hourly creation are capped at five each to avoid floods while letting the nightly run
+  drain a normal service-update backlog.
 - Dependency dashboard enabled through GitHub Issues
 - Static-site app paths are ignored by Renovate:
   - `/Users/khz/Code/rangoonpulse/apps/blog/helmrelease.yaml`
@@ -58,6 +59,8 @@ This doc defines the current split between service update automation and static-
 - When the control panel detects updates for a tag family, confirm Renovate has a matching versioning rule before expecting
   PRs. Docker tags with suffixes are especially sensitive because Renovate preserves compatibility suffixes by default.
 - For dual AdGuard, keep Renovate updates one instance per PR even when both files track the same upstream tag.
+- Subarr image updates are given higher Renovate priority so user-visible update nags do not sit behind the
+  broader media-service backlog.
 - Do not add a broad `groupName` package rule for the `flux` or `helm-values` managers. That recreates oversized "helm chart patch and minor updates" PRs and hides standalone service PRs.
 
 ## Verification

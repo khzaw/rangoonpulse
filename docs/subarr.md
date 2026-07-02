@@ -3,7 +3,7 @@ title: Subarr
 summary: Deployment notes and breadcrumb surfaces for the Subarr subtitle-management service.
 status: active
 owner: homelab
-last_reviewed: 2026-06-04
+last_reviewed: 2026-07-02
 ---
 
 # Subarr
@@ -19,7 +19,7 @@ Subarr is a subtitle-management service for the media automation stack.
 
 ## Runtime
 
-- Image: `ghcr.io/coaxk/subarr:1.0.2`
+- Image: `ghcr.io/coaxk/subarr:2.3.1`
 - Namespace: `default`
 - Service: `subarr.default.svc.cluster.local:9922`
 - Health endpoint: `/api/health`
@@ -27,7 +27,7 @@ Subarr is a subtitle-management service for the media automation stack.
 
 ## Storage
 
-- `/config`: dedicated `local-path` PVC, `2Gi`
+- `/data`: dedicated `local-path` PVC, `2Gi`; contains `subarr.db` and persisted settings
 - `/media`: existing shared `media` PVC
 
 ## Breadcrumbs To Keep Updated
