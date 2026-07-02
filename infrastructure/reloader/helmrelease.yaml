@@ -28,8 +28,8 @@ spec:
       deployment:
         resources:
           requests:
-            cpu: 10m
-            memory: 64Mi
-          limits:
-            cpu: 100m
+            cpu: 25m
             memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
