@@ -425,9 +425,7 @@ main {
   z-index: 0;
   border-radius: calc(var(--radius-control) - 3px);
   background: var(--accent-soft);
-  box-shadow:
-    inset 0 0 0 1px var(--accent-border),
-    0 2px 9px -4px var(--pulse-shadow);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
@@ -442,23 +440,6 @@ main {
 
 .seg-switch.seg-ready .seg-thumb {
   opacity: 1;
-}
-
-.seg-thumb::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 55%);
-  pointer-events: none;
-}
-
-.seg-thumb .seg-glow {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .seg-switch.is-busy .seg-thumb {
@@ -529,20 +510,6 @@ main {
   background: color-mix(in srgb, var(--yellow) 13%, transparent);
 }
 
-.toggle-switch .seg-glow {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  opacity: 0;
-  transition: opacity 320ms var(--ease-snappy);
-}
-
-.toggle-switch.on .seg-glow {
-  opacity: 1;
-}
-
 .toggle-knob {
   position: absolute;
   top: 50%;
@@ -552,7 +519,6 @@ main {
   margin-top: -9px;
   border-radius: 999px;
   background: var(--text-3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition:
     transform 420ms var(--ease-spring),
     width 200ms var(--ease-snappy),
@@ -571,8 +537,7 @@ main {
 .toggle-switch.on .toggle-knob,
 .toggle-switch.on:not(:disabled):hover .toggle-knob {
   transform: translateX(20px);
-  background: #fffdf6;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  background: var(--yellow);
 }
 
 .toggle-switch.on:not(:disabled):active .toggle-knob {

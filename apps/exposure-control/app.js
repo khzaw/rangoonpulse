@@ -136,260 +136,42 @@
 
       /* ------------------------------------------------ segmented switches */
 
-      const segReduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-      const segSwitches = [];
-      let segGlowRaf = null;
-
-      function segGlowFrame(now) {
-        segGlowRaf = null;
-        let animating = false;
-        segSwitches.forEach((sw) => {
-          if (sw.drawGlow(now)) animating = true;
-        });
-        if (animating) segGlowRaf = requestAnimationFrame(segGlowFrame);
-      }
-
-      function scheduleSegGlow() {
-        if (segGlowRaf == null) segGlowRaf = requestAnimationFrame(segGlowFrame);
-      }
-
-      function parseCssColor(value) {
-        const raw = String(value || '').trim();
-        let m = /^#([0-9a-f]{3})$/i.exec(raw);
-        if (m) return [0, 1, 2].map((i) => parseInt(m[1][i] + m[1][i], 16) / 255);
-        m = /^#([0-9a-f]{6})/i.exec(raw);
-        if (m) {
-          const n = parseInt(m[1], 16);
-          return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
-        }
-        m = /^rgba?\(([^)]+)\)/i.exec(raw);
-        if (m) {
-          const parts = m[1].split(',').map((p) => parseFloat(p));
-          if (parts.length >= 3 && parts.slice(0, 3).every((p) => Number.isFinite(p))) {
-            return [parts[0] / 255, parts[1] / 255, parts[2] / 255];
-          }
-        }
-        return [0.42, 0.55, 1];
-      }
-
-      const SEG_GLOW_FRAG = [
-        'precision mediump float;',
-        'uniform vec2 u_res;',
-        'uniform float u_t;',
-        'uniform vec3 u_c1;',
-        'uniform vec3 u_c2;',
-        'uniform float u_alpha;',
-        'void main() {',
-        '  vec2 uv = gl_FragCoord.xy / u_res;',
-        '  vec2 p = vec2(uv.x * max(u_res.x / u_res.y, 1.0), uv.y);',
-        '  float w1 = sin(p.x * 1.7 + u_t * 0.9 + sin(p.y * 2.4 + u_t * 0.6));',
-        '  float w2 = sin(p.x * 2.6 - u_t * 0.7 + p.y * 1.8 + 1.7);',
-        '  float w3 = sin((p.x * 0.9 + p.y * 1.3) * 1.4 + u_t * 1.15);',
-        '  float n = (w1 * 0.45 + w2 * 0.35 + w3 * 0.2) * 0.5 + 0.5;',
-        '  float streak = exp(-pow((uv.x - (0.5 + 0.38 * sin(u_t * 0.42))) * 2.6, 2.0));',
-        '  float body = clamp(n * 0.85 + streak * 0.4, 0.0, 1.0);',
-        '  float edgeX = smoothstep(0.0, 0.18, uv.x) * smoothstep(1.0, 0.82, uv.x);',
-        '  float edgeY = smoothstep(0.0, 0.24, uv.y) * smoothstep(1.0, 0.55, uv.y);',
-        '  vec3 col = mix(u_c1, u_c2, clamp(n * 1.3 - 0.15, 0.0, 1.0));',
-        '  float a = body * edgeX * edgeY * u_alpha;',
-        '  gl_FragColor = vec4(col * a, a);',
-        '}',
-      ].join('\n');
-
-      function createSegGlow(canvas) {
-        if (!canvas) return null;
-        let gl = null;
-        try {
-          gl = canvas.getContext('webgl', {
-            alpha: true,
-            antialias: false,
-            depth: false,
-            stencil: false,
-            premultipliedAlpha: true,
-            powerPreference: 'low-power',
-          });
-        } catch (err) {
-          gl = null;
-        }
-        if (!gl) return null;
-        function compile(type, source) {
-          const shader = gl.createShader(type);
-          gl.shaderSource(shader, source);
-          gl.compileShader(shader);
-          return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null;
-        }
-        const vs = compile(gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}');
-        const fs = compile(gl.FRAGMENT_SHADER, SEG_GLOW_FRAG);
-        if (!vs || !fs) return null;
-        const program = gl.createProgram();
-        gl.attachShader(program, vs);
-        gl.attachShader(program, fs);
-        gl.linkProgram(program);
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
-        gl.useProgram(program);
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-        const posLoc = gl.getAttribLocation(program, 'p');
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        const uRes = gl.getUniformLocation(program, 'u_res');
-        const uT = gl.getUniformLocation(program, 'u_t');
-        const uC1 = gl.getUniformLocation(program, 'u_c1');
-        const uC2 = gl.getUniformLocation(program, 'u_c2');
-        const uAlpha = gl.getUniformLocation(program, 'u_alpha');
-        let colors = { c1: [0.42, 0.55, 1], c2: [0.8, 0.85, 1], alpha: 0.4 };
-        let lost = false;
-        canvas.addEventListener('webglcontextlost', (event) => {
-          event.preventDefault();
-          lost = true;
-          canvas.style.display = 'none';
-        });
-        return {
-          setColors(c1, c2, alpha) {
-            colors = { c1, c2, alpha };
-          },
-          draw(t) {
-            if (lost) return;
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
-            const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
-            if (canvas.width !== w || canvas.height !== h) {
-              canvas.width = w;
-              canvas.height = h;
-            }
-            gl.viewport(0, 0, w, h);
-            gl.uniform2f(uRes, w, h);
-            gl.uniform1f(uT, t);
-            gl.uniform3f(uC1, colors.c1[0], colors.c1[1], colors.c1[2]);
-            gl.uniform3f(uC2, colors.c2[0], colors.c2[1], colors.c2[2]);
-            gl.uniform1f(uAlpha, colors.alpha);
-            gl.drawArrays(gl.TRIANGLES, 0, 3);
-          },
-        };
-      }
-
       function setupSegSwitch(container) {
         const thumb = container.querySelector('.seg-thumb');
         const buttons = Array.from(container.querySelectorAll('button'));
         if (!thumb || !buttons.length) return;
-        const glow = createSegGlow(thumb.querySelector('canvas.seg-glow'));
-        const sw = {
-          staticPending: true,
-          positioned: false,
-          activeButton() {
-            return buttons.find((b) => b.classList.contains('active') || b.classList.contains('mode-active')) || null;
-          },
-          refreshColors() {
-            if (!glow) return;
-            const styles = getComputedStyle(document.documentElement);
-            const base = parseCssColor(styles.getPropertyValue('--accent'));
-            const soft = base.map((c) => Math.min(1, c * 0.5 + 0.5));
-            const dark = resolvedThemeMode(storedThemeMode()) === 'dark';
-            glow.setColors(base, soft, dark ? 0.5 : 0.3);
-            this.staticPending = true;
-          },
-          sync() {
-            container.classList.toggle('is-busy', buttons.some((b) => b.classList.contains('is-loading')));
-            const active = this.activeButton();
-            if (!active) {
-              container.classList.remove('seg-ready');
-              this.positioned = false;
-              return;
-            }
-            if (!this.positioned) thumb.style.transition = 'none';
-            thumb.style.transform = 'translateX(' + active.offsetLeft + 'px)';
-            thumb.style.width = active.offsetWidth + 'px';
-            if (!this.positioned) {
-              void thumb.offsetWidth;
-              thumb.style.transition = '';
-              this.positioned = true;
-            }
-            container.classList.add('seg-ready');
-            this.refreshColors();
-            scheduleSegGlow();
-          },
-          drawGlow(now) {
-            if (!glow || document.hidden || !container.classList.contains('seg-ready')) return false;
-            if (segReduceMotion && segReduceMotion.matches) {
-              if (this.staticPending) {
-                glow.draw(4.2);
-                this.staticPending = false;
-              }
-              return false;
-            }
-            glow.draw(now * 0.001);
-            return true;
-          },
-        };
-        const classObserver = new MutationObserver(() => sw.sync());
+        let positioned = false;
+        function sync() {
+          container.classList.toggle('is-busy', buttons.some((b) => b.classList.contains('is-loading')));
+          const active = buttons.find((b) => b.classList.contains('active') || b.classList.contains('mode-active')) || null;
+          if (!active) {
+            container.classList.remove('seg-ready');
+            positioned = false;
+            return;
+          }
+          if (!positioned) thumb.style.transition = 'none';
+          thumb.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+          thumb.style.width = active.offsetWidth + 'px';
+          if (!positioned) {
+            void thumb.offsetWidth;
+            thumb.style.transition = '';
+            positioned = true;
+          }
+          container.classList.add('seg-ready');
+        }
+        const classObserver = new MutationObserver(sync);
         buttons.forEach((b) => classObserver.observe(b, { attributes: true, attributeFilter: ['class'] }));
         if (window.ResizeObserver) {
-          const sizeObserver = new ResizeObserver(() => sw.sync());
+          const sizeObserver = new ResizeObserver(sync);
           sizeObserver.observe(container);
           buttons.forEach((b) => sizeObserver.observe(b));
         } else {
-          window.addEventListener('resize', () => sw.sync());
+          window.addEventListener('resize', sync);
         }
-        segSwitches.push(sw);
-        sw.sync();
+        sync();
       }
 
       document.querySelectorAll('.seg-switch').forEach((el) => setupSegSwitch(el));
-      (() => {
-        if (!vpnSwitch) return;
-        const glow = createSegGlow(vpnSwitch.querySelector('canvas.seg-glow'));
-        if (!glow) return;
-        const state = {
-          staticPending: true,
-          refreshColors() {
-            const styles = getComputedStyle(document.documentElement);
-            const base = parseCssColor(styles.getPropertyValue('--yellow'));
-            const soft = base.map((c) => Math.min(1, c * 0.5 + 0.5));
-            const dark = resolvedThemeMode(storedThemeMode()) === 'dark';
-            glow.setColors(base, soft, dark ? 0.55 : 0.35);
-            this.staticPending = true;
-          },
-          drawGlow(now) {
-            if (document.hidden || !vpnSwitch.classList.contains('on')) return false;
-            if (segReduceMotion && segReduceMotion.matches) {
-              if (this.staticPending) {
-                glow.draw(4.2);
-                this.staticPending = false;
-              }
-              return false;
-            }
-            glow.draw(now * 0.001);
-            return true;
-          },
-        };
-        new MutationObserver(() => {
-          state.staticPending = true;
-          scheduleSegGlow();
-        }).observe(vpnSwitch, { attributes: true, attributeFilter: ['class'] });
-        state.refreshColors();
-        segSwitches.push(state);
-      })();
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) scheduleSegGlow();
-      });
-      if (segReduceMotion && segReduceMotion.addEventListener) {
-        segReduceMotion.addEventListener('change', () => {
-          segSwitches.forEach((sw) => {
-            sw.staticPending = true;
-          });
-          scheduleSegGlow();
-        });
-      }
-      new MutationObserver(() => {
-        segSwitches.forEach((sw) => sw.refreshColors());
-        scheduleSegGlow();
-      }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-      if (themeMedia) {
-        themeMedia.addEventListener('change', () => {
-          segSwitches.forEach((sw) => sw.refreshColors());
-          scheduleSegGlow();
-        });
-      }
 
       function setMessage(target, text, isError) {
         target.textContent = text || '';
