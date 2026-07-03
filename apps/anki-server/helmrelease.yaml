@@ -33,7 +33,7 @@ spec:
           main:
             image:
               repository: jeankhawand/anki-sync-server
-              tag: "25.07"
+              tag: "26.05"
             env:
               TZ: "${TIMEZONE}"
               SYNC_USER1:
