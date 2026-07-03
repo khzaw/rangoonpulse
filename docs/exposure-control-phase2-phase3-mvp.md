@@ -87,6 +87,10 @@ Default exposure expiry:
 - No backend logic was merged:
   - `exposure-control` still owns control actions and cockpit rendering.
   - `resource-advisor` still owns tuning logic, report generation, and apply-preflight data.
+10. Cockpit asset delivery:
+- static assets and the rendered cockpit HTML are served brotli/gzip-compressed with ETag revalidation
+- asset URLs carry a content-hash `?v=` and are browser-cached immutable; the HTML re-renders when any asset hash changes
+- CSP allows Google Fonts (`fonts.googleapis.com` styles, `fonts.gstatic.com` font files) and hash-pins the inline theme-bootstrap script; all other sources remain `'self'`
 
 ## Validation Checklist (Passed)
 

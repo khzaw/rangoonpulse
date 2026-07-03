@@ -3,6 +3,7 @@ const https = require("node:https");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const zlib = require("node:zlib");
 const { URL } = require("node:url");
 
 const CONFIGURED_BASE_DOMAIN = String(
@@ -523,21 +524,29 @@ const SECURITY_HEADERS = {
   "x-frame-options": "DENY",
 };
 
-const HTML_CONTENT_SECURITY_POLICY = [
+const HTML_CONTENT_SECURITY_POLICY_BASE = [
   "default-src 'self'",
   "base-uri 'none'",
   "form-action 'self'",
   "frame-ancestors 'none'",
   "img-src 'self' data:",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
   "connect-src 'self'",
-].join("; ");
+];
 
-function securityHeadersFor(contentType) {
+function htmlContentSecurityPolicy(inlineScriptHashes) {
+  const scriptSources = ["'self'", ...(inlineScriptHashes || [])];
+  return HTML_CONTENT_SECURITY_POLICY_BASE.concat(
+    "script-src " + scriptSources.join(" "),
+  ).join("; ");
+}
+
+function securityHeadersFor(contentType, inlineScriptHashes) {
   const headers = { ...SECURITY_HEADERS };
   if (String(contentType || "").toLowerCase().startsWith("text/html")) {
-    headers["content-security-policy"] = HTML_CONTENT_SECURITY_POLICY;
+    headers["content-security-policy"] =
+      htmlContentSecurityPolicy(inlineScriptHashes);
   }
   return headers;
 }
@@ -567,16 +576,6 @@ function sendBody(res, statusCode, body, contentType) {
     "content-type": resolvedContentType,
     "cache-control": "no-store",
     ...securityHeadersFor(resolvedContentType),
-  });
-  res.end(body);
-}
-
-function sendHtml(res, statusCode, body) {
-  const contentType = "text/html; charset=utf-8";
-  res.writeHead(statusCode, {
-    "content-type": contentType,
-    "cache-control": "no-store",
-    ...securityHeadersFor(contentType),
   });
   res.end(body);
 }
@@ -4156,23 +4155,147 @@ const CONTROL_PANEL_ASSETS = new Map([
   }],
 ]);
 
-function readControlPanelAsset(filePath) {
-  return fs.readFileSync(filePath, "utf8");
+const staticAssetCache = new Map();
+
+function compressAssetBody(body) {
+  return {
+    gzip: zlib.gzipSync(body, { level: 9 }),
+    brotli: zlib.brotliCompressSync(body, {
+      params: {
+        [zlib.constants.BROTLI_PARAM_QUALITY]: 11,
+        [zlib.constants.BROTLI_PARAM_SIZE_HINT]: body.length,
+      },
+    }),
+  };
 }
 
-function sendControlPanelAsset(res, asset) {
-  return sendBody(res, 200, readControlPanelAsset(asset.filePath), asset.contentType);
+function loadStaticAsset(filePath) {
+  const stat = fs.statSync(filePath);
+  const cached = staticAssetCache.get(filePath);
+  if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+    return cached;
+  }
+  const body = fs.readFileSync(filePath);
+  const digest = crypto.createHash("sha256").update(body).digest("hex");
+  const entry = {
+    mtimeMs: stat.mtimeMs,
+    size: stat.size,
+    body,
+    version: digest.slice(0, 12),
+    etag: '"' + digest.slice(0, 32) + '"',
+    inlineScriptHashes: collectInlineScriptHashes(body.toString("utf8")),
+    ...compressAssetBody(body),
+  };
+  staticAssetCache.set(filePath, entry);
+  return entry;
 }
 
-function renderCombinedCockpitHtml() {
-  return readControlPanelAsset(CONTROL_PANEL_UI_TEMPLATE)
+function collectInlineScriptHashes(html) {
+  const hashes = [];
+  const scriptPattern = /<script(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = scriptPattern.exec(html)) !== null) {
+    if (!match[1]) continue;
+    hashes.push(
+      "'sha256-" +
+        crypto.createHash("sha256").update(match[1], "utf8").digest("base64") +
+        "'",
+    );
+  }
+  return hashes;
+}
+
+function negotiateEncoding(req) {
+  const accept = String(req.headers["accept-encoding"] || "");
+  if (/\bbr\b/.test(accept)) return "br";
+  if (/\bgzip\b/.test(accept)) return "gzip";
+  return "identity";
+}
+
+function sendCachedAsset(req, res, entry, contentType, cacheControl) {
+  const headers = {
+    "cache-control": cacheControl,
+    etag: entry.etag,
+    vary: "accept-encoding",
+    ...securityHeadersFor(contentType, entry.inlineScriptHashes),
+  };
+  if (req.headers["if-none-match"] === entry.etag) {
+    res.writeHead(304, headers);
+    return res.end();
+  }
+  headers["content-type"] = contentType;
+  const encoding = negotiateEncoding(req);
+  let body = entry.body;
+  if (encoding === "br") {
+    headers["content-encoding"] = "br";
+    body = entry.brotli;
+  } else if (encoding === "gzip") {
+    headers["content-encoding"] = "gzip";
+    body = entry.gzip;
+  }
+  headers["content-length"] = body.length;
+  res.writeHead(200, headers);
+  if (req.method === "HEAD") return res.end();
+  return res.end(body);
+}
+
+function sendControlPanelAsset(req, res, parsed, asset) {
+  const entry = loadStaticAsset(asset.filePath);
+  const version = parsed.searchParams.get("v");
+  const cacheControl =
+    version && version === entry.version
+      ? "public, max-age=31536000, immutable"
+      : "no-cache";
+  return sendCachedAsset(req, res, entry, asset.contentType, cacheControl);
+}
+
+function renderCombinedCockpitHtml(template) {
+  return template
     .replace(/__SHARE_HOST_PREFIX__/g, escapeHtml(SHARE_HOST_PREFIX))
     .replace(/__PUBLIC_DOMAIN__/g, escapeHtml(PUBLIC_DOMAIN))
     .replace(/__DEFAULT_EXPIRY_HOURS__/g, escapeHtml(String(DEFAULT_EXPIRY_HOURS)))
     .replace(
       /__TRANSMISSION_VPN_WEBUI_URL__/g,
       escapeHtml(TRANSMISSION_VPN_WEBUI_URL),
-    );
+    )
+    .replace(/\/assets\/(styles\.css|app\.js)/g, (match) => {
+      const asset = CONTROL_PANEL_ASSETS.get(match);
+      if (!asset) return match;
+      return match + "?v=" + loadStaticAsset(asset.filePath).version;
+    });
+}
+
+let cockpitHtmlCache = null;
+
+function loadCockpitHtml() {
+  const stat = fs.statSync(CONTROL_PANEL_UI_TEMPLATE);
+  const assetVersions = Array.from(
+    CONTROL_PANEL_ASSETS.values(),
+    (asset) => loadStaticAsset(asset.filePath).version,
+  ).join(",");
+  if (
+    cockpitHtmlCache &&
+    cockpitHtmlCache.mtimeMs === stat.mtimeMs &&
+    cockpitHtmlCache.assetVersions === assetVersions
+  ) {
+    return cockpitHtmlCache;
+  }
+  const body = Buffer.from(
+    renderCombinedCockpitHtml(
+      fs.readFileSync(CONTROL_PANEL_UI_TEMPLATE, "utf8"),
+    ),
+    "utf8",
+  );
+  const digest = crypto.createHash("sha256").update(body).digest("hex");
+  cockpitHtmlCache = {
+    mtimeMs: stat.mtimeMs,
+    assetVersions,
+    body,
+    etag: '"' + digest.slice(0, 32) + '"',
+    inlineScriptHashes: collectInlineScriptHashes(body.toString("utf8")),
+    ...compressAssetBody(body),
+  };
+  return cockpitHtmlCache;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -4196,7 +4319,7 @@ const server = http.createServer(async (req, res) => {
 
     if (isControlPanelHost) {
       const asset = CONTROL_PANEL_ASSETS.get(parsed.pathname);
-      if (asset) return sendControlPanelAsset(res, asset);
+      if (asset) return sendControlPanelAsset(req, res, parsed, asset);
     }
 
     if (parsed.pathname.startsWith("/api/")) {
@@ -4231,7 +4354,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (isControlPanelHost && parsed.pathname === "/") {
-      return sendHtml(res, 200, renderCombinedCockpitHtml());
+      return sendCachedAsset(
+        req,
+        res,
+        loadCockpitHtml(),
+        "text/html; charset=utf-8",
+        "no-cache",
+      );
     }
 
     if (isControlPanelHost && parsed.pathname === "/status") {
