@@ -42,7 +42,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/calibre
-              tag: "v9.10.0-ls410"
+              tag: "v9.11.0-ls410"
             env:
               TZ: '${TIMEZONE}'
               PUID: "1000"
