@@ -29,4 +29,5 @@ resources:
   - prometheusrule-exposure-control.yaml
   - prometheusrule-truenas-storage-alerts.yaml
   - prometheusrule-truenas-host-alerts.yaml
+  - prometheusrule-cronjob-deadman.yaml
   - alertmanagerconfig-homelab.yaml

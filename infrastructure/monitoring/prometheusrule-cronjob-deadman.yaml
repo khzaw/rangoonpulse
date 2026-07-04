@@ -1,0 +1,161 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cronjob-deadman
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab-cronjob-deadman.rules
+      interval: 2m
+      rules:
+        - alert: HomelabCronJobStale
+          expr: >
+            (
+              time()
+              - max by (namespace, cronjob) (
+                  kube_cronjob_status_last_successful_time{
+                    namespace="monitoring",
+                    cronjob="resource-advisor-report"
+                  }
+                )
+            ) > 108000
+            unless on (namespace, cronjob)
+              (
+                kube_cronjob_spec_suspend{
+                  namespace="monitoring",
+                  cronjob="resource-advisor-report"
+                } == 1
+              )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob resource-advisor-report has not succeeded within its expected window"
+            description: "The daily resource-advisor-report CronJob in namespace monitoring last succeeded {{ $value | humanizeDuration }} ago, past its 30h staleness threshold. Inspect or re-run it from controlpanel.khzaw.dev (Managed CronJobs view)."
+
+        - alert: HomelabCronJobStale
+          expr: >
+            (
+              time()
+              - max by (namespace, cronjob) (
+                  kube_cronjob_status_last_successful_time{
+                    namespace="monitoring",
+                    cronjob="resource-advisor-apply-pr"
+                  }
+                )
+            ) > 691200
+            unless on (namespace, cronjob)
+              (
+                kube_cronjob_spec_suspend{
+                  namespace="monitoring",
+                  cronjob="resource-advisor-apply-pr"
+                } == 1
+              )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob resource-advisor-apply-pr has not succeeded within its expected window"
+            description: "The weekly resource-advisor-apply-pr CronJob in namespace monitoring last succeeded {{ $value | humanizeDuration }} ago, past its 8d staleness threshold. Inspect or re-run it from controlpanel.khzaw.dev (Managed CronJobs view)."
+
+        - alert: HomelabCronJobStale
+          expr: >
+            (
+              time()
+              - max by (namespace, cronjob) (
+                  kube_cronjob_status_last_successful_time{
+                    namespace="democratic-csi",
+                    cronjob="truenas-management-plane-refresh"
+                  }
+                )
+            ) > 691200
+            unless on (namespace, cronjob)
+              (
+                kube_cronjob_spec_suspend{
+                  namespace="democratic-csi",
+                  cronjob="truenas-management-plane-refresh"
+                } == 1
+              )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob truenas-management-plane-refresh has not succeeded within its expected window"
+            description: "The weekly truenas-management-plane-refresh CronJob in namespace democratic-csi last succeeded {{ $value | humanizeDuration }} ago, past its 8d staleness threshold. Inspect or re-run it from controlpanel.khzaw.dev (Managed CronJobs view)."
+
+        - alert: HomelabCronJobRunFailed
+          expr: >
+            max by (namespace, job_name) (
+              kube_job_status_failed{
+                namespace=~"monitoring|democratic-csi",
+                job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh)-.*"
+              }
+            ) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "A monitored CronJob run failed"
+            description: "Job {{ $labels.job_name }} in namespace {{ $labels.namespace }} has {{ $value }} failed pod(s). This covers scheduled and -manual- runs; the failed Job ages out via TTL (6h) and history limits, so this alert self-resolves and HomelabCronJobStale is the backstop. Inspect or re-run from controlpanel.khzaw.dev (Managed CronJobs view)."
+
+        - alert: HomelabCronJobMissing
+          expr: >
+            absent(
+              kube_cronjob_created{
+                namespace="monitoring",
+                cronjob="resource-advisor-report"
+              }
+            )
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob resource-advisor-report is missing"
+            description: "kube-state-metrics reports no kube_cronjob_created series for resource-advisor-report in namespace monitoring for 1h. The CronJob may have been deleted or renamed without updating monitoring."
+
+        - alert: HomelabCronJobMissing
+          expr: >
+            absent(
+              kube_cronjob_created{
+                namespace="monitoring",
+                cronjob="resource-advisor-apply-pr"
+              }
+            )
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob resource-advisor-apply-pr is missing"
+            description: "kube-state-metrics reports no kube_cronjob_created series for resource-advisor-apply-pr in namespace monitoring for 1h. The CronJob may have been deleted or renamed without updating monitoring."
+
+        - alert: HomelabCronJobMissing
+          expr: >
+            absent(
+              kube_cronjob_created{
+                namespace="democratic-csi",
+                cronjob="truenas-management-plane-refresh"
+              }
+            )
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob truenas-management-plane-refresh is missing"
+            description: "kube-state-metrics reports no kube_cronjob_created series for truenas-management-plane-refresh in namespace democratic-csi for 1h. The CronJob may have been deleted or renamed without updating monitoring."
+
+        - alert: HomelabCronJobSuspendedTooLong
+          expr: >
+            kube_cronjob_spec_suspend{
+              namespace=~"monitoring|democratic-csi",
+              cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh"
+            } == 1
+          for: 7d
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob {{ $labels.cronjob }} has been suspended for over 7 days"
+            description: "CronJob {{ $labels.cronjob }} in namespace {{ $labels.namespace }} has been suspended for more than 7 days. If this was toggled in controlpanel.khzaw.dev (Managed CronJobs view) and forgotten, resume it there."

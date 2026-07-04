@@ -81,6 +81,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md) when working with the Metrics API or `kubectl top`.
 - [`docs/flux-web-ui.md`](./flux-web-ui.md) for the Flux Operator web UI at `fluxui.khzaw.dev`.
 - [`docs/kube-state-metrics-oomkills.md`](./kube-state-metrics-oomkills.md) for the known kube-state-metrics sizing issue.
+- [`docs/cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md) for CronJob dead-man's-switch alerts and staleness/failure routing.
 
 ### Secrets and auth
 

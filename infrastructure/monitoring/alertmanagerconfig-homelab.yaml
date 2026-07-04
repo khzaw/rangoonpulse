@@ -28,6 +28,14 @@ spec:
           - name: alertname
             matchType: "=~"
             value: TrueNAS.*
+      - receiver: critical-multi
+        matchers:
+          - name: severity
+            matchType: "="
+            value: warning
+          - name: alertname
+            matchType: "=~"
+            value: HomelabCronJob.*
       - receiver: "null"
   receivers:
     - name: critical-multi
