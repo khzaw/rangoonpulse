@@ -85,13 +85,13 @@ kubectl get prometheusrule -n monitoring node-power-estimation -o yaml
 kubectl get configmap -n monitoring grafana-dashboard-node-power-estimation -o yaml
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_estimated_power_watts'
+  promtool query instant http://localhost:9090 'homelab:node_estimated_power_watts'
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_rpi_low_voltage_alarm'
+  promtool query instant http://localhost:9090 'homelab:node_rpi_low_voltage_alarm'
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:singapore_household_tariff_sgd_per_kwh'
+  promtool query instant http://localhost:9090 'homelab:singapore_household_tariff_sgd_per_kwh'
 ```
 
 Grafana dashboard title: `Node Power Estimation`.

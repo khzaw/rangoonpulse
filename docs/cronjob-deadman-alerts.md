@@ -151,19 +151,21 @@ kubectl get prometheusrule -n monitoring cronjob-deadman -o yaml
 kubectl get alertmanagerconfig -n monitoring homelab-alerting -o yaml
 
 # Confirm the rule group and alert names loaded into Prometheus.
-kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/rules' | \
+# (/api/v1/rules is not a PromQL query; use a short-lived port-forward + curl.)
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 19090:9090 &
+curl -s 'http://localhost:19090/api/v1/rules' | \
   grep -o 'HomelabCronJob[A-Za-z]*' | sort -u
+kill %1
 
 # Confirm kube-state-metrics is exposing the source series for all three CronJobs.
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=kube_cronjob_status_last_successful_time'
+  promtool query instant http://localhost:9090 'kube_cronjob_status_last_successful_time'
 
 # Seconds since last success per CronJob (should be well under the Stale threshold).
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=time()%20-%20max%20by%20(namespace%2C%20cronjob)(kube_cronjob_status_last_successful_time)'
+  promtool query instant http://localhost:9090 'time() - max by (namespace, cronjob)(kube_cronjob_status_last_successful_time)'
 
 # Confirm the suspend exclusion series exists (should be 0 for active jobs).
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=kube_cronjob_spec_suspend'
+  promtool query instant http://localhost:9090 'kube_cronjob_spec_suspend'
 ```

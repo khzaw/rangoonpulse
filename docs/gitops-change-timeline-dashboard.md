@@ -29,7 +29,7 @@ flux reconcile kustomization monitoring -n flux-system --with-source
 kubectl get configmap -n monitoring grafana-dashboard-gitops-change-timeline -o yaml
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=sum(increase(controller_runtime_reconcile_total{job="monitoring/flux-controllers"}[1h]))'
+  promtool query instant http://localhost:9090 'sum(increase(controller_runtime_reconcile_total{job="monitoring/flux-controllers"}[1h]))'
 ```
 
 Grafana dashboard title: `GitOps Change Timeline`.

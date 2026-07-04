@@ -51,10 +51,10 @@ kubectl get prometheusrule -n monitoring node-capacity-overview -o yaml
 kubectl get configmap -n monitoring grafana-dashboard-node-capacity-overview -o yaml
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_host_cpu_utilization:ratio'
+  promtool query instant http://localhost:9090 'homelab:node_host_cpu_utilization:ratio'
 
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  wget -qO- 'http://localhost:9090/api/v1/query?query=homelab:node_host_memory_utilization:ratio'
+  promtool query instant http://localhost:9090 'homelab:node_host_memory_utilization:ratio'
 ```
 
 Grafana dashboard title: `Node Capacity Overview`.
