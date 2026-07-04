@@ -233,6 +233,24 @@ const MANAGED_JOBS = [
     repoPath: "infrastructure/storage/democratic-csi/truenas-maintenance-cronjob.yaml",
     fluxKustomization: "democratic-csi",
   },
+  {
+    id: "resource-advisor-report",
+    title: "Resource advisor report",
+    namespace: "monitoring",
+    cronJob: "resource-advisor-report",
+    description: "Generates the daily tuning report and publishes the latest resource recommendations for the Tuning view.",
+    repoPath: "infrastructure/resource-advisor/cronjob-report.yaml",
+    fluxKustomization: "resource-advisor",
+  },
+  {
+    id: "resource-advisor-apply-pr",
+    title: "Resource advisor apply PR",
+    namespace: "monitoring",
+    cronJob: "resource-advisor-apply-pr",
+    description: "Runs the weekly safe-apply planner and opens resource tuning PRs for eligible services.",
+    repoPath: "infrastructure/resource-advisor/cronjob-apply-pr.yaml",
+    fluxKustomization: "resource-advisor",
+  },
 ];
 const MANAGED_JOB_BY_ID = new Map(MANAGED_JOBS.map((job) => [job.id, job]));
 const MANAGED_JOB_LOG_TAIL_LINES = clampInt(

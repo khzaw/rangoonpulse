@@ -54,6 +54,8 @@ Apply PR cleanliness:
 
 ## Operator UI Surface
 - Canonical operator cockpit: `https://controlpanel.khzaw.dev` (`Tuning` section)
+- Managed CronJobs surface: `https://controlpanel.khzaw.dev#jobs`
+  - includes `resource-advisor-report` and `resource-advisor-apply-pr` for schedule, suspend state, manual runs, recent run status, and log tails
 - Public backend-native hostname: retired
 - Served by: `monitoring/resource-advisor-exporter`
 - Purpose:
