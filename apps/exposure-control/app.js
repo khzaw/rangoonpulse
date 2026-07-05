@@ -407,14 +407,28 @@
         });
       }
 
-      function versionDiffHtml(currentVersion, latestVersion) {
+      function versionTagHtml(value, className) {
+        const text = value || '—';
+        return '<span class="version-tag ' + className + '" title="' + attrText(text) + '" data-version-tooltip="' + attrText(text) + '">' + escapeHtml(text) + '</span>';
+      }
+
+      function versionDiffHtml(currentVersion, latestVersion, status) {
         const current = currentVersion || '—';
         const latest = latestVersion || '—';
+        const hasUpdate = status === 'update' && current !== latest;
+        const tooltip = hasUpdate ? current + ' → ' + latest : (latest !== '—' ? latest : current);
+        if (!hasUpdate) {
+          return (
+            '<div class="updates-version-diff is-current" title="' + attrText(tooltip) + '" data-version-tooltip="' + attrText(tooltip) + '">' +
+              versionTagHtml(latest !== '—' ? latest : current, 'version-single') +
+            '</div>'
+          );
+        }
         return (
-          '<div class="updates-version-diff">' +
-            '<span class="version-current">' + escapeHtml(current) + '</span>' +
+          '<div class="updates-version-diff is-update" title="' + attrText(tooltip) + '" data-version-tooltip="' + attrText(tooltip) + '">' +
+            versionTagHtml(current, 'version-current') +
             '<span class="version-arrow">→</span>' +
-            '<span class="version-latest">' + escapeHtml(latest) + '</span>' +
+            versionTagHtml(latest, 'version-latest') +
           '</div>'
         );
       }
@@ -1491,7 +1505,7 @@
             }
             tr.innerHTML =
               '<td><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
-              '<td class="updates-version-cell">' + versionDiffHtml(item.currentVersion, item.latestVersion) + '</td>' +
+              '<td class="updates-version-cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
               '<td class="updates-status-cell"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
               '<td class="updates-context-cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text">' + escapeHtml(imageDetail) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';

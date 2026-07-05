@@ -1935,6 +1935,7 @@ tr:hover td {
 }
 
 .updates-version-diff {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
@@ -1945,11 +1946,38 @@ tr:hover td {
   white-space: nowrap;
 }
 
+.version-tag {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.updates-version-diff:hover::after {
+  content: attr(data-version-tooltip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 9px);
+  z-index: 5;
+  max-width: min(360px, 70vw);
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-panel-strong);
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+}
+
 .version-current {
   max-width: 9ch;
-  overflow: hidden;
   color: var(--text-3);
-  text-overflow: ellipsis;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 65%, transparent);
 }
 
 .version-arrow {
@@ -1958,10 +1986,14 @@ tr:hover td {
 
 .version-latest {
   max-width: 10ch;
-  overflow: hidden;
-  color: var(--text-1);
+  color: var(--yellow);
   font-weight: 600;
-  text-overflow: ellipsis;
+}
+
+.version-single {
+  max-width: 16ch;
+  color: var(--text-2);
+  font-weight: 500;
 }
 
 .audit-action {
