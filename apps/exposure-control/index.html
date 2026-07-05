@@ -50,7 +50,7 @@
             </button>
           </div>
           <button id="refreshAllBtn" type="button">Refresh all</button>
-          <button id="emergencyBtn" class="danger" type="button">Disable all exposures</button>
+          <button id="emergencyBtn" class="danger danger-ghost" type="button">Disable all exposures</button>
         </div>
       </div>
     </header>
@@ -190,15 +190,24 @@
             <h2 class="section-heading">image updates</h2>
             <div id="updatesMeta" class="updates-meta">No update check yet.</div>
           </div>
-          <button id="updatesRefreshBtn" type="button">Check Now</button>
+          <div class="updates-toolbar-actions">
+            <label class="search-shell updates-search" for="updatesSearchInput">
+              <span class="input-prefix">filter</span>
+              <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="service or image" />
+            </label>
+            <label class="toggle-filter">
+              <input id="updatesOnlyAvailable" type="checkbox" />
+              <span>updatable only</span>
+            </label>
+            <button id="updatesRefreshBtn" type="button">Check Now</button>
+          </div>
         </div>
         <div class="updates-scroll">
-          <table>
+          <table class="updates-table">
             <thead>
               <tr>
                 <th>service</th>
-                <th>current</th>
-                <th>latest</th>
+                <th>version</th>
                 <th>status</th>
                 <th>image</th>
                 <th>action</th>

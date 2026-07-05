@@ -43,6 +43,8 @@
       const rowsEl = document.getElementById('rows');
       const auditRowsEl = document.getElementById('auditRows');
       const updatesRowsEl = document.getElementById('updatesRows');
+      const updatesSearchInputEl = document.getElementById('updatesSearchInput');
+      const updatesOnlyAvailableEl = document.getElementById('updatesOnlyAvailable');
       const renovateMetaEl = document.getElementById('renovateMeta');
       const renovateLinksEl = document.getElementById('renovateLinks');
       const vpnMetaEl = document.getElementById('vpnMeta');
@@ -89,6 +91,8 @@
       let pendingExpiryRefresh = false;
       let transmissionVpnState = null;
       let tuningFilterAction = 'all';
+      let updatesFilterQuery = '';
+      let updatesOnlyAvailable = false;
       let dashboardState = {
         services: [],
         audit: [],
@@ -332,6 +336,10 @@
           .replace(/'/g, '&#39;');
       }
 
+      function attrText(value) {
+        return escapeHtml(value).replace(/\n/g, '&#10;');
+      }
+
       function normalizeMatchToken(value) {
         return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
       }
@@ -371,6 +379,44 @@
           }
         });
         return bestScore > 0 ? best : null;
+      }
+
+      function updateItemSearchText(item) {
+        return [
+          item && item.name,
+          item && item.id,
+          item && item.namespace,
+          item && item.imageRepo,
+          item && item.image,
+          item && item.currentVersion,
+          item && item.latestVersion,
+          item && item.statusText,
+          item && item.detail,
+          item && item.pod,
+        ].filter(Boolean).join(' ').toLowerCase();
+      }
+
+      function filteredUpdateItems(items) {
+        const query = String(updatesSearchInputEl ? updatesSearchInputEl.value : updatesFilterQuery).trim().toLowerCase();
+        const onlyAvailable = updatesOnlyAvailableEl ? updatesOnlyAvailableEl.checked : updatesOnlyAvailable;
+        return items.filter((item) => {
+          if (!item) return false;
+          if (onlyAvailable && item.status !== 'update') return false;
+          if (query && !updateItemSearchText(item).includes(query)) return false;
+          return true;
+        });
+      }
+
+      function versionDiffHtml(currentVersion, latestVersion) {
+        const current = currentVersion || '—';
+        const latest = latestVersion || '—';
+        return (
+          '<div class="updates-version-diff">' +
+            '<span class="version-current">' + escapeHtml(current) + '</span>' +
+            '<span class="version-arrow">→</span>' +
+            '<span class="version-latest">' + escapeHtml(latest) + '</span>' +
+          '</div>'
+        );
       }
 
       function setBtnLoading(btn, on) {
@@ -1411,17 +1457,25 @@
 
       function renderUpdates(payload) {
         const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        const visibleItems = filteredUpdateItems(items);
         const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
         const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
         updatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="6" class="empty-state">No update rows available.</td>';
+          tr.innerHTML = '<td colspan="5" class="empty-state">No update rows available.</td>';
+          updatesRowsEl.appendChild(tr);
+        } else if (!visibleItems.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="5" class="empty-state">No update rows match the current filter.</td>';
           updatesRowsEl.appendChild(tr);
         } else {
-          items.forEach((item) => {
+          visibleItems.forEach((item) => {
             const tr = document.createElement('tr');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
+            const imageLabel = item.imageRepo || item.image || '—';
+            const imageDetail = [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ');
+            const imageTitle = [imageLabel, imageDetail].filter(Boolean).join('\n');
             const matchingPr = findMatchingRenovatePr(item, 'image');
             let actionHtml = '<span class="updates-action-note">—</span>';
             if (matchingPr) {
@@ -1436,11 +1490,10 @@
               }
             }
             tr.innerHTML =
-              '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
-              '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
-              '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
-              '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td class="updates-context-cell"><div class="updates-version">' + (item.imageRepo || item.image || '—') + '</div><div class="updates-sub">' + [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ') + '</div></td>' +
+              '<td><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
+              '<td class="updates-version-cell">' + versionDiffHtml(item.currentVersion, item.latestVersion) + '</td>' +
+              '<td class="updates-status-cell"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
+              '<td class="updates-context-cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text">' + escapeHtml(imageDetail) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
@@ -1450,7 +1503,8 @@
         const source = payload && payload.source ? payload.source : 'unknown';
         const staleText = payload && payload.stale ? ' · stale cache' : '';
         const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
-        updatesMetaEl.textContent = 'Checked: ' + checkedAt + ' | Next check: ' + nextCheckAt + ' | Source: ' + source + staleText + refreshingText;
+        const filterText = items.length && visibleItems.length !== items.length ? ' | Showing: ' + visibleItems.length + '/' + items.length : '';
+        updatesMetaEl.textContent = 'Checked: ' + checkedAt + ' | Next check: ' + nextCheckAt + ' | Source: ' + source + staleText + refreshingText + filterText;
       }
 
       async function loadUpdates(options) {
@@ -1841,7 +1895,7 @@
           jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
-          updatesRowsEl.innerHTML = skeletonTableRows(6, 4);
+          updatesRowsEl.innerHTML = skeletonTableRows(5, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
           if (activePage === 'jobs') jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
@@ -1966,6 +2020,14 @@
 
       refreshAllBtn.onclick = () => loadDashboard();
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
+      updatesSearchInputEl.addEventListener('input', () => {
+        updatesFilterQuery = updatesSearchInputEl.value || '';
+        renderUpdates(dashboardState.updates || { items: [] });
+      });
+      updatesOnlyAvailableEl.addEventListener('change', () => {
+        updatesOnlyAvailable = updatesOnlyAvailableEl.checked;
+        renderUpdates(dashboardState.updates || { items: [] });
+      });
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
       jobsRefreshBtn.onclick = () => loadJobs({ force: true });
