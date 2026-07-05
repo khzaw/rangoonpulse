@@ -67,11 +67,11 @@ spec:
                 value: "true"
             resources:
               requests:
-                cpu: "75m"
-                memory: "320Mi"
+                cpu: "94m"
+                memory: "400Mi"
               limits:
-                cpu: "450m"
-                memory: "576Mi"
+                cpu: "562m"
+                memory: "615Mi"
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
