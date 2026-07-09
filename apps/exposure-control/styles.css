@@ -1268,6 +1268,24 @@ main {
   padding-top: 20px;
 }
 
+/* Bordered shells that sit directly under a rule bar need breathing room,
+   otherwise the bar's border-bottom collides with the shell's own border. */
+.section-bar + .overview-strip,
+.panel-actions + .table-shell,
+.subsection-bar + .audit-scroll,
+.updates-toolbar + .updates-scroll,
+.toolbar + .table-shell,
+.toolbar + .jobs-list {
+  margin-top: 20px;
+}
+
+/* The toolbar rule already tops the jobs list; a border on the first
+   card would draw a second parallel line right under it. */
+.toolbar + .jobs-list .job-card:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
 /* ---------------------------------------------------------- card shells */
 
 .overview-strip {
