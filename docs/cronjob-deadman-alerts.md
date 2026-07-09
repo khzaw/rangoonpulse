@@ -69,13 +69,15 @@ Single rule. Fires when any tracked Job has `kube_job_status_failed > 0`, `for: 
 max by (namespace, job_name) (
   kube_job_status_failed{
     namespace=~"monitoring|democratic-csi",
-    job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh)-.*"
+    job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh)-[0-9]+"
   }
 ) > 0
 ```
 
-The `-.*` job_name suffix matches both scheduled runs (`<cronjob>-<timestamp>`) and manual
-runs triggered from controlpanel (`<cronjob>-manual-<suffix>`), so both are covered.
+The `-[0-9]+` job_name suffix matches Kubernetes CronJob-created scheduled runs
+(`resource-advisor-report-29725590`) while excluding controlpanel/manual/test Jobs such as
+`<cronjob>-manual-<suffix>`. Manual runs are intentionally not paged; the operational contract
+is that the real scheduled CronJob must run on time.
 
 Failed Job objects age out via `ttlSecondsAfterFinished: 21600` (6h) and the CronJob
 history limits, so this alert self-resolves once the failed Job is reaped. The Stale alert
@@ -130,9 +132,9 @@ warning-severity alerts continue to be null-routed as before.
 
 - Manual runs: jobs triggered from `controlpanel.khzaw.dev` (Managed CronJobs view) are
   named `<cronjob>-manual-<suffix>` with label `cronjob-name: <cronjob>`. HomelabCronJobRunFailed
-  matches the `-.*` job_name suffix, so manual runs that fail are paged alongside scheduled
-  ones. HomelabCronJobStale keys on the CronJob object's `last_successful_time`, so a
-  successful manual run also clears pending staleness.
+  intentionally excludes them and only pages on numeric-suffixed scheduled Jobs. HomelabCronJobStale
+  keys on the CronJob object's `last_successful_time`, so a successful manual run can still clear
+  pending staleness.
 - Suspend: toggling suspend in controlpanel sets `kube_cronjob_spec_suspend=1`, which the
   Stale rule explicitly excludes via `unless`. A suspended job will never page as stale;
   HomelabCronJobSuspendedTooLong is the only signal that catches a forgotten suspend.
