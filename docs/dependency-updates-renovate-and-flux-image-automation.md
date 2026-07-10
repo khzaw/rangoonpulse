@@ -1,16 +1,16 @@
 # Dependency Updates: Renovate and Flux Image Automation
 
 ## Purpose
-This doc defines the current split between service update automation and static-site artifact promotion.
+This doc defines the current split between service dependency updates and direct promotion of self-built artifacts.
 
 ## Current Model
 - Flux remains the in-cluster deploy authority.
 - Renovate runs through GitHub Actions and opens PRs for service dependency updates.
-- Flux image automation remains narrow and writes directly to `master` only for static-site style image flows.
+- Flux image automation remains narrow and writes directly to `master` only for explicitly selected self-built image flows.
 
 ## Why The Split Exists
 - Service dependency maintenance benefits from reviewable PRs, batching, labels, and dashboard visibility.
-- Static-site artifact promotion benefits from direct image-to-Git updates after a publish pipeline completes.
+- Self-built artifact promotion benefits from direct image-to-Git updates after a publish pipeline completes.
 - These are different policies and should not target the same fields.
 
 ## Renovate Scope
@@ -51,10 +51,19 @@ This doc defines the current split between service update automation and static-
   - `mmcal`
   - `rangoon-mapper`
   - `ericaknight`
+  - `interview-prep`
+
+## Scan And Write Cadence
+
+- The shared `ImageUpdateAutomation/flux-system` writer checks for policy changes every `1h`.
+- `ImageRepository/interview-prep` scans GHCR every `1h` while the app is under active development.
+- The static-site image repositories remain at `6h`; an hourly writer does not trigger extra registry scans for them.
+- `Kustomization/image-automation` remains at `6h` because it reconciles the automation definitions, not published image tags.
+- Return Interview Prep and the shared writer to `6h` when the active tweaking period ends.
 
 ## Operating Rule
 - Do not let Renovate and Flux image automation manage the same image tag field.
-- Use Flux image automation only for self-built static-site style artifacts that should promote directly after image publish.
+- Use Flux image automation only for selected self-built artifacts that should promote directly after image publish.
 - Use Renovate for ordinary service image and chart maintenance where PR review is desired.
 - When the control panel detects updates for a tag family, confirm Renovate has a matching versioning rule before expecting
   PRs. Docker tags with suffixes are especially sensitive because Renovate preserves compatibility suffixes by default.

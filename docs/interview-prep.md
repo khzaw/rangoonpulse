@@ -15,6 +15,17 @@ Interview Prep is a single-user coding and system-design practice journal deploy
 - GitOps: `apps/interview-prep/` and `flux/kustomizations/interview-prep.yaml`
 - Image promotion: timestamped commit tags selected by `ImagePolicy/interview-prep`
 
+## Image promotion cadence
+
+Interview Prep is currently on a temporary active-development cadence:
+
+- `ImageRepository/interview-prep` scans GHCR every `1h`.
+- The shared `ImageUpdateAutomation/flux-system` writer checks for policy changes every `1h`.
+- Other image repositories retain their existing `6h` registry scans.
+- `Kustomization/image-automation` remains at `6h`; it reconciles the automation definitions and is not the steady-state image scan/write timer.
+
+When the app settles down, change the Interview Prep repository and shared writer intervals back to `6h` in `infrastructure/image-automation/`.
+
 ## Persistence
 
 The application stores its entire versioned workspace in SQLite at `/data/interview-prep.sqlite`. The `/data` mount is a `1Gi` `local-path` PVC and the controller uses `Recreate`, so only one process can write the database.

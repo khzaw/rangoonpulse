@@ -5,7 +5,8 @@ metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 6h
+  # The Interview Prep repository scans hourly; other repositories retain their own scan cadence.
+  interval: 1h
   sourceRef:
     kind: GitRepository
     name: flux-system
