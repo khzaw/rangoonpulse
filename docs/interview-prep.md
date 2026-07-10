@@ -5,7 +5,7 @@ summary: Deployment, persistence, image updates, and recovery notes for the inte
 
 # Interview Prep
 
-Interview Prep is a single-user coding and system-design practice journal deployed at `https://prep.khzaw.dev`.
+Interview Prep is a single-user coding and system-design practice journal deployed at `https://itvp.khzaw.dev`.
 
 ## Runtime
 

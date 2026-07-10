@@ -87,11 +87,11 @@ spec:
         enabled: true
         className: nginx
         annotations:
-          external-dns.alpha.kubernetes.io/hostname: prep.${BASE_DOMAIN}
+          external-dns.alpha.kubernetes.io/hostname: itvp.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: prep.${BASE_DOMAIN}
+          - host: itvp.${BASE_DOMAIN}
             paths:
               - path: /
                 pathType: Prefix
@@ -101,7 +101,7 @@ spec:
         tls:
           - secretName: interview-prep-tls
             hosts:
-              - prep.${BASE_DOMAIN}
+              - itvp.${BASE_DOMAIN}
 
     persistence:
       data:

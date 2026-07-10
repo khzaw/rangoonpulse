@@ -240,7 +240,7 @@ spec:
                                 url: https://anki.${BASE_DOMAIN}
                                 icon: mdi:cards-outline
                               - title: Interview Prep
-                                url: https://prep.${BASE_DOMAIN}
+                                url: https://itvp.${BASE_DOMAIN}
                                 icon: mdi:head-lightbulb-outline
                               - title: LiveSync
                                 url: https://livesync.${BASE_DOMAIN}
@@ -746,7 +746,7 @@ spec:
                             alt-status-codes:
                               - 404
                           - title: Interview Prep
-                            url: https://prep.${BASE_DOMAIN}
+                            url: https://itvp.${BASE_DOMAIN}
                             check-url: http://interview-prep.default.svc.cluster.local:3000/api/health
                             icon: mdi:head-lightbulb-outline
                           - title: LiveSync
@@ -829,7 +829,7 @@ spec:
                             alt-status-codes:
                               - 404
                           - title: Interview Prep
-                            url: https://prep.${BASE_DOMAIN}
+                            url: https://itvp.${BASE_DOMAIN}
                             check-url: http://interview-prep.default.svc.cluster.local:3000/api/health
                             icon: mdi:head-lightbulb-outline
                           - title: LiveSync
