@@ -10,4 +10,6 @@ resources:
   - rangoon-mapper-image-policy.yaml
   - ericaknight-image-repository.yaml
   - ericaknight-image-policy.yaml
+  - interview-prep-image-repository.yaml
+  - interview-prep-image-policy.yaml
   - image-update-automation.yaml

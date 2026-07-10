@@ -63,6 +63,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/media-postgres.md`](./media-postgres.md) for shared TimescaleDB placement and constraints.
 - [`docs/calibre-storage-migration-to-truenas-nfs.md`](./calibre-storage-migration-to-truenas-nfs.md) for ebook storage patterns.
 - [`docs/uptime-kuma-sqlite-on-nfs-timeouts.md`](./uptime-kuma-sqlite-on-nfs-timeouts.md) for the node-local Uptime Kuma decision.
+- [`docs/interview-prep.md`](./interview-prep.md) for the Interview Prep runtime, SQLite persistence, image automation, and recovery path.
 - [`docs/vaultwarden-db-timeouts-and-postgres-reset.md`](./vaultwarden-db-timeouts-and-postgres-reset.md) for Vaultwarden state and recovery gotchas.
 - [`docs/prometheus-tsdb-local-path-migration.md`](./prometheus-tsdb-local-path-migration.md) for Prometheus persistence expectations.
 - [`docs/storage-sunset-cleanup.md`](./storage-sunset-cleanup.md) for retired storage paths and cleanup.
