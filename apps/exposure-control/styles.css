@@ -1275,8 +1275,14 @@ main {
 .subsection-bar + .audit-scroll,
 .updates-toolbar + .updates-scroll,
 .toolbar + .table-shell,
+.toolbar + .site-deploy-grid,
 .toolbar + .jobs-list {
   margin-top: 20px;
+}
+
+.site-deploy-toolbar {
+  padding-bottom: 8px;
+  border-bottom: none;
 }
 
 /* The toolbar rule already tops the jobs list; a border on the first
@@ -2214,7 +2220,7 @@ tr:hover td {
 
 .travel-grid,
 .site-deploy-grid {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .travel-support-grid {
@@ -2246,7 +2252,8 @@ tr:hover td {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  padding: 15px 16px;
 }
 
 .site-deploy-card-head,
@@ -2259,14 +2266,25 @@ tr:hover td {
 
 .site-deploy-meta {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   color: var(--text-2);
   font-size: 12px;
+}
+
+.site-deploy-tag {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
 }
 
 .site-deploy-meta strong {
   color: var(--text-1);
   font-weight: 500;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-deploy-actions {

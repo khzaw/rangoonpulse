@@ -936,6 +936,18 @@
         return condition.reason || 'unknown';
       }
 
+      function shortHash(value) {
+        const text = String(value || '');
+        if (!text || text === 'n/a') return 'n/a';
+        if (text.length <= 22) return text;
+        return text.slice(0, 13) + '…' + text.slice(-7);
+      }
+
+      function deployTag(label, value) {
+        const full = String(value || 'n/a');
+        return '<span class="site-deploy-tag"><span>' + escapeHtml(label) + '</span><strong title="' + escapeHtml(full) + '">' + escapeHtml(shortHash(full)) + '</strong></span>';
+      }
+
       function renderSiteDeployments(payload) {
         const data = payload || { items: [] };
         const items = Array.isArray(data.items) ? data.items : [];
@@ -963,12 +975,12 @@
           return (
             '<article class="support-card site-deploy-card">' +
               '<div class="site-deploy-card-head">' +
-                '<div><div class="support-card-title">' + escapeHtml(item.title || item.id) + '</div><p class="support-copy">' + escapeHtml(item.description || '') + '</p></div>' +
+                '<div class="support-card-title">' + escapeHtml(item.title || item.id) + '</div>' +
                 '<span class="status-chip ' + (ready ? 'ok' : 'warning') + '">' + (ready ? 'ready' : 'check') + '</span>' +
               '</div>' +
               '<div class="site-deploy-meta">' +
-                '<span>current <strong>' + escapeHtml(current) + '</strong></span>' +
-                '<span>policy <strong>' + escapeHtml(latest) + '</strong></span>' +
+                deployTag('current', current) +
+                deployTag('policy', latest) +
                 '<span>scan ' + escapeHtml(fmtDateTime(item.lastScanTime)) + '</span>' +
                 '<span>kustomization ' + escapeHtml(conditionLabel(item.kustomizationReady)) + '</span>' +
                 '<span>helm ' + escapeHtml(conditionLabel(item.helmReleaseReady)) + '</span>' +
@@ -1004,7 +1016,6 @@
       }
 
       async function runSiteDeployment(siteId, button) {
-        if (!confirm('Deploy ' + siteId + ' now?')) return;
         setBtnLoading(button, true);
         setSiteDeployMsg('Reconciling ' + siteId + ' through Flux image automation...');
         try {
