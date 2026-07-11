@@ -1517,6 +1517,11 @@ function helmReleaseMainImage(helmRelease) {
   return String(image.repository || "") + (image.tag ? ":" + image.tag : "");
 }
 
+function imageFromLatestRef(latestRef) {
+  if (!latestRef || !latestRef.name) return null;
+  return String(latestRef.name) + (latestRef.tag ? ":" + latestRef.tag : "");
+}
+
 function assertSiteDeployment(id) {
   const normalized = String(id || "").trim().toLowerCase();
   const deployment = SITE_DEPLOYMENT_BY_ID.get(normalized);
@@ -1540,7 +1545,7 @@ async function siteDeploymentSnapshot(deployment) {
   const policyStatus = (imagePolicy && imagePolicy.status) || {};
   const repositoryStatus = (imageRepository && imageRepository.status) || {};
   const scan = repositoryStatus.lastScanResult || {};
-  const latestImage = policyStatus.latestImage || null;
+  const latestImage = policyStatus.latestImage || imageFromLatestRef(policyStatus.latestRef);
   const kustomizationReady = conditionSummary(kustomization, "Ready");
   const helmReleaseReady = conditionSummary(helmRelease, "Ready");
   return {
