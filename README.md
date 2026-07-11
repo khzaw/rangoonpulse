@@ -246,18 +246,19 @@ kubectl top pods -A
 talosctl -n 10.0.0.197 dashboard
 ```
 
-### Static Sites (`blog`, `mmcal`, `ericaknight`)
+### Self-built Images (`blog`, `mmcal`, `ericaknight`, `interview-prep`)
 
 ```bash
 # Normal mode:
-# 1) push in source repo (blog/mmcal/ericaknight)
+# 1) push in the source repo
 # 2) image gets published
-# 3) Flux image automation updates this repo on interval (6h)
+# 3) Flux image automation updates this repo on its configured interval
 
 # Fast path (deploy now)
 make deploy-blog
 make deploy-mmcal
 make deploy-ericaknight
+make deploy-itvp
 ```
 
 - `make deploy-*` forces image repository scan, image policy resolution, image update automation, source reconcile, and app kustomization reconcile.

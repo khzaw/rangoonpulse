@@ -26,6 +26,16 @@ Interview Prep is currently on a temporary active-development cadence:
 
 When the app settles down, change the Interview Prep repository and shared writer intervals back to `6h` in `infrastructure/image-automation/`.
 
+## Deploy latest image now
+
+Use the fast path while iterating instead of waiting for the hourly loop:
+
+```bash
+make deploy-itvp
+```
+
+The target reconciles `ImageRepository/interview-prep`, resolves `ImagePolicy/interview-prep`, runs the shared image-update writer, refreshes the Flux Git source, and reconciles `Kustomization/interview-prep`.
+
 ## Persistence
 
 The application stores its entire versioned workspace in SQLite at `/data/interview-prep.sqlite`. The `/data` mount is a `1Gi` `local-path` PVC and the controller uses `Recreate`, so only one process can write the database.
