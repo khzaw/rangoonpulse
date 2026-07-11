@@ -26,18 +26,18 @@ Interview Prep is a single-user coding and system-design practice journal deploy
 Interview Prep is currently on a temporary active-development cadence:
 
 - `ImageRepository/interview-prep` scans GHCR every `1h`.
-- The shared `ImageUpdateAutomation/flux-system` writer checks for policy changes every `1h`.
+- `ImageUpdateAutomation/interview-prep` checks for policy changes every `1h` and writes only `apps/interview-prep`.
 - Other image repositories retain their existing `6h` registry scans.
 - `Kustomization/image-automation` remains at `6h`; it reconciles the automation definitions and is not the steady-state image scan/write timer.
 
-When the app settles down, change the Interview Prep repository and shared writer intervals back to `6h` in `infrastructure/image-automation/`.
+When the app settles down, change the Interview Prep repository and writer intervals back to `6h` in `infrastructure/image-automation/`.
 
 ## Deploy latest image now
 
 Use the control panel fast path while iterating instead of waiting for the hourly loop:
 
 1. Open `https://controlpanel.khzaw.dev/#deploy`.
-2. Press **Deploy now** for `ITVP` after the GHCR image has been published.
+2. Press **Deploy this** for `ITVP` after the GHCR image has been published.
 
 The terminal equivalent remains:
 
@@ -45,7 +45,7 @@ The terminal equivalent remains:
 make deploy-itvp
 ```
 
-The target reconciles `ImageRepository/interview-prep`, resolves `ImagePolicy/interview-prep`, runs the shared image-update writer, refreshes the Flux Git source, and reconciles `Kustomization/interview-prep`.
+The target reconciles `ImageRepository/interview-prep`, resolves `ImagePolicy/interview-prep`, runs `ImageUpdateAutomation/interview-prep`, refreshes the Flux Git source, and reconciles `Kustomization/interview-prep`.
 
 ## Persistence
 

@@ -1285,6 +1285,14 @@ main {
   border-bottom: none;
 }
 
+.site-deploy-toolbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 /* The toolbar rule already tops the jobs list; a border on the first
    card would draw a second parallel line right under it. */
 .toolbar + .jobs-list .job-card:first-child {

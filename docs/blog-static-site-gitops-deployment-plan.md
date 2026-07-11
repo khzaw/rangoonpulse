@@ -182,6 +182,6 @@ Proceed with this two-repo GitOps model:
 
 ## Fast Manual Promotion
 
-`controlpanel.khzaw.dev/#deploy` provides one-click Flux image-automation reconciliation for the self-built static-site targets: `blog`, `mmcal`, `ericaknight`, `itvp`, and `rangoon-mapper`. Use it after the source repository push has finished publishing the new GHCR image and waiting for the normal registry scan/write cadence is inconvenient.
+`controlpanel.khzaw.dev/#deploy` provides one-click Flux image-automation reconciliation for the self-built static-site targets: `blog`, `mmcal`, `ericaknight`, `itvp`, and `rangoon-mapper`. Each site button runs only that site's image automation. The global **Deploy all** button runs the same targeted flow for every static site in sequence. Use it after the source repository push has finished publishing the new GHCR image and waiting for the normal registry scan/write cadence is inconvenient.
 
-The buttons perform the same control-plane sequence as the `make deploy-*` targets: reconcile the `ImageRepository`, resolve the `ImagePolicy`, run the shared `ImageUpdateAutomation/flux-system`, refresh `GitRepository/flux-system`, and reconcile the app `Kustomization`.
+The buttons perform the same control-plane sequence as the `make deploy-*` targets: reconcile the `ImageRepository`, resolve the `ImagePolicy`, run the per-site `ImageUpdateAutomation`, refresh `GitRepository/flux-system`, and reconcile the app `Kustomization`.

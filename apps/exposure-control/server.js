@@ -261,7 +261,7 @@ const SITE_DEPLOYMENTS = [
     url: "https://blog." + PUBLIC_DOMAIN,
     imageRepository: "blog",
     imagePolicy: "blog",
-    imageUpdateAutomation: "flux-system",
+    imageUpdateAutomation: "blog",
     gitRepository: "flux-system",
     kustomization: "blog",
     helmRelease: "blog",
@@ -275,7 +275,7 @@ const SITE_DEPLOYMENTS = [
     url: "https://mmcal." + PUBLIC_DOMAIN,
     imageRepository: "mmcal",
     imagePolicy: "mmcal",
-    imageUpdateAutomation: "flux-system",
+    imageUpdateAutomation: "mmcal",
     gitRepository: "flux-system",
     kustomization: "mmcal",
     helmRelease: "mmcal",
@@ -289,7 +289,7 @@ const SITE_DEPLOYMENTS = [
     url: null,
     imageRepository: "ericaknight",
     imagePolicy: "ericaknight",
-    imageUpdateAutomation: "flux-system",
+    imageUpdateAutomation: "ericaknight",
     gitRepository: "flux-system",
     kustomization: "ericaknight",
     helmRelease: "ericaknight",
@@ -303,7 +303,7 @@ const SITE_DEPLOYMENTS = [
     url: "https://itvp." + PUBLIC_DOMAIN,
     imageRepository: "interview-prep",
     imagePolicy: "interview-prep",
-    imageUpdateAutomation: "flux-system",
+    imageUpdateAutomation: "interview-prep",
     gitRepository: "flux-system",
     kustomization: "interview-prep",
     helmRelease: "interview-prep",
@@ -318,7 +318,7 @@ const SITE_DEPLOYMENTS = [
     url: "https://rangoonmapper." + PUBLIC_DOMAIN,
     imageRepository: "rangoon-mapper",
     imagePolicy: "rangoon-mapper",
-    imageUpdateAutomation: "flux-system",
+    imageUpdateAutomation: "rangoon-mapper",
     gitRepository: "flux-system",
     kustomization: "rangoon-mapper",
     helmRelease: "rangoon-mapper",
@@ -1588,11 +1588,12 @@ async function listSiteDeploymentsSnapshot() {
   return { checkedAt: nowIso(), items };
 }
 
-async function runSiteDeploymentNow(id) {
+async function runSiteDeploymentNow(id, options) {
+  const opts = options || {};
   const deployment = assertSiteDeployment(id);
   const steps = [];
-  const step = async (kind, name, pathname, options) => {
-    const result = await reconcileFluxResource(pathname, kind, name, options);
+  const step = async (kind, name, pathname, stepOptions) => {
+    const result = await reconcileFluxResource(pathname, kind, name, stepOptions);
     steps.push(result);
     return result;
   };
@@ -1603,11 +1604,25 @@ async function runSiteDeploymentNow(id) {
   await step("GitRepository", deployment.gitRepository, "/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/" + encodeURIComponent(deployment.gitRepository), { timeoutMs: 15000 });
   await step("Kustomization", deployment.kustomization, "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/" + encodeURIComponent(deployment.kustomization), { timeoutMs: 30000 });
 
-  appendAuditEntry({ action: "site-deploy", serviceId: deployment.id });
+  if (!opts.skipAudit) appendAuditEntry({ action: "site-deploy", serviceId: deployment.id });
   return {
     deployment: await siteDeploymentSnapshot(deployment),
     steps,
     message: "Deploy reconcile requested for " + deployment.title + ".",
+  };
+}
+
+async function runAllSiteDeploymentsNow() {
+  const results = [];
+  for (const deployment of SITE_DEPLOYMENTS) {
+    results.push(await runSiteDeploymentNow(deployment.id, { skipAudit: true }));
+  }
+  appendAuditEntry({ action: "site-deploy-all", serviceId: "static-sites" });
+  return {
+    checkedAt: nowIso(),
+    results,
+    items: await Promise.all(SITE_DEPLOYMENTS.map((deployment) => siteDeploymentSnapshot(deployment))),
+    message: "Deploy reconcile requested for all static sites.",
   };
 }
 
@@ -4218,6 +4233,15 @@ async function handleApi(req, res, parsedUrl) {
       return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/site-deployments/run") {
+    try {
+      const payload = await runAllSiteDeploymentsNow();
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
     }
   }
 

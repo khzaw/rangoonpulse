@@ -59,8 +59,8 @@ Examples:
 The root `GitRepository/flux-system` stays on a short poll interval so pushed Git changes are detected promptly.
 Ordinary child `Kustomization` objects and `HelmRelease` objects use a `24h` periodic interval by default.
 Flux image repositories use a `6h` interval by default so unattended image tag discovery still happens within the same day.
-Interview Prep is a temporary active-development exception: its image repository and the shared image-update writer run hourly.
-The other image repositories retain their `6h` registry-scan interval, so the hourly writer does not make every repository poll hourly.
+Interview Prep is a temporary active-development exception: its image repository and per-site image-update writer run hourly.
+The other image repositories and per-site image-update writers retain their `6h` interval.
 
 The longer default reduces background controller churn on a small cluster while still allowing explicit reconciles:
 

@@ -40,6 +40,7 @@
       const siteDeploySummaryEl = document.getElementById('siteDeploySummary');
       const siteDeployOverviewStripEl = document.getElementById('siteDeployOverviewStrip');
       const siteDeployRefreshBtn = document.getElementById('siteDeployRefreshBtn');
+      const siteDeployAllBtn = document.getElementById('siteDeployAllBtn');
       const siteDeployListEl = document.getElementById('siteDeployList');
       const siteDeployMsgEl = document.getElementById('siteDeployMsg');
       const exposureMetaEl = document.getElementById('exposureMeta');
@@ -969,7 +970,7 @@
           const ready = item.ready;
           const latest = item.latestTag || 'n/a';
           const current = item.currentTag || 'n/a';
-          const buttonText = 'Deploy now';
+          const buttonText = 'Deploy this';
           const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">open site</a>' : '<span class="muted">cluster-internal</span>';
           const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
           return (
@@ -1017,12 +1018,29 @@
 
       async function runSiteDeployment(siteId, button) {
         setBtnLoading(button, true);
-        setSiteDeployMsg('Reconciling ' + siteId + ' through Flux image automation...');
+        setSiteDeployMsg('Reconciling only ' + siteId + ' through its Flux image automation...');
         try {
           const payload = await request('/api/site-deployments/' + encodeURIComponent(siteId) + '/run', 'POST', {});
           const handled = (payload.steps || []).filter((step) => step.handled).length;
           const total = (payload.steps || []).length;
           setSiteDeployMsg((payload.message || 'Deploy reconcile requested.') + ' ' + handled + '/' + total + ' controller(s) acknowledged the request.');
+          await loadSiteDeployments();
+        } catch (err) {
+          setSiteDeployMsg(err.message, true);
+        } finally {
+          setBtnLoading(button, false);
+        }
+      }
+
+      async function runAllSiteDeployments(button) {
+        setBtnLoading(button, true);
+        setSiteDeployMsg('Reconciling all static sites through their Flux image automations...');
+        try {
+          const payload = await request('/api/site-deployments/run', 'POST', {});
+          const steps = (payload.results || []).flatMap((result) => result.steps || []);
+          const handled = steps.filter((step) => step.handled).length;
+          const total = steps.length;
+          setSiteDeployMsg((payload.message || 'Deploy reconcile requested for all static sites.') + ' ' + handled + '/' + total + ' controller(s) acknowledged the request.');
           await loadSiteDeployments();
         } catch (err) {
           setSiteDeployMsg(err.message, true);
@@ -2183,6 +2201,7 @@
       renovateRunBtn.onclick = () => runRenovate();
       jobsRefreshBtn.onclick = () => loadJobs({ force: true });
       siteDeployRefreshBtn.onclick = () => loadSiteDeployments({ force: true });
+      siteDeployAllBtn.onclick = () => runAllSiteDeployments(siteDeployAllBtn);
       secretsRefreshBtn.onclick = () => loadSecrets({ force: true });
       newSecretBtn.onclick = () => createSecret();
       secretSaveBtn.onclick = () => saveSelectedSecret();

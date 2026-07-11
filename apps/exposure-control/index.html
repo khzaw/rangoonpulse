@@ -191,7 +191,10 @@
             <h3 class="section-heading">targets</h3>
             <p class="section-copy">Pressing a button scans GHCR, resolves the Flux image policy, runs image automation, refreshes Git, and reconciles the app.</p>
           </div>
-          <button id="siteDeployRefreshBtn" type="button">Refresh</button>
+          <div class="site-deploy-toolbar-actions">
+            <button id="siteDeployRefreshBtn" type="button">Refresh</button>
+            <button id="siteDeployAllBtn" type="button">Deploy all</button>
+          </div>
         </div>
         <div id="siteDeployList" class="site-deploy-grid"></div>
         <div class="content-block">

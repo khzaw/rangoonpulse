@@ -2,11 +2,10 @@
 apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
-  name: flux-system
+  name: ericaknight
   namespace: flux-system
 spec:
-  # The Interview Prep repository scans hourly; other repositories retain their own scan cadence.
-  interval: 1h
+  interval: 6h
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -18,9 +17,9 @@ spec:
       author:
         name: fluxcdbot
         email: fluxcdbot@users.noreply.github.com
-      messageTemplate: "image-automation: update {{range .Changed.Changes}}{{print .OldValue}} -> {{print .NewValue}} {{end}}"
+      messageTemplate: "image-automation(ericaknight): update {{range .Changed.Changes}}{{print .OldValue}} -> {{print .NewValue}} {{end}}"
     push:
       branch: master
   update:
-    path: ./apps
+    path: ./apps/ericaknight
     strategy: Setters

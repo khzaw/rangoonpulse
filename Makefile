@@ -1,5 +1,5 @@
 .PHONY: help status flux-status hr-status events nodes pods
-.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp
+.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-rangoon-mapper deploy-static-sites
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate validate-kustomize validate-all check-docs check-node check-shell test-python
@@ -57,7 +57,7 @@ deploy-blog: ## Force deploy latest blog image now
 	flux reconcile image repository blog -n flux-system
 	@sleep 2
 	flux reconcile image policy blog -n flux-system
-	flux reconcile image update flux-system -n flux-system
+	flux reconcile image update blog -n flux-system
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization blog -n flux-system --with-source
 
@@ -65,7 +65,7 @@ deploy-mmcal: ## Force deploy latest mmcal image now
 	flux reconcile image repository mmcal -n flux-system
 	@sleep 2
 	flux reconcile image policy mmcal -n flux-system
-	flux reconcile image update flux-system -n flux-system
+	flux reconcile image update mmcal -n flux-system
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization mmcal -n flux-system --with-source
 
@@ -73,7 +73,7 @@ deploy-ericaknight: ## Force deploy latest Erica Knight portfolio image now
 	flux reconcile image repository ericaknight -n flux-system
 	@sleep 2
 	flux reconcile image policy ericaknight -n flux-system
-	flux reconcile image update flux-system -n flux-system
+	flux reconcile image update ericaknight -n flux-system
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization ericaknight -n flux-system --with-source
 
@@ -81,9 +81,24 @@ deploy-itvp: ## Force deploy latest Interview Prep image now
 	flux reconcile image repository interview-prep -n flux-system
 	@sleep 2
 	flux reconcile image policy interview-prep -n flux-system
-	flux reconcile image update flux-system -n flux-system
+	flux reconcile image update interview-prep -n flux-system
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization interview-prep -n flux-system --with-source
+
+deploy-rangoon-mapper: ## Force deploy latest Rangoon Mapper image now
+	flux reconcile image repository rangoon-mapper -n flux-system
+	@sleep 2
+	flux reconcile image policy rangoon-mapper -n flux-system
+	flux reconcile image update rangoon-mapper -n flux-system
+	flux reconcile source git flux-system -n flux-system
+	flux reconcile kustomization rangoon-mapper -n flux-system --with-source
+
+deploy-static-sites: ## Force deploy all static-site images now
+	$(MAKE) deploy-blog
+	$(MAKE) deploy-mmcal
+	$(MAKE) deploy-ericaknight
+	$(MAKE) deploy-itvp
+	$(MAKE) deploy-rangoon-mapper
 
 # --- Logs ---
 
