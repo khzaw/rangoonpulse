@@ -55,6 +55,12 @@
     "authMode": "cloudflare-access"
   },
   {
+    "id": "itvp",
+    "name": "Interview Prep",
+    "target": "http://interview-prep.default.svc.cluster.local:3000",
+    "description": "Coding and system-design practice journal"
+  },
+  {
     "id": "sonarr",
     "name": "Sonarr",
     "target": "http://sonarr.default.svc.cluster.local:8989",

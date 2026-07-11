@@ -34,6 +34,7 @@ Default exposure expiry:
   - `share-audiobookshelf.khzaw.dev`
   - `share-uptime.khzaw.dev`
   - `share-fluxui.khzaw.dev`
+  - `share-itvp.khzaw.dev`
   - `share-sonarr.khzaw.dev`
   - `share-radarr.khzaw.dev`
   - `share-tracerr.khzaw.dev`

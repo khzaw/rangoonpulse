@@ -7,6 +7,12 @@ summary: Deployment, persistence, image updates, and recovery notes for the inte
 
 Interview Prep is a single-user coding and system-design practice journal deployed at `https://itvp.khzaw.dev`.
 
+## Access
+
+- The canonical `itvp.khzaw.dev` hostname follows the normal private service path and resolves to the shared ingress VIP for LAN and Tailscale access.
+- Temporary public access uses `share-itvp.khzaw.dev` and is disabled by default.
+- Enable or disable the public share from the Exposure Control page at `https://controlpanel.khzaw.dev`.
+
 ## Runtime
 
 - Source and image: `github.com/khzaw/interview-prep` / `ghcr.io/khzaw/interview-prep`
