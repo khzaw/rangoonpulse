@@ -253,6 +253,90 @@ const MANAGED_JOBS = [
   },
 ];
 const MANAGED_JOB_BY_ID = new Map(MANAGED_JOBS.map((job) => [job.id, job]));
+const SITE_DEPLOYMENTS = [
+  {
+    id: "blog",
+    title: "Blog",
+    description: "Personal site and blog promoted from the latest ghcr.io/khzaw/blog image tag.",
+    url: "https://blog." + PUBLIC_DOMAIN,
+    imageRepository: "blog",
+    imagePolicy: "blog",
+    imageUpdateAutomation: "flux-system",
+    gitRepository: "flux-system",
+    kustomization: "blog",
+    helmRelease: "blog",
+    namespace: "default",
+    imageRepo: "ghcr.io/khzaw/blog",
+  },
+  {
+    id: "mmcal",
+    title: "MMCal",
+    description: "Static Myanmar calendar site promoted from the latest ghcr.io/khzaw/mmcal image tag.",
+    url: "https://mmcal." + PUBLIC_DOMAIN,
+    imageRepository: "mmcal",
+    imagePolicy: "mmcal",
+    imageUpdateAutomation: "flux-system",
+    gitRepository: "flux-system",
+    kustomization: "mmcal",
+    helmRelease: "mmcal",
+    namespace: "default",
+    imageRepo: "ghcr.io/khzaw/mmcal",
+  },
+  {
+    id: "ericaknight",
+    title: "Erica Knight",
+    description: "Portfolio site promoted through Flux image automation; no public ingress is enabled in-cluster.",
+    url: null,
+    imageRepository: "ericaknight",
+    imagePolicy: "ericaknight",
+    imageUpdateAutomation: "flux-system",
+    gitRepository: "flux-system",
+    kustomization: "ericaknight",
+    helmRelease: "ericaknight",
+    namespace: "default",
+    imageRepo: "ghcr.io/khzaw/ericaknight",
+  },
+  {
+    id: "itvp",
+    title: "ITVP",
+    description: "Interview-prep site promoted from the latest ghcr.io/khzaw/interview-prep image tag.",
+    url: "https://itvp." + PUBLIC_DOMAIN,
+    imageRepository: "interview-prep",
+    imagePolicy: "interview-prep",
+    imageUpdateAutomation: "flux-system",
+    gitRepository: "flux-system",
+    kustomization: "interview-prep",
+    helmRelease: "interview-prep",
+    namespace: "default",
+    imageRepo: "ghcr.io/khzaw/interview-prep",
+    aliases: ["interview-prep"],
+  },
+  {
+    id: "rangoon-mapper",
+    title: "Rangoon Mapper",
+    description: "Project Rangoon map site promoted from the latest ghcr.io/projectrangoon/rangoon-mapper image tag.",
+    url: "https://rangoonmapper." + PUBLIC_DOMAIN,
+    imageRepository: "rangoon-mapper",
+    imagePolicy: "rangoon-mapper",
+    imageUpdateAutomation: "flux-system",
+    gitRepository: "flux-system",
+    kustomization: "rangoon-mapper",
+    helmRelease: "rangoon-mapper",
+    namespace: "default",
+    imageRepo: "ghcr.io/projectrangoon/rangoon-mapper",
+  },
+];
+const SITE_DEPLOYMENT_BY_ID = new Map();
+for (const deployment of SITE_DEPLOYMENTS) {
+  SITE_DEPLOYMENT_BY_ID.set(deployment.id, deployment);
+  for (const alias of deployment.aliases || []) SITE_DEPLOYMENT_BY_ID.set(alias, deployment);
+}
+const SITE_DEPLOY_RECONCILE_WAIT_MS = clampInt(
+  process.env.SITE_DEPLOY_RECONCILE_WAIT_MS,
+  15000,
+  0,
+  60000,
+);
 const MANAGED_JOB_LOG_TAIL_LINES = clampInt(
   process.env.MANAGED_JOB_LOG_TAIL_LINES,
   160,
@@ -1342,7 +1426,29 @@ async function reconcileSecretsFlux() {
 }
 
 async function reconcileFluxKustomization(name) {
-  const requestedAt = nowIso();
+  const git = await reconcileFluxResource(
+    "/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/flux-system",
+    "GitRepository",
+    "flux-system",
+    { wait: false },
+  );
+  const kustomization = await reconcileFluxResource(
+    "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/" +
+      encodeURIComponent(name),
+    "Kustomization",
+    name,
+    { wait: false },
+  );
+  return kustomization.requestedAt || git.requestedAt;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function reconcileFluxResource(pathname, kind, name, options) {
+  const opts = options || {};
+  const requestedAt = opts.requestedAt || nowIso();
   const patch = {
     metadata: {
       annotations: {
@@ -1350,24 +1456,154 @@ async function reconcileFluxKustomization(name) {
       },
     },
   };
-  await kubeRequest(
-    "/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/flux-system",
-    {
-      method: "PATCH",
-      body: patch,
-      contentType: "application/merge-patch+json",
-    },
-  );
-  await kubeRequest(
-    "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/" +
-      encodeURIComponent(name),
-    {
-      method: "PATCH",
-      body: patch,
-      contentType: "application/merge-patch+json",
-    },
-  );
-  return requestedAt;
+  const res = await kubeRequest(pathname, {
+    method: "PATCH",
+    body: patch,
+    contentType: "application/merge-patch+json",
+  });
+  if (res.statusCode < 200 || res.statusCode >= 300) {
+    throw new Error("failed to request " + kind + " reconcile for " + name + " (" + res.statusCode + ")");
+  }
+  const handled = opts.wait === false
+    ? false
+    : await waitForFluxResourceHandled(pathname, requestedAt, opts.timeoutMs);
+  return { kind, name, requestedAt, handled };
+}
+
+function fluxLastHandledReconcileAt(obj) {
+  const status = (obj && obj.status) || {};
+  return String(status.lastHandledReconcileAt || status.lastHandledReconcileRequest || "");
+}
+
+async function waitForFluxResourceHandled(pathname, requestedAt, timeoutMs) {
+  const timeout = typeof timeoutMs === "number" ? timeoutMs : SITE_DEPLOY_RECONCILE_WAIT_MS;
+  if (!timeout) return false;
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    await sleep(1000);
+    const obj = await kubeGetJson(pathname).catch(() => null);
+    if (fluxLastHandledReconcileAt(obj) === requestedAt) return true;
+  }
+  return false;
+}
+
+function conditionSummary(obj, type) {
+  const conditions = (obj && obj.status && Array.isArray(obj.status.conditions))
+    ? obj.status.conditions
+    : [];
+  const condition = conditions.find((item) => item && item.type === type) || null;
+  if (!condition) return { status: "Unknown", message: "condition unavailable", reason: "Unknown" };
+  return {
+    status: condition.status || "Unknown",
+    reason: condition.reason || "",
+    message: condition.message || "",
+    lastTransitionTime: condition.lastTransitionTime || null,
+  };
+}
+
+function tagFromImage(image) {
+  const value = String(image || "");
+  if (!value) return null;
+  const digestIndex = value.indexOf("@sha256:");
+  const withoutDigest = digestIndex >= 0 ? value.slice(0, digestIndex) : value;
+  const slashIndex = withoutDigest.lastIndexOf("/");
+  const colonIndex = withoutDigest.lastIndexOf(":");
+  return colonIndex > slashIndex ? withoutDigest.slice(colonIndex + 1) : null;
+}
+
+function helmReleaseMainImage(helmRelease) {
+  const image = (((((((helmRelease || {}).spec || {}).values || {}).controllers || {}).main || {}).containers || {}).main || {}).image || {};
+  if (!image.repository && !image.tag) return null;
+  return String(image.repository || "") + (image.tag ? ":" + image.tag : "");
+}
+
+function assertSiteDeployment(id) {
+  const normalized = String(id || "").trim().toLowerCase();
+  const deployment = SITE_DEPLOYMENT_BY_ID.get(normalized);
+  if (!deployment) throw new Error("site deployment not found");
+  return deployment;
+}
+
+function imageApiPath(resource, name) {
+  return "/apis/image.toolkit.fluxcd.io/v1/namespaces/flux-system/" + resource + "/" + encodeURIComponent(name);
+}
+
+async function siteDeploymentSnapshot(deployment) {
+  const [imageRepository, imagePolicy, imageAutomation, gitRepository, kustomization, helmRelease] = await Promise.all([
+    kubeGetJson(imageApiPath("imagerepositories", deployment.imageRepository)).catch((err) => ({ error: err.message })),
+    kubeGetJson(imageApiPath("imagepolicies", deployment.imagePolicy)).catch((err) => ({ error: err.message })),
+    kubeGetJson(imageApiPath("imageupdateautomations", deployment.imageUpdateAutomation)).catch((err) => ({ error: err.message })),
+    kubeGetJson("/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/" + encodeURIComponent(deployment.gitRepository)).catch((err) => ({ error: err.message })),
+    kubeGetJson("/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/" + encodeURIComponent(deployment.kustomization)).catch((err) => ({ error: err.message })),
+    kubeGetJson("/apis/helm.toolkit.fluxcd.io/v2/namespaces/" + encodeURIComponent(deployment.namespace) + "/helmreleases/" + encodeURIComponent(deployment.helmRelease)).catch((err) => ({ error: err.message })),
+  ]);
+  const policyStatus = (imagePolicy && imagePolicy.status) || {};
+  const repositoryStatus = (imageRepository && imageRepository.status) || {};
+  const scan = repositoryStatus.lastScanResult || {};
+  const latestImage = policyStatus.latestImage || null;
+  const kustomizationReady = conditionSummary(kustomization, "Ready");
+  const helmReleaseReady = conditionSummary(helmRelease, "Ready");
+  return {
+    id: deployment.id,
+    title: deployment.title,
+    description: deployment.description,
+    url: deployment.url,
+    imageRepo: deployment.imageRepo,
+    imageRepository: deployment.imageRepository,
+    imagePolicy: deployment.imagePolicy,
+    imageUpdateAutomation: deployment.imageUpdateAutomation,
+    gitRepository: deployment.gitRepository,
+    kustomization: deployment.kustomization,
+    helmRelease: deployment.helmRelease,
+    namespace: deployment.namespace,
+    currentImage: helmReleaseMainImage(helmRelease),
+    currentTag: tagFromImage(helmReleaseMainImage(helmRelease)),
+    latestImage,
+    latestTag: tagFromImage(latestImage),
+    tagCount: scan.tagCount || null,
+    lastScanTime: scan.scanTime || repositoryStatus.lastScanTime || null,
+    imageRepositoryReady: conditionSummary(imageRepository, "Ready"),
+    imagePolicyReady: conditionSummary(imagePolicy, "Ready"),
+    imageUpdateReady: conditionSummary(imageAutomation, "Ready"),
+    gitRepositoryReady: conditionSummary(gitRepository, "Ready"),
+    kustomizationReady,
+    helmReleaseReady,
+    ready: kustomizationReady.status === "True" && helmReleaseReady.status === "True",
+    errors: [imageRepository, imagePolicy, imageAutomation, gitRepository, kustomization, helmRelease]
+      .map((item) => item && item.error)
+      .filter(Boolean),
+  };
+}
+
+async function listSiteDeploymentsSnapshot() {
+  const items = [];
+  for (const deployment of SITE_DEPLOYMENTS) {
+    items.push(await siteDeploymentSnapshot(deployment));
+  }
+  return { checkedAt: nowIso(), items };
+}
+
+async function runSiteDeploymentNow(id) {
+  const deployment = assertSiteDeployment(id);
+  const steps = [];
+  const step = async (kind, name, pathname, options) => {
+    const result = await reconcileFluxResource(pathname, kind, name, options);
+    steps.push(result);
+    return result;
+  };
+
+  await step("ImageRepository", deployment.imageRepository, imageApiPath("imagerepositories", deployment.imageRepository), { timeoutMs: 30000 });
+  await step("ImagePolicy", deployment.imagePolicy, imageApiPath("imagepolicies", deployment.imagePolicy), { timeoutMs: 15000 });
+  await step("ImageUpdateAutomation", deployment.imageUpdateAutomation, imageApiPath("imageupdateautomations", deployment.imageUpdateAutomation), { timeoutMs: 30000 });
+  await step("GitRepository", deployment.gitRepository, "/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/" + encodeURIComponent(deployment.gitRepository), { timeoutMs: 15000 });
+  await step("Kustomization", deployment.kustomization, "/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/" + encodeURIComponent(deployment.kustomization), { timeoutMs: 30000 });
+
+  appendAuditEntry({ action: "site-deploy", serviceId: deployment.id });
+  return {
+    deployment: await siteDeploymentSnapshot(deployment),
+    steps,
+    message: "Deploy reconcile requested for " + deployment.title + ".",
+  };
 }
 
 async function runSecretGitOperation(operation) {
@@ -3966,6 +4202,26 @@ async function handleApi(req, res, parsedUrl) {
       invalidateSecretInventoryCache();
       appendAuditEntry({ action: "secret-delete", serviceId: namespace + "/" + name });
       return sendJson(res, 200, result);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  if (req.method === "GET" && pathname === "/api/site-deployments") {
+    try {
+      const payload = await listSiteDeploymentsSnapshot();
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
+  const siteDeployRunMatch = pathname.match(/^\/api\/site-deployments\/([^/]+)\/run$/);
+  if (siteDeployRunMatch && req.method === "POST") {
+    try {
+      const id = decodeURIComponent(siteDeployRunMatch[1]);
+      const payload = await runSiteDeploymentNow(id);
+      return sendJson(res, 200, payload);
     } catch (err) {
       return sendJson(res, 400, { error: err.message });
     }

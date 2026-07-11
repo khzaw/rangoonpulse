@@ -37,6 +37,11 @@
       const jobsRefreshBtn = document.getElementById('jobsRefreshBtn');
       const jobsMsgEl = document.getElementById('jobsMsg');
       const jobsListEl = document.getElementById('jobsList');
+      const siteDeploySummaryEl = document.getElementById('siteDeploySummary');
+      const siteDeployOverviewStripEl = document.getElementById('siteDeployOverviewStrip');
+      const siteDeployRefreshBtn = document.getElementById('siteDeployRefreshBtn');
+      const siteDeployListEl = document.getElementById('siteDeployList');
+      const siteDeployMsgEl = document.getElementById('siteDeployMsg');
       const exposureMetaEl = document.getElementById('exposureMeta');
       const vpnSectionMetaEl = document.getElementById('vpnSectionMeta');
       const auditMetaEl = document.getElementById('auditMeta');
@@ -103,6 +108,7 @@
         travel: null,
         tuning: null,
         jobs: null,
+        siteDeployments: null,
         secrets: null,
         selectedSecret: null,
       };
@@ -218,10 +224,14 @@
         setMessage(jobsMsgEl, text, isError);
       }
 
+      function setSiteDeployMsg(text, isError) {
+        setMessage(siteDeployMsgEl, text, isError);
+      }
+
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
         if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['updates', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
+        const knownPages = new Set(['updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
         if (knownPages.has(candidate)) return candidate;
         return 'updates';
       }
@@ -258,6 +268,11 @@
           jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           loadJobs();
+        }
+        if (nextPage === 'deploy' && hasLoadedDashboard && !dashboardState.siteDeployments) {
+          siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          siteDeployListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
+          loadSiteDeployments();
         }
       }
 
@@ -911,6 +926,97 @@
           setJobsMsg(err.message, true);
         } finally {
           if (force) setBtnLoading(jobsRefreshBtn, false);
+        }
+      }
+
+      function conditionLabel(condition) {
+        if (!condition) return 'unknown';
+        if (condition.status === 'True') return 'ready';
+        if (condition.status === 'False') return condition.reason || 'not ready';
+        return condition.reason || 'unknown';
+      }
+
+      function renderSiteDeployments(payload) {
+        const data = payload || { items: [] };
+        const items = Array.isArray(data.items) ? data.items : [];
+        dashboardState.siteDeployments = data;
+        const readyCount = items.filter((item) => item && item.ready).length;
+        const errorCount = items.filter((item) => item && item.errors && item.errors.length).length;
+        siteDeploySummaryEl.textContent = String(items.length) + ' target' + (items.length === 1 ? '' : 's') + ' · ' + String(readyCount) + ' ready';
+        siteDeployOverviewStripEl.innerHTML =
+          overviewSegment('targets', String(items.length), 'Flux image-automated sites', { eyebrow: 'static deploys', barPct: 100, tone: 'neutral' }) +
+          overviewSegment('ready', String(readyCount), 'kustomization and helm ready', { eyebrow: 'runtime state', barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
+          overviewSegment('errors', String(errorCount), errorCount ? 'some Flux objects unavailable' : 'inventory clean', { eyebrow: 'api inventory', barPct: errorCount ? Math.min(100, errorCount * 25) : 0, tone: errorCount ? 'danger' : 'status' }) +
+          overviewSegment('checked', data.checkedAt ? new Date(data.checkedAt).toLocaleTimeString() : 'n/a', 'latest control-panel snapshot', { eyebrow: 'snapshot', barPct: 100, tone: 'neutral' });
+
+        if (!items.length) {
+          siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
+          return;
+        }
+        siteDeployListEl.innerHTML = items.map((item) => {
+          const ready = item.ready;
+          const latest = item.latestTag || 'n/a';
+          const current = item.currentTag || 'n/a';
+          const buttonText = 'Deploy now';
+          const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">open site</a>' : '<span class="muted">cluster-internal</span>';
+          const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
+          return (
+            '<article class="support-card site-deploy-card">' +
+              '<div class="site-deploy-card-head">' +
+                '<div><div class="support-card-title">' + escapeHtml(item.title || item.id) + '</div><p class="support-copy">' + escapeHtml(item.description || '') + '</p></div>' +
+                '<span class="status-chip ' + (ready ? 'ok' : 'warning') + '">' + (ready ? 'ready' : 'check') + '</span>' +
+              '</div>' +
+              '<div class="site-deploy-meta">' +
+                '<span>current <strong>' + escapeHtml(current) + '</strong></span>' +
+                '<span>policy <strong>' + escapeHtml(latest) + '</strong></span>' +
+                '<span>scan ' + escapeHtml(fmtDateTime(item.lastScanTime)) + '</span>' +
+                '<span>kustomization ' + escapeHtml(conditionLabel(item.kustomizationReady)) + '</span>' +
+                '<span>helm ' + escapeHtml(conditionLabel(item.helmReleaseReady)) + '</span>' +
+              '</div>' +
+              errorText +
+              '<div class="site-deploy-actions">' +
+                link +
+                '<button type="button" data-site-deploy-run="' + escapeHtml(item.id) + '">' + buttonText + '</button>' +
+              '</div>' +
+            '</article>'
+          );
+        }).join('');
+      }
+
+      async function loadSiteDeployments(options) {
+        const force = Boolean(options && options.force);
+        if (force) {
+          setBtnLoading(siteDeployRefreshBtn, true);
+          setSiteDeployMsg('Refreshing deploy targets...');
+        }
+        try {
+          const payload = await request('/api/site-deployments', 'GET');
+          renderSiteDeployments(payload);
+          if (force) setSiteDeployMsg('Deploy targets refreshed.');
+        } catch (err) {
+          siteDeploySummaryEl.textContent = 'Site deploys unavailable';
+          siteDeployOverviewStripEl.innerHTML = '';
+          siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
+          setSiteDeployMsg(err.message, true);
+        } finally {
+          if (force) setBtnLoading(siteDeployRefreshBtn, false);
+        }
+      }
+
+      async function runSiteDeployment(siteId, button) {
+        if (!confirm('Deploy ' + siteId + ' now?')) return;
+        setBtnLoading(button, true);
+        setSiteDeployMsg('Reconciling ' + siteId + ' through Flux image automation...');
+        try {
+          const payload = await request('/api/site-deployments/' + encodeURIComponent(siteId) + '/run', 'POST', {});
+          const handled = (payload.steps || []).filter((step) => step.handled).length;
+          const total = (payload.steps || []).length;
+          setSiteDeployMsg((payload.message || 'Deploy reconcile requested.') + ' ' + handled + '/' + total + ' controller(s) acknowledged the request.');
+          await loadSiteDeployments();
+        } catch (err) {
+          setSiteDeployMsg(err.message, true);
+        } finally {
+          setBtnLoading(button, false);
         }
       }
 
@@ -1907,19 +2013,22 @@
           travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           tuningOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
           updatesRowsEl.innerHTML = skeletonTableRows(5, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
           tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
           if (activePage === 'jobs') jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
+          if (activePage === 'deploy') siteDeployListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           if (activePage === 'secrets') secretsListEl.innerHTML = skeletonTableRows(1, 5);
         }
 
         try {
           const includeSecrets = activePage === 'secrets';
           const includeJobs = activePage === 'jobs';
-          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, jobsData, secretsData] = await Promise.allSettled([
+          const includeSiteDeployments = activePage === 'deploy';
+          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, jobsData, siteDeployData, secretsData] = await Promise.allSettled([
             request('/api/services', 'GET'),
             request('/api/audit', 'GET'),
             request('/api/transmission-vpn', 'GET'),
@@ -1929,6 +2038,7 @@
             request('/api/renovate', 'GET'),
             request('/api/travel', 'GET'),
             includeJobs ? request('/api/jobs', 'GET') : Promise.resolve(null),
+            includeSiteDeployments ? request('/api/site-deployments', 'GET') : Promise.resolve(null),
             includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
           ]);
 
@@ -2007,6 +2117,22 @@
             jobsOverviewDetailEl.textContent = 'open jobs to load cron state';
             jobsListEl.innerHTML = '<div class="empty-state">Open the jobs page to load managed CronJob state.</div>';
           }
+          if (includeSiteDeployments) {
+            if (siteDeployData && siteDeployData.status === 'fulfilled') {
+              renderSiteDeployments(siteDeployData.value);
+              if (!silent) setSiteDeployMsg('');
+            } else {
+              dashboardState.siteDeployments = null;
+              siteDeploySummaryEl.textContent = 'Site deploys unavailable';
+              siteDeployOverviewStripEl.innerHTML = '';
+              siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(siteDeployData ? siteDeployData.reason.message : 'Site deploys unavailable.') + '</div>';
+              if (siteDeployData && !silent) setSiteDeployMsg(siteDeployData.reason.message, true);
+            }
+          } else if (!dashboardState.siteDeployments) {
+            siteDeploySummaryEl.textContent = 'Site deploy inventory loads only when this page is opened.';
+            siteDeployOverviewStripEl.innerHTML = '';
+            siteDeployListEl.innerHTML = '<div class="empty-state">Open deploy sites to load static-site targets.</div>';
+          }
           if (includeSecrets) {
             if (secretsData && secretsData.status === 'fulfilled') {
               renderSecretsList(secretsData.value);
@@ -2045,6 +2171,7 @@
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
       jobsRefreshBtn.onclick = () => loadJobs({ force: true });
+      siteDeployRefreshBtn.onclick = () => loadSiteDeployments({ force: true });
       secretsRefreshBtn.onclick = () => loadSecrets({ force: true });
       newSecretBtn.onclick = () => createSecret();
       secretSaveBtn.onclick = () => saveSelectedSecret();
@@ -2112,6 +2239,11 @@
           button.disabled = false;
         }
       };
+      siteDeployListEl.onclick = async (event) => {
+        const runButton = event.target.closest('[data-site-deploy-run]');
+        if (runButton) await runSiteDeployment(runButton.dataset.siteDeployRun, runButton);
+      };
+
       jobsListEl.onclick = async (event) => {
         const saveButton = event.target.closest('[data-job-save]');
         const runButton = event.target.closest('[data-job-run]:not([data-job-log])');

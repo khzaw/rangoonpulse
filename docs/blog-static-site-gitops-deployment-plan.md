@@ -179,3 +179,9 @@ Proceed with this two-repo GitOps model:
 - `mmcal.${BASE_DOMAIN}` and `rangoonmapper.${BASE_DOMAIN}` follow the same source-repo image publish plus Flux image automation pattern.
 - `${ERICAKNIGHT_DOMAIN}` follows the same GitOps deployment pattern, but uses its own Cloudflare zone and permanent public-edge tunnel routes for `${ERICAKNIGHT_DOMAIN}` and `www.${ERICAKNIGHT_DOMAIN}` instead of `${BASE_DOMAIN}` subdomains. DNS for this zone is owned by `external-dns` through `infrastructure/public-edge/share-hosts-cname.yaml`.
 - Pages CMS edits `github.com/khzaw/ericaknight` directly. Simple publishing means Pages CMS commits to `master`, GitHub Actions publishes `ghcr.io/khzaw/ericaknight`, and Flux image automation promotes that image into the cluster.
+
+## Fast Manual Promotion
+
+`controlpanel.khzaw.dev/#deploy` provides one-click Flux image-automation reconciliation for the self-built static-site targets: `blog`, `mmcal`, `ericaknight`, `itvp`, and `rangoon-mapper`. Use it after the source repository push has finished publishing the new GHCR image and waiting for the normal registry scan/write cadence is inconvenient.
+
+The buttons perform the same control-plane sequence as the `make deploy-*` targets: reconcile the `ImageRepository`, resolve the `ImagePolicy`, run the shared `ImageUpdateAutomation/flux-system`, refresh `GitRepository/flux-system`, and reconcile the app `Kustomization`.

@@ -2206,12 +2206,14 @@ tr:hover td {
 /* --------------------------------------------------------------- travel */
 
 .travel-grid,
-.travel-support-grid {
+.travel-support-grid,
+.site-deploy-grid {
   display: grid;
   gap: 14px;
 }
 
-.travel-grid {
+.travel-grid,
+.site-deploy-grid {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
@@ -2220,7 +2222,8 @@ tr:hover td {
 }
 
 .travel-grid .support-card,
-.travel-support-grid .support-card {
+.travel-support-grid .support-card,
+.site-deploy-grid .support-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-shell);
   background: var(--bg-panel);
@@ -2228,7 +2231,8 @@ tr:hover td {
 }
 
 .travel-grid .support-card:hover,
-.travel-support-grid .support-card:hover {
+.travel-support-grid .support-card:hover,
+.site-deploy-grid .support-card:hover {
   border-color: var(--travel-card-hover-border);
   transform: translateY(-2px);
 }
@@ -2236,6 +2240,49 @@ tr:hover td {
 .travel-card,
 .travel-support-card {
   min-height: 100%;
+}
+
+.site-deploy-card {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.site-deploy-card-head,
+.site-deploy-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.site-deploy-meta {
+  display: grid;
+  gap: 7px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.site-deploy-meta strong {
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.site-deploy-actions {
+  margin-top: auto;
+  align-items: center;
+}
+
+.site-deploy-actions a,
+.muted {
+  color: var(--text-2);
+}
+
+.site-deploy-errors {
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .travel-card-head,
@@ -2871,7 +2918,8 @@ button.is-loading::after {
     border-bottom: none;
   }
   .travel-grid .support-card,
-  .travel-support-grid .support-card {
+  .travel-support-grid .support-card,
+  .site-deploy-grid .support-card {
     border: 1px solid var(--border);
   }
   .secrets-layout {

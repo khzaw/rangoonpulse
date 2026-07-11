@@ -73,6 +73,7 @@
 
       <nav class="section-nav" aria-label="Section navigation">
         <a class="nav-pill" data-page-link href="#updates">updates</a>
+        <a class="nav-pill" data-page-link href="#deploy">deploy sites</a>
         <a class="nav-pill" data-page-link href="#travel">travel</a>
         <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
         <a class="nav-pill" data-page-link href="#tuning">tuning</a>
@@ -173,6 +174,28 @@
               <tbody id="auditRows"></tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <section id="deploy" class="section" data-page-section>
+        <div class="section-bar">
+          <div>
+            <h2 class="section-heading">deploy sites</h2>
+            <p class="section-copy">Force Flux image automation and app reconciliation for the static sites, without opening a terminal.</p>
+          </div>
+          <div id="siteDeploySummary" class="section-detail">Site deploy inventory loads when opened.</div>
+        </div>
+        <div id="siteDeployOverviewStrip" class="overview-strip site-deploy-strip"></div>
+        <div class="toolbar">
+          <div>
+            <h3 class="section-heading">targets</h3>
+            <p class="section-copy">Pressing a button scans GHCR, resolves the Flux image policy, runs image automation, refreshes Git, and reconciles the app.</p>
+          </div>
+          <button id="siteDeployRefreshBtn" type="button">Refresh</button>
+        </div>
+        <div id="siteDeployList" class="site-deploy-grid"></div>
+        <div class="content-block">
+          <div id="siteDeployMsg" class="msg"></div>
         </div>
       </section>
 
