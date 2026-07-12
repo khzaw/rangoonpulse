@@ -36,10 +36,10 @@ spec:
               GUID: "1000"
             resources:
               requests:
-                cpu: "56m"
+                cpu: "70m"
                 memory: "400Mi"
               limits:
-                cpu: "281m"
+                cpu: "351m"
                 memory: "954Mi"
     service:
       main:
