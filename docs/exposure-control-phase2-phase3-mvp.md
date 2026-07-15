@@ -14,7 +14,8 @@ This is a lean implementation of:
 
 Default exposure expiry:
 - `1 hour` (can be changed per enable action in the UI/API).
-- UI expiry presets: `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`.
+- UI expiry presets: `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`, and `Until turned off`.
+- `Until turned off` is opt-in; it stores `expiresAt: null` and remains enabled until a manual or emergency disable.
 
 ## Components
 
@@ -65,13 +66,13 @@ Default exposure expiry:
 ## Behavior
 
 1. Control panel/API can enable or disable configured share hosts.
-2. On enable, backend sets an `expiresAt` timestamp.
-3. Reconciliation loop disables exposures after expiry.
+2. On enable, backend sets an `expiresAt` timestamp, or `null` for the explicit until-turned-off mode.
+3. Reconciliation loop disables bounded exposures after expiry; until-turned-off exposures are disabled manually or through the emergency disable-all action.
 4. Requests to share hostnames proxy to target app only when enabled.
 5. API is restricted to control panel host requests.
 6. UI defaults:
 - auth selector defaults to `none`
-- expiry selector default is `1h` with quick presets (`15m` .. `24h`)
+- expiry selector default is `1h` with bounded quick presets (`15m` .. `24h`) and an opt-in `Until turned off` choice
 7. Security hardening (phase 4):
 - default auth mode is `cloudflare-access`
 - per-request rate limiting is active
@@ -156,6 +157,12 @@ curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enabl
 # Enable with explicit expiry hours (0.25-24)
 curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/enable \
   -H 'content-type: application/json' -d '{"hours":0.5}' | jq
+```
+
+```bash
+# Enable until manually disabled
+curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/enable \
+  -H 'content-type: application/json' -d '{"hours":null}' | jq
 ```
 
 ```bash

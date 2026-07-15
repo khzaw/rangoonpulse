@@ -284,8 +284,10 @@
         return d.toLocaleString();
       }
 
-      function fmtExpiry(value) {
-        if (!value) return { text: '—', state: 'none' };
+      function fmtExpiry(value, enabled) {
+        if (!value) return enabled
+          ? { text: 'until turned off', state: 'active' }
+          : { text: '—', state: 'none' };
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return { text: 'invalid', state: 'invalid' };
         const diff = d.getTime() - Date.now();
@@ -300,7 +302,10 @@
       }
 
       function updateExpiryNode(node) {
-        const next = fmtExpiry(node.dataset.expiresAt || '');
+        const next = fmtExpiry(
+          node.dataset.expiresAt || '',
+          node.dataset.enabled === '1',
+        );
         node.textContent = next.text;
         node.classList.toggle('urgent', next.state === 'urgent');
         node.classList.toggle('expired', next.state === 'expired');
@@ -1198,7 +1203,7 @@
           ? activeServices.map((svc) =>
             '<div class="travel-share-item">' +
               '<a href="' + escapeHtml(svc.publicUrl || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(svc.name || svc.id || 'service') + '</a>' +
-              '<span class="travel-share-meta">' + escapeHtml(svc.authMode || 'none') + ' · ' + escapeHtml(fmtExpiry(svc.expiresAt).text) + '</span>' +
+              '<span class="travel-share-meta">' + escapeHtml(svc.authMode || 'none') + ' · ' + escapeHtml(fmtExpiry(svc.expiresAt, svc.enabled).text) + '</span>' +
             '</div>'
           ).join('')
           : '<p class="support-copy">No temporary public shares are active.</p>';
@@ -1471,7 +1476,7 @@
         services.forEach((svc) => {
           const tr = document.createElement('tr');
           if (svc.enabled) tr.classList.add('is-enabled');
-          const expiry = fmtExpiry(svc.expiresAt);
+          const expiry = fmtExpiry(svc.expiresAt, svc.enabled);
 
           const serviceTd = document.createElement('td');
           const serviceName = document.createElement('div');
@@ -1525,6 +1530,10 @@
             if (hours === Number(svc.defaultExpiryHours || 1)) opt.selected = true;
             expirySelect.appendChild(opt);
           });
+          const untilDisabledOpt = document.createElement('option');
+          untilDisabledOpt.value = 'until-disabled';
+          untilDisabledOpt.textContent = 'Until turned off';
+          expirySelect.appendChild(untilDisabledOpt);
 
           const authSelect = document.createElement('select');
           authSelect.className = 'control-select';
@@ -1542,8 +1551,11 @@
             try {
               mutationInFlight += 1;
               setBtnLoading(enableBtn, true);
+              const hours = expirySelect.value === 'until-disabled'
+                ? null
+                : Number(expirySelect.value);
               await request('/api/services/' + svc.id + '/enable', 'POST', {
-                hours: Number(expirySelect.value),
+                hours,
                 authMode: authSelect.value,
               });
               setMsg('Enabled ' + svc.id);
@@ -1592,6 +1604,7 @@
           const tr = document.createElement('tr');
           const parts = [];
           if (entry.hours) parts.push(entry.hours + 'h');
+          if (entry.expiryMode === 'until-disabled') parts.push('until turned off');
           if (entry.authMode) parts.push(entry.authMode);
           if (entry.mode) parts.push('mode: ' + entry.mode);
           if (entry.disabled != null) parts.push('disabled: ' + entry.disabled);

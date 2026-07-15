@@ -47,7 +47,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md) for LAN DNS architecture and router integration.
 - [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS, Flux, and Talos node DNS hardening.
 - [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for the current Cloudflare Tunnel and permanent-public/share-host design.
-- [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md) for the implemented exposure-control backend/UI behavior and security hardening path.
+- [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md) for the implemented exposure-control backend/UI behavior, bounded and until-disabled exposure modes, and security hardening path.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) when public share-host auth changes.
 - [`docs/travel-center.md`](./travel-center.md) when changing the control panel's travel readiness and remote-life workflow.
 - [`docs/router-dns-rebind-private-a-records.md`](./router-dns-rebind-private-a-records.md) when private `A` records or router DNS behavior are involved.

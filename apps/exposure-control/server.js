@@ -4051,12 +4051,14 @@ async function handleApi(req, res, parsedUrl) {
       return sendJson(res, 400, { error: err.message });
     }
 
-    const hours = clampHours(Number(body.hours ?? DEFAULT_EXPIRY_HOURS));
+    const hours = body.hours === null
+      ? null
+      : clampHours(Number(body.hours ?? DEFAULT_EXPIRY_HOURS));
     const authMode =
       normalizeAuthMode(body.authMode) || serviceDefaultAuthMode(svc);
-    const expiresAt = new Date(
-      Date.now() + hours * 60 * 60 * 1000,
-    ).toISOString();
+    const expiresAt = hours === null
+      ? null
+      : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
     state.exposures[id] = {
       enabled: true,
       expiresAt,
@@ -4065,7 +4067,12 @@ async function handleApi(req, res, parsedUrl) {
     };
     saveState(state);
     metrics.enableTotal += 1;
-    appendAuditEntry({ action: "enable", serviceId: id, hours, authMode });
+    appendAuditEntry({
+      action: "enable",
+      serviceId: id,
+      ...(hours === null ? { expiryMode: "until-disabled" } : { hours }),
+      authMode,
+    });
     return sendJson(res, 200, {
       service: snapshotServices().find((item) => item.id === id),
     });

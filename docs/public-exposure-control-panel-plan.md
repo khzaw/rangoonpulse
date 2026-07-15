@@ -183,7 +183,7 @@ Lean MVP note:
   - allowlist config (`services.json`)
   - PVC-backed state file (`/data/state.json`)
   - reconciliation loop for expiry disable
-  - default expiry `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`)
+  - default expiry `1h` (UI presets include `15m`, `30m`, `1h`, `2h`, `6h`, `12h`, `24h`, plus an explicit `Until turned off` option)
 
 ### Phase 3: Control Panel UI + API (Completed)
 1. Deploy UI + API at `controlpanel.khzaw.dev`.
@@ -191,7 +191,7 @@ Lean MVP note:
 3. Implement operator UX:
 - list expose-eligible services
 - toggle exposure on/off
-- set expiry windows (preset dropdown: 15m, 30m, 1h, 2h, 6h, 12h, 24h)
+- set expiry windows (preset dropdown: 15m, 30m, 1h, 2h, 6h, 12h, 24h, or Until turned off)
 - view audit history (append-only JSON Lines log at `/data/audit.json`, API at `GET /api/audit`)
 
 Implementation:
