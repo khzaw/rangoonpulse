@@ -2271,7 +2271,7 @@ tr:hover td {
   min-height: 100%;
 }
 
-.site-deploy-card {
+.site-deploy-grid .site-deploy-card {
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -2286,7 +2286,7 @@ tr:hover td {
 }
 
 @starting-style {
-  .site-deploy-card {
+  .site-deploy-grid .site-deploy-card {
     opacity: 0;
     transform: translateY(4px) scale(0.99);
   }
@@ -2921,7 +2921,7 @@ button.is-loading::after {
     scroll-behavior: auto;
   }
 
-  .site-deploy-card {
+  .site-deploy-grid .site-deploy-card {
     transform: none !important;
     transition: opacity 100ms linear !important;
   }
@@ -2944,7 +2944,7 @@ button.is-loading::after {
 
 @media (prefers-reduced-motion: reduce) {
   @starting-style {
-    .site-deploy-card {
+    .site-deploy-grid .site-deploy-card {
       opacity: 0.85;
       transform: none !important;
     }
