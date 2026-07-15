@@ -144,7 +144,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.0.2
+                tag: v3.0.3
               resources:
                 requests:
                   cpu: "300m"
@@ -167,7 +167,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-server
-                tag: v3.0.2
+                tag: v3.0.3
               resources:
                 requests:
                   cpu: "200m"
