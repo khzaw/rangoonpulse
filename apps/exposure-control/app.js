@@ -966,15 +966,16 @@
           siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
           return;
         }
-        siteDeployListEl.innerHTML = items.map((item) => {
+        siteDeployListEl.innerHTML = items.map((item, index) => {
           const ready = item.ready;
           const latest = item.latestTag || 'n/a';
           const current = item.currentTag || 'n/a';
           const buttonText = 'Deploy this';
           const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">open site</a>' : '<span class="muted">cluster-internal</span>';
           const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
+          const enterDelay = Math.min(index * 30, 120);
           return (
-            '<article class="support-card site-deploy-card">' +
+            '<article class="support-card site-deploy-card" style="--deploy-enter-delay:' + enterDelay + 'ms">' +
               '<div class="site-deploy-card-head">' +
                 '<div class="support-card-title">' + escapeHtml(item.title || item.id) + '</div>' +
                 '<span class="status-chip ' + (ready ? 'ok' : 'warning') + '">' + (ready ? 'ready' : 'check') + '</span>' +
@@ -994,6 +995,12 @@
             '</article>'
           );
         }).join('');
+        const renderedCards = Array.from(siteDeployListEl.querySelectorAll('.site-deploy-card'));
+        window.setTimeout(() => {
+          renderedCards.forEach((card) => {
+            card.style.removeProperty('--deploy-enter-delay');
+          });
+        }, 320);
       }
 
       async function loadSiteDeployments(options) {
@@ -2243,10 +2250,19 @@
           reveal.textContent = visible ? 'Reveal' : 'Hide';
         }
         if (remove) {
-          remove.closest('.secret-key-row').remove();
-          if (!secretKeyRowsEl.querySelector('.secret-key-row')) {
-            secretKeyRowsEl.innerHTML = '<div class="empty-state">This Secret has no keys yet.</div>';
-          }
+          const row = remove.closest('.secret-key-row');
+          if (!row || row.classList.contains('is-removing')) return;
+          row.classList.add('is-removing');
+
+          const finishRemoval = () => {
+            if (!row.isConnected) return;
+            row.remove();
+            if (!secretKeyRowsEl.querySelector('.secret-key-row')) {
+              secretKeyRowsEl.innerHTML = '<div class="empty-state">This Secret has no keys yet.</div>';
+            }
+          };
+          row.addEventListener('transitionend', finishRemoval, { once: true });
+          window.setTimeout(finishRemoval, 220);
         }
       });
       updatesRowsEl.onclick = async (event) => {

@@ -1984,24 +1984,39 @@ tr:hover td {
   text-overflow: ellipsis;
 }
 
-.updates-version-diff:hover::after {
-  content: attr(data-version-tooltip);
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 9px);
-  z-index: 5;
-  max-width: min(360px, 70vw);
-  padding: 6px 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  background: var(--bg-panel-strong);
-  color: var(--text-1);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.35;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+@media (hover: hover) and (pointer: fine) {
+  .updates-version-diff::after {
+    content: attr(data-version-tooltip);
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 9px);
+    z-index: 5;
+    max-width: min(360px, 70vw);
+    padding: 6px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--bg-panel-strong);
+    color: var(--text-1);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(2px);
+    transform-origin: left bottom;
+    transition:
+      opacity 100ms var(--ease-snappy),
+      transform 100ms var(--ease-snappy);
+  }
+
+  .updates-version-diff:hover::after {
+    opacity: 1;
+    transform: translateY(0);
+    transition-duration: 140ms;
+  }
 }
 
 .version-current {
@@ -2262,6 +2277,19 @@ tr:hover td {
   flex-direction: column;
   gap: 10px;
   padding: 15px 16px;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    border-color 220ms var(--ease-snappy),
+    opacity 180ms var(--ease-out) var(--deploy-enter-delay, 0ms),
+    transform 180ms var(--ease-out) var(--deploy-enter-delay, 0ms);
+}
+
+@starting-style {
+  .site-deploy-card {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
 }
 
 .site-deploy-card-head,
@@ -2805,13 +2833,24 @@ tr:hover td {
   padding: 10px 0 12px;
   border-bottom: 1px solid var(--subtle-line);
   animation: secretRowIn 220ms var(--ease-out) both;
-  transition: border-color 200ms var(--ease-snappy), background 200ms var(--ease-snappy), transform 200ms var(--ease-snappy);
+  transition:
+    border-color 200ms var(--ease-snappy),
+    background 200ms var(--ease-snappy),
+    opacity 160ms var(--ease-snappy),
+    transform 160ms var(--ease-snappy);
 }
 
 .secret-key-row:focus-within {
   border-color: var(--accent-border);
   background: var(--secret-focus-bg);
   transform: translateY(-1px);
+}
+
+.secret-key-row.is-removing {
+  animation: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px) scale(0.99);
 }
 
 @keyframes secretRowIn {
@@ -2880,6 +2919,35 @@ button.is-loading::after {
   }
   html {
     scroll-behavior: auto;
+  }
+
+  .site-deploy-card {
+    transform: none !important;
+    transition: opacity 100ms linear !important;
+  }
+
+  .secret-key-row {
+    transition: opacity 100ms linear !important;
+  }
+
+  .secret-key-row.is-removing {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .updates-version-diff::after {
+    transform: none !important;
+    transition: opacity 100ms linear !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .site-deploy-card {
+      opacity: 0.85;
+      transform: none !important;
+    }
   }
 }
 
