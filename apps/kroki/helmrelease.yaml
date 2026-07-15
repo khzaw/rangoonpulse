@@ -33,7 +33,7 @@ spec:
           main:
             image:
               repository: yuzutech/kroki
-              tag: 0.31.0
+              tag: 0.31.1
             env:
               - name: KROKI_MERMAID_HOST
                 value: "127.0.0.1"
@@ -59,7 +59,7 @@ spec:
           mermaid:
             image:
               repository: yuzutech/kroki-mermaid
-              tag: 0.31.0
+              tag: 0.31.1
             resources:
               requests:
                 cpu: "25m"
@@ -70,7 +70,7 @@ spec:
           bpmn:
             image:
               repository: yuzutech/kroki-bpmn
-              tag: 0.31.0
+              tag: 0.31.1
             resources:
               requests:
                 cpu: "25m"
@@ -81,7 +81,7 @@ spec:
           excalidraw:
             image:
               repository: yuzutech/kroki-excalidraw
-              tag: 0.31.0
+              tag: 0.31.1
             resources:
               requests:
                 cpu: "25m"
