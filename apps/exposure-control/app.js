@@ -277,11 +277,36 @@
         }
       }
 
+      const dateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+      });
+      const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+      });
+
+      function validDate(value) {
+        if (!value) return null;
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
       function fmtDateTime(value) {
-        if (!value) return 'n/a';
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return 'n/a';
-        return d.toLocaleString();
+        const date = validDate(value);
+        return date ? dateTimeFormatter.format(date) : 'n/a';
+      }
+
+      function fmtTime(value) {
+        const date = validDate(value);
+        return date ? timeFormatter.format(date) : 'n/a';
       }
 
       function fmtExpiry(value, enabled) {
@@ -951,7 +976,7 @@
 
       function deployTag(label, value) {
         const full = String(value || 'n/a');
-        return '<span class="site-deploy-tag"><span>' + escapeHtml(label) + '</span><strong title="' + escapeHtml(full) + '">' + escapeHtml(shortHash(full)) + '</strong></span>';
+        return '<span class="site-deploy-tag has-full-tooltip" title="' + attrText(full) + '" data-full-tooltip="' + attrText(full) + '"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(shortHash(full)) + '</strong></span>';
       }
 
       function renderSiteDeployments(payload) {
@@ -965,7 +990,7 @@
           overviewSegment('targets', String(items.length), 'Flux image-automated sites', { eyebrow: 'static deploys', barPct: 100, tone: 'neutral' }) +
           overviewSegment('ready', String(readyCount), 'kustomization and helm ready', { eyebrow: 'runtime state', barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
           overviewSegment('errors', String(errorCount), errorCount ? 'some Flux objects unavailable' : 'inventory clean', { eyebrow: 'api inventory', barPct: errorCount ? Math.min(100, errorCount * 25) : 0, tone: errorCount ? 'danger' : 'status' }) +
-          overviewSegment('checked', data.checkedAt ? new Date(data.checkedAt).toLocaleTimeString() : 'n/a', 'latest control-panel snapshot', { eyebrow: 'snapshot', barPct: 100, tone: 'neutral' });
+          overviewSegment('checked', fmtTime(data.checkedAt), 'latest control-panel snapshot', { eyebrow: 'snapshot', barPct: 100, tone: 'neutral' });
 
         if (!items.length) {
           siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
@@ -1662,7 +1687,7 @@
               '<td><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
               '<td class="updates-version-cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
               '<td class="updates-status-cell"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td class="updates-context-cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text">' + escapeHtml(imageDetail) + '</div></td>' +
+              '<td class="updates-context-cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(imageDetail) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
@@ -1699,7 +1724,7 @@
           } else {
             setUpdatesMsg('Update report loaded.');
             if (force) {
-              setLoadState('Image updates checked at ' + new Date().toLocaleTimeString());
+              setLoadState('Image updates checked at ' + fmtTime(new Date()));
               setMsg('Image update check complete.');
             }
           }
@@ -2046,7 +2071,7 @@
         dashboardState.services = payload.services || [];
         renderRows(dashboardState.services);
         renderOverview();
-        setLoadState('Exposure state refreshed ' + new Date().toLocaleTimeString());
+        setLoadState('Exposure state refreshed ' + fmtTime(new Date()));
       }
 
       async function loadDashboard(options) {
@@ -2197,7 +2222,7 @@
 
           renderOverview();
           hasLoadedDashboard = true;
-          setLoadState((silent ? 'Last refresh ' : 'Updated ') + new Date().toLocaleTimeString());
+          setLoadState((silent ? 'Last refresh ' : 'Updated ') + fmtTime(new Date()));
           if (!silent) setMsg('Exposure state updated.');
         } catch (err) {
           setLoadState(err.message, true);

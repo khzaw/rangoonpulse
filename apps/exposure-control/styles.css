@@ -1987,7 +1987,8 @@ tr:hover td {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .updates-version-diff::after {
+  .updates-version-diff::after,
+  .has-full-tooltip::after {
     content: attr(data-version-tooltip);
     position: absolute;
     left: 0;
@@ -2014,7 +2015,12 @@ tr:hover td {
       transform 100ms var(--ease-snappy);
   }
 
-  .updates-version-diff:hover::after {
+  .has-full-tooltip::after {
+    content: attr(data-full-tooltip);
+  }
+
+  .updates-version-diff:hover::after,
+  .has-full-tooltip:hover::after {
     opacity: 1;
     transform: translateY(0);
     transition-duration: 140ms;
@@ -2310,6 +2316,7 @@ tr:hover td {
 }
 
 .site-deploy-tag {
+  position: relative;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 8px;
