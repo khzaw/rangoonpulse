@@ -273,7 +273,7 @@ spec:
         annotations:
           external-dns.alpha.kubernetes.io/hostname: books.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
-          nginx.ingress.kubernetes.io/permanent-redirect: https://bookorbit.${BASE_DOMAIN}$${request_uri}
+          nginx.ingress.kubernetes.io/permanent-redirect: https://bookorbit.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/permanent-redirect-code: "308"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
