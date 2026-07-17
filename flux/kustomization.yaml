@@ -58,7 +58,6 @@ resources:
   - ./kustomizations/anki-server.yaml
   - ./kustomizations/interview-prep.yaml
   - ./kustomizations/bookorbit.yaml
-  - ./kustomizations/stump.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml

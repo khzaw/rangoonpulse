@@ -167,7 +167,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **Obsidian LiveSync** | Note sync via CouchDB |
 | **Anki Server** | Flashcard sync |
 | **Interview Prep** | Spaced-repetition coding and system-design journal |
-| **Stump** | E-book and comics library reader |
+| **BookOrbit** | E-book library and web reader |
 
 ---
 

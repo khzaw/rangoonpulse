@@ -96,7 +96,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Service-specific guides
 
-- [`docs/study-services-livesync-anki-stump.md`](./study-services-livesync-anki-stump.md)
+- [`docs/study-services-livesync-anki-bookorbit.md`](./study-services-livesync-anki-bookorbit.md)
 - [`docs/reactive-resume.md`](./reactive-resume.md)
 - [`docs/shelfmark.md`](./shelfmark.md)
 - [`docs/subarr.md`](./subarr.md)

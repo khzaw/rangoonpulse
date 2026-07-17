@@ -12,9 +12,9 @@
     "description": "ChartDB"
   },
   {
-    "id": "stump",
-    "name": "Stump",
-    "target": "http://stump.default.svc.cluster.local:10801",
+    "id": "bookorbit",
+    "name": "BookOrbit",
+    "target": "http://bookorbit.default.svc.cluster.local:3000",
     "description": "Digital book library"
   },
   {

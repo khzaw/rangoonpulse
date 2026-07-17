@@ -117,9 +117,9 @@
       }
     },
     {
-      "id": "stump",
-      "name": "Stump",
-      "url": "https://books.${BASE_DOMAIN}",
+      "id": "bookorbit",
+      "name": "BookOrbit",
+      "url": "https://bookorbit.${BASE_DOMAIN}",
       "access": "tailnet-private",
       "bundle": "life",
       "priority": 90,

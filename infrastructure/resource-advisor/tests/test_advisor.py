@@ -320,7 +320,7 @@ class BuildApplyPlanTests(unittest.TestCase):
         report = make_report(
             [
                 make_recommendation(
-                    "stump",
+                    "bookorbit",
                     current_cpu="100m",
                     recommended_cpu="75m",
                     current_memory="512Mi",

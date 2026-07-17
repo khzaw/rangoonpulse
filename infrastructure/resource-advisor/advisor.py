@@ -42,7 +42,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "sabnzbd": "apps/sabnzbd/helmrelease.yaml",
     "sonarr": "apps/sonarr/helmrelease.yaml",
     "speedtest": "apps/speedtest/helmrelease.yaml",
-    "stump": "apps/stump/helmrelease.yaml",
+    "bookorbit": "apps/bookorbit/helmrelease.yaml",
     "transmission": "apps/transmission/helmrelease.yaml",
     "tunarr": "apps/tunarr/helmrelease.yaml",
     "uptime-kuma": "apps/uptime-kuma/helmrelease.yaml",

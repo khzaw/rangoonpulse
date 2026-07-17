@@ -153,7 +153,7 @@ Auto-apply (Phase 3 PR commits) is currently enabled for:
 - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`
 - `calibre`, `calibre-web-automated`, `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`, `shelfmark`
 - `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`
-- `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `stump`, `transmission`, `tunarr`
+- `bookorbit`, `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`
 
 Service-aware tuning profiles are enabled for bursty/manual media paths where p95 automation metrics have

@@ -21,7 +21,7 @@ existing book and audiobook stack.
 Operational intent:
 - Shelfmark shares the Calibre/CWA config PVC family without writing into their subpaths.
 - Ebook downloads can land on the shared Calibre library PVC.
-- Stump can scan the same shared Calibre library PVC, including `/bookdrop` if ebook handoff uses that staging path.
+- BookOrbit scans the same shared Calibre library PVC read-only; Shelfmark and Calibre remain the writers.
 - Audiobookshelf handoff can target `/audiobooks`.
 
 ## Runtime Defaults
@@ -46,7 +46,7 @@ Operational intent:
 
 ## Quick Checks
 ```bash
-flux get kustomizations | rg 'shelfmark|stump|public-edge|exposure-control'
+flux get kustomizations | rg 'shelfmark|bookorbit|public-edge|exposure-control'
 kubectl get hr -n default shelfmark
 kubectl get pods -n default | rg shelfmark
 kubectl logs -n default deploy/shelfmark --tail=120

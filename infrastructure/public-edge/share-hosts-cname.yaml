@@ -112,10 +112,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-stump-cname
+  name: share-bookorbit-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}stump.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}bookorbit.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
