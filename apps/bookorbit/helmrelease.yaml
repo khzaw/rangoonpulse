@@ -123,7 +123,7 @@ spec:
   interval: 24h
   timeout: 20m
   dependsOn:
-    - name: bookorbit-postgres
+    - name: media-postgres
   chart:
     spec:
       chart: app-template
@@ -161,7 +161,7 @@ spec:
               PORT: "3000"
               APP_URL: https://bookorbit.${BASE_DOMAIN}
               CLIENT_URL: https://bookorbit.${BASE_DOMAIN}
-              POSTGRES_HOST: bookorbit-postgres
+              POSTGRES_HOST: media-postgres
               POSTGRES_PORT: "5432"
               POSTGRES_USER:
                 valueFrom:

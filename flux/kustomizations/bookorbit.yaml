@@ -20,6 +20,7 @@ spec:
   timeout: 20m
   dependsOn:
     - name: secrets
+    - name: media-postgres
     - name: infra-storage-calibre
     - name: local-path-provisioner
     - name: ingress-nginx

@@ -21,7 +21,7 @@ This document records the GitOps deployment and operational decisions for study-
 - Canonical hostname: `https://bookorbit.khzaw.dev`
 - Alias: `https://books.khzaw.dev` redirects to the canonical hostname.
 - Image: `ghcr.io/bookorbit/bookorbit:2.2.0`
-- Backend: PostgreSQL with pgvector.
+- Backend: a dedicated `bookorbit` database and role on the shared `media-postgres` PostgreSQL instance.
 - Purpose: digital book library and web reader over the existing Calibre books.
 
 Stump and its private SQLite/config PVC were retired after BookOrbit was populated and verified. No Stump database
@@ -38,7 +38,7 @@ Writable app state is separate from the shared library:
 
 - `obsidian-livesync`: `/opt/couchdb/data` on a dedicated `5Gi` `local-path` PVC.
 - `anki-server`: `/anki_data` on a dedicated expandable `5Gi` PVC.
-- `bookorbit-postgres`: `/var/lib/postgresql/data` on a dedicated `5Gi` `local-path` PVC.
+- `bookorbit` database: shared `media-postgres` `20Gi` `local-path` PVC; isolated from the other apps by role and database.
 - `bookorbit`: `/data` on a dedicated expandable `5Gi` NFS PVC.
 - `bookorbit`: `/books` from existing claim `calibre-books-nfs`, mounted read-only.
 

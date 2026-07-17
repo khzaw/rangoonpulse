@@ -69,6 +69,11 @@ spec:
                   secretKeyRef:
                     name: speedtest-tracker-secret
                     key: POSTGRES_PASSWORD
+              - name: BOOKORBIT_DB_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: bookorbit-secret
+                    key: POSTGRES_PASSWORD
             resources:
               requests:
                 cpu: "300m"
@@ -91,7 +96,7 @@ spec:
           10-init-app-dbs.sh: |
             (
               set -eu
-              echo "Initializing app databases/users (tracearr, reactive_resume, speedtest_tracker) ..."
+              echo "Initializing app databases/users (tracearr, reactive_resume, speedtest_tracker, bookorbit) ..."
 
               # Role: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then
@@ -122,6 +127,20 @@ spec:
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='speedtest_tracker'" | grep -q 1; then
                 createdb -O speedtest_tracker speedtest_tracker
               fi
+
+              # Role: bookorbit
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='bookorbit'" | grep -q 1; then
+                psql -v ON_ERROR_STOP=1 -c "CREATE ROLE bookorbit LOGIN PASSWORD '$${BOOKORBIT_DB_PASSWORD}'"
+              fi
+              # DB: bookorbit
+              if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname='bookorbit'" | grep -q 1; then
+                createdb -O bookorbit bookorbit
+              fi
+
+              # BookOrbit requires PostgreSQL extensions supplied by this image.
+              psql -v ON_ERROR_STOP=1 -d bookorbit -c "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+              psql -v ON_ERROR_STOP=1 -d bookorbit -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'
+              psql -v ON_ERROR_STOP=1 -d bookorbit -c "CREATE EXTENSION IF NOT EXISTS vector"
             )
 
     persistence:
