@@ -30,7 +30,7 @@ spec:
           main:
             image:
               repository: timescale/timescaledb
-              tag: 2.28.2-pg16
+              tag: 2.28.3-pg16
             command:
               - sh
               - -c
