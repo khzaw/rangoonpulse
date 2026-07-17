@@ -4632,15 +4632,6 @@ const server = http.createServer(async (req, res) => {
       if (asset) return sendControlPanelAsset(req, res, parsed, asset);
     }
 
-    if (parsed.pathname.startsWith("/api/")) {
-      if (!isControlPanelHost) {
-        return sendJson(res, 403, {
-          error: "api access is restricted to control panel host",
-        });
-      }
-      return await handleApi(req, res, parsed);
-    }
-
     if (svc) {
       const exposure = state.exposures[svc.id];
       if (!effectiveEnabled(exposure)) {
@@ -4661,6 +4652,15 @@ const server = http.createServer(async (req, res) => {
       }
       metrics.shareAllowedTotal += 1;
       return proxyRequest(req, res, svc.target);
+    }
+
+    if (parsed.pathname.startsWith("/api/")) {
+      if (!isControlPanelHost) {
+        return sendJson(res, 403, {
+          error: "api access is restricted to control panel host",
+        });
+      }
+      return await handleApi(req, res, parsed);
     }
 
     if (isControlPanelHost && parsed.pathname === "/") {

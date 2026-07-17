@@ -68,8 +68,8 @@ Default exposure expiry:
 1. Control panel/API can enable or disable configured share hosts.
 2. On enable, backend sets an `expiresAt` timestamp, or `null` for the explicit until-turned-off mode.
 3. Reconciliation loop disables bounded exposures after expiry; until-turned-off exposures are disabled manually or through the emergency disable-all action.
-4. Requests to share hostnames proxy to target app only when enabled.
-5. API is restricted to control panel host requests.
+4. Requests to share hostnames proxy to the target app only when enabled, including target-app API paths such as `/api/*`.
+5. Exposure Control's own API is restricted to control panel host requests; API-shaped requests on recognized share hosts are proxied to their target app instead.
 6. UI defaults:
 - auth selector defaults to `none`
 - expiry selector default is `1h` with bounded quick presets (`15m` .. `24h`) and an opt-in `Until turned off` choice

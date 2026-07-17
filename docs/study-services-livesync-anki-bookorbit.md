@@ -20,9 +20,16 @@ This document records the GitOps deployment and operational decisions for study-
 - Path: `apps/bookorbit/helmrelease.yaml`
 - Canonical hostname: `https://bookorbit.khzaw.dev`
 - Alias: `https://books.khzaw.dev` redirects to the canonical hostname.
+- Public share hostname: `https://share-bookorbit.khzaw.dev` when enabled from Exposure Control.
 - Image: `ghcr.io/bookorbit/bookorbit:2.2.0`
 - Backend: a dedicated `bookorbit` database and role on the shared `media-postgres` PostgreSQL instance.
 - Purpose: digital book library and web reader over the existing Calibre books.
+
+The public share hostname proxies the complete BookOrbit application, including its API. Devices without Tailscale can
+use `https://share-bookorbit.khzaw.dev` as the KOReader plugin server and
+`https://share-bookorbit.khzaw.dev/api/v1/opds` as the OPDS catalog while that exposure is enabled. Keep Exposure
+Control authentication set to `none` for these non-browser clients; BookOrbit still enforces its separate KOReader and
+OPDS credentials at the application layer.
 
 Stump and its private SQLite/config PVC were retired after BookOrbit was populated and verified. No Stump database
 state was migrated. The book files remained on the existing `calibre-books-nfs` claim throughout the replacement.
