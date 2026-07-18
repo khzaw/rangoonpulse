@@ -57,12 +57,21 @@
       "enabled": false
     },
     {
+      "description": "Track Jackett's three-part app versions with optional ls build tags.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "lscr.io/linuxserver/jackett"
+      ],
+      "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-ls(?<build>\\d+))?$"
+    },
+    {
       "description": "Track LinuxServer images with four-part app versions and moving ls build tags.",
       "matchDatasources": [
         "docker"
       ],
       "matchPackageNames": [
-        "lscr.io/linuxserver/jackett",
         "lscr.io/linuxserver/prowlarr",
         "lscr.io/linuxserver/radarr",
         "lscr.io/linuxserver/sonarr"

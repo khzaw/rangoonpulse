@@ -2250,30 +2250,47 @@ async function listRegistryTags(imageRef) {
   const tokenState = { token: "" };
   const tags = [];
   const seen = new Set();
-  let pageCount = 0;
-
-  while (nextUrl && pageCount < IMAGE_UPDATE_TAG_PAGE_LIMIT) {
-    pageCount += 1;
-    const res = await registryRequest(
-      nextUrl,
-      lookupImageRef.repository,
-      tokenState,
-      {},
-    );
-    if (res.statusCode !== 200) {
-      throw new Error("tags request failed (" + res.statusCode + ")");
-    }
-
-    const payload = JSON.parse(res.body || "{}");
-    if (Array.isArray(payload.tags)) {
-      for (const tag of payload.tags) {
-        const value = String(tag || "").trim();
-        if (!value || seen.has(value)) continue;
-        seen.add(value);
-        tags.push(value);
+  async function collectTagPages(startUrl) {
+    let pageCount = 0;
+    let pageUrl = startUrl;
+    while (pageUrl && pageCount < IMAGE_UPDATE_TAG_PAGE_LIMIT) {
+      pageCount += 1;
+      const res = await registryRequest(
+        pageUrl,
+        lookupImageRef.repository,
+        tokenState,
+        {},
+      );
+      if (res.statusCode !== 200) {
+        throw new Error("tags request failed (" + res.statusCode + ")");
       }
+
+      const payload = JSON.parse(res.body || "{}");
+      if (Array.isArray(payload.tags)) {
+        for (const tag of payload.tags) {
+          const value = String(tag || "").trim();
+          if (!value || seen.has(value)) continue;
+          seen.add(value);
+          tags.push(value);
+        }
+      }
+      pageUrl = nextLinkUrl(res.headers.link, pageUrl);
     }
-    nextUrl = nextLinkUrl(res.headers.link, nextUrl);
+  }
+
+  await collectTagPages(nextUrl);
+
+  // Very large repositories can place the deployed tag beyond the global
+  // page limit. Continue from that tag so nearby newer releases are still
+  // visible without downloading the repository's entire tag history.
+  if (lookupImageRef.tag && !seen.has(lookupImageRef.tag)) {
+    nextUrl =
+      base +
+      "/v2/" +
+      lookupImageRef.repository +
+      "/tags/list?n=200&last=" +
+      encodeURIComponent(lookupImageRef.tag);
+    await collectTagPages(nextUrl);
   }
 
   registryTagCache.set(cacheKey, { ts: now, tags });
@@ -2850,18 +2867,15 @@ async function mapWithConcurrency(items, limit, worker) {
 function resolveLatestSemver(currentTag, tags) {
   const current = parseSemverTag(currentTag);
   if (!current || current.prerelease) return null;
-  let best = null;
-  let currentFoundInRegistry = false;
+  // Large registry tag sets can be truncated by the page limit. Start from
+  // the deployed version so a partial listing can never suggest a downgrade.
+  let best = current;
   for (const tag of tags || []) {
     const parsed = parseSemverTag(tag);
     if (!parsed || parsed.prerelease) continue;
-    if (parsed.major === current.major && parsed.minor === current.minor && parsed.patch === current.patch) {
-      currentFoundInRegistry = true;
-    }
-    if (!best || compareSemver(parsed, best) > 0) best = parsed;
+    if (compareSemver(parsed, best) > 0) best = parsed;
   }
-  if (!best) return null;
-  const updateAvailable = compareSemver(best, current) > 0 || !currentFoundInRegistry;
+  const updateAvailable = compareSemver(best, current) > 0;
   return {
     latestTag: best.raw,
     updateAvailable,

@@ -81,6 +81,10 @@ Default exposure expiry:
 - monitoring alerts are defined in `infrastructure/monitoring/`
 8. Image update tracker:
 - compares stable semver tags directly
+- only reports a semver update when the registry candidate is newer than the deployed tag; partial registry listings
+  must not turn an older tag into an update recommendation
+- when a very large registry omits the deployed tag from the initial page window, resumes pagination from that tag so
+  nearby newer releases can still be discovered without downloading the full tag history
 - compares same-family non-semver numeric tags when the tag shape is clear (for example `24-alpine`, `25.07`, `4.0.16.2944-ls304`)
 - falls back to remote registry digest checks for floating or non-sortable tags (for example `latest`, `next`, `stable-alpine`, `pg16`)
 - still remains best-effort; hash-like tags may stay `Unknown` if there is no safe ordering signal
