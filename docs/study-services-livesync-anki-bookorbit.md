@@ -26,10 +26,11 @@ This document records the GitOps deployment and operational decisions for study-
 - Purpose: digital book library and web reader over the existing Calibre books.
 
 The public share hostname proxies the complete BookOrbit application, including its API. Devices without Tailscale can
-use `https://share-bookorbit.khzaw.dev` as the KOReader plugin server and
-`https://share-bookorbit.khzaw.dev/api/v1/opds` as the OPDS catalog while that exposure is enabled. Keep Exposure
-Control authentication set to `none` for these non-browser clients; BookOrbit still enforces its separate KOReader and
-OPDS credentials at the application layer.
+use `https://share-bookorbit.khzaw.dev` as the BookOrbit KOReader plugin server,
+`https://share-bookorbit.khzaw.dev/api/v1/koreader` as the sync-server base for KOSync-compatible clients such as
+CrossPoint, and `https://share-bookorbit.khzaw.dev/api/v1/opds` as the OPDS catalog while that exposure is enabled.
+Keep Exposure Control authentication set to `none` for these non-browser clients; BookOrbit still enforces its separate
+KOReader and OPDS credentials at the application layer.
 
 Stump and its private SQLite/config PVC were retired after BookOrbit was populated and verified. No Stump database
 state was migrated. The book files remained on the existing `calibre-books-nfs` claim throughout the replacement.

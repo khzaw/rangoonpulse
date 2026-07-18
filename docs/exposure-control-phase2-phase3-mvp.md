@@ -69,6 +69,8 @@ Default exposure expiry:
 2. On enable, backend sets an `expiresAt` timestamp, or `null` for the explicit until-turned-off mode.
 3. Reconciliation loop disables bounded exposures after expiry; until-turned-off exposures are disabled manually or through the emergency disable-all action.
 4. Requests to share hostnames proxy to the target app only when enabled, including target-app API paths such as `/api/*`.
+   The proxy preserves request bodies and their original `Content-Length` because device sync and other write APIs depend on
+   the upstream framework receiving the complete payload.
 5. Exposure Control's own API is restricted to control panel host requests; API-shaped requests on recognized share hosts are proxied to their target app instead.
 6. UI defaults:
 - auth selector defaults to `none`

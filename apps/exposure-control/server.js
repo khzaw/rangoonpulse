@@ -4447,7 +4447,6 @@ function proxyRequest(req, res, target) {
   headers.host = targetUrl.host;
   headers["x-forwarded-host"] = host;
   headers["x-forwarded-proto"] = "https";
-  delete headers["content-length"];
 
   const upstream = client.request(
     targetUrl,
