@@ -48,11 +48,13 @@ Writable app state is separate from the shared library:
 - `anki-server`: `/anki_data` on a dedicated expandable `5Gi` PVC.
 - `bookorbit` database: shared `media-postgres` `20Gi` `local-path` PVC; isolated from the other apps by role and database.
 - `bookorbit`: `/data` on a dedicated expandable `5Gi` NFS PVC.
-- `bookorbit`: `/books` from existing claim `calibre-books-nfs`, mounted read-only.
+- `bookorbit`: `/books` from existing claim `calibre-books-nfs`, mounted read-write so enabled metadata write-back can
+  update the embedded metadata and cover in the existing book file.
 
-BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, disables file writes and renames,
-excludes `bookdrop`, and scans every six hours. Calibre, Calibre-Web Automated, and Shelfmark remain the only writers
-to the shared book claim.
+BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, enables EPUB metadata and cover
+write-back, keeps file renames disabled, excludes `bookdrop`, and scans every six hours. Calibre, Calibre-Web Automated,
+and Shelfmark can still write the shared claim; BookOrbit's write access is for its opt-in in-place metadata operations.
+Avoid editing the same book concurrently in multiple applications.
 
 ## Node Placement and Resources
 
@@ -80,8 +82,10 @@ Flux Kustomizations:
 ## Library Safety Verification
 
 Before replacement, record the shared claim identity, file count, byte count, and a content checksum. After the first
-BookOrbit scan and again after Stump removal, confirm those values are unchanged. Also verify that the rendered and live
-BookOrbit pod specs mount `calibre-books-nfs` at `/books` with `readOnly: true`.
+BookOrbit scan and again after Stump removal, confirm those values are unchanged. For the current metadata write-back
+mode, verify that the rendered and live BookOrbit pod specs mount `calibre-books-nfs` at `/books` with `readOnly: false`,
+that the live mount options show `rw`, that the `Books` library keeps file renames disabled, and that a metadata save
+completes without leaving a sibling `.tmp` file behind.
 
 ## Quick Checks
 

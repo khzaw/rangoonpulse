@@ -196,7 +196,7 @@ spec:
           main:
             main:
               - path: /books
-                readOnly: true
+                readOnly: false
 
       tmp:
         enabled: true
