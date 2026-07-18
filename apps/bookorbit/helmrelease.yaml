@@ -40,7 +40,7 @@ spec:
           main:
             image:
               repository: ghcr.io/bookorbit/bookorbit
-              tag: "2.2.0"
+              tag: "2.3.0"
             env:
               TZ: "${TIMEZONE}"
               NODE_ENV: production
