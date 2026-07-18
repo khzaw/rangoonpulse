@@ -29,6 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/jackett
+              # renovate: datasource=github-releases depName=Jackett/Jackett
               tag: 0.24.1394
             env:
               TZ: "${TIMEZONE}"

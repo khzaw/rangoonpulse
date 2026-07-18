@@ -10,6 +10,7 @@
     "renovate"
   ],
   "enabledManagers": [
+    "custom.regex",
     "flux",
     "github-actions",
     "helm-values"
@@ -34,6 +35,20 @@
       "/(^|/)(apps|core|infrastructure)/.+(helmrelease|values)\\.ya?ml$/"
     ]
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track Jackett app releases without enumerating the LinuxServer image tag history.",
+      "managerFilePatterns": [
+        "/^apps/jackett/helmrelease\\.yaml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+tag:\\s*(?<currentValue>\\S+)"
+      ],
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$"
+    }
+  ],
   "packageRules": [
     {
       "description": "Keep the intentionally pinned Flaresolverr fork manual.",
@@ -57,14 +72,18 @@
       "enabled": false
     },
     {
-      "description": "Track Jackett's three-part app versions with optional ls build tags.",
+      "description": "Use Jackett's upstream releases because the LinuxServer registry tag history is too large for reliable lookup.",
+      "matchManagers": [
+        "flux",
+        "helm-values"
+      ],
       "matchDatasources": [
         "docker"
       ],
       "matchPackageNames": [
         "lscr.io/linuxserver/jackett"
       ],
-      "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:-ls(?<build>\\d+))?$"
+      "enabled": false
     },
     {
       "description": "Track LinuxServer images with four-part app versions and moving ls build tags.",

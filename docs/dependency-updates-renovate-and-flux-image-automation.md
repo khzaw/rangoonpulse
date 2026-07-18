@@ -36,8 +36,10 @@ This doc defines the current split between service dependency updates and direct
 - The intentionally pinned `alexfozor/flaresolverr` image is excluded from Renovate
 - LinuxServer images use explicit regex versioning rules so Renovate can update tags with moving `-ls###`
   build suffixes instead of treating that suffix as immutable Docker compatibility
-- Jackett has a dedicated three-component version rule (`0.24.2228`, optionally with an `-ls###` suffix);
-  do not include it in the four-component Sonarr/Radarr/Prowlarr rule
+- Jackett uses an inline custom-manager hint to track stable `Jackett/Jackett` GitHub releases while preserving
+  the three-component image tag (`0.24.2228`). Its LinuxServer Docker dependency is disabled because that
+  registry's very large tag history makes the datasource lookup incomplete; do not include Jackett in the
+  four-component Sonarr/Radarr/Prowlarr rule
 - The two AdGuard Home image references are intentionally split into file-specific branches and PRs:
   - `/Users/khz/Code/rangoonpulse/apps/adguard/primary/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/adguard/secondary/helmrelease.yaml`
