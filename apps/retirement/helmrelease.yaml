@@ -36,7 +36,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/retirement
-              tag: 1784740087-62c1d2f7be5b4199f3b5c73665b7d576abc45d09 # {"$imagepolicy": "flux-system:retirement:tag"}
+              tag: 1784740712-2f975b181df96abecbdce8bbd054d04b611263a2 # {"$imagepolicy": "flux-system:retirement:tag"}
             probes:
               liveness:
                 enabled: true
