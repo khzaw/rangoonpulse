@@ -63,6 +63,9 @@
       const travelMsgEl = document.getElementById('travelMsg');
       const refreshAllBtn = document.getElementById('refreshAllBtn');
       const emergencyBtn = document.getElementById('emergencyBtn');
+      const controlActivityEl = document.getElementById('controlActivity');
+      const controlActivityOrbEl = document.getElementById('controlActivityOrb');
+      const controlActivityLabelEl = document.getElementById('controlActivityLabel');
       const themeModeButtons = Array.from(document.querySelectorAll('[data-theme-mode]'));
       const vpnSwitch = document.getElementById('vpnSwitch');
       const vpnToggleLabels = Array.from(document.querySelectorAll('[data-vpn-label]'));
@@ -96,6 +99,15 @@
       let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
       let transmissionVpnState = null;
+      let activitySequence = 0;
+      let activityHideTimer = 0;
+      const requestActivities = new Map();
+      const controlActivityOrb = window.ThinkingOrbs?.create(controlActivityOrbEl, {
+        state: 'searching',
+        size: 20,
+        paused: true,
+        'aria-label': 'Control panel activity',
+      });
       let tuningFilterAction = 'all';
       let updatesFilterQuery = '';
       let updatesOnlyAvailable = false;
@@ -355,15 +367,61 @@
         }
       }
 
+      function describeRequestActivity(path, method) {
+        const target = String(path || '');
+        const readOnly = String(method || 'GET').toUpperCase() === 'GET';
+        if (readOnly) {
+          if (/image-updates|helm-updates|renovate/.test(target)) return { state: 'searching', label: 'Checking updates' };
+          if (/site-deployments/.test(target)) return { state: 'searching', label: 'Checking deploy targets' };
+          if (/secrets/.test(target)) return { state: 'searching', label: 'Loading secrets' };
+          if (/jobs/.test(target)) return { state: 'searching', label: 'Loading jobs' };
+          if (/tuning/.test(target)) return { state: 'solving', label: 'Reading resource advisor' };
+          if (/travel/.test(target)) return { state: 'searching', label: 'Checking travel readiness' };
+          return { state: 'listening', label: 'Syncing control plane' };
+        }
+        if (/secrets/.test(target)) return { state: 'shaping', label: 'Updating secrets' };
+        if (/renovate/.test(target)) return { state: 'searching', label: 'Running Renovate' };
+        if (/site-deployments/.test(target)) return { state: 'composing', label: 'Deploying site' };
+        if (/tuning/.test(target)) return { state: 'solving', label: 'Applying recommendation' };
+        if (/jobs/.test(target)) return { state: 'working', label: 'Running managed job' };
+        return { state: 'working', label: 'Applying control-plane change' };
+      }
+
+      function syncControlActivity() {
+        if (!controlActivityEl || !controlActivityLabelEl) return;
+        const activities = Array.from(requestActivities.values());
+        const active = activities.length ? activities[activities.length - 1] : null;
+        window.clearTimeout(activityHideTimer);
+        if (active) {
+          controlActivityLabelEl.textContent = active.label;
+          controlActivityEl.hidden = false;
+          controlActivityOrb?.setState(active.state);
+          controlActivityOrb?.setPaused(false);
+          return;
+        }
+        activityHideTimer = window.setTimeout(() => {
+          controlActivityEl.hidden = true;
+          controlActivityOrb?.setPaused(true);
+        }, 180);
+      }
+
       async function request(path, method, body) {
-        const res = await fetch(path, {
-          method,
-          headers: { 'content-type': 'application/json' },
-          body: body ? JSON.stringify(body) : undefined,
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'request failed');
-        return data;
+        const activityId = ++activitySequence;
+        requestActivities.set(activityId, describeRequestActivity(path, method));
+        syncControlActivity();
+        try {
+          const res = await fetch(path, {
+            method,
+            headers: { 'content-type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'request failed');
+          return data;
+        } finally {
+          requestActivities.delete(activityId);
+          syncControlActivity();
+        }
       }
 
       function withUnitSpace(value) {

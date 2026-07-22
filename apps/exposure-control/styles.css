@@ -340,6 +340,33 @@ main {
   animation: statusPulse 2.6s ease-out infinite;
 }
 
+.control-activity {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 11px 3px 7px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  background: var(--chip-bg);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.control-activity[hidden] {
+  display: none;
+}
+
+.control-activity-orb {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex: 0 0 20px;
+}
+
 /* ------------------------------------------------------- layout helpers */
 
 .top-actions,
@@ -2961,6 +2988,9 @@ button.is-loading::after {
 }
 
 @media (max-width: 980px) {
+  .control-activity {
+    display: none;
+  }
   .hero::before {
     display: none;
   }
