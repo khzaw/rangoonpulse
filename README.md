@@ -167,6 +167,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **Obsidian LiveSync** | Note sync via CouchDB |
 | **Anki Server** | Flashcard sync |
 | **Interview Prep** | Spaced-repetition coding and system-design journal |
+| **Retirement** | Private retirement calculator and portfolio projections |
 | **BookOrbit** | E-book library and web reader |
 
 ---
@@ -246,7 +247,7 @@ kubectl top pods -A
 talosctl -n 10.0.0.197 dashboard
 ```
 
-### Self-built Images (`blog`, `mmcal`, `ericaknight`, `interview-prep`)
+### Self-built Images (`blog`, `mmcal`, `ericaknight`, `interview-prep`, `retirement`)
 
 ```bash
 # Normal mode:
@@ -259,6 +260,7 @@ make deploy-blog
 make deploy-mmcal
 make deploy-ericaknight
 make deploy-itvp
+make deploy-retirement
 ```
 
 - `make deploy-*` forces image repository scan, image policy resolution, image update automation, source reconcile, and app kustomization reconcile.

@@ -1,5 +1,5 @@
 .PHONY: help status flux-status hr-status events nodes pods
-.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-rangoon-mapper deploy-static-sites
+.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-retirement deploy-rangoon-mapper deploy-static-sites
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate validate-kustomize validate-all check-docs check-node check-shell test-python
@@ -85,6 +85,14 @@ deploy-itvp: ## Force deploy latest Interview Prep image now
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization interview-prep -n flux-system --with-source
 
+deploy-retirement: ## Force deploy latest Retirement image now
+	flux reconcile image repository retirement -n flux-system
+	@sleep 2
+	flux reconcile image policy retirement -n flux-system
+	flux reconcile image update retirement -n flux-system
+	flux reconcile source git flux-system -n flux-system
+	flux reconcile kustomization retirement -n flux-system --with-source
+
 deploy-rangoon-mapper: ## Force deploy latest Rangoon Mapper image now
 	flux reconcile image repository rangoon-mapper -n flux-system
 	@sleep 2
@@ -98,6 +106,7 @@ deploy-static-sites: ## Force deploy all static-site images now
 	$(MAKE) deploy-mmcal
 	$(MAKE) deploy-ericaknight
 	$(MAKE) deploy-itvp
+	$(MAKE) deploy-retirement
 	$(MAKE) deploy-rangoon-mapper
 
 # --- Logs ---

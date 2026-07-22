@@ -1,0 +1,15 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: retirement
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: retirement
+  filterTags:
+    pattern: '^(?P<ts>\d+)-[a-f0-9]{40}$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc

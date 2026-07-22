@@ -1,0 +1,11 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: retirement
+  namespace: flux-system
+spec:
+  image: ghcr.io/khzaw/retirement
+  interval: 6h
+  secretRef:
+    name: ghcr-pull-secret

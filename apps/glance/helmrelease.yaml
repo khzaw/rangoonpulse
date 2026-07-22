@@ -242,6 +242,9 @@ spec:
                               - title: Interview Prep
                                 url: https://itvp.${BASE_DOMAIN}
                                 icon: mdi:head-lightbulb-outline
+                              - title: Retirement
+                                url: https://retirement.${BASE_DOMAIN}
+                                icon: mdi:chart-areaspline
                               - title: LiveSync
                                 url: https://livesync.${BASE_DOMAIN}
                                 icon: mdi:notebook-sync-outline
@@ -749,6 +752,10 @@ spec:
                             url: https://itvp.${BASE_DOMAIN}
                             check-url: http://interview-prep.default.svc.cluster.local:3000/api/health
                             icon: mdi:head-lightbulb-outline
+                          - title: Retirement
+                            url: https://retirement.${BASE_DOMAIN}
+                            check-url: http://retirement.default.svc.cluster.local:8080/health
+                            icon: mdi:chart-areaspline
                           - title: LiveSync
                             url: https://livesync.${BASE_DOMAIN}
                             check-url: http://obsidian-livesync.default.svc.cluster.local:5984
@@ -832,6 +839,10 @@ spec:
                             url: https://itvp.${BASE_DOMAIN}
                             check-url: http://interview-prep.default.svc.cluster.local:3000/api/health
                             icon: mdi:head-lightbulb-outline
+                          - title: Retirement
+                            url: https://retirement.${BASE_DOMAIN}
+                            check-url: http://retirement.default.svc.cluster.local:8080/health
+                            icon: mdi:chart-areaspline
                           - title: LiveSync
                             url: https://livesync.${BASE_DOMAIN}
                             check-url: http://obsidian-livesync.default.svc.cluster.local:5984

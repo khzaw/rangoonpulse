@@ -33,6 +33,7 @@ This doc defines the current split between service dependency updates and direct
   - `/Users/khz/Code/rangoonpulse/apps/mmcal/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/rangoon-mapper/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/ericaknight/helmrelease.yaml`
+  - `/Users/khz/Code/rangoonpulse/apps/retirement/helmrelease.yaml`
 - The intentionally pinned `alexfozor/flaresolverr` image is excluded from Renovate
 - LinuxServer images use explicit regex versioning rules so Renovate can update tags with moving `-ls###`
   build suffixes instead of treating that suffix as immutable Docker compatibility
@@ -56,6 +57,7 @@ This doc defines the current split between service dependency updates and direct
   - `rangoon-mapper`
   - `ericaknight`
   - `interview-prep`
+  - `retirement`
 
 ## Scan And Write Cadence
 

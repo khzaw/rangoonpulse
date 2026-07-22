@@ -1,0 +1,96 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: retirement
+  namespace: default
+spec:
+  interval: 24h
+  chart:
+    spec:
+      chart: app-template
+      version: "5.0.1"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: {remediation: {retries: 3}}
+  upgrade: {remediation: {retries: 3}}
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      main:
+        strategy: Recreate
+        replicas: 1
+        containers:
+          main:
+            image:
+              repository: ghcr.io/khzaw/retirement
+              tag: 1784740087-62c1d2f7be5b4199f3b5c73665b7d576abc45d09 # {"$imagepolicy": "flux-system:retirement:tag"}
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 30
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: "5m"
+                memory: "16Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: false
+    service:
+      main:
+        controller: main
+        type: ClusterIP
+        ports:
+          http:
+            port: 8080
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: retirement.${BASE_DOMAIN}
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - host: retirement.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: retirement-tls
+            hosts:
+              - retirement.${BASE_DOMAIN}

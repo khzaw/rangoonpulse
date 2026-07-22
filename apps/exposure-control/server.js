@@ -325,6 +325,20 @@ const SITE_DEPLOYMENTS = [
     namespace: "default",
     imageRepo: "ghcr.io/projectrangoon/rangoon-mapper",
   },
+  {
+    id: "retirement",
+    title: "Retirement",
+    description: "Private retirement planner promoted from the latest ghcr.io/khzaw/retirement image tag.",
+    url: "https://retirement." + PUBLIC_DOMAIN,
+    imageRepository: "retirement",
+    imagePolicy: "retirement",
+    imageUpdateAutomation: "retirement",
+    gitRepository: "flux-system",
+    kustomization: "retirement",
+    helmRelease: "retirement",
+    namespace: "default",
+    imageRepo: "ghcr.io/khzaw/retirement",
+  },
 ];
 const SITE_DEPLOYMENT_BY_ID = new Map();
 for (const deployment of SITE_DEPLOYMENTS) {

@@ -57,6 +57,7 @@ resources:
   - ./kustomizations/obsidian-livesync.yaml
   - ./kustomizations/anki-server.yaml
   - ./kustomizations/interview-prep.yaml
+  - ./kustomizations/retirement.yaml
   - ./kustomizations/bookorbit.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml

@@ -20,7 +20,8 @@
     "apps/blog/**",
     "apps/mmcal/**",
     "apps/rangoon-mapper/**",
-    "apps/ericaknight/**"
+    "apps/ericaknight/**",
+    "apps/retirement/**"
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 5,
