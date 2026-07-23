@@ -49,6 +49,7 @@ This keeps runtime overhead low in-cluster and controls monthly storage cost.
 - Vaultwarden data
 - Immich photos/original assets
 - Immich Postgres dump
+- Longview retirement planning database and exports
 - Any personal documents/photos not reproducible
 
 ### Tier 2: Important but rebuildable (offsite optional)

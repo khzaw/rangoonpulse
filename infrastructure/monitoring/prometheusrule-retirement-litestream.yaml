@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: retirement-litestream
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: retirement-litestream.rules
+      interval: 1m
+      rules:
+        - alert: RetirementBackupSyncErrors
+          expr: >
+            increase(
+              litestream_sync_error_count{
+                db="/data/longview.sqlite"
+              }[10m]
+            ) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Retirement database backup is failing"
+            description: "Litestream has reported sync errors for the Longview SQLite database. Inspect the retirement pod's litestream container and the retirement-backup PVC."
+
+        - alert: RetirementBackupCompactionErrors
+          expr: >
+            increase(
+              litestream_compaction_verify_error_count{
+                db="/data/longview.sqlite"
+              }[6h]
+            ) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: "Retirement backup integrity verification failed"
+            description: "Litestream found a transaction-range gap or overlap while compacting the Longview backup replica. Investigate before relying on the backup for recovery."
+
+        - alert: RetirementBackupMetricsMissing
+          expr: >
+            absent(
+              litestream_db_size{
+                db="/data/longview.sqlite"
+              }
+            )
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Retirement backup monitoring is missing"
+            description: "Prometheus has not seen Litestream metrics for the Longview database for 15 minutes. The sidecar, ServiceMonitor, or retirement workload may be unavailable."

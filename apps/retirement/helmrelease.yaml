@@ -22,21 +22,56 @@ spec:
         - name: ghcr-pull-secret
       nodeSelector:
         kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+      terminationGracePeriodSeconds: 45
       securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
         runAsNonRoot: true
-        runAsUser: 101
-        runAsGroup: 101
+        runAsUser: 1000
+        runAsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
     controllers:
       main:
         strategy: Recreate
         replicas: 1
+        initContainers:
+          restore:
+            image:
+              repository: docker.io/litestream/litestream
+              tag: 0.5.13
+            command:
+              - /usr/local/bin/litestream
+            args:
+              - restore
+              - -if-db-not-exists
+              - -if-replica-exists
+              - -integrity-check
+              - quick
+              - -config
+              - /etc/litestream.yml
+              - /data/longview.sqlite
+            resources:
+              requests:
+                cpu: "5m"
+                memory: "16Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
         containers:
           main:
             image:
               repository: ghcr.io/khzaw/retirement
               tag: 1784740712-2f975b181df96abecbdce8bbd054d04b611263a2 # {"$imagepolicy": "flux-system:retirement:tag"}
+            env:
+              DATABASE_PATH: /data/longview.sqlite
+              TZ: Asia/Singapore
             probes:
               liveness:
                 enabled: true
@@ -56,6 +91,29 @@ spec:
                   periodSeconds: 10
             resources:
               requests:
+                cpu: "10m"
+                memory: "32Mi"
+              limits:
+                cpu: "250m"
+                memory: "192Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+          litestream:
+            image:
+              repository: docker.io/litestream/litestream
+              tag: 0.5.13
+            command:
+              - /usr/local/bin/litestream
+            args:
+              - replicate
+              - -config
+              - /etc/litestream.yml
+            resources:
+              requests:
                 cpu: "5m"
                 memory: "16Mi"
               limits:
@@ -66,7 +124,7 @@ spec:
               capabilities:
                 drop:
                   - ALL
-              readOnlyRootFilesystem: false
+              readOnlyRootFilesystem: true
     service:
       main:
         controller: main
@@ -74,6 +132,8 @@ spec:
         ports:
           http:
             port: 8080
+          metrics:
+            port: 9090
     ingress:
       main:
         enabled: true
@@ -94,3 +154,80 @@ spec:
           - secretName: retirement-tls
             hosts:
               - retirement.${BASE_DOMAIN}
+    configMaps:
+      litestream:
+        enabled: true
+        data:
+          litestream.yml: |
+            addr: ":9090"
+            logging:
+              level: info
+              type: json
+            sync-interval: 5s
+            snapshot:
+              interval: 24h
+              retention: 2160h
+            validation:
+              interval: 6h
+            verify-compaction: true
+            shutdown-sync-timeout: 30s
+            dbs:
+              - path: /data/longview.sqlite
+                restore-if-db-not-exists: true
+                monitor-interval: 1s
+                checkpoint-interval: 1m
+                replica:
+                  type: file
+                  path: /backup/longview
+    persistence:
+      data:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: local-path
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          main:
+            main:
+              - path: /data
+            litestream:
+              - path: /data
+            restore:
+              - path: /data
+      backup:
+        enabled: true
+        type: persistentVolumeClaim
+        storageClass: truenas-nfs
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        advancedMounts:
+          main:
+            litestream:
+              - path: /backup
+            restore:
+              - path: /backup
+      litestream:
+        enabled: true
+        type: configMap
+        identifier: litestream
+        advancedMounts:
+          main:
+            litestream:
+              - path: /etc/litestream.yml
+                subPath: litestream.yml
+                readOnly: true
+            restore:
+              - path: /etc/litestream.yml
+                subPath: litestream.yml
+                readOnly: true
+      tmp:
+        enabled: true
+        type: emptyDir
+        advancedMounts:
+          main:
+            main:
+              - path: /tmp
+            litestream:
+              - path: /tmp
+            restore:
+              - path: /tmp
