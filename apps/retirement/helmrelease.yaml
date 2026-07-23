@@ -68,7 +68,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/retirement
-              tag: 1784815878-0b3949aa5debeec3e53b7167307a241df25243e2 # {"$imagepolicy": "flux-system:retirement:tag"}
+              tag: 1784818585-1368462f84e0461266bb1beda6140d22265476a3 # {"$imagepolicy": "flux-system:retirement:tag"}
             env:
               DATABASE_PATH: /data/longview.sqlite
               TZ: Asia/Singapore
