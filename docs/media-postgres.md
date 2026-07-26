@@ -5,6 +5,7 @@
 - Tracerr (`tracearr` DB)
 - Reactive Resume (`reactive_resume` DB)
 - Speedtest Tracker (`speedtest_tracker` DB)
+- BookOrbit (`bookorbit` DB)
 
 Immich uses its own Postgres and is intentionally not consolidated here.
 
@@ -14,8 +15,13 @@ Immich uses its own Postgres and is intentionally not consolidated here.
 
 ## Runtime tuning
 - `timescaledb.telemetry_level=off`
+- `max_connections=100`
 - `max_locks_per_transaction=2048`
-- resources: `requests.memory=4Gi`, `limits.memory=8Gi`
+- resources: `requests.memory=2Gi`, `limits.memory=8Gi`
+
+The connection limit is explicit because the image-generated persistent configuration selected `25`, which is too low
+for the combined connection pools of the shared applications. A budget of `100` restores normal PostgreSQL headroom
+while retaining the default three superuser-reserved slots.
 
 The higher lock budget is intentional. `tracearr.library_snapshots` is a Timescale hypertable with thousands of chunks, and overview/retention queries can exhaust the default lock table and fail with `out of shared memory` unless Postgres is sized for that fan-out.
 
