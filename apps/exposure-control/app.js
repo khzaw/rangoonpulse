@@ -1712,6 +1712,7 @@
         const visibleItems = filteredUpdateItems(items);
         const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
         const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
+        const policy = window.UpdatePolicy;
         updatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
@@ -1728,23 +1729,26 @@
             const imageLabel = item.imageRepo || item.image || '—';
             const imageDetail = [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ');
             const imageTitle = [imageLabel, imageDetail].filter(Boolean).join('\n');
-            const matchingPr = findMatchingRenovatePr(item, 'image');
+            const workflow = policy.classifyImageUpdate(item, dashboardState.renovate, payload && payload.checkedAt);
+            const statusLabel = item.status === 'update' ? workflow.label : String(item.statusText || 'unknown').toLowerCase();
             let actionHtml = '<span class="updates-action-note">—</span>';
-            if (matchingPr) {
-              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>';
+            if (workflow.url) {
+              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(workflow.url) + '" target="_blank" rel="noreferrer">' + escapeHtml(workflow.label) + '</a>';
             } else if (item.status === 'update') {
               if (!renovateConfigured) {
                 actionHtml = '<span class="updates-action-note">Renovate off</span>';
-              } else if (renovateActiveRun) {
+              } else if (renovateActiveRun && workflow.canRun) {
                 actionHtml = '<span class="updates-action-note">Scan running</span>';
-              } else {
+              } else if (workflow.canRun) {
                 actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="image" data-item-label="' + escapeHtml(item.name || item.id || 'service') + '">Run scan</button>';
+              } else {
+                actionHtml = '<span class="updates-action-note" title="' + attrText(workflow.detail) + '">' + escapeHtml(workflow.label) + '</span>';
               }
             }
             tr.innerHTML =
               '<td><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
               '<td class="updates-version-cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
-              '<td class="updates-status-cell"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
+              '<td class="updates-status-cell"><span class="update-chip ' + (item.status || 'unknown') + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
               '<td class="updates-context-cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(imageDetail) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);

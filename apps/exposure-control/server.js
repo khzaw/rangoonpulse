@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
 const { URL } = require("node:url");
+const { parseDependencyDashboard } = require("./renovate-dashboard");
 
 const CONFIGURED_BASE_DOMAIN = String(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "",
@@ -1881,6 +1882,9 @@ async function buildRenovateStatusSnapshot() {
   const openPrs = Array.isArray(pullsData) ? pullsData : [];
   const openIssues = Array.isArray(issuesData) ? issuesData : [];
   const dashboardIssue = pickRenovateDashboardIssue(openIssues);
+  const dashboardStatus = parseDependencyDashboard(
+    dashboardIssue ? String(dashboardIssue.body || "") : "",
+  );
   const renovatePrs = openPrs.filter((pr) => {
     const headRef = String((pr && pr.head && pr.head.ref) || "");
     const labels = Array.isArray(pr && pr.labels)
@@ -1902,6 +1906,8 @@ async function buildRenovateStatusSnapshot() {
     lastRun: sanitizeWorkflowRun(lastRun),
     openPrCount: renovatePrs.length,
     openPrs: renovatePrs.map(sanitizeRenovatePr),
+    rateLimitedUpdates: dashboardStatus.rateLimitedUpdates,
+    detectedDependencies: dashboardStatus.detectedDependencies,
     dashboardIssueUrl: dashboardIssue ? String(dashboardIssue.html_url || "") : "",
     dashboardIssueNumber: dashboardIssue ? Number(dashboardIssue.number || 0) : 0,
     checkedAt: nowIso(),
@@ -4488,6 +4494,10 @@ const CONTROL_PANEL_ASSETS = new Map([
   }],
   ["/assets/thinking-orb.js", {
     filePath: path.join(APP_DIR, "thinking-orb.js"),
+    contentType: "application/javascript; charset=utf-8",
+  }],
+  ["/assets/update-policy.js", {
+    filePath: path.join(APP_DIR, "update-policy.js"),
     contentType: "application/javascript; charset=utf-8",
   }],
   ["/assets/app.js", {

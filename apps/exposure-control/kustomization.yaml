@@ -11,8 +11,10 @@ configMapGenerator:
     files:
       - app.js
       - index.html
+      - renovate-dashboard.js
       - server.js
       - thinking-orb.js
+      - update-policy.js
       - secret-commit-job.sh
       - services.json
       - styles.css

@@ -13,15 +13,15 @@
     "custom.regex",
     "flux",
     "github-actions",
-    "helm-values"
+    "helm-values",
+    "kubernetes"
   ],
   "ignorePaths": [
     "flux/flux-system/**",
     "apps/blog/**",
     "apps/mmcal/**",
     "apps/rangoon-mapper/**",
-    "apps/ericaknight/**",
-    "apps/retirement/**"
+    "apps/ericaknight/**"
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 5,
@@ -34,6 +34,11 @@
   "helm-values": {
     "managerFilePatterns": [
       "/(^|/)(apps|core|infrastructure)/.+(helmrelease|values)\\.ya?ml$/"
+    ]
+  },
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/(^|/)(apps|core|infrastructure)/.+\\.ya?ml$/"
     ]
   },
   "customManagers": [
@@ -62,11 +67,12 @@
       "enabled": false
     },
     {
-      "description": "Keep private Multica app images manual; GHCR package lookup is not available to Renovate.",
+      "description": "Keep Flux-managed and private app images out of Renovate while tracking public sidecars in the same manifests.",
       "matchDatasources": [
         "docker"
       ],
       "matchPackageNames": [
+        "ghcr.io/khzaw/retirement",
         "ghcr.io/khzaw/multica-web",
         "ghcr.io/khzaw/multica-backend"
       ],

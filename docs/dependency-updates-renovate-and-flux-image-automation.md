@@ -20,20 +20,22 @@ This doc defines the current split between service dependency updates and direct
 - Current enabled managers:
   - `flux` for `HelmRelease` chart version updates
   - `helm-values` for container image tags in Helm values style YAML
+  - `kubernetes` for container images in raw Deployments, CronJobs, and other pod templates
   - `github-actions` for workflow action updates
 - Helm chart and service image updates are intentionally not broadly grouped.
   Each chart/image dependency should get its own Renovate branch and PR so a bad rollout can be reverted without backing out unrelated services.
 
 ## Renovate Guardrails
-- PR concurrency and hourly creation are capped at five each to avoid floods while letting the nightly run
-  drain a normal service-update backlog.
+- PR concurrency and hourly creation are capped at five each to avoid floods. Renovate runs every six hours so
+  the bounded queue refills after earlier PRs are merged instead of waiting for the next day.
 - Dependency dashboard enabled through GitHub Issues
 - Static-site app paths are ignored by Renovate:
   - `/Users/khz/Code/rangoonpulse/apps/blog/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/mmcal/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/rangoon-mapper/helmrelease.yaml`
   - `/Users/khz/Code/rangoonpulse/apps/ericaknight/helmrelease.yaml`
-  - `/Users/khz/Code/rangoonpulse/apps/retirement/helmrelease.yaml`
+- The Flux-managed `ghcr.io/khzaw/retirement` application image is disabled with a package rule rather than a
+  path-wide ignore. Public companion images in the same manifest, including Litestream, remain Renovate-managed.
 - The intentionally pinned `alexfozor/flaresolverr` image is excluded from Renovate
 - LinuxServer images use explicit regex versioning rules so Renovate can update tags with moving `-ls###`
   build suffixes instead of treating that suffix as immutable Docker compatibility
@@ -46,7 +48,9 @@ This doc defines the current split between service dependency updates and direct
   - `/Users/khz/Code/rangoonpulse/apps/adguard/secondary/helmrelease.yaml`
 - GitHub Actions patch/minor updates may be grouped because they only touch workflow dependencies.
 - Generated Flux install manifests under `flux/flux-system/**` are ignored
-- `controlpanel.khzaw.dev` can dispatch the Renovate workflow and link matching open PRs from the updates tab
+- `controlpanel.khzaw.dev` can dispatch the Renovate workflow and link matching open PRs from the updates tab.
+  It also reads the Dependency Dashboard to distinguish open PRs, rate-limited updates, Git versions ahead of
+  live workloads, releases discovered after the last run, chart-managed images, and intentional version policies.
 
 ## Flux Image Automation Scope
 - GitOps path: `/Users/khz/Code/rangoonpulse/infrastructure/image-automation/`
