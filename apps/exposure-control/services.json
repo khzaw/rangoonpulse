@@ -115,18 +115,6 @@
     "description": "Immich"
   },
   {
-    "id": "calibre",
-    "name": "Calibre Web Automated",
-    "target": "https://calibre.${BASE_DOMAIN}",
-    "description": "OPDS and web library"
-  },
-  {
-    "id": "calibre-manage",
-    "name": "Calibre Manage",
-    "target": "https://calibre-manage.${BASE_DOMAIN}",
-    "description": "Calibre GUI and content server paths"
-  },
-  {
     "id": "iris",
     "name": "Iris OpenClaw UI",
     "target": "http://10.0.0.66:18789",

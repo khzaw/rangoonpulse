@@ -21,9 +21,9 @@ This document records the GitOps deployment and operational decisions for study-
 - Canonical hostname: `https://bookorbit.khzaw.dev`
 - Alias: `https://books.khzaw.dev` redirects to the canonical hostname.
 - Public share hostname: `https://share-bookorbit.khzaw.dev` when enabled from Exposure Control.
-- Image: `ghcr.io/bookorbit/bookorbit:2.2.0`
+- Image: `ghcr.io/bookorbit/bookorbit:2.3.0`
 - Backend: a dedicated `bookorbit` database and role on the shared `media-postgres` PostgreSQL instance.
-- Purpose: digital book library and web reader over the existing Calibre books.
+- Purpose: digital book library and web reader over the shared ebook library.
 
 The public share hostname proxies the complete BookOrbit application, including its API. Devices without Tailscale can
 use `https://share-bookorbit.khzaw.dev` as the BookOrbit KOReader plugin server,
@@ -52,9 +52,8 @@ Writable app state is separate from the shared library:
   update the embedded metadata and cover in the existing book file.
 
 BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, enables EPUB metadata and cover
-write-back, keeps file renames disabled, excludes `bookdrop`, and scans every six hours. Calibre, Calibre-Web Automated,
-and Shelfmark can still write the shared claim; BookOrbit's write access is for its opt-in in-place metadata operations.
-Avoid editing the same book concurrently in multiple applications.
+write-back, keeps file renames disabled, excludes `bookdrop`, and scans every six hours. BookOrbit and Shelfmark can
+write the shared claim. Avoid editing the same book concurrently in both applications.
 
 ## Node Placement and Resources
 

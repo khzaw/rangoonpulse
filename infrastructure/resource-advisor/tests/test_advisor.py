@@ -189,11 +189,11 @@ class BuildApplyPlanTests(unittest.TestCase):
         self.assertEqual(plan["skipped_reason_counts"].get("node_capacity_block"), 1)
         self.assertTrue(plan["node_fit"]["hard_fit_ok"])
 
-    def test_build_apply_plan_maps_calibre_to_helmrelease(self):
+    def test_build_apply_plan_maps_bookorbit_to_helmrelease(self):
         report = make_report(
             [
                 make_recommendation(
-                    "calibre",
+                    "bookorbit",
                     current_cpu="150m",
                     recommended_cpu="112m",
                     current_memory="512Mi",
@@ -216,8 +216,8 @@ class BuildApplyPlanTests(unittest.TestCase):
                 plan, _markdown = advisor.build_apply_plan(report)
 
         self.assertEqual(len(plan["selected"]), 1)
-        self.assertEqual(plan["selected"][0]["release"], "calibre")
-        self.assertEqual(plan["selected"][0]["path"], "apps/calibre/helmrelease.yaml")
+        self.assertEqual(plan["selected"][0]["release"], "bookorbit")
+        self.assertEqual(plan["selected"][0]["path"], "apps/bookorbit/helmrelease.yaml")
 
     def test_build_apply_plan_applies_bursty_media_floor_before_downsize(self):
         report = make_report(
@@ -412,7 +412,7 @@ class BuildApplyPlanTests(unittest.TestCase):
         report = make_report(
             [
                 make_recommendation(
-                    "calibre-web-automated",
+                    "shelfmark",
                     current_cpu="75m",
                     recommended_cpu="56m",
                     current_memory="256Mi",

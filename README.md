@@ -115,7 +115,6 @@ Current cluster status: both nodes are functional and schedulable.
 | **Immich** | Photo & video backup |
 | **Seerr** | Media request manager |
 | **Audiobookshelf** | Audiobook & podcast server |
-| **Calibre** | E-book library management |
 | **Shelfmark** | Book and audiobook downloader |
 
 ### Media Automation
@@ -308,13 +307,6 @@ make deploy-retirement
 <img src=".github/screenshots/sonarr.webp" />
 
 <img src=".github/screenshots/radarr.webp" />
-
----
-
-### Calibre
-
-
-<img src=".github/screenshots/calibre.webp" />
 
 ---
 

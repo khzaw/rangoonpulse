@@ -17,7 +17,6 @@ This repository now uses a unified destination model:
   - Type `LoadBalancer`
   - MetalLB external IP: `10.0.0.231`
   - Primary ports: `80` and `443`
-  - Additional service port: `9090` on the same controller service, preserving explicit `calibre-manage` content-server access without a second ingress controller
 - Dedicated edge exception:
   - `iris.khzaw.dev` uses dedicated MetalLB VIP `10.0.0.235`
   - `443` fronts the ordinary ingress-nginx controller through `Service/ingress-nginx-iris-controller`
@@ -51,7 +50,6 @@ This repository now uses a unified destination model:
 ### Components And Their Roles
 1. `ingress-nginx-controller` (MetalLB VIP `10.0.0.231`)
 - Primary entrypoint for all Kubernetes apps (`80/443`).
-- Also exposes `9090` on the same Service for `calibre-manage` content-server clients, routed by the normal `nginx` ingress class.
 
 2. `iris.khzaw.dev` dedicated VIP (`10.0.0.235`)
 - Gives one hostname a unique edge IP so HTTPS and SSH can coexist cleanly.

@@ -32,22 +32,7 @@ patches:
       name: ingress-nginx-controller
       namespace: ingress-nginx
 
-  # Patch 3: Preserve calibre content-server access on 9090 without running a second ingress-nginx controller.
-  - patch: |-
-      - op: add
-        path: /spec/ports/-
-        value:
-          appProtocol: https
-          name: https-9090
-          port: 9090
-          protocol: TCP
-          targetPort: https
-    target:
-      kind: Service
-      name: ingress-nginx-controller
-      namespace: ingress-nginx
-
-  # Patch 4: Set security defaults and reference custom response headers
+  # Patch 3: Set security defaults and reference custom response headers
   - patch: |-
       - op: remove
         path: /data
@@ -61,7 +46,7 @@ patches:
       name: ingress-nginx-controller
       namespace: ingress-nginx
 
-  # Patch 5: Keep ingress-nginx burstable, but bound runaway CPU/memory use.
+  # Patch 4: Keep ingress-nginx burstable, but bound runaway CPU/memory use.
   - patch: |-
       - op: add
         path: /spec/template/spec/containers/0/resources/limits

@@ -4,7 +4,7 @@
 - Path: `apps/shelfmark/helmrelease.yaml`
 - Hostname: `https://shelfmark.khzaw.dev`
 - Temporary share host: `https://share-shelfmark.khzaw.dev`
-- Image: `ghcr.io/calibrain/shelfmark:v1.2.0`
+- Image: `ghcr.io/calibrain/shelfmark:v1.3.4`
 - Health endpoint: `/api/health`
 
 Shelfmark is deployed as a primary-node `app-template` workload and acts as a manual search/download front end for the
@@ -15,22 +15,19 @@ existing book and audiobook stack.
 - `/books` -> `calibre-books-nfs`
 - `/bookdrop` -> `calibre-books-nfs` (subPath `bookdrop`)
 - `/audiobooks` -> `books` PVC (subPath `audiobooks`)
-- `/integrations/calibre` -> `app-configs-pvc-nfs` (subPath `calibre`, read-only)
-- `/integrations/calibre-web-automated` -> `app-configs-pvc-nfs` (subPath `calibre-web-automated`, read-only)
 
 Operational intent:
-- Shelfmark shares the Calibre/CWA config PVC family without writing into their subpaths.
-- Ebook downloads can land on the shared Calibre library PVC.
-- BookOrbit scans the same shared Calibre library PVC read-only; Shelfmark and Calibre remain the writers.
+- Ebook downloads can land on the shared ebook library PVC.
+- BookOrbit and Shelfmark both mount `calibre-books-nfs` read-write. BookOrbit owns library browsing and metadata;
+  Shelfmark writes downloaded files into the library or `bookdrop`.
 - Audiobookshelf handoff can target `/audiobooks`.
 
 ## Runtime Defaults
 - Node: `talos-7nf-osf`
 - Strategy: `Recreate`
-- Requests: `200m` CPU / `512Mi` memory
-- Limits: `1500m` CPU / `2Gi` memory
+- Requests: `84m` CPU / `417Mi` memory
+- Limits: `633m` CPU / `864Mi` memory
 - UI shortcuts:
-  - `CALIBRE_WEB_URL=https://calibre.khzaw.dev`
   - `AUDIOBOOK_LIBRARY_URL=https://audiobookshelf.khzaw.dev`
 
 ## Related GitOps Surfaces

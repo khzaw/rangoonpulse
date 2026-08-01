@@ -48,8 +48,6 @@ resources:
   - ./kustomizations/local-storage.yaml
   - ./kustomizations/uptime-kuma.yaml
   - ./kustomizations/audiobookshelf.yaml
-  - ./kustomizations/calibre.yaml
-  - ./kustomizations/calibre-web-automated.yaml
   - ./kustomizations/shelfmark.yaml
   - ./kustomizations/chartsdb.yaml
   - ./kustomizations/speedtest.yaml

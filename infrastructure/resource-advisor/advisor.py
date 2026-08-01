@@ -19,8 +19,6 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",
     "autobrr": "apps/autobrr/helmrelease.yaml",
     "bazarr": "apps/bazarr/helmrelease.yaml",
-    "calibre": "apps/calibre/helmrelease.yaml",
-    "calibre-web-automated": "apps/calibre-web-automated/helmrelease.yaml",
     "shelfmark": "apps/shelfmark/helmrelease.yaml",
     "chartsdb": "apps/chartsdb/helmrelease.yaml",
     "ersatztv": "apps/ersatztv/helmrelease.yaml",

@@ -9,13 +9,23 @@ Date: 2026-02-18
 - `default/calibre-books-nfs` (`20Gi`, `RWX`, storageClass `truenas-nfs`)
 - `default/app-configs-pvc-nfs` (`1Gi`, `RWX`, storageClass `truenas-nfs`)
 
-App mappings:
-- `apps/calibre/helmrelease.yaml`
-  - `/books` -> `calibre-books-nfs`
-  - `/config` (subPath `calibre`) -> `app-configs-pvc-nfs`
-- `apps/calibre-web-automated/helmrelease.yaml`
-  - `/calibre-library` -> `calibre-books-nfs`
-  - `/config` (subPath `calibre-web-automated`) -> `app-configs-pvc-nfs`
+## Current Ownership After Calibre Retirement
+
+Calibre and Calibre Web Automated were retired on 2026-08-01. Their Deployments, Services, Ingresses, Flux
+Kustomizations, dashboard entries, and public-share routes were removed, but no storage data was deleted.
+
+`calibre-books-nfs` remains an independently managed claim under `infrastructure/storage/calibre/`:
+- BookOrbit mounts it read-write at `/books` and owns library browsing and metadata write-back.
+- Shelfmark mounts it read-write at `/books` and `/bookdrop` for downloaded files.
+
+The old `calibre` and `calibre-web-automated` subpaths on `app-configs-pvc-nfs` are retained but no longer mounted.
+Keeping those dormant config directories is deliberate rollback safety; their eventual deletion is a separate destructive
+cleanup task.
+
+Historical app mappings before retirement:
+- Calibre mounted `/books` from `calibre-books-nfs` and `/config` from the `calibre` subpath of `app-configs-pvc-nfs`.
+- Calibre Web Automated mounted `/calibre-library` from `calibre-books-nfs` and `/config` from the
+  `calibre-web-automated` subpath of `app-configs-pvc-nfs`.
 
 ## Data Safety Checks Performed
 - Initial pre-seed copy to new PVCs with migration pod.

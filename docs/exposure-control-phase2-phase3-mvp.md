@@ -43,8 +43,6 @@ Default exposure expiry:
   - `share-tunarr.khzaw.dev`
   - `share-vaultwarden.khzaw.dev`
   - `share-immich.khzaw.dev`
-  - `share-calibre.khzaw.dev`
-  - `share-calibre-manage.khzaw.dev`
 
 3. Exposure backend + control panel:
 - `apps/exposure-control/helmrelease.yaml`

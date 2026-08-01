@@ -38,7 +38,6 @@ spec:
               PUID: "1000"
               PGID: "1000"
               SESSION_COOKIE_SECURE: "true"
-              CALIBRE_WEB_URL: "https://calibre.${BASE_DOMAIN}"
               AUDIOBOOK_LIBRARY_URL: "https://audiobookshelf.${BASE_DOMAIN}"
             probes:
               startup:
@@ -119,12 +118,6 @@ spec:
             main:
               - path: /config
                 subPath: shelfmark
-              - path: /integrations/calibre
-                subPath: calibre
-                readOnly: true
-              - path: /integrations/calibre-web-automated
-                subPath: calibre-web-automated
-                readOnly: true
 
       calibre-books:
         enabled: true

@@ -227,12 +227,6 @@ spec:
                               - title: Shelfmark
                                 url: https://shelfmark.${BASE_DOMAIN}
                                 icon: mdi:bookshelf
-                              - title: Calibre
-                                url: https://calibre.${BASE_DOMAIN}
-                                icon: di:calibre
-                              - title: Calibre VNC
-                                url: https://calibre-manage.${BASE_DOMAIN}
-                                icon: di:calibre
                               - title: BookOrbit
                                 url: https://bookorbit.${BASE_DOMAIN}
                                 icon: mdi:book-open-page-variant
@@ -622,8 +616,6 @@ spec:
                           - transmission/transmission
                           - sabnzbd/sabnzbd
                           - alexfozor/flaresolverr
-                          - linuxserver/docker-calibre
-                          - crocodilestick/Calibre-Web-Automated
 
                   - size: small
                     widgets:

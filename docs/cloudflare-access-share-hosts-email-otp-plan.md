@@ -5,7 +5,7 @@ Purpose:
 - Keep `authMode=none` available for truly open links when needed.
 
 Scope:
-- Applies only to share hostnames (for example `share-calibre.khzaw.dev`).
+- Applies only to share hostnames (for example `share-bookorbit.khzaw.dev`).
 - Does not change private LAN/Tailscale access paths.
 
 ## Target Behavior

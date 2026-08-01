@@ -105,7 +105,6 @@
       ],
       "matchPackageNames": [
         "lscr.io/linuxserver/bazarr",
-        "lscr.io/linuxserver/calibre",
         "lscr.io/linuxserver/sabnzbd",
         "lscr.io/linuxserver/speedtest-tracker"
       ],
