@@ -19,6 +19,7 @@ patches:
       spec:
         type: LoadBalancer
         loadBalancerIP: ${INGRESS_VIP}
+        externalTrafficPolicy: Local
 
   # Patch 2: Add the missing --publish-service argument to the Deployment
   #  path: /spec/template/spec/containers/0/args/- uses JSON Patch syntax to append (add to path ending in -) the value to the existing args array for the first container).
