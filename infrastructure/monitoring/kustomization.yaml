@@ -10,6 +10,7 @@ resources:
   - servicemonitor-kubelet-resource.yaml
   - servicemonitor-truenas-netdata.yaml
   - servicemonitor-retirement-litestream.yaml
+  - servicemonitor-seventyfivesoft-litestream.yaml
   - grafana-dashboard-gitops-change-timeline.yaml
   - grafana-dashboard-dns-access-paths.yaml
   - grafana-dashboard-node-power-estimation.yaml
@@ -31,5 +32,6 @@ resources:
   - prometheusrule-truenas-storage-alerts.yaml
   - prometheusrule-truenas-host-alerts.yaml
   - prometheusrule-retirement-litestream.yaml
+  - prometheusrule-seventyfivesoft-litestream.yaml
   - prometheusrule-cronjob-deadman.yaml
   - alertmanagerconfig-homelab.yaml

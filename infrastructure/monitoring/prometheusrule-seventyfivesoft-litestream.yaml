@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: seventyfivesoft-litestream
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: seventyfivesoft-litestream.rules
+      interval: 1m
+      rules:
+        - alert: SeventyFiveSoftBackupSyncErrors
+          expr: >
+            increase(
+              litestream_sync_error_count{
+                db="/data/seventyfivesoft.sqlite"
+              }[10m]
+            ) > 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "75 Soft database backup is failing"
+            description: "Litestream has reported sync errors for the 75 Soft SQLite database. Inspect the seventyfivesoft pod's litestream container and the seventyfivesoft-backup PVC."
+
+        - alert: SeventyFiveSoftBackupCompactionErrors
+          expr: >
+            increase(
+              litestream_compaction_verify_error_count{
+                db="/data/seventyfivesoft.sqlite"
+              }[6h]
+            ) > 0
+          labels:
+            severity: critical
+          annotations:
+            summary: "75 Soft backup compaction verification failed"
+            description: "Litestream found a transaction-range gap or overlap while compacting the 75 Soft backup replica. Investigate before relying on the backup for recovery."
+
+        - alert: SeventyFiveSoftBackupMetricsMissing
+          expr: >
+            absent(
+              litestream_db_size{
+                db="/data/seventyfivesoft.sqlite"
+              }
+            )
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "75 Soft backup monitoring is missing"
+            description: "Prometheus has not seen Litestream metrics for the 75 Soft database for 15 minutes. The sidecar, ServiceMonitor, or seventyfivesoft workload may be unavailable."

@@ -167,6 +167,7 @@ Current cluster status: both nodes are functional and schedulable.
 | **Anki Server** | Flashcard sync |
 | **Interview Prep** | Spaced-repetition coding and system-design journal |
 | **Retirement** | Private retirement calculator and portfolio projections |
+| **75 Soft** | Private offline-first wellness journal and habit tracker |
 | **BookOrbit** | E-book library and web reader |
 
 ---

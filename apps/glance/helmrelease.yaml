@@ -239,6 +239,9 @@ spec:
                               - title: Retirement
                                 url: https://retirement.${BASE_DOMAIN}
                                 icon: mdi:chart-areaspline
+                              - title: 75 Soft
+                                url: https://seventyfivesoft.${ERICAKNIGHT_DOMAIN}
+                                icon: mdi:heart-pulse
                               - title: LiveSync
                                 url: https://livesync.${BASE_DOMAIN}
                                 icon: mdi:notebook-sync-outline
@@ -748,6 +751,10 @@ spec:
                             url: https://retirement.${BASE_DOMAIN}
                             check-url: http://retirement.default.svc.cluster.local:8080/health
                             icon: mdi:chart-areaspline
+                          - title: 75 Soft
+                            url: https://seventyfivesoft.${ERICAKNIGHT_DOMAIN}
+                            check-url: http://seventyfivesoft.default.svc.cluster.local:8080/healthz
+                            icon: mdi:heart-pulse
                           - title: LiveSync
                             url: https://livesync.${BASE_DOMAIN}
                             check-url: http://obsidian-livesync.default.svc.cluster.local:5984
@@ -835,6 +842,10 @@ spec:
                             url: https://retirement.${BASE_DOMAIN}
                             check-url: http://retirement.default.svc.cluster.local:8080/health
                             icon: mdi:chart-areaspline
+                          - title: 75 Soft
+                            url: https://seventyfivesoft.${ERICAKNIGHT_DOMAIN}
+                            check-url: http://seventyfivesoft.default.svc.cluster.local:8080/healthz
+                            icon: mdi:heart-pulse
                           - title: LiveSync
                             url: https://livesync.${BASE_DOMAIN}
                             check-url: http://obsidian-livesync.default.svc.cluster.local:5984
