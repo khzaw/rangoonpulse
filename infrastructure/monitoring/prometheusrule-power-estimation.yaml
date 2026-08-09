@@ -87,7 +87,7 @@ spec:
         - record: homelab:cluster_estimated_power_watts
           expr: sum(homelab:node_estimated_power_watts)
 
-        # Q1 2026 Singapore regulated household tariff (with 9% GST):
-        # 29.11 cents/kWh for 1 Jan 2026 to 31 Mar 2026.
+        # Q3 2026 Singapore regulated household tariff (with 9% GST):
+        # 34.78 cents/kWh for 1 Jul 2026 to 30 Sep 2026.
         - record: homelab:singapore_household_tariff_sgd_per_kwh
-          expr: vector(0.2911)
+          expr: vector(0.3478)

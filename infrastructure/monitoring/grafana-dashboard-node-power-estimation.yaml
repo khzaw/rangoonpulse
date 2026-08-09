@@ -85,7 +85,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost uses the Singapore regulated household tariff pinned in Prometheus for `1 January 2026` through `31 March 2026` (`29.11` cents/kWh, GST inclusive). The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
+            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost uses the Singapore regulated household tariff pinned in Prometheus for `1 July 2026` through `30 September 2026` (`34.78` cents/kWh, GST inclusive). The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
           }
         },
         {
@@ -307,7 +307,7 @@ data:
         {
           "id": 8,
           "type": "stat",
-          "title": "Singapore Tariff (Q1 2026)",
+          "title": "Singapore Tariff (Q3 2026)",
           "datasource": {
             "uid": "$datasource"
           },

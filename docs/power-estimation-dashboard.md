@@ -68,9 +68,9 @@ estimated power results.
 - Estimated cost multiplies that energy by the Singapore regulated household tariff
   series `homelab:singapore_household_tariff_sgd_per_kwh`.
 - Current tariff pinned in GitOps:
-  - `0.2911 SGD/kWh` (`29.11` cents/kWh, with GST)
-  - effective `1 January 2026` to `31 March 2026`
-  - source: EMA regulated tariff page and SP Group Q1 2026 tariff release
+  - `0.3478 SGD/kWh` (`34.78` cents/kWh, with GST)
+  - effective `1 July 2026` to `30 September 2026`
+  - source: SP Group tariff information page and Q3 2026 tariff release
 - Review and update this tariff every quarter.
 
 ## Verification
