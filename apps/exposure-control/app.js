@@ -1058,7 +1058,7 @@
           const ready = item.ready;
           const latest = item.latestTag || 'n/a';
           const current = item.currentTag || 'n/a';
-          const buttonText = 'Deploy this';
+          const buttonText = 'Deploy';
           const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">open site</a>' : '<span class="muted">cluster-internal</span>';
           const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
           const enterDelay = Math.min(index * 30, 120);

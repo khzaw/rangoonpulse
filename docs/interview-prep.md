@@ -41,7 +41,7 @@ When the app settles down, change the Interview Prep repository and writer inter
 Use the control panel fast path while iterating instead of waiting for the hourly loop:
 
 1. Open `https://controlpanel.khzaw.dev/#deploy`.
-2. Press **Deploy this** for `ITVP` after the GHCR image has been published.
+2. Press **Deploy** for `ITVP` after the GHCR image has been published.
 
 The terminal equivalent remains:
 
