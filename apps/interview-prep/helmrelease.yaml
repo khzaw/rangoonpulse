@@ -36,7 +36,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/interview-prep
-              tag: 1786342118-72d1f0b289876cecd093f3c029f1afd319250f4f # {"$imagepolicy": "flux-system:interview-prep:tag"}
+              tag: 1786370023-d3684d3a56f8ca4bb119fd99517d5aa9790131f7 # {"$imagepolicy": "flux-system:interview-prep:tag"}
             env:
               DATABASE_PATH: /data/interview-prep.sqlite
               TZ: "${TIMEZONE}"
