@@ -312,9 +312,6 @@ spec:
                               - title: Diagrams
                                 url: https://diagrams.${BASE_DOMAIN}
                                 icon: mdi:vector-polyline
-                              - title: Multica
-                                url: https://multica.${BASE_DOMAIN}
-                                icon: mdi:certificate-outline
                               - title: SponsorBlock TV
                                 url: https://sponsorblocktv.${BASE_DOMAIN}
                                 icon: mdi:skip-forward-outline
@@ -721,10 +718,6 @@ spec:
                             url: https://diagrams.${BASE_DOMAIN}
                             check-url: http://kroki.default.svc.cluster.local:8000
                             icon: mdi:vector-polyline
-                          - title: Multica
-                            url: https://multica.${BASE_DOMAIN}
-                            check-url: http://multica-backend.default.svc.cluster.local:8080/health
-                            icon: mdi:certificate-outline
                           - title: Immich
                             url: https://photos.${BASE_DOMAIN}
                             check-url: http://immich-server.default.svc.cluster.local:2283/server-info/ping

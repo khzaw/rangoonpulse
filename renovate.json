@@ -72,9 +72,7 @@
         "docker"
       ],
       "matchPackageNames": [
-        "ghcr.io/khzaw/retirement",
-        "ghcr.io/khzaw/multica-web",
-        "ghcr.io/khzaw/multica-backend"
+        "ghcr.io/khzaw/retirement"
       ],
       "enabled": false
     },
