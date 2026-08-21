@@ -201,6 +201,27 @@ Why this matters:
 - first-run wizard mode only listens on `:3000`,
 - without explicit probes, Kubernetes can report the pod `Running` while DNS and ingress are both broken.
 
+### 9) ExternalDNS v0.22 Requires An Explicit Annotation Prefix
+
+ExternalDNS v0.22.0 changed its default annotation prefix from
+`external-dns.alpha.kubernetes.io/` to `external-dns.kubernetes.io/` with no
+fallback. Rangoonpulse still declares hostnames with the legacy prefix. Without
+an explicit compatibility flag, the ingress and service sources produce an
+empty desired record set; because this deployment uses `--policy=sync`,
+ExternalDNS then deletes every record and ownership TXT record it previously
+managed.
+
+Expected GitOps state while the repository still has legacy annotations:
+
+```yaml
+- --annotation-prefix=external-dns.alpha.kubernetes.io/
+```
+
+Do not remove that flag until all hostname annotations have been migrated in one
+controlled change. For future ExternalDNS upgrades, read the upstream release
+notes before merge and test annotation or registry migrations with
+`--dry-run=true` and `--policy=create-only` before returning to `sync`.
+
 ## Validation Commands
 ```bash
 # Check AdGuard DNS service exposure

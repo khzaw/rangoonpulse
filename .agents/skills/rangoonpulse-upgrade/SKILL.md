@@ -95,6 +95,14 @@ https://controlpanel.khzaw.dev/#updates
 
 ### 2. Analyze Upgrade Risk Before Editing
 
+Before any controller upgrade that can mutate external state, read the upstream
+release notes for migration or deletion warnings. This is mandatory for tools
+such as ExternalDNS that run with destructive reconciliation policies. If an
+upgrade changes annotation prefixes, ownership registries, source discovery, or
+record policy, first prove the new configuration with `--dry-run=true` and a
+non-destructive policy such as `--policy=create-only`; only return to `sync`
+after the desired record set is known to be complete.
+
 Produce a concise analysis in your working notes or user update:
 - source of truth for the version bump
 - whether the service is stateless, stateful, or mixed
