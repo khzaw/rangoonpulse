@@ -38,7 +38,7 @@ spec:
           main:
             image:
               repository: louislam/uptime-kuma
-              tag: "2.5.0"
+              tag: "2.5.3"
             resources:
               requests:
                 cpu: 50m
