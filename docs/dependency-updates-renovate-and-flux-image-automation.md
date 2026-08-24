@@ -65,7 +65,7 @@ This doc defines the current split between service dependency updates and direct
 
 ## Scan And Write Cadence
 
-- `ImageRepository/interview-prep` and `ImageUpdateAutomation/interview-prep` run every `1h` while the app is under active development.
+- `ImageRepository/interview-prep` and `ImageUpdateAutomation/interview-prep` run every `3h` while the app is under active development.
 - The other static-site image repositories and per-site image writers remain at `6h`.
 - `Kustomization/image-automation` remains at `6h` because it reconciles the automation definitions, not published image tags.
 - Return Interview Prep's repository and writer to `6h` when the active tweaking period ends.

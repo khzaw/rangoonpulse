@@ -29,8 +29,8 @@ Interview Prep is a single-user coding and system-design practice journal deploy
 
 Interview Prep is currently on a temporary active-development cadence:
 
-- `ImageRepository/interview-prep` scans GHCR every `1h`.
-- `ImageUpdateAutomation/interview-prep` checks for policy changes every `1h` and writes only `apps/interview-prep`.
+- `ImageRepository/interview-prep` scans GHCR every `3h`.
+- `ImageUpdateAutomation/interview-prep` checks for policy changes every `3h` and writes only `apps/interview-prep`.
 - Other image repositories retain their existing `6h` registry scans.
 - `Kustomization/image-automation` remains at `6h`; it reconciles the automation definitions and is not the steady-state image scan/write timer.
 

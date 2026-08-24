@@ -7,4 +7,4 @@ metadata:
 spec:
   image: ghcr.io/khzaw/interview-prep
   # Temporarily accelerated while the app is under active development.
-  interval: 1h
+  interval: 3h

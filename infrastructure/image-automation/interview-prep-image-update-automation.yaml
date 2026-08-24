@@ -5,7 +5,7 @@ metadata:
   name: interview-prep
   namespace: flux-system
 spec:
-  interval: 1h
+  interval: 3h
   sourceRef:
     kind: GitRepository
     name: flux-system
