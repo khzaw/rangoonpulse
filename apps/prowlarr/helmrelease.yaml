@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/prowlarr
-              tag: 2.5.2.5491-ls156
+              tag: 2.5.2.5491-ls157
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
