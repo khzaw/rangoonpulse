@@ -50,6 +50,8 @@ This repository now uses a unified destination model:
 ### Components And Their Roles
 1. `ingress-nginx-controller` (MetalLB VIP `10.0.0.231`)
 - Primary entrypoint for all Kubernetes apps (`80/443`).
+- Compresses eligible responses with gzip at level 5; the controller's native
+  MIME list includes JSON, JavaScript, CSS, SVG, and text responses.
 
 2. `iris.khzaw.dev` dedicated VIP (`10.0.0.235`)
 - Gives one hostname a unique edge IP so HTTPS and SSH can coexist cleanly.

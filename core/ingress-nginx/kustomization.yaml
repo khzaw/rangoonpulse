@@ -41,7 +41,9 @@ patches:
         path: /data
         value:
           add-headers: "ingress-nginx/ingress-nginx-custom-headers"
+          gzip-level: "5"
           hide-headers: "X-Powered-By,Server"
+          use-gzip: "true"
     target:
       kind: ConfigMap
       name: ingress-nginx-controller

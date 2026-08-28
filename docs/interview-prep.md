@@ -18,6 +18,8 @@ Interview Prep is a single-user coding and system-design practice journal deploy
 - Source and image: `github.com/khzaw/interview-prep` / `ghcr.io/khzaw/interview-prep`
 - Workload: one `app-template` replica pinned to `${PRIMARY_NODE_NAME}`
 - Port and health: `3000` / `/api/health`
+- The shared ingress-nginx controller compresses the large workspace JSON
+  response with gzip when the client advertises support.
 - CPU: `100m` request and `1` core limit. The app server-renders the complete
   workspace bootstrap, so it needs burst headroom even though steady-state use
   is low. The previous `312m` limit caused sustained CFS throttling and probe
