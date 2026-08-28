@@ -84,6 +84,7 @@ spec:
         annotations:
           external-dns.alpha.kubernetes.io/hostname: itvp.${BASE_DOMAIN}
           nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/proxy-body-size: "2m"
           cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
           - host: itvp.${BASE_DOMAIN}
