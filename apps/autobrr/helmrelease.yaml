@@ -37,7 +37,7 @@ spec:
           main:
             image:
               repository: ghcr.io/autobrr/autobrr
-              tag: v1.84.0
+              tag: v1.85.0
             env:
               TZ: "${TIMEZONE}"
             resources:
