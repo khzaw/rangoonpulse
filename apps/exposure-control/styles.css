@@ -3458,7 +3458,8 @@ tbody tr {
   margin-top: 0;
 }
 
-.overview-shared > .overview-strip {
+.overview-shared > .overview-strip,
+.section[data-page-section] > .overview-strip {
   border-top: 0;
   border-right: 0;
   border-left: 0;
