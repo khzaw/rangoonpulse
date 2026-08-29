@@ -73,8 +73,8 @@ spec:
                 value: "${TIMEZONE}"
             resources:
               requests:
-                cpu: "49m"
-                memory: "256Mi"
+                cpu: "52m"
+                memory: "192Mi"
               limits:
                 cpu: "976m"
                 memory: "768Mi"
