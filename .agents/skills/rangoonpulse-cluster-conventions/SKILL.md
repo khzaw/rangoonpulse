@@ -22,6 +22,7 @@ Open the smallest relevant subset:
 - `/Users/khz/Code/rangoonpulse/docs/shared-cluster-settings.md`
 - `/Users/khz/Code/rangoonpulse/docs/secrets-management-current-state-options-and-plan.md`
 - `/Users/khz/Code/rangoonpulse/docs/networking-current-state-and-simplification.md` when hostnames, ingress VIP, or access path matter
+- `/Users/khz/Code/rangoonpulse/docs/talos-kubelet-image-garbage-collection.md` when node `/var`, CRI image retention, or kubelet image GC matters
 - `/Users/khz/Code/rangoonpulse/docs/README.md` for any deeper domain doc routing
 
 ## Core Rules
