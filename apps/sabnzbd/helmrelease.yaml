@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/sabnzbd
-              tag: 5.1.2-ls270
+              tag: 5.1.2-ls271
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
