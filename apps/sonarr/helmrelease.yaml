@@ -40,10 +40,10 @@ spec:
               # above p95 automation data; keep CPU headroom for manual search.
               requests:
                 cpu: "100m"
-                memory: "702Mi"
+                memory: "803Mi"
               limits:
                 cpu: "500m"
-                memory: "1055Mi"
+                memory: "1204Mi"
     service:
       main:
         ports:
