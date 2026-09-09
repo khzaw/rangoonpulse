@@ -115,14 +115,14 @@
       "versioning": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-ls(?<build>\\d+)$"
     },
     {
-      "description": "Track LinuxServer Jellyfin while preserving the Ubuntu base compatibility suffix.",
+      "description": "Track stable LinuxServer Jellyfin releases, Ubuntu bases, and ls rebuilds.",
       "matchDatasources": [
         "docker"
       ],
       "matchPackageNames": [
         "lscr.io/linuxserver/jellyfin"
       ],
-      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?<compatibility>ubu\\d+)-ls(?<build>\\d+)$"
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?ubu(?<build>\\d+)-ls(?<revision>\\d+)$"
     },
     {
       "description": "Track LinuxServer images with r and ls build components.",
