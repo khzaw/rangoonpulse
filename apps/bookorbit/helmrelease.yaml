@@ -198,6 +198,16 @@ spec:
               - path: /books
                 readOnly: false
 
+      downloads:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: downloads
+        advancedMounts:
+          main:
+            main:
+              - path: /downloads
+                readOnly: false
+
       tmp:
         enabled: true
         type: emptyDir

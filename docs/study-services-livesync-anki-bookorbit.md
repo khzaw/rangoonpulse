@@ -50,6 +50,17 @@ Writable app state is separate from the shared library:
 - `bookorbit`: `/data` on a dedicated expandable `5Gi` NFS PVC.
 - `bookorbit`: `/books` from existing claim `calibre-books-nfs`, mounted read-write so enabled metadata write-back can
   update the embedded metadata and cover in the existing book file.
+- `bookorbit`: `/downloads` from existing claim `downloads`, mounted read-write at the same path as Transmission,
+  Radarr, and Sonarr.
+
+For Transmission integration, use `http://transmission-main.default.svc.cluster.local:9091` and explicitly configure
+`/downloads` to `/downloads` as the client-to-BookOrbit path mapping. With category `bookorbit`, new torrents use
+`/downloads/bookorbit`; the category subdirectory is covered by that mapping. Client configuration remains runtime
+application state, not Git-managed configuration.
+
+BookOrbit stages completed imports in `/data/book-dock` before library ingestion. Direct-file sources/plugins use
+`/data/request-downloads`, independently of Transmission. Both remain on BookOrbit's app-data PVC. These are separate
+filesystems from `/downloads`, so the importer falls back to copying when a hardlink fails across mounts.
 
 BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, enables EPUB metadata and cover
 write-back, keeps file renames disabled, excludes `bookdrop`, and scans every six hours. BookOrbit and Shelfmark can
