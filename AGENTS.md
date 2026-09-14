@@ -5,7 +5,7 @@ Detailed operating context belongs in the root `README.md`, `docs/README.md`,
 focused docs under `docs/`, and project-local skills under `.agents/skills/`.
 
 ## Start Here
-- On every new session in `/Users/khz/Code/rangoonpulse`, read in order:
+- On every new session in this repo, read in order:
   1. `AGENTS.md`
   2. `README.md`
   3. `docs/README.md`
