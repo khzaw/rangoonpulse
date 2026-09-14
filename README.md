@@ -176,6 +176,7 @@ Current cluster status: both nodes are functional and schedulable.
 
 ```
 .
+├── .agents/                   # Project-local agent skills
 ├── apps/                      # User-facing applications
 │   ├── jellyfin/
 │   ├── immich/
@@ -188,26 +189,31 @@ Current cluster status: both nodes are functional and schedulable.
 │   ├── external-dns/
 │   ├── metallb/
 │   ├── monitoring/
-│   ├── flux-operator/
+│   ├── public-edge/
 │   ├── resource-advisor/
 │   ├── secrets/
 │   ├── storage/
-│   └── tailscale-operator/
+│   ├── tailscale-operator/
+│   └── ...
 ├── flux/                      # Flux GitOps configuration
 │   ├── repositories/          # Helm repositories
 │   ├── kustomizations/        # App kustomizations
 │   └── cluster-settings.yaml  # Shared non-secret cluster constants
-├── talos/                     # Talos machine configuration
 ├── docs/                      # Documentation & runbooks
-└── scripts/                   # Operational scripts
+├── scripts/                   # Operational scripts
+├── AGENTS.md                  # Agent session entrypoint
+└── ...
 ```
+
+Talos Linux is the cluster OS, but machine configuration is not kept in this repo.
+Node names, VIP, and related non-secret facts live in [`flux/cluster-settings.yaml`](./flux/cluster-settings.yaml).
 
 ---
 
 ## Shared Settings
 
 Cluster-wide non-secret constants now live in:
-- `/Users/khz/Code/rangoonpulse/flux/cluster-settings.yaml`
+- [`flux/cluster-settings.yaml`](./flux/cluster-settings.yaml)
 
 Flux child `Kustomization` objects consume those values with post-build substitution, so changing items like the base
 domain, share-host prefix, timezone, node names, ingress VIP, or LAN service IPs can now be done in one place for the GitOps-managed
