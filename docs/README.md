@@ -4,7 +4,7 @@ Use this file as the docs entrypoint for new agent sessions and for any task tha
 
 ## Required Session-Start Reading
 
-On every new session in `/Users/khz/Code/rangoonpulse`, read:
+On every new session in this repo, read:
 
 1. [`AGENTS.md`](../AGENTS.md)
 2. [`README.md`](../README.md)
