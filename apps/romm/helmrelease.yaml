@@ -130,7 +130,7 @@ spec:
           main:
             image:
               repository: postgres
-              tag: "16.15-alpine"
+              tag: "18.6-alpine"
             command: [sh, -c]
             args:
               - |
