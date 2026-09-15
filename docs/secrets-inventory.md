@@ -57,6 +57,12 @@ Notes:
     - keys: `username`, `password`
 
 ### Media DBs
+- **romm** (`apps/romm/helmrelease.yaml`)
+  - `default/romm-secret`
+    - keys: `DB_PASSWD`, `ROMM_AUTH_SECRET_KEY`
+  - `default/media-postgres-secret`
+    - key: `POSTGRES_PASSWORD` (database provisioning hook only; never passed to the app)
+
 - **media-postgres** (`apps/media-postgres/helmrelease.yaml`)
   - `default/media-postgres-secret`
     - key: `POSTGRES_PASSWORD` (postgres superuser password)

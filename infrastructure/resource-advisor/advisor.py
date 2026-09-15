@@ -37,6 +37,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "prowlarr": "apps/prowlarr/helmrelease.yaml",
     "radarr": "apps/radarr/helmrelease.yaml",
     "reactive-resume": "apps/reactive-resume/helmrelease.yaml",
+    "romm": "apps/romm/helmrelease.yaml",
     "sabnzbd": "apps/sabnzbd/helmrelease.yaml",
     "sonarr": "apps/sonarr/helmrelease.yaml",
     "speedtest": "apps/speedtest/helmrelease.yaml",
@@ -50,6 +51,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
 DEFAULT_APPLY_ALLOWLIST = tuple(APP_TEMPLATE_RELEASE_FILE_MAP.keys())
 DEFAULT_DOWNSCALE_EXCLUDE = (
     "jellyfin",
+    "romm",
     "immich",
     "immich-postgres",
     "machine-learning",

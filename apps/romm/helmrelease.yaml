@@ -1,0 +1,237 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: romm
+  namespace: default
+spec:
+  interval: 24h
+  timeout: 15m
+  dependsOn:
+    - name: media-postgres
+  chart:
+    spec:
+      chart: app-template
+      version: "5.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+    controllers:
+      main:
+        forceRename: romm
+        replicas: 1
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: rommapp/romm
+              tag: "5.2.0"
+            env:
+              TZ: "${TIMEZONE}"
+              ROMM_BASE_URL: https://roms.${BASE_DOMAIN}
+              ROMM_DB_DRIVER: postgresql
+              DB_HOST: media-postgres.default.svc.cluster.local
+              DB_PORT: "5432"
+              DB_NAME: romm
+              DB_USER: romm
+              ROMM_SESSION_SECURE_COOKIE: "true"
+              ROMM_CORS_ALLOWED_ORIGINS: https://roms.${BASE_DOMAIN}
+              HASHEOUS_API_ENABLED: "true"
+              # Each Python process has its own DB pool. Keep scan/API concurrency
+              # small on the shared PostgreSQL server until workload is measured.
+              WEB_SERVER_CONCURRENCY: "1"
+              SCAN_WORKERS: "1"
+              # Archive hashing and patching also use the generic temp directory.
+              TMPDIR: /romm
+              ROM_PATCHER_MAX_CONCURRENCY: "1"
+              ROM_PATCHER_MAX_FILE_SIZE_BYTES: "268435456"
+            envFrom:
+              - secretRef:
+                  name: romm-secret
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 250m
+                memory: 1Gi
+              limits:
+                cpu: "2"
+                memory: 3Gi
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/heartbeat
+                    port: 8080
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 90
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/heartbeat
+                    port: 8080
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 6
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/heartbeat
+                    port: 8080
+                  periodSeconds: 30
+                  timeoutSeconds: 10
+                  failureThreshold: 6
+
+      # Run before install/upgrade, including recovery onto an empty shared DB.
+      # The running app never receives the PostgreSQL superuser credential.
+      database:
+        type: job
+        # The release ServiceAccount does not exist yet during pre-install.
+        serviceAccount:
+          name: default
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        job:
+          backoffLimit: 3
+          activeDeadlineSeconds: 300
+        containers:
+          main:
+            image:
+              repository: postgres
+              tag: "16.14-alpine"
+            command: [sh, -c]
+            args:
+              - |
+                set -eu
+                psql -X -w -q -v ON_ERROR_STOP=1 -v ECHO=none <<'SQL'
+                \getenv romm_password ROMM_DB_PASSWORD
+                SELECT pg_advisory_lock(1380928845, 1);
+                SELECT 'CREATE ROLE romm LOGIN'
+                WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'romm')
+                \gexec
+                ALTER ROLE romm WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 30 PASSWORD :'romm_password';
+                SELECT 'CREATE DATABASE romm OWNER romm'
+                WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'romm')
+                \gexec
+                ALTER DATABASE romm OWNER TO romm;
+                REVOKE ALL ON DATABASE romm FROM PUBLIC;
+                SELECT pg_advisory_unlock(1380928845, 1);
+                SQL
+                echo "RomM database and role are ready."
+            env:
+              PGHOST: media-postgres.default.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: postgres
+              PGUSER: postgres
+              PGCONNECT_TIMEOUT: "10"
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: media-postgres-secret
+                    key: POSTGRES_PASSWORD
+              ROMM_DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: romm-secret
+                    key: DB_PASSWD
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 25m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: roms.${BASE_DOMAIN}
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+          nginx.ingress.kubernetes.io/proxy-body-size: "0"
+          nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+          nginx.ingress.kubernetes.io/proxy-buffering: "off"
+          nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+          nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+        hosts:
+          - host: roms.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: romm-tls
+            hosts:
+              - roms.${BASE_DOMAIN}
+
+    persistence:
+      # One NAS filesystem keeps ROMs, upload staging and generated ZIPs off the
+      # node disk, and supports hardlinks between RomM's data directories.
+      data:
+        type: persistentVolumeClaim
+        storageClass: truenas-nfs
+        accessMode: ReadWriteOnce
+        size: 20Gi
+        retain: true
+        advancedMounts:
+          main:
+            main:
+              - path: /romm
+      redis:
+        type: persistentVolumeClaim
+        storageClass: local-path
+        accessMode: ReadWriteOnce
+        size: 2Gi
+        retain: true
+        advancedMounts:
+          main:
+            main:
+              - path: /redis-data

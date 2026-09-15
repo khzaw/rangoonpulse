@@ -59,6 +59,7 @@ resources:
   - ./kustomizations/retirement.yaml
   - ./kustomizations/seventyfivesoft.yaml
   - ./kustomizations/bookorbit.yaml
+  - ./kustomizations/romm.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml

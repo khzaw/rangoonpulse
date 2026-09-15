@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/kustomization-kustomize-v1.json
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: romm
+  namespace: flux-system
+spec:
+  interval: 24h
+  path: ./apps/romm
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-settings
+  targetNamespace: default
+  timeout: 20m
+  wait: true
+  dependsOn:
+    - name: secrets
+    - name: media-postgres
+    - name: democratic-csi
+    - name: local-path-provisioner
+    - name: ingress-nginx
+    - name: external-dns
+    - name: cert-manager-config

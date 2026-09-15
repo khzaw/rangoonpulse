@@ -99,6 +99,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Service-specific guides
 
+- [`docs/romm.md`](./romm.md) for the private ROM library, shared PostgreSQL provisioning, and expandable NAS storage.
 - [`docs/study-services-livesync-anki-bookorbit.md`](./study-services-livesync-anki-bookorbit.md)
 - [`docs/reactive-resume.md`](./reactive-resume.md)
 - [`docs/bentopdf.md`](./bentopdf.md) for private browser-based PDF tools, resource limits, and bounded autoscaling.

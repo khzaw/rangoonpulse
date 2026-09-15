@@ -230,6 +230,9 @@ spec:
                               - title: BookOrbit
                                 url: https://bookorbit.${BASE_DOMAIN}
                                 icon: mdi:book-open-page-variant
+                              - title: RomM
+                                url: https://roms.${BASE_DOMAIN}
+                                icon: mdi:gamepad-variant
                               - title: Anki
                                 url: https://anki.${BASE_DOMAIN}
                                 icon: mdi:cards-outline
@@ -602,6 +605,7 @@ spec:
                           - jellyfin/jellyfin
                           - advplyr/audiobookshelf
                           - calibrain/shelfmark
+                          - rommapp/romm
                           - seerr-team/seerr
                           - chrisbenincasa/tunarr
                           - actualbudget/actual
@@ -733,6 +737,10 @@ spec:
                             url: https://bookorbit.${BASE_DOMAIN}
                             check-url: http://bookorbit.default.svc.cluster.local:3000/api/v1/health
                             icon: mdi:book-open-page-variant
+                          - title: RomM
+                            url: https://roms.${BASE_DOMAIN}
+                            check-url: http://romm.default.svc.cluster.local:8080/api/heartbeat
+                            icon: mdi:gamepad-variant
                           - title: Shelfmark
                             url: https://shelfmark.${BASE_DOMAIN}
                             check-url: http://shelfmark.default.svc.cluster.local:8084/api/health
@@ -824,6 +832,10 @@ spec:
                             url: https://bookorbit.${BASE_DOMAIN}
                             check-url: http://bookorbit.default.svc.cluster.local:3000/api/v1/health
                             icon: mdi:book-open-page-variant
+                          - title: RomM
+                            url: https://roms.${BASE_DOMAIN}
+                            check-url: http://romm.default.svc.cluster.local:8080/api/heartbeat
+                            icon: mdi:gamepad-variant
                           - title: Shelfmark
                             url: https://shelfmark.${BASE_DOMAIN}
                             check-url: http://shelfmark.default.svc.cluster.local:8084/api/health

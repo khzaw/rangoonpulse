@@ -6,6 +6,7 @@
 - Reactive Resume (`reactive_resume` DB)
 - Speedtest Tracker (`speedtest_tracker` DB)
 - BookOrbit (`bookorbit` DB)
+- RomM (`romm` DB; provisioned by its own Helm hook, see [`romm.md`](./romm.md))
 
 Immich uses its own Postgres and is intentionally not consolidated here.
 
@@ -44,3 +45,9 @@ This release also reads per-app DB passwords from existing Secrets:
 - `default/speedtest-tracker-secret` (`POSTGRES_PASSWORD`)
 
 The init script creates roles/DBs on first boot only.
+
+RomM's `pre-install,pre-upgrade` Helm hook provisions its own database and role
+against both existing and newly initialized servers. Its credentials are not
+added to this release, so installing RomM does not roll the shared database.
+The app uses one API worker and one scan worker with a 30-connection role limit
+to bound its use of the shared 100-connection budget.
