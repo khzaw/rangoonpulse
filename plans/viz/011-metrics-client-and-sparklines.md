@@ -1,7 +1,7 @@
 # 011 — Metrics client, pulse page and sparklines
 
 - **Status**: DONE — live verified 2026-09-16
-- **Commit**: 630906f
+- **Commit**: fa41a42
 - **Phase**: 0 foundation
 - **Category**: Client data layer; layout; first visual
 - **Estimated scope**: 5 files, about 320 lines (new pulse.js, index.html, app.js, styles.css, kustomization.yaml)

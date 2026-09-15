@@ -16,7 +16,7 @@ else builds on it.
 | [011](011-metrics-client-and-sparklines.md) | Metrics client, pulse page and sparklines | 0 foundation | DONE | 010 |
 | [012](012-node-twins.md) | Node twins | 1 physical | DONE | 011 |
 | [013](013-power-and-cost-ticker.md) | Power and cost ticker | 1 physical | DONE | 011 |
-| [014](014-placement-map.md) | Placement map | 2 shape | TODO | 011 |
+| [014](014-placement-map.md) | Placement map | 2 shape | DONE | 011 |
 | [015](015-storage-tanks.md) | Storage tanks | 2 shape | DONE | 011 |
 | [016](016-flux-reconcile-ribbon.md) | Flux reconcile ribbon | 3 activity | TODO | 011 |
 | [017](017-alert-lamp-board.md) | Alert lamp board | 3 activity | TODO | 011 |
@@ -116,3 +116,10 @@ any policy change.
 - Inventory currently has 48 PVCs, with usage telemetry for 19 NAS claims.
   Local-path must show unavailable usage and requested capacity.
 - Seven-day power uses a derived 34-minute step, not one hour.
+
+- 012/013 shipped together to validate their shared node/power model in one rollout.
+- 012–015 live verification: both node drawings and cost estimates render; all
+  100 observed pods have a nonzero map cell; Show all reveals all 48 claims.
+  Keyboard fold/expand, pod details, both themes, and 400px layouts were checked.
+- Full repository check: 92 tests pass. New metrics clients remain separate from
+  operator refresh completion, verified with a deliberately pending metrics call.

@@ -1,7 +1,7 @@
 # 010 — Prometheus query proxy
 
 - **Status**: DONE — live verified 2026-09-16
-- **Commit**: 630906f
+- **Commit**: 7d0bddf
 - **Phase**: 0 foundation
 - **Category**: Server; data access
 - **Estimated scope**: 3 files, about 220 lines added (server.js, server.test.js, helmrelease.yaml)

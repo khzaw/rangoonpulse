@@ -1,7 +1,7 @@
 # 013 — Power and cost ticker
 
 - **Status**: DONE — live verified 2026-09-16
-- **Commit**: 630906f
+- **Commit**: e10e1ba
 - **Phase**: 1 physical
 - **Category**: Visual; derived metric
 - **Estimated scope**: 3 files, about 180 lines (pulse.js, app.js, styles.css)

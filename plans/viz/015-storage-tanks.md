@@ -1,7 +1,7 @@
 # 015 — Storage tanks
 
 - **Status**: DONE — live verified 2026-09-16
-- **Commit**: 630906f
+- **Commit**: 0f2a696
 - **Phase**: 2 shape
 - **Category**: Visual; capacity
 - **Estimated scope**: 3 files, about 220 lines (pulse.js, app.js, styles.css)

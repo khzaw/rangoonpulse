@@ -1,7 +1,7 @@
 # 014 — Placement map
 
-- **Status**: IMPLEMENTED — pending live verification
-- **Commit**: 630906f
+- **Status**: DONE — live verified 2026-09-16
+- **Commit**: c3faff4
 - **Phase**: 2 shape
 - **Category**: Visual; topology
 - **Estimated scope**: 3 files, about 340 lines (pulse.js, app.js, styles.css)

@@ -1,7 +1,7 @@
 # 012 — Node twins
 
 - **Status**: DONE — live verified 2026-09-16
-- **Commit**: 630906f
+- **Commit**: e10e1ba
 - **Phase**: 1 physical
 - **Category**: Visual; hardware state
 - **Estimated scope**: 3 files, about 260 lines (pulse.js, app.js, styles.css)

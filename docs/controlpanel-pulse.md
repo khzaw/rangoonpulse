@@ -79,3 +79,21 @@ curl -fsS 'https://controlpanel.khzaw.dev/api/metrics?names=cluster_watts,tariff
 Verify the Pulse page in light and dark themes, at desktop and 400-pixel widths.
 Navigation to another page must stop periodic metric requests. Keep deployment
 and commits scoped to exposure-control; other cluster work may be concurrent.
+
+## Verification record — 2026-09-16
+
+The completed page was checked against live node, pod, and PVC inventory in both
+themes and at 400px. All 100 sampled pods retained visible cells; expanding both
+storage groups showed all 48 claims (19 measured, 29 unavailable). Ninety-two
+repository tests passed, including sparse histories and heavily skewed treemaps.
+
+Ten cached requests added 40 cache hits and no upstream requests. Off-page
+observation over 115 seconds produced no extra metric request; reopening Pulse
+refreshed it. A deliberately pending client metrics call did not delay completion
+of the operator dashboard refresh. The pod settled at approximately 1m CPU and
+19–23Mi memory during checks, within the existing resource limits.
+
+The first layout attempt measured empty, hidden blocks and therefore used an
+incorrect SVG width. Charts now measure the page width. Namespace insets and
+header heights scale down for tiny groups; fixed insets previously removed their
+pod cells. Neither fix changes the memory weights represented in the map.

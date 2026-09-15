@@ -2369,6 +2369,9 @@
       }
 
       async function loadDashboard(options) {
+        // Telemetry has its own loading state; a slow metrics query must not
+        // delay rendering the operator controls returned by the other APIs.
+        if (activePage === 'pulse') void loadPulse();
         const silent = Boolean(options && options.silent);
         if (!silent) {
           setLoadState('Refreshing dashboard...');
@@ -2408,7 +2411,6 @@
             includeJobs ? request('/api/jobs', 'GET') : Promise.resolve(null),
             includeSiteDeployments ? request('/api/site-deployments', 'GET') : Promise.resolve(null),
             includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
-            activePage === 'pulse' ? loadPulse() : Promise.resolve(null),
           ]);
 
           if (svcData.status !== 'fulfilled') throw svcData.reason;
