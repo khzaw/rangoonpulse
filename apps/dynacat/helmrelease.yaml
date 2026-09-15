@@ -50,6 +50,11 @@ spec:
               TZ: "${TIMEZONE}"
               ENABLE_EDITOR: "false"
               ENABLE_DYNAMIC_UPDATE: "true"
+              GITHUB_RELEASES_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: dynacat-github
+                    key: token
             envFrom:
               - secretRef:
                   name: homepage-widget-secrets
@@ -626,6 +631,7 @@ spec:
                               {{ end }}`}}
 
                       - type: releases
+                        token: $${GITHUB_RELEASES_TOKEN}
                         cache: 24h
                         update-interval: 24h
                         show-source-icon: true

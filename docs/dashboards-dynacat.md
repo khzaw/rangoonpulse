@@ -10,6 +10,8 @@ The former `glance.khzaw.dev` alias and its workload, Flux objects, ingress, and
 - `apps/dynacat/certificate.yaml`: canonical TLS certificate, issued independently of ingress for safe cutovers.
 - `flux/kustomizations/dynacat.yaml`: Flux wiring and shared-setting substitution.
 - `default/homepage-widget-secrets`: existing encrypted API keys, consumed with `envFrom`.
+- `default/dynacat-github`: SOPS-managed GitHub token for authenticated release lookups;
+  its `token` key is injected as `GITHUB_RELEASES_TOKEN`.
 
 The dashboard runs on the ARM64 utility node, `talos-uua-g6r`, with the pinned multiarch
 `ghcr.io/panonim/dynacat:3.0.0` image. The Home, Health, and Media pages retain the existing
@@ -49,6 +51,18 @@ round trips and measures the service path directly.
 
 When adding a service, update its bookmark group, relevant Health monitor, and upstream release watcher when available.
 The operator cockpit remains `controlpanel.khzaw.dev`; `resource-advisor-exporter` remains a separate monitored backend.
+
+The Releases widget uses `token: $${GITHUB_RELEASES_TOKEN}` in Git so Flux preserves the
+runtime environment reference. Keep the credential in `default/dynacat-github`, never in
+the ConfigMap. Its purpose is to read public repository releases; the widget does not
+need repository write access.
+
+On 2026-09-15, the whole Releases widget displayed `failed to retrieve any content`.
+Pod logs showed GitHub HTTP `403` responses for all tracked repositories, including
+BentoPDF, with `API rate limit exceeded`. The widget had no token configured and shared
+the cluster's unauthenticated request quota. Authenticate these requests before treating
+that symptom as a missing release or an invalid repository name. After a credential
+change, roll the deployment and check both the pod logs and rendered release entries.
 
 The custom API templates use Go template braces. Preserve the Helm wrapper when embedding them:
 

@@ -19,6 +19,11 @@ Notes:
   - `default/homepage-widget-secrets`
     - consumed via `envFrom.secretRef`
     - keys: various `*_API_KEY` values used by Dynacat widgets
+  - `default/dynacat-github`
+    - key: `token`, consumed as `GITHUB_RELEASES_TOKEN` by the Releases widget
+    - SOPS-managed and visible in the Control Panel Secrets inventory
+    - reuses the existing fine-grained Resource Advisor GitHub credential; the widget only reads public releases
+    - rotate this copy together with `monitoring/resource-advisor-github` when rotating that shared credential
 
 - **exposure-control** (`apps/exposure-control/helmrelease.yaml`)
   - `default/exposure-control-github`
