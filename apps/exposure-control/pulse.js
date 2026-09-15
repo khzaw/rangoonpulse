@@ -276,8 +276,133 @@
       '<g class="tank-ruler" fill="none" stroke="var(--border-strong)" stroke-width=".65">' + ticks + '<path d="M11 92H31"/></g></svg>';
   }
 
+  // Generic weights use item.value. Pod request floors belong to the renderer,
+  // keeping this layout useful for both namespace and pod rectangles.
+  function treemap(items, width, height) {
+    if (!Array.isArray(items) || !numeric(width) || !numeric(height) || width <= 0 || height <= 0 || !numeric(width * height)) return [];
+    const entries = items.map((item, index) => ({ item, index, value: item?.value })).filter((entry) => numeric(entry.value) && entry.value > 0).sort((a, b) => b.value - a.value || a.index - b.index);
+    if (!entries.length) return [];
+    const largest = entries[0].value;
+    const total = entries.reduce((sum, entry) => sum + entry.value / largest, 0);
+    for (const entry of entries) entry.area = (entry.value / largest / total) * width * height;
+    const cells = [];
+    let x = 0, y = 0, remainingWidth = width, remainingHeight = height, row = [];
+    function worst(group, side) {
+      if (!group.length || side <= 0) return Infinity;
+      const areas = group.map((entry) => entry.area);
+      const sum = areas.reduce((value, area) => value + area, 0);
+      return Math.max(side * side * Math.max(...areas) / (sum * sum), sum * sum / (side * side * Math.min(...areas)));
+    }
+    function place(group) {
+      const sum = group.reduce((value, entry) => value + entry.area, 0);
+      const vertical = remainingWidth >= remainingHeight;
+      const cross = vertical ? remainingHeight : remainingWidth;
+      const thickness = Math.min(vertical ? remainingWidth : remainingHeight, sum / cross);
+      let offset = 0;
+      group.forEach((entry, index) => {
+        const length = index === group.length - 1 ? Math.max(0, cross - offset) : Math.min(cross - offset, entry.area / thickness);
+        cells.push({ item: entry.item, x: x + (vertical ? 0 : offset), y: y + (vertical ? offset : 0), width: vertical ? thickness : length, height: vertical ? length : thickness });
+        offset += length;
+      });
+      if (vertical) { x += thickness; remainingWidth = Math.max(0, width - x); }
+      else { y += thickness; remainingHeight = Math.max(0, height - y); }
+    }
+    for (const entry of entries) {
+      const side = Math.min(remainingWidth, remainingHeight);
+      if (row.length && worst([...row, entry], side) > worst(row, side)) { place(row); row = []; }
+      row.push(entry);
+    }
+    if (row.length) place(row);
+    return cells;
+  }
+
+  function joinPods(metrics = {}) {
+    function keyed(metric, activePhase = false) {
+      const result = new Map();
+      if (metric?.state && metric.state !== 'live') return result;
+      for (const series of metric?.series || []) {
+        const { namespace, pod } = series.labels || {};
+        if (typeof namespace !== 'string' || !namespace || typeof pod !== 'string' || !pod || (activePhase && last(series) !== 1)) continue;
+        // Queries already aggregate containers by namespace and pod. Never sum
+        // duplicate exporter observations, or memory and restart counts double.
+        result.set(namespace + '|' + pod, series);
+      }
+      return result;
+    }
+    const inventory = keyed(metrics.pod_info);
+    const requests = keyed(metrics.pod_mem_request);
+    const usage = keyed(metrics.pod_mem_usage);
+    const restarts = keyed(metrics.pod_restarts_24h);
+    const phases = keyed(metrics.pod_phase, true);
+    const observed = (series) => { const value = last(series); return numeric(value) && value >= 0 ? value : null; };
+    return [...inventory].filter(([, series]) => typeof series.labels.node === 'string' && series.labels.node.trim()).map(([key, item]) => {
+      const request = observed(requests.get(key));
+      const used = observed(usage.get(key));
+      return { key, name: item.labels.pod, namespace: item.labels.namespace, node: item.labels.node, request, usage: used, ratio: used !== null && request > 0 ? used / request : null, restarts: observed(restarts.get(key)), phase: phases.get(key)?.labels.phase || 'unknown' };
+    });
+  }
+
+  function placementSvg(pods, width, height, options = {}) {
+    if (!numeric(width) || !numeric(height) || width <= 0 || height <= 0) return '';
+    const id = 'pulse-placement-' + (++svgId);
+    const namespaces = new Map();
+    for (const pod of pods || []) {
+      if (!namespaces.has(pod.namespace)) namespaces.set(pod.namespace, { name: pod.namespace, value: 0, pods: [] });
+      const namespace = namespaces.get(pod.namespace);
+      const value = Math.max(32 * 1024 ** 2, numeric(pod.request) && pod.request >= 0 ? pod.request : 0);
+      namespace.value += value;
+      namespace.pods.push({ ...pod, value });
+    }
+    const text = (value, room, size = 10) => {
+      const count = Math.floor(room / (size * .61));
+      return count < 1 ? '' : value.length <= count ? value : count === 1 ? '…' : value.slice(0, count - 1) + '…';
+    };
+    const pos = (value) => Math.max(0, value).toFixed(3);
+    const definitions = halftoneDefs(id) + '<defs><pattern id="' + id + '-check" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 0h2v2H0zM2 2h2v2H2z" fill="currentColor" opacity=".28"/></pattern></defs>';
+    const groups = treemap([...namespaces.values()], width, height).map((area) => {
+      const group = area.item;
+      const collapsed = options.collapsed?.has(group.name) || false;
+      const gapX = Math.min(1.5, area.width / 4), gapY = Math.min(1.5, area.height / 4);
+      const x = area.x + gapX, y = area.y + gapY;
+      const w = Math.max(0, area.width - gapX * 2), h = Math.max(0, area.height - gapY * 2);
+      // A namespace header must never consume the only space its pods have.
+      // Small namespaces keep a keyboard-accessible header without visible text.
+      const headerHeight = Math.min(22, h * .25);
+      const inset = Math.min(1, w / 4, h / 4);
+      const title = group.name + ' · ' + group.pods.length + ' pods';
+      const header = '<g class="placement-namespace-label" role="button" tabindex="0" data-namespace="' + esc(group.name) + '" aria-expanded="' + !collapsed + '" aria-label="' + esc((collapsed ? 'Expand ' : 'Collapse ') + title) + '"><title>' + esc(title) + '</title><rect x="' + pos(x) + '" y="' + pos(y) + '" width="' + pos(w) + '" height="' + pos(headerHeight) + '" fill="transparent" pointer-events="all"/>' + (headerHeight >= 14 ? '<text x="' + pos(x + Math.min(6, w / 2)) + '" y="' + pos(y + 14) + '" font-size="11" fill="var(--text-1)" pointer-events="none">' + esc(text(title, w - 12, 11)) + '</text>' : '') + '</g>';
+      let content = '';
+      if (collapsed) {
+        content = '<rect class="placement-collapsed-fill" x="' + pos(x + inset) + '" y="' + pos(y + headerHeight) + '" width="' + pos(w - inset * 2) + '" height="' + pos(h - headerHeight - inset) + '" fill="url(#' + id + '-ink-1)"/>';
+      } else {
+        const innerWidth = Math.max(0, w - inset * 2), innerHeight = Math.max(0, h - headerHeight - inset);
+        const cells = treemap(group.pods, innerWidth, innerHeight);
+        content = cells.map((cell) => {
+          const pod = cell.item;
+          const px = x + inset + cell.x, py = y + headerHeight + cell.y;
+          const gap = Math.min(1, cell.width * .15, cell.height * .15);
+          const pw = Math.max(0, cell.width - gap), ph = Math.max(0, cell.height - gap);
+          const phase = pod.phase || 'unknown';
+          const running = phase === 'Running';
+          const step = Pulse.inkStep(pod.ratio);
+          const fill = !running ? 'url(#' + id + '-check)' : step ? 'url(#' + id + '-ink-' + step + ')' : 'none';
+          const description = pod.namespace + '/' + pod.name + '; request ' + fmt.bytes(pod.request) + '; usage ' + fmt.bytes(pod.usage) + '; usage/request ' + (numeric(pod.ratio) ? number(pod.ratio, 2) : 'unavailable') + '; ' + number(pod.restarts, 0) + ' restarts; phase ' + phase;
+          const label = pw >= 64 && ph >= 16 ? text(pod.name, pw - 12) : '';
+          const labelWidth = Math.min(pw - 4, label.length * 6.1 + 6);
+          return '<g class="placement-pod' + (!running ? ' is-not-running' : '') + (options.flashing?.has(pod.key) ? ' is-flashing' : '') + '" role="img" tabindex="0" data-pod-key="' + esc(pod.key) + '" aria-label="' + esc(description) + '"><title>' + esc(description) + '</title>' +
+            '<rect class="placement-pod-rect" x="' + pos(px) + '" y="' + pos(py) + '" width="' + pos(pw) + '" height="' + pos(ph) + '" fill="' + fill + '" stroke="var(--border)" stroke-width=".75" vector-effect="non-scaling-stroke"/>' +
+            (numeric(pod.ratio) && pod.ratio > 1 && pw > 2 && ph > 2 ? '<rect class="placement-overload" x="' + pos(px + 1) + '" y="' + pos(py + 1) + '" width="' + pos(pw - 2) + '" height="' + pos(ph - 2) + '" fill="none" stroke="var(--red)" stroke-width="1" vector-effect="non-scaling-stroke"/>' : '') +
+            (label ? '<rect class="placement-label-backplate" x="' + pos(px + 2) + '" y="' + pos(py + 2) + '" width="' + pos(labelWidth) + '" height="13" fill="var(--bg-panel)" opacity=".92" pointer-events="none"/><text class="placement-pod-name" x="' + pos(px + 5) + '" y="' + pos(py + 12) + '" font-size="10" fill="var(--text-1)" pointer-events="none">' + esc(label) + '</text>' : '') +
+            (numeric(pod.restarts) && pod.restarts > 0 && pw >= 6 && ph >= 6 ? '<rect class="placement-restart" x="' + pos(px + pw - 5) + '" y="' + pos(py + 1) + '" width="4" height="4" fill="var(--text-1)" pointer-events="none"/>' : '') + '</g>';
+        }).join('');
+      }
+      return '<g class="placement-namespace' + (collapsed ? ' is-collapsed' : '') + '"><rect class="placement-namespace-outline" x="' + pos(x) + '" y="' + pos(y) + '" width="' + pos(w) + '" height="' + pos(h) + '" fill="none" stroke="var(--border-strong)" stroke-width="1" vector-effect="non-scaling-stroke"/>' + content + header + '</g>';
+    }).join('');
+    return '<svg class="placement-svg" viewBox="0 0 ' + width + ' ' + height + '" role="group" aria-label="Pod placement by namespace" style="color:var(--text-1)">' + definitions + groups + '</svg>';
+  }
+
   const Pulse = {
-    numeric, esc, clamp, values, last, byLabel, fmt, number, sparkline, silhouette, twinCard, power, dayTicks, projectFull, joinPvcs, halftoneDefs, tankSvg,
+    numeric, esc, clamp, values, last, byLabel, fmt, number, sparkline, silhouette, twinCard, power, dayTicks, projectFull, joinPvcs, halftoneDefs, tankSvg, treemap, joinPods, placementSvg,
     inkStep: (ratio) => !numeric(ratio) ? 0 : ratio < .25 ? 1 : ratio < .5 ? 2 : ratio < .75 ? 3 : ratio <= 1 ? 4 : 5,
     async fetch(names, range = '24h') {
       const response = await root.fetch('/api/metrics?' + new URLSearchParams({ names: names.join(','), range }), { signal: AbortSignal.timeout(20000) });

@@ -44,6 +44,24 @@ Time-to-full is a least-squares trend from timestamped samples, requiring at lea
 12 readings spanning 24 hours. New or flat-history volumes have no projection.
 Only projections under 30 days are shown; under seven days uses danger styling.
 
+## Placement
+
+The map groups pods by node and namespace. Area reflects requested memory with a
+32 Mi display floor. Dot density reflects usage relative to requests; red outlines
+indicate usage above requests, and squares indicate restarts within 24 hours.
+Checkered cells indicate a non-running or unavailable phase. Completed pods with
+no matching phase series therefore display an unknown phase rather than Running.
+
+Container memory selects the kubelet cAdvisor scrape explicitly to avoid double
+counting the resource endpoint. Inventory is authoritative and joins are keyed by
+namespace and pod. Missing usage remains unmeasured. Namespace headers and padding
+adapt to small rectangles so every pod remains represented without changing weights.
+
+Hover, touch, or keyboard focus exposes the complete pod reading below the map.
+Select a namespace heading (Enter/Space with a keyboard) to fold it; state is local
+to the page session. A genuine increase in the rounded restart count causes a
+single brief flash; reduced motion disables it. Refresh preserves focused cells.
+
 ## Delivery and validation
 
 Client primitives live in `apps/exposure-control/pulse.js`, registered in the

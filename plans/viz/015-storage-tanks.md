@@ -1,6 +1,6 @@
 # 015 — Storage tanks
 
-- **Status**: IMPLEMENTED — pending live verification
+- **Status**: DONE — live verified 2026-09-16
 - **Commit**: 630906f
 - **Phase**: 2 shape
 - **Category**: Visual; capacity

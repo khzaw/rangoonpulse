@@ -2152,6 +2152,7 @@
         { range: '7d', names: ['cluster_watts', 'tariff'] },
         { range: '24h', names: ['pvc_class', 'pvc_util', 'pvc_used', 'pvc_capacity', 'pvc_requested'] },
         { range: '7d', names: ['pvc_util_7d'] },
+        { range: '24h', names: ['pod_info', 'pod_mem_request', 'pod_mem_usage', 'pod_restarts_24h', 'pod_phase'] },
       ];
       const pulseMetric = (name, range = '24h') => dashboardState.metrics[name + '|' + range];
 
@@ -2211,7 +2212,7 @@
           [P.fmt.sgd(power.sgd30d), 'projected / 30 d'],
         ];
         const el = document.getElementById('powerTicker');
-        const width = Math.max(280, el.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
+        const width = Math.max(280, el.parentElement.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
         el.innerHTML = pulseSectionHeader('03', 'power & cost', '7 days · ' + (P.numeric(tariff) ? 'S$ ' + tariff.toFixed(4) + ' / kWh' : 'tariff unavailable')) +
           '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
           '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated cluster power over seven days' }) + '</div>' +
@@ -2264,11 +2265,87 @@
         renderStorageTanks();
       });
 
+      const collapsedNamespaces = new Set();
+      let previousPodRestarts = new Map();
+      let placementPods = [];
+      let placementFlashTimer;
+      function renderPlacementMap(recordRestarts = false) {
+        const P = window.Pulse;
+        placementPods = P.joinPods(Object.fromEntries(['pod_info', 'pod_mem_request', 'pod_mem_usage', 'pod_restarts_24h', 'pod_phase'].map((name) => [name, pulseMetric(name)])));
+        const flashing = new Set();
+        if (recordRestarts && pulseMetric('pod_restarts_24h')?.state === 'live') {
+          const current = new Map();
+          for (const pod of placementPods) {
+            if (!P.numeric(pod.restarts)) continue;
+            const count = Math.round(pod.restarts);
+            current.set(pod.key, count);
+            if (previousPodRestarts.has(pod.key) && count > previousPodRestarts.get(pod.key)) flashing.add(pod.key);
+          }
+          previousPodRestarts = current;
+        }
+        const groups = new Map();
+        for (const pod of placementPods) {
+          if (!groups.has(pod.node)) groups.set(pod.node, []);
+          groups.get(pod.node).push(pod);
+        }
+        const primary = pulseMetric('node_role')?.series?.find((series) => series.labels.role === 'control-plane')?.labels.node;
+        const nodes = [...groups].sort(([a], [b]) => a === primary ? -1 : b === primary ? 1 : a.localeCompare(b));
+        const weight = (pods) => pods.reduce((sum, pod) => sum + Math.max(32 * 1024 ** 2, pod.request || 0), 0);
+        const total = nodes.reduce((sum, [, pods]) => sum + weight(pods), 0);
+        const el = document.getElementById('placementMap');
+        const focused = el.contains(document.activeElement) ? { pod: document.activeElement.dataset.podKey, namespace: document.activeElement.dataset.namespace, node: document.activeElement.closest('[data-placement-node]')?.dataset.placementNode } : null;
+        const width = Math.max(280, el.parentElement.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
+        const stacked = window.innerWidth <= 720;
+        const chartHeight = stacked ? 300 : Math.max(260, Math.min(420, width * .36));
+        const namespaceCount = new Set(placementPods.map((pod) => pod.namespace)).size;
+        el.innerHTML = pulseSectionHeader('04', 'where things run', placementPods.length ? placementPods.length + ' pods · ' + namespaceCount + ' namespaces' : 'Pod inventory unavailable') +
+          '<div class="placement-legend"><span>area / requested memory</span><span class="placement-density">usage / request ' + [1, 2, 3, 4, 5].map((step) => '<i class="density-step density-' + step + '"></i>').join('') + '<span>low → high</span></span></div>' +
+          '<div class="placement-nodes" style="grid-template-columns:' + (stacked ? '1fr' : nodes.map(([, pods]) => weight(pods) + 'fr').join(' ')) + '">' + nodes.map(([name, pods]) => {
+            const nodeWidth = stacked ? width : (width - 24 * (nodes.length - 1)) * weight(pods) / total;
+            const collapsed = new Set([...collapsedNamespaces].filter((key) => key.startsWith(name + '|')).map((key) => key.slice(name.length + 1)));
+            const requested = pods.reduce((sum, pod) => sum + (pod.request || 0), 0);
+            return '<section class="placement-node" data-placement-node="' + escapeHtml(name) + '"><div class="placement-node-heading"><h3>' + escapeHtml(name) + '</h3><span>' + pods.length + ' pods · ' + P.fmt.bytes(requested) + '</span></div>' + P.placementSvg(pods, nodeWidth, chartHeight, { collapsed, flashing }) + '</section>';
+          }).join('') + '</div>' + (placementPods.length ? '' : '<p class="pulse-empty">Waiting for pod inventory.</p>') +
+          '<div id="placementDetail" class="placement-detail" role="status">Hover or focus a pod for details. Select a namespace to fold it.</div><div class="placement-note">Squares / restarts · red / over request · checkered / not running or phase unknown.<span>Minimum visible area: 32 Mi</span></div>';
+        if (focused) {
+          const target = [...el.querySelectorAll('[data-pod-key], [data-namespace]')].find((element) => focused.pod ? element.dataset.podKey === focused.pod : element.dataset.namespace === focused.namespace && element.closest('[data-placement-node]')?.dataset.placementNode === focused.node);
+          target?.focus({ preventScroll: true });
+        }
+        clearTimeout(placementFlashTimer);
+        if (flashing.size) placementFlashTimer = setTimeout(() => el.querySelectorAll('.is-flashing').forEach((cell) => cell.classList.remove('is-flashing')), 650);
+      }
+
+      function showPlacementDetail(event) {
+        const cell = event.target.closest('[data-pod-key]');
+        if (!cell) return;
+        const pod = placementPods.find((item) => item.key === cell.dataset.podKey);
+        if (!pod) return;
+        const P = window.Pulse;
+        document.getElementById('placementDetail').textContent = pod.namespace + '/' + pod.name + ' · req ' + P.fmt.bytes(pod.request) + ' · use ' + P.fmt.bytes(pod.usage) + ' · ' + P.fmt.pct(pod.ratio) + ' of request · ' + P.number(pod.restarts, 0) + ' restarts · ' + pod.phase;
+      }
+      const placementMapEl = document.getElementById('placementMap');
+      placementMapEl.addEventListener('pointerover', showPlacementDetail);
+      placementMapEl.addEventListener('focusin', showPlacementDetail);
+      function togglePlacementNamespace(event) {
+        const label = event.target.closest('[data-namespace]');
+        if (!label) { if (event.type === 'click') showPlacementDetail(event); return; }
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        const node = label.closest('[data-placement-node]')?.dataset.placementNode;
+        const key = node + '|' + label.dataset.namespace;
+        if (collapsedNamespaces.has(key)) collapsedNamespaces.delete(key);
+        else collapsedNamespaces.add(key);
+        renderPlacementMap();
+      }
+      placementMapEl.addEventListener('click', togglePlacementNamespace);
+      placementMapEl.addEventListener('keydown', togglePlacementNamespace);
+
       function renderPulse() {
         renderPulseStrip();
         renderNodeTwins();
         renderPowerTicker();
         renderStorageTanks();
+        renderPlacementMap(true);
       }
 
       async function loadPulse() {
@@ -2669,7 +2746,7 @@
       let pulseResizeTimer;
       window.addEventListener('resize', () => {
         clearTimeout(pulseResizeTimer);
-        pulseResizeTimer = setTimeout(() => { if (activePage === 'pulse') renderPowerTicker(); }, 200);
+        pulseResizeTimer = setTimeout(() => { if (activePage === 'pulse') { renderPowerTicker(); renderPlacementMap(); } }, 200);
       });
       setInterval(() => {
         if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
