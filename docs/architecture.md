@@ -109,7 +109,7 @@ Current examples:
 
 Service changes often span more than one domain. Before declaring a change complete, check whether it should also touch:
 
-- `apps/glance/helmrelease.yaml` for dashboard links or monitors
+- `apps/dynacat/helmrelease.yaml` for dashboard links or monitors
 - `apps/exposure-control/services.json` if the service should be share-managed
 - `infrastructure/resource-advisor/advisor.py` and related policy if the service should be auto-tuned
 - ingress, DNS, and TLS wiring if external reachability changed

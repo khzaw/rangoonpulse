@@ -43,7 +43,7 @@ Open the smallest relevant subset:
 - Utility-node allowlist today:
   - `infrastructure/public-edge`
   - `apps/exposure-control`
-  - `apps/glance`
+  - `apps/dynacat`
   - `apps/profilarr`
   - `apps/adguard`
   - `apps/chartsdb`

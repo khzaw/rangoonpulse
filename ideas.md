@@ -27,7 +27,7 @@ This file tracks ideas explicitly rated `good` or better that are still active, 
 - Reuse what already exists:
   - `apps/exposure-control` already owns runtime write actions, audit logging, and the operator UI.
   - `apps/transmission/transmission-vpn-control.yaml` already shows the right GitOps-safe pattern for runtime-owned overlays.
-  - Glance already uses Jellyfin's `Sessions` API, so session-based detection fits the current repo.
+  - Dynacat already uses Jellyfin's `Sessions` API, so session-based detection fits the current repo.
   - Prometheus already has primary-node pressure signals through `homelab:node_host_cpu_utilization:ratio` and `homelab:node_host_memory_utilization:ratio`.
 - Implementation plan:
   1. Define the policy surface first.
@@ -84,7 +84,7 @@ This file tracks ideas explicitly rated `good` or better that are still active, 
 - Keep BookOrbit pointed read-only at the shared Calibre library without duplicating book files or adding avoidable database overhead.
 
 5. `good` - ARM Node Utilization (Remaining Headroom Work)
-- This is no longer a greenfield idea: `autobrr`, `prowlarr`, `jackett`, `flaresolverr`, `profilarr`, `glance`, and `uptime-kuma` are already on the utility node.
+- This is no longer a greenfield idea: `autobrr`, `prowlarr`, `jackett`, `flaresolverr`, `profilarr`, `dynacat`, and `uptime-kuma` are already on the utility node.
 - Remaining candidates worth auditing for the Pi are `bazarr`, `sabnzbd`, and possibly `transmission` once image, storage, and throughput tradeoffs are verified.
 
 6. `good` - Monitoring Completion: Remaining Rules + Notification Delivery

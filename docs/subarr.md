@@ -14,7 +14,7 @@ Subarr is a subtitle-management service for the media automation stack.
 
 - App manifests: `apps/subarr/`
 - Flux registration: `flux/kustomizations/subarr.yaml`
-- Glance dashboard links and monitors: `apps/glance/helmrelease.yaml`
+- Dynacat dashboard links and monitors: `apps/dynacat/helmrelease.yaml`
 - Exposure-control service catalog: `apps/exposure-control/services.json`
 
 ## Runtime
@@ -34,7 +34,7 @@ Subarr is a subtitle-management service for the media automation stack.
 
 - Root `README.md` media automation overview
 - `docs/README.md` service-specific guide index
-- Glance `Arr Stack` bookmark group
-- Glance `Arr and Download Health` monitor group
-- Glance GitHub releases widget entry: `coaxk/subarr`
+- Dynacat `Arr Stack` bookmark group
+- Dynacat `Arr and Download Health` monitor group
+- Dynacat GitHub releases widget entry: `coaxk/subarr`
 - Exposure-control service catalog entry: `subarr`

@@ -32,7 +32,7 @@ Operational intent:
 
 ## Related GitOps Surfaces
 - Flux: `flux/kustomizations/shelfmark.yaml`
-- Glance links/health/release watcher: `apps/glance/helmrelease.yaml`
+- Dynacat links/health/release watcher: `apps/dynacat/helmrelease.yaml`
 - Share control catalog: `apps/exposure-control/services.json`
 - Share host plumbing:
   - `infrastructure/public-edge/helmrelease.yaml`

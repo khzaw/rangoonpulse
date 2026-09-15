@@ -44,6 +44,7 @@ Use the matching project-local skill when the task fits:
 If no skill applies, route through `docs/README.md` and read the smallest focused doc set for the touched domain.
 
 Service reference: [`docs/bentopdf.md`](docs/bentopdf.md) covers BentoPDF's private access and autoscaling.
+Dashboard reference: [`docs/dashboards-dynacat.md`](docs/dashboards-dynacat.md) covers Dynacat at `rangoonpulse.khzaw.dev`.
 Service reference: [`docs/romm.md`](docs/romm.md) covers RomM's shared PostgreSQL hook and expandable NAS library.
 
 ## Docs Hygiene

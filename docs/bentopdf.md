@@ -34,7 +34,7 @@ the application and its static assets.
 - Upstream includes the HTTPS cross-origin isolation headers needed by
   LibreOffice WASM. Some processing libraries load from upstream CDNs; private
   ingress does not make this an air-gapped deployment.
-- Glance includes the private URL and checks the cluster-local service at
+- Dynacat includes the private URL and checks the cluster-local service at
   `http://bentopdf.default.svc.cluster.local:8080`
 
 ## Resource bounds

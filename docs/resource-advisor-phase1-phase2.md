@@ -151,7 +151,7 @@ Operational expectation:
 ## Current Apply Scope Policy
 Auto-apply (Phase 3 PR commits) is currently enabled for:
 - `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`
-- `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `glance`, `shelfmark`
+- `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `dynacat`, `shelfmark`
 - `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`
 - `bookorbit`, `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `romm`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`

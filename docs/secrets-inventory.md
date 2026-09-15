@@ -15,10 +15,10 @@ Notes:
 ## In-Use Secrets (Referenced By GitOps Manifests)
 
 ### Dashboards
-- **glance** (`apps/glance/helmrelease.yaml`)
+- **dynacat** (`apps/dynacat/helmrelease.yaml`)
   - `default/homepage-widget-secrets`
     - consumed via `envFrom.secretRef`
-    - keys: various `*_API_KEY` values used by Glance widgets
+    - keys: various `*_API_KEY` values used by Dynacat widgets
 
 - **exposure-control** (`apps/exposure-control/helmrelease.yaml`)
   - `default/exposure-control-github`

@@ -382,7 +382,7 @@ class BuildApplyPlanTests(unittest.TestCase):
         report = make_report(
             [
                 make_recommendation(
-                    "glance",
+                    "dynacat",
                     current_cpu="50m",
                     recommended_cpu="55m",
                     current_memory="128Mi",

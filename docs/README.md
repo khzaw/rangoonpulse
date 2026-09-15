@@ -77,7 +77,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 - [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the current tuning workflow, apply-PR model, and cockpit/exporter contract.
 - [`docs/homelab-operations-dashboards.md`](./homelab-operations-dashboards.md) for the Grafana operations dashboards.
-- [`docs/dashboards-homepage-glance.md`](./dashboards-homepage-glance.md) for the Glance dashboard, monitors, and widget-specific gotchas.
+- [`docs/dashboards-dynacat.md`](./dashboards-dynacat.md) for the Dynacat dashboard, monitors, and widget-specific gotchas.
 - [`docs/gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md) for rollout/change timeline interpretation.
 - [`docs/dns-access-path-dashboard.md`](./dns-access-path-dashboard.md) for DNS and ingress path troubleshooting.
 - [`docs/node-capacity-dashboard.md`](./node-capacity-dashboard.md) for node fit and capacity views.

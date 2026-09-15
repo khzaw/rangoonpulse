@@ -116,7 +116,7 @@ kubectl exec deployment/romm -n default -- df -h /romm /redis-data
 
 ## Operator integration and updates
 
-- Glance has the private URL, cluster-local heartbeat monitors, and upstream releases.
+- Dynacat has the private URL, cluster-local heartbeat monitors, and upstream releases.
 - Resource Advisor can propose upsizing. Downscaling is excluded until scans
   and file hashing establish a representative resource floor.
 - Renovate handles the explicit image/chart versions. The control panel discovers

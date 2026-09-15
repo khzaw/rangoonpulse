@@ -9,7 +9,7 @@
 - Helm repository: `flux/repositories/controlplaneio-fluxcd.yaml`
 - Helm release: `infrastructure/flux-operator/helmrelease.yaml`
 - Flux wiring: `flux/kustomizations/flux-operator.yaml`
-- Dashboard breadcrumbs: `apps/glance/helmrelease.yaml`
+- Dashboard breadcrumbs: `apps/dynacat/helmrelease.yaml`
 
 ## Access Path
 

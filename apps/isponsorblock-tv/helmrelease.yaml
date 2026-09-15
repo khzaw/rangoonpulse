@@ -93,7 +93,7 @@ spec:
                 memory: "512Mi"
 
           # iSponsorBlockTV does not expose an HTTP UI. This sidecar serves a small info page so we can
-          # hang a stable hostname off ingress and keep a clickable reference in Glance.
+          # hang a stable hostname off ingress and keep a clickable reference in Dynacat.
           info:
             image:
               repository: nginxinc/nginx-unprivileged

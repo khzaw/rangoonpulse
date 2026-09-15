@@ -1,6 +1,6 @@
 ---
 name: rangoonpulse-service-deploy
-description: "Use when adding, deploying, exposing, or materially changing an app or service in /Users/khz/Code/rangoonpulse. This skill is only for the rangoonpulse GitOps repo and covers the full workflow: app manifests, Flux wiring, Glance/dashboard links, image automation, resource-advisor integration, docs, README/AGENTS updates, commit/push, reconcile, and live verification until the service is actually reachable."
+description: "Use when adding, deploying, exposing, or materially changing an app or service in /Users/khz/Code/rangoonpulse. This skill is only for the rangoonpulse GitOps repo and covers the full workflow: app manifests, Flux wiring, Dynacat/dashboard links, image automation, resource-advisor integration, docs, README/AGENTS updates, commit/push, reconcile, and live verification until the service is actually reachable."
 ---
 
 # Rangoonpulse Service Deploy
@@ -40,7 +40,7 @@ Required access wiring when externally reachable:
 - matching TLS hosts
 
 Required operator surfaces:
-- Glance links and monitors in `apps/glance/helmrelease.yaml`
+- Dynacat links and monitors in `apps/dynacat/helmrelease.yaml`
 - Exposure-control catalog in `apps/exposure-control/services.json` if the service should be share-managed
 - Public share-host plumbing in:
   - `infrastructure/public-edge/helmrelease.yaml`
@@ -64,7 +64,7 @@ Required documentation surfaces:
 
 Before editing:
 - inspect the closest existing service in the same category
-- inspect Glance, exposure-control, image-automation, and resource-advisor surfaces
+- inspect Dynacat, exposure-control, image-automation, and resource-advisor surfaces
 - inspect storage and hostname patterns used by adjacent apps
 
 For book/media/study services especially, compare against:
@@ -72,7 +72,7 @@ For book/media/study services especially, compare against:
 - `apps/calibre-web-automated/`
 - `apps/booklore/`
 - `apps/audiobookshelf/`
-- `apps/glance/helmrelease.yaml`
+- `apps/dynacat/helmrelease.yaml`
 - `apps/exposure-control/services.json`
 - `infrastructure/resource-advisor/`
 - `infrastructure/image-automation/`
@@ -133,7 +133,7 @@ kubectl get ingress -n <ns> | rg '<name>'
 If supporting surfaces changed, reconcile them too:
 - `public-edge`
 - `image-automation`
-- `glance`
+- `dynacat`
 - `resource-advisor`
 
 ### 6. Verify Live Behavior

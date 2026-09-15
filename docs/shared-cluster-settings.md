@@ -72,7 +72,7 @@ flux reconcile helmrelease <name> -n <namespace>
 ## Important Escaping Rule
 
 Some app configs intentionally need literal `${...}` at runtime:
-- Glance secret placeholders such as `${JELLYFIN_API_KEY}`
+- Dynacat secret placeholders such as `${JELLYFIN_API_KEY}`
 - shell/runtime placeholders such as `${TRACERR_DB_PASSWORD}`
 - JavaScript template literals inside `apps/exposure-control/server.js`
 
@@ -86,7 +86,7 @@ Flux renders `$${VAR}` back to literal `${VAR}` in the applied manifest.
 
 Files that already rely on this pattern:
 - `apps/exposure-control/server.js`
-- `apps/glance/helmrelease.yaml`
+- `apps/dynacat/helmrelease.yaml`
 - `apps/media-postgres/helmrelease.yaml`
 
 ## Scope Rules

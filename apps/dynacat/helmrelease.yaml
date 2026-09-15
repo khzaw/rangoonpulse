@@ -93,7 +93,7 @@ spec:
 
     ingress:
       main:
-        enabled: false
+        enabled: true
         className: nginx
         hosts:
           - host: rangoonpulse.${BASE_DOMAIN}

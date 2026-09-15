@@ -24,7 +24,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "ersatztv": "apps/ersatztv/helmrelease.yaml",
     "exposure-control": "apps/exposure-control/helmrelease.yaml",
     "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
-    "glance": "apps/glance/helmrelease.yaml",
+    "dynacat": "apps/dynacat/helmrelease.yaml",
     "isponsorblock-tv": "apps/isponsorblock-tv/helmrelease.yaml",
     "interview-prep": "apps/interview-prep/helmrelease.yaml",
     "profilarr": "apps/profilarr/helmrelease.yaml",

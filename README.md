@@ -100,7 +100,7 @@ Current cluster status: both nodes are functional and schedulable.
 | Service | Description |
 |---------|-------------|
 | **AdGuard Home** | Dual LAN DNS filtering & ad blocking |
-| **Glance** | Dashboard & service hub |
+| **[Dynacat](docs/dashboards-dynacat.md)** | Dashboard & service hub at `rangoonpulse.khzaw.dev` |
 | **Uptime Kuma** | Uptime monitoring |
 | **Grafana** | Metrics & dashboards |
 | **Flux Web UI** | Browser view for GitOps sources, Kustomizations, HelmReleases, and controller status |
@@ -182,7 +182,7 @@ Current cluster status: both nodes are functional and schedulable.
 ├── apps/                      # User-facing applications
 │   ├── jellyfin/
 │   ├── immich/
-│   ├── glance/
+│   ├── dynacat/
 │   └── ...
 ├── core/                      # Core cluster components
 │   └── ingress-nginx/
