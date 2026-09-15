@@ -28,6 +28,7 @@ focused docs under `docs/`, and project-local skills under `.agents/skills/`.
 - Use `flux/cluster-settings.yaml` for cluster-wide non-secret constants.
 - Escape runtime-literal placeholders as `$${VAR}` when Flux post-build substitution is in play.
 - Do not commit plaintext credentials; Git-managed secrets stay SOPS-encrypted under `infrastructure/secrets/**`.
+- Before requesting a new GitHub token, consult [`docs/github-credentials.md`](docs/github-credentials.md) for existing Secret keys, verified permissions, and reuse guidance.
 - Keep ingress, DNS annotation, and TLS settings aligned for externally reachable apps.
 - For critical redundant services, do not couple both instances into one risky rollout unit.
 - This repo is a shared worktree. Do not revert unrelated edits; stage only your task's hunks.

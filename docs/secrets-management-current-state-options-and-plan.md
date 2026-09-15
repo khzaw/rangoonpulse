@@ -99,6 +99,10 @@ The direction is:
 
 ## Control Panel Secret Editor
 
+For existing GitHub credential locations, verified permissions, and replacement
+selection, consult [GitHub credentials and permissions](./github-credentials.md)
+before requesting a new token.
+
 The canonical UI for managed secret edits is the `Secrets` section of `https://controlpanel.khzaw.dev`.
 
 Important behavior:

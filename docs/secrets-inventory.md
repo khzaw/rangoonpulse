@@ -2,6 +2,10 @@
 
 This doc is a living map of **which services consume which Kubernetes Secrets**, and where those secrets are managed.
 
+For GitHub authentication, read [GitHub credentials and permissions](./github-credentials.md)
+before requesting a new token. It records existing keys, verified capabilities,
+which credential to use, and copies that must rotate together.
+
 ## Management Model (Current)
 - **GitOps encrypted secrets** live under `infrastructure/secrets/**` and are encrypted with **SOPS+age**.
 - Flux decrypts them during reconciliation via:
@@ -27,7 +31,7 @@ Notes:
 
 - **exposure-control** (`apps/exposure-control/helmrelease.yaml`)
   - `default/exposure-control-github`
-    - key: `GITHUB_TOKEN` (GitHub API token for dispatching Renovate workflow and listing Renovate runs and PRs)
+    - key: `GITHUB_TOKEN` (GitHub API credential for Secrets inventory/commits, managed Jobs configuration, and Renovate status/dispatch)
 
 ### Study Services
 - **bentopdf** (`apps/bentopdf/helmrelease.yaml`)

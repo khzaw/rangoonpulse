@@ -94,6 +94,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Secrets and auth
 
+- [`docs/github-credentials.md`](./github-credentials.md) for existing GitHub Secret keys, verified permissions, credential selection, and rotation dependencies; consult it before requesting a new token.
 - [`docs/secrets-inventory.md`](./secrets-inventory.md) for service-to-secret mapping.
 - [`docs/secrets-management-current-state-options-and-plan.md`](./secrets-management-current-state-options-and-plan.md) for the SOPS and age operating model.
 - [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) for share-host auth behavior.
