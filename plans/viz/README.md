@@ -12,8 +12,8 @@ else builds on it.
 
 | Plan | Title | Phase | Status | Dependencies |
 | --- | --- | --- | --- | --- |
-| [010](010-prometheus-query-proxy.md) | Prometheus query proxy | 0 foundation | TODO | None |
-| [011](011-metrics-client-and-sparklines.md) | Metrics client, pulse page and sparklines | 0 foundation | TODO | 010 |
+| [010](010-prometheus-query-proxy.md) | Prometheus query proxy | 0 foundation | DONE | None |
+| [011](011-metrics-client-and-sparklines.md) | Metrics client, pulse page and sparklines | 0 foundation | DONE | 010 |
 | [012](012-node-twins.md) | Node twins | 1 physical | TODO | 011 |
 | [013](013-power-and-cost-ticker.md) | Power and cost ticker | 1 physical | TODO | 011 |
 | [014](014-placement-map.md) | Placement map | 2 shape | TODO | 011 |
@@ -105,3 +105,14 @@ Also note that `apps/exposure-control` has no NetworkPolicy and the
 `prometheus-operated.monitoring.svc.cluster.local:9090` and
 `kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093` without
 any policy change.
+
+## Implementation notes (2026-09-16)
+
+- 010/011 live: foundation response about 51 KB; ten repeated requests added
+  40 cache hits and no upstream requests. Refresh latency median 94 ms.
+- Plans 016–018 are index entries only; their detailed files were not supplied.
+- Live preflight corrections: node metadata needs `node_hardware` and `node_role`;
+  pod memory must select cAdvisor only; storage thresholds are 80/90 percent.
+- Inventory currently has 48 PVCs, with usage telemetry for 19 NAS claims.
+  Local-path must show unavailable usage and requested capacity.
+- Seven-day power uses a derived 34-minute step, not one hour.

@@ -1,6 +1,6 @@
 # 010 — Prometheus query proxy
 
-- **Status**: IMPLEMENTED — pending live verification
+- **Status**: DONE — live verified 2026-09-16
 - **Commit**: 630906f
 - **Phase**: 0 foundation
 - **Category**: Server; data access

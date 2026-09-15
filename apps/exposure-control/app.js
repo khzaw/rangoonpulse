@@ -2147,14 +2147,18 @@
       }
 
       let pulseRequest = null;
-      const pulseNames = ['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h'];
+      const pulseBatches = [
+        { range: '24h', names: ['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h', 'node_watts', 'node_req_cpu', 'node_req_mem', 'node_info', 'node_role', 'node_hardware', 'node_ready', 'node_pods', 'rpi_low_voltage'] },
+        { range: '7d', names: ['cluster_watts', 'tariff'] },
+      ];
       const pulseMetric = (name, range = '24h') => dashboardState.metrics[name + '|' + range];
 
       function renderPulseStrip() {
         const P = window.Pulse;
         const cpu = pulseMetric('node_cpu')?.series || [];
-        const primary = cpu.find((series) => series.labels.node === 'talos-7nf-osf') || cpu[0];
-        const memory = pulseMetric('node_mem')?.series?.find((series) => series.labels.node === primary?.labels.node);
+        const primaryName = pulseMetric('node_role')?.series?.find((series) => series.labels.role === 'control-plane')?.labels.node || 'talos-7nf-osf';
+        const primary = cpu.find((series) => series.labels.node === primaryName);
+        const memory = pulseMetric('node_mem')?.series?.find((series) => series.labels.node === primaryName);
         const definitions = [
           ['cpu', primary, P.fmt.pct, .7, 'primary node'],
           ['memory', memory, P.fmt.pct, .8, 'primary node'],
@@ -2170,26 +2174,72 @@
         }).join('');
       }
 
+      function pulseSectionHeader(index, title, detail) {
+        return '<div class="section-bar"><h2 class="section-heading"><span class="pulse-section-index" aria-hidden="true">' + index + '</span>' + escapeHtml(title) + '</h2><div class="section-detail">' + escapeHtml(detail) + '</div></div>';
+      }
+
+      function renderNodeTwins() {
+        const P = window.Pulse;
+        const info = pulseMetric('node_info')?.series || [];
+        const lookup = (name, node) => P.byLabel(pulseMetric(name), 'node').get(node);
+        const models = info.map((series) => {
+          const name = series.labels.node;
+          const value = (metric) => P.last(lookup(metric, name));
+          const machine = lookup('node_hardware', name)?.labels.machine;
+          const arch = machine === 'aarch64' ? 'arm64' : machine === 'x86_64' ? 'amd64' : machine || 'unknown';
+          const roles = (pulseMetric('node_role')?.series || []).filter((entry) => entry.labels.node === name).map((entry) => entry.labels.role);
+          return { name, arch, roles, ready: value('node_ready'), cpu: value('node_cpu'), mem: value('node_mem'), watts: value('node_watts'), reqCpu: value('node_req_cpu'), reqMem: value('node_req_mem'), pods: value('node_pods'), kernel: series.labels.kernel_version, lowVoltage: value('rpi_low_voltage') === 1, wattsSeries: lookup('node_watts', name) };
+        }).sort((a, b) => Number(b.roles.includes('control-plane')) - Number(a.roles.includes('control-plane')) || a.name.localeCompare(b.name));
+        const ready = models.filter((model) => model.ready === 1).length;
+        const pods = models.every((model) => P.numeric(model.pods)) ? models.reduce((sum, model) => sum + model.pods, 0) : null;
+        document.getElementById('nodeTwins').innerHTML = pulseSectionHeader('02', 'the machines', models.length ? ready + '/' + models.length + ' ready · ' + P.number(pods, 0) + ' pods' : 'Node inventory unavailable') +
+          (models.length ? '<div class="node-twins-grid">' + models.map(P.twinCard).join('') + '</div><div class="pulse-reading-key"><span class="key-halftone"></span> current usage <span class="key-request"></span> requested capacity</div>' : '<p class="pulse-empty">Waiting for node telemetry.</p>');
+      }
+
+      function renderPowerTicker() {
+        const P = window.Pulse;
+        const series = pulseMetric('cluster_watts', '7d')?.series?.[0];
+        const tariff = P.last(pulseMetric('tariff', '7d')?.series?.[0]);
+        const power = P.power(series, tariff);
+        const ticks = P.dayTicks(series);
+        const stats = [
+          [P.fmt.watts(P.last(pulseMetric('cluster_watts')?.series?.[0])), 'estimated now'],
+          [P.numeric(power.kwh24h) ? P.number(power.kwh24h, 2) + '\u00a0kWh' : '—', 'energy / 24 h'],
+          [P.fmt.sgd(power.sgdPerDay), 'cost / day'],
+          [P.fmt.sgd(power.sgd30d), 'projected / 30 d'],
+        ];
+        const el = document.getElementById('powerTicker');
+        const width = Math.max(280, el.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
+        el.innerHTML = pulseSectionHeader('03', 'power & cost', '7 days · ' + (P.numeric(tariff) ? 'S$ ' + tariff.toFixed(4) + ' / kWh' : 'tariff unavailable')) +
+          '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
+          '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated cluster power over seven days' }) + '</div>' +
+          '<div class="ticker-days">' + ticks.filter((tick) => tick.x > .015 && tick.x < .985).map((tick) => '<span style="left:' + tick.x * 100 + '%">' + escapeHtml(tick.label) + '</span>').join('') + '</div>' +
+          '<div class="ticker-note">Estimated from CPU load · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>';
+      }
+
+      function renderPulse() {
+        renderPulseStrip();
+        renderNodeTwins();
+        renderPowerTicker();
+      }
+
       async function loadPulse() {
         if (pulseRequest) return pulseRequest;
         const status = document.getElementById('pulseStatus');
         pulseRequest = (async () => {
-          try {
-            const snapshot = await window.Pulse.fetch(pulseNames, '24h');
-            for (const [name, metric] of Object.entries(snapshot.metrics)) dashboardState.metrics[name + '|24h'] = metric;
-            const degraded = Object.values(snapshot.metrics).filter((metric) => metric.state !== 'live').length;
-            status.dataset.state = degraded ? 'degraded' : 'live';
-            status.textContent = (degraded ? degraded + ' signals unavailable' : 'Live') + ' · ' + new Date(snapshot.at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
-            renderPulseStrip();
-          } catch (error) {
-            status.dataset.state = 'degraded';
-            status.textContent = 'Telemetry unavailable · retrying in 60 s';
-            for (const name of pulseNames) dashboardState.metrics[name + '|24h'] = { state: 'degraded', series: [] };
-            renderPulseStrip();
-          } finally {
-            pulseRequest = null;
-          }
-        })();
+          await Promise.all(pulseBatches.map(async ({ names, range }) => {
+            try {
+              const snapshot = await window.Pulse.fetch(names, range);
+              for (const [name, metric] of Object.entries(snapshot.metrics)) dashboardState.metrics[name + '|' + range] = metric;
+            } catch (error) {
+              for (const name of names) dashboardState.metrics[name + '|' + range] = { state: 'degraded', series: [] };
+            }
+          }));
+          const degraded = Object.values(dashboardState.metrics).filter((metric) => metric.state !== 'live').length;
+          status.dataset.state = degraded ? 'degraded' : 'live';
+          status.textContent = (degraded ? degraded + ' signals unavailable' : 'Live') + ' · ' + new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
+          renderPulse();
+        })().finally(() => { pulseRequest = null; });
         return pulseRequest;
       }
 
@@ -2568,6 +2618,11 @@
         setActivePage(window.location.hash, { replace: true });
       });
 
+      let pulseResizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(pulseResizeTimer);
+        pulseResizeTimer = setTimeout(() => { if (activePage === 'pulse') renderPowerTicker(); }, 200);
+      });
       setInterval(() => {
         if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
       }, 60000);

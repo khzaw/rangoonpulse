@@ -1,6 +1,6 @@
 # 011 — Metrics client, pulse page and sparklines
 
-- **Status**: IMPLEMENTED — pending live verification
+- **Status**: DONE — live verified 2026-09-16
 - **Commit**: 630906f
 - **Phase**: 0 foundation
 - **Category**: Client data layer; layout; first visual

@@ -53,8 +53,128 @@
     const dot = options.dot && endpoint ? '<rect x="' + (endpoint[0] - 1) + '" y="' + (endpoint[1] - 1) + '" width="2" height="2" fill="currentColor"/>' : '';
     return '<svg viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="none" role="img" aria-label="' + esc(options.label || 'Metric history') + '">' + definitions + ticks + fills + lines + dot + '</svg>';
   }
+  // Physical node drawings deliberately use the same one-pixel ink as the charts.
+  function silhouette(arch) {
+    const pi = arch === 'arm64';
+    const label = pi ? 'Raspberry Pi board with GPIO pins, processor and network sockets' : 'Tower server with drive slots, ventilation and feet';
+    const drawing = pi
+      ? '<rect x="12" y="43" width="96" height="61" rx="5"/>' +
+        '<path d="M24 43V33H72V43M28 33V26M34 33V26M40 33V26M46 33V26M52 33V26M58 33V26M64 33V26M70 33V26M28 39V34M34 39V34M40 39V34M46 39V34M52 39V34M58 39V34M64 39V34M70 39V34"/>' +
+        '<rect x="82" y="48" width="28" height="19" rx="2"/><path d="M87 53H105V61H87ZM93 54V60M99 54V60"/>' +
+        '<rect x="82" y="75" width="28" height="23" rx="2"/><path d="M87 80H105V93H87ZM91 80V84H101V80"/>' +
+        '<rect x="39" y="62" width="25" height="25" rx="1"/><rect x="44" y="67" width="15" height="15"/>' +
+        '<path d="M44 58V62M50 58V62M56 58V62M62 58V62M44 87V91M50 87V91M56 87V91M62 87V91M35 67H39M35 73H39M35 79H39M64 67H68M64 73H68M64 79H68M19 66H28V77H19ZM23 104V111H38V104"/>' +
+        '<circle cx="20" cy="51" r="2"/><circle cx="20" cy="96" r="2"/><circle cx="74" cy="96" r="2"/>'
+      : '<rect x="32" y="13" width="55" height="101" rx="3"/><path d="M78 13V114M32 48H78M40 25H70V30H40ZM40 36H70V41H40Z"/>' +
+        '<circle cx="59" cy="61" r="5"/><path d="M59 54V60M41 79H68M41 85H68M41 91H68M41 97H68M41 103H68M39 114V121H48V114M70 114V121H79V114"/>' +
+        '<rect x="40" y="58" width="4" height="7" rx="1"/>';
+    return '<svg class="twin-silhouette ' + (pi ? 'is-pi' : 'is-tower') + '" viewBox="0 0 120 132" role="img" aria-label="' + label + '" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square" stroke-linejoin="round">' + drawing.replace(/<(path|rect|circle)\b/g, '<$1 vector-effect="non-scaling-stroke"') + '</svg>';
+  }
+
+  function twinCard(model) {
+    const ready = model.ready === 1 || model.ready === true;
+    const status = ready ? 'ready' : model.ready === 0 || model.ready === false ? 'not ready' : 'readiness unavailable';
+    const roles = Array.isArray(model.roles) ? model.roles.join(' · ') : model.roles;
+    const unavailable = 'n/a';
+    const maxWatts = model.arch === 'arm64' ? 12 : 75;
+    function reading(label, value, formatter, request, scale = 1) {
+      const observed = ready && numeric(value);
+      const requested = ready && numeric(request);
+      const display = ready ? formatter(value) : unavailable;
+      const ratio = observed ? value / scale : 0;
+      const tone = ratio > .9 ? ' danger' : ratio > .7 ? ' warning' : '';
+      const requestLabel = requested ? 'requested ' + fmt.pct(request) : request === undefined ? '' : 'requested ' + (ready ? '—' : unavailable);
+      const description = label + ': ' + display + (requestLabel ? '; ' + requestLabel : '') + (scale !== 1 ? '; scale 0–' + scale + ' watts' : '');
+      return '<div class="twin-reading"><div class="twin-reading-top"><span class="twin-reading-label">' + label + '</span>' +
+        '<span class="twin-request-label">' + requestLabel + '</span><strong class="twin-value">' + display + '</strong></div>' +
+        '<div class="twin-bar' + (!observed ? ' is-unavailable' : '') + '" role="img" aria-label="' + esc(description) + '">' +
+        '<span class="twin-bar-fill' + tone + '" style="width:' + (clamp(ratio) * 100).toFixed(2) + '%"></span>' +
+        (requested ? '<span class="twin-bar-request' + (request > 1 ? ' is-over' : '') + '" style="left:' + (clamp(request) * 100).toFixed(2) + '%" title="' + esc(requestLabel) + '"></span>' : '') + '</div></div>';
+    }
+    const alarm = model.arch === 'arm64' && (model.lowVoltage === 1 || model.lowVoltage === true) ? '<span class="twin-alarm" role="status">low voltage</span>' : '';
+    const history = ready ? sparkline(values(model.wattsSeries), { fill: true, dot: true, label: 'Estimated power over 24 hours for ' + model.name }) : '<span class="pulse-no-series">Node readings unavailable</span>';
+    return '<article class="node-twin' + (!ready ? ' is-down' : '') + '" aria-label="' + esc(model.name + ', ' + status) + '">' +
+      '<header class="twin-header"><div class="twin-identity"><h3>' + esc(model.name) + '</h3><div class="twin-meta">' + esc(model.arch || 'architecture unavailable') + (roles ? ' · ' + esc(roles) : '') + '</div></div>' + alarm + '</header>' +
+      '<div class="twin-body"><div class="twin-machine">' + silhouette(model.arch) + '<span class="twin-machine-label">' + (model.arch === 'arm64' ? 'Raspberry Pi' : 'Workload node') + '</span></div><div class="twin-readings">' +
+      reading('CPU', model.cpu, fmt.pct, model.reqCpu ?? null) + reading('Memory', model.mem, fmt.pct, model.reqMem ?? null) + reading('Est. power', model.watts, fmt.watts, undefined, maxWatts) + '</div></div>' +
+      '<div class="twin-history"><span class="twin-history-label">Estimated power · 24 h</span>' + history + '</div>' +
+      '<footer class="twin-footer"><span>' + (ready ? number(model.pods, 0) : unavailable) + ' pods</span><span>kernel ' + esc(model.kernel || '—') + '</span><span class="twin-state">' + status + '</span></footer></article>';
+  }
+
+  // Prometheus timestamps are seconds. Retain null samples so integration never
+  // bridges an explicitly missing interval; infer cadence to catch omitted points.
+  function timedPoints(series) {
+    const byTime = new Map();
+    for (const point of series?.values || []) {
+      if (Array.isArray(point) && numeric(point[0])) byTime.set(point[0], numeric(point[1]) && point[1] >= 0 ? point[1] : null);
+    }
+    return [...byTime].sort((a, b) => a[0] - b[0]);
+  }
+
+  function power(series, tariff) {
+    const points = timedPoints(series);
+    const end = points.at(-1)?.[0] ?? null;
+    const intervals = points.slice(1).map((point, index) => point[0] - points[index][0]).sort((a, b) => a - b);
+    const middle = Math.floor(intervals.length / 2);
+    const cadence = intervals.length ? intervals.length % 2 ? intervals[middle] : (intervals[middle - 1] + intervals[middle]) / 2 : 0;
+    function integrate(duration) {
+      let seconds = 0;
+      let wattSeconds = 0;
+      const start = end === null ? null : end - duration;
+      for (let index = 1; index < points.length; index++) {
+        const [from, first] = points[index - 1];
+        const [to, second] = points[index];
+        if (first === null || second === null || to - from > cadence * 1.5) continue;
+        const lower = Math.max(start, from);
+        const upper = Math.min(end, to);
+        if (upper <= lower) continue;
+        const atLower = first + (second - first) * (lower - from) / (to - from);
+        const atUpper = first + (second - first) * (upper - from) / (to - from);
+        wattSeconds += (atLower + atUpper) / 2 * (upper - lower);
+        seconds += upper - lower;
+      }
+      // Range queries can end up to one step short of the requested window.
+      // Permit that small edge deficit, while keeping material gaps explicit.
+      const sufficient = seconds / duration >= .98 && duration - seconds <= cadence + .001;
+      const state = sufficient ? 'complete' : seconds > 0 ? 'partial' : 'unavailable';
+      return { mean: seconds ? wattSeconds / seconds : null, kwh: seconds ? wattSeconds / 3600000 : null, coverage: { state, hours: seconds / 3600, ratio: clamp(seconds / duration), start, end } };
+    }
+    const recent = integrate(86400);
+    const week = integrate(7 * 86400);
+    const rate = numeric(tariff) && tariff >= 0 ? tariff : null;
+    const kwh24h = recent.coverage.state === 'complete' ? recent.mean * 24 / 1000 : null;
+    return {
+      nowWatts: points.findLast((point) => numeric(point[1]))?.[1] ?? null,
+      tariff: rate,
+      mean24h: recent.mean,
+      mean7d: week.mean,
+      kwh24h,
+      sgdPerDay: kwh24h !== null && rate !== null ? kwh24h * rate : null,
+      sgd30d: week.coverage.state === 'complete' && rate !== null ? week.mean * 24 * 30 / 1000 * rate : null,
+      observedKwh24h: recent.kwh,
+      observedKwh7d: week.kwh,
+      coverage24h: recent.coverage,
+      coverage7d: week.coverage,
+    };
+  }
+
+  function dayTicks(series) {
+    const points = timedPoints(series);
+    if (points.length < 2) return [];
+    const start = points[0][0];
+    const end = points.at(-1)[0];
+    const offset = 8 * 3600;
+    const day = 86400;
+    const ticks = [];
+    const weekdays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    for (let at = Math.ceil((start + offset) / day) * day - offset; at <= end; at += day) {
+      ticks.push({ x: (at - start) / (end - start), label: weekdays[new Date((at + offset) * 1000).getUTCDay()], at });
+    }
+    return ticks;
+  }
+
   const Pulse = {
-    numeric, esc, clamp, values, last, byLabel, fmt, number, sparkline,
+    numeric, esc, clamp, values, last, byLabel, fmt, number, sparkline, silhouette, twinCard, power, dayTicks,
     inkStep: (ratio) => !numeric(ratio) ? 0 : ratio < .25 ? 1 : ratio < .5 ? 2 : ratio < .75 ? 3 : ratio <= 1 ? 4 : 5,
     async fetch(names, range = '24h') {
       const response = await root.fetch('/api/metrics?' + new URLSearchParams({ names: names.join(','), range }), { signal: AbortSignal.timeout(20000) });

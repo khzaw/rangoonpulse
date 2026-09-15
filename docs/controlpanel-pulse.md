@@ -20,6 +20,18 @@ render as unavailable; a failed refresh does not present old readings as live.
 Power readings use the existing estimated-power recording rules. They are
 estimates, not wall-meter measurements.
 
+## Nodes and power
+
+Node identity joins `node_info`, `node_hardware`, and `node_role` on `node`;
+architecture is not present in kube-state-metrics' `kube_node_info`. CPU and
+memory bars show current whole-host usage with a tick for scheduler requests.
+Readiness and Raspberry Pi low voltage remain independent live signals.
+
+Power history is sampled over seven days. Energy uses timestamp-weighted
+integration; cost uses the configured tariff, and the 30-day projection uses
+the seven-day mean. Missing tariffs or insufficient history leave cost blank.
+Midnight ticks always use Asia/Singapore, independent of the browser's timezone.
+
 ## Delivery and validation
 
 Client primitives live in `apps/exposure-control/pulse.js`, registered in the
