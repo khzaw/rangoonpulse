@@ -34,7 +34,7 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v5
         with:
-          version: v1.32.0
+          version: v1.37.0
 
       - name: Validate repository
         run: make validate-all
