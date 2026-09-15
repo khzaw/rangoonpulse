@@ -14,8 +14,8 @@ else builds on it.
 | --- | --- | --- | --- | --- |
 | [010](010-prometheus-query-proxy.md) | Prometheus query proxy | 0 foundation | DONE | None |
 | [011](011-metrics-client-and-sparklines.md) | Metrics client, pulse page and sparklines | 0 foundation | DONE | 010 |
-| [012](012-node-twins.md) | Node twins | 1 physical | TODO | 011 |
-| [013](013-power-and-cost-ticker.md) | Power and cost ticker | 1 physical | TODO | 011 |
+| [012](012-node-twins.md) | Node twins | 1 physical | DONE | 011 |
+| [013](013-power-and-cost-ticker.md) | Power and cost ticker | 1 physical | DONE | 011 |
 | [014](014-placement-map.md) | Placement map | 2 shape | TODO | 011 |
 | [015](015-storage-tanks.md) | Storage tanks | 2 shape | TODO | 011 |
 | [016](016-flux-reconcile-ribbon.md) | Flux reconcile ribbon | 3 activity | TODO | 011 |

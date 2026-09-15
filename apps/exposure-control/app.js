@@ -2150,6 +2150,8 @@
       const pulseBatches = [
         { range: '24h', names: ['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h', 'node_watts', 'node_req_cpu', 'node_req_mem', 'node_info', 'node_role', 'node_hardware', 'node_ready', 'node_pods', 'rpi_low_voltage'] },
         { range: '7d', names: ['cluster_watts', 'tariff'] },
+        { range: '24h', names: ['pvc_class', 'pvc_util', 'pvc_used', 'pvc_capacity', 'pvc_requested'] },
+        { range: '7d', names: ['pvc_util_7d'] },
       ];
       const pulseMetric = (name, range = '24h') => dashboardState.metrics[name + '|' + range];
 
@@ -2217,10 +2219,56 @@
           '<div class="ticker-note">Estimated from CPU load · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>';
       }
 
+      const expandedStorageGroups = new Set();
+      function renderStorageTanks() {
+        const P = window.Pulse;
+        const metrics = Object.fromEntries(['pvc_class', 'pvc_util', 'pvc_used', 'pvc_capacity', 'pvc_requested'].map((name) => [name, pulseMetric(name)]));
+        metrics.pvc_util_7d = pulseMetric('pvc_util_7d', '7d');
+        const claims = P.joinPvcs(metrics);
+        const measured = claims.filter((claim) => claim.measured).length;
+        const warnings = claims.filter((claim) => P.numeric(claim.util) && claim.util >= .8).length;
+        const projections = claims.filter((claim) => P.numeric(claim.daysToFull) && claim.daysToFull < 30).length;
+        const grouped = new Map();
+        for (const claim of claims) {
+          const group = claim.storageClass.startsWith('truenas-') ? 'truenas' : claim.storageClass || 'unknown';
+          if (!grouped.has(group)) grouped.set(group, []);
+          grouped.get(group).push(claim);
+        }
+        const groups = [...grouped].sort(([a], [b]) => a === 'truenas' ? -1 : b === 'truenas' ? 1 : a.localeCompare(b));
+        const el = document.getElementById('storageTanks');
+        const focusedGroup = el.contains(document.activeElement) ? document.activeElement.dataset.storageGroup : null;
+        el.innerHTML = pulseSectionHeader('05', 'storage', claims.length ? claims.length + ' claims · ' + measured + ' measured · ' + warnings + ' above 80%' : 'Volume inventory unavailable') +
+          groups.map(([key, items]) => {
+            items.sort((a, b) => (b.util ?? -1) - (a.util ?? -1) || a.name.localeCompare(b.name));
+            const expanded = expandedStorageGroups.has(key);
+            const visible = expanded ? items : items.slice(0, 16);
+            const title = key === 'truenas' ? 'TrueNAS' : key;
+            const copy = key === 'truenas' ? 'Network volumes · expandable' : key === 'local-path' ? 'Node-local volumes · fixed capacity' : 'Persistent volumes';
+            return '<section class="tank-group"><div class="tank-group-heading"><div><h3>' + escapeHtml(title) + '<span>' + items.length + '</span></h3><p>' + copy + '</p></div>' +
+              (items.length > 16 ? '<button type="button" class="tank-more" data-storage-group="' + escapeHtml(key) + '" aria-expanded="' + expanded + '">' + (expanded ? 'Show fewer' : 'Show all · ' + (items.length - 16) + ' more') + '</button>' : '') + '</div>' +
+              '<div class="tank-grid">' + visible.map((claim) => {
+                const tone = claim.util >= .9 ? 'danger' : claim.util >= .8 ? 'warning' : '';
+                const size = claim.measured ? P.fmt.bytes(claim.used) + ' / ' + P.fmt.bytes(claim.capacity) : P.fmt.bytes(claim.requested) + ' requested';
+                const projection = P.numeric(claim.daysToFull) && claim.daysToFull < 30 ? '<span class="tank-eta ' + (claim.daysToFull < 7 ? 'danger' : 'warning') + '">full in ' + Math.max(1, Math.ceil(claim.daysToFull)) + ' d</span>' : '';
+                return '<figure class="tank ' + tone + (claim.measured ? '' : ' is-unmeasured') + '"><div class="tank-value">' + P.fmt.pct(claim.util) + '</div>' + P.tankSvg(claim) + '<figcaption><div class="tank-name" title="' + escapeHtml(claim.namespace + '/' + claim.name) + '">' + escapeHtml(claim.name) + '</div><div class="tank-size">' + size + '</div>' + (claim.measured ? projection : '<span class="tank-unavailable">usage unavailable</span>') + '</figcaption></figure>';
+              }).join('') + '</div></section>';
+          }).join('') + (claims.length ? '<div class="storage-note">Usage telemetry covers NAS volumes; outlined local volumes show requested capacity.<span>' + projections + ' projected full within 30 days</span></div>' : '<p class="pulse-empty">Waiting for persistent volume inventory.</p>');
+        if (focusedGroup) [...el.querySelectorAll('[data-storage-group]')].find((button) => button.dataset.storageGroup === focusedGroup)?.focus({ preventScroll: true });
+      }
+      document.getElementById('storageTanks').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-storage-group]');
+        if (!button) return;
+        const key = button.dataset.storageGroup;
+        if (expandedStorageGroups.has(key)) expandedStorageGroups.delete(key);
+        else expandedStorageGroups.add(key);
+        renderStorageTanks();
+      });
+
       function renderPulse() {
         renderPulseStrip();
         renderNodeTwins();
         renderPowerTicker();
+        renderStorageTanks();
       }
 
       async function loadPulse() {

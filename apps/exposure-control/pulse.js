@@ -173,8 +173,111 @@
     return ticks;
   }
 
+  // Fit only observations, preserving their timestamps. A gap never shortens the
+  // elapsed time or becomes an invented zero/measurement.
+  function projectFull(samples, stepSeconds) {
+    if (!Array.isArray(samples)) return null;
+    const byTime = new Map();
+    samples.forEach((sample, index) => {
+      const paired = Array.isArray(sample);
+      const timestamp = paired ? sample[0] : numeric(stepSeconds) && stepSeconds > 0 ? index * stepSeconds : null;
+      const value = paired ? sample[1] : sample;
+      if (numeric(timestamp)) byTime.set(timestamp, numeric(value) && value >= 0 ? value : null);
+    });
+    const observed = [...byTime].filter(([, value]) => numeric(value)).sort((a, b) => a[0] - b[0]);
+    if (observed.length < 12 || observed.at(-1)[0] - observed[0][0] < 86400) return null;
+    const origin = observed[0][0];
+    const points = observed.map(([timestamp, value]) => [(timestamp - origin) / 86400, value]);
+    const meanX = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+    const meanY = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+    let covariance = 0;
+    let variance = 0;
+    for (const [x, y] of points) {
+      covariance += (x - meanX) * (y - meanY);
+      variance += (x - meanX) ** 2;
+    }
+    const slope = covariance / variance;
+    if (!numeric(slope) || slope <= 1e-12) return null;
+    const fittedNow = meanY + slope * (points.at(-1)[0] - meanX);
+    const days = (1 - fittedNow) / slope;
+    return numeric(days) ? Math.max(0, days) : null;
+  }
+
+  function joinPvcs(metrics = {}) {
+    function keyed(metric) {
+      const result = new Map();
+      if (metric?.state && metric.state !== 'live') return result;
+      for (const series of metric?.series || []) {
+        const { namespace, persistentvolumeclaim } = series.labels || {};
+        if (typeof namespace !== 'string' || !namespace || typeof persistentvolumeclaim !== 'string' || !persistentvolumeclaim) continue;
+        result.set(namespace + '|' + persistentvolumeclaim, series);
+      }
+      return result;
+    }
+    const inventory = keyed(metrics.pvc_class);
+    const utilization = keyed(metrics.pvc_util);
+    const usedBytes = keyed(metrics.pvc_used);
+    const capacityBytes = keyed(metrics.pvc_capacity);
+    const requestedBytes = keyed(metrics.pvc_requested);
+    const history = keyed(metrics.pvc_util_7d);
+    const nonnegative = (series) => { const value = last(series); return numeric(value) && value >= 0 ? value : null; };
+    return [...inventory].map(([key, item]) => {
+      const used = nonnegative(usedBytes.get(key));
+      const capacity = nonnegative(capacityBytes.get(key));
+      const requested = nonnegative(requestedBytes.get(key));
+      const recordedUtil = nonnegative(utilization.get(key));
+      const util = recordedUtil ?? (used !== null && capacity > 0 ? used / capacity : null);
+      const measured = util !== null;
+      return {
+        key,
+        name: item.labels.persistentvolumeclaim,
+        namespace: item.labels.namespace,
+        storageClass: item.labels.storageclass || 'unknown',
+        util, used, capacity, requested, measured,
+        daysToFull: measured ? projectFull(history.get(key)?.values, metrics.pvc_util_7d?.step) : null,
+      };
+    });
+  }
+
+  // Callers give each SVG a unique prefix, then reference <prefix>-ink-1..5.
+  // Dot area increases with utilization; currentColor keeps the material in theme.
+  function halftoneDefs(id) {
+    const prefix = esc(id);
+    return '<defs>' + [.35, .55, .78, 1.02, 1.3].map((radius, index) =>
+      '<pattern id="' + prefix + '-ink-' + (index + 1) + '" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="' + radius + '" fill="currentColor"/></pattern>'
+    ).join('') + '</defs>';
+  }
+
+  function tankSvg(model) {
+    const id = 'pulse-tank-' + (++svgId);
+    const measured = model.measured !== false && numeric(model.util) && model.util >= 0;
+    const ratio = measured ? clamp(model.util) : null;
+    const tone = measured && model.util >= .9 ? ' danger' : measured && model.util >= .8 ? ' warning' : '';
+    const color = tone === ' danger' ? 'var(--red)' : tone === ' warning' ? 'var(--yellow)' : 'var(--text-1)';
+    const identity = (model.namespace ? model.namespace + '/' : '') + (model.name || 'Volume');
+    const description = measured
+      ? identity + ' — ' + fmt.pct(model.util) + ' used; ' + fmt.bytes(model.used) + ' of ' + fmt.bytes(model.capacity)
+      : identity + ' — utilization unavailable' + (numeric(model.requested) ? '; requested ' + fmt.bytes(model.requested) : '');
+    const fillHeight = measured ? ratio * 80 : null;
+    const fillY = measured ? 86 - fillHeight : null;
+    const definitions = halftoneDefs(id) + '<defs><pattern id="' + id + '-missing" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 0h2v2H0zM2 2h2v2H2z" fill="currentColor"/></pattern></defs>';
+    const fill = measured
+      ? '<rect class="tank-liquid" x="8" y="' + fillY.toFixed(3) + '" width="26" height="' + fillHeight.toFixed(3) + '" fill="url(#' + id + '-ink-' + Pulse.inkStep(model.util) + ')"/>' +
+        (ratio > 0 ? '<path class="tank-meniscus" d="M8 ' + fillY.toFixed(3) + 'H34" stroke="currentColor" stroke-width=".75" opacity=".55"/>' : '')
+      : '<rect class="tank-missing-fill" x="8" y="6" width="26" height="80" fill="url(#' + id + '-missing)" opacity=".14"/><path d="M16 46H26" stroke="currentColor" stroke-width="1.25"/>';
+    const ticks = Array.from({ length: 11 }, (_, index) => {
+      const y = 86 - index * 8;
+      return '<path d="M38 ' + y + 'H' + (index % 5 === 0 ? 43 : 40) + '"/>';
+    }).join('');
+    return '<svg class="tank-svg' + tone + (measured ? ' is-measured' : ' is-unavailable') + '" viewBox="0 0 44 96" role="img" aria-labelledby="' + id + '-title" style="color:' + color + '">' +
+      '<title id="' + id + '-title">' + esc(description) + '</title>' + definitions + fill +
+      '<rect class="tank-outline" x="6" y="4" width="30" height="84" rx="3" fill="none" stroke="currentColor" stroke-width="1"/>' +
+      '<path class="tank-warning-mark" d="M6 22H36" fill="none" stroke="var(--border-strong)" stroke-width=".75" stroke-dasharray="2 2"/>' +
+      '<g class="tank-ruler" fill="none" stroke="var(--border-strong)" stroke-width=".65">' + ticks + '<path d="M11 92H31"/></g></svg>';
+  }
+
   const Pulse = {
-    numeric, esc, clamp, values, last, byLabel, fmt, number, sparkline, silhouette, twinCard, power, dayTicks,
+    numeric, esc, clamp, values, last, byLabel, fmt, number, sparkline, silhouette, twinCard, power, dayTicks, projectFull, joinPvcs, halftoneDefs, tankSvg,
     inkStep: (ratio) => !numeric(ratio) ? 0 : ratio < .25 ? 1 : ratio < .5 ? 2 : ratio < .75 ? 3 : ratio <= 1 ? 4 : 5,
     async fetch(names, range = '24h') {
       const response = await root.fetch('/api/metrics?' + new URLSearchParams({ names: names.join(','), range }), { signal: AbortSignal.timeout(20000) });

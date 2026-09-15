@@ -32,6 +32,18 @@ integration; cost uses the configured tariff, and the 30-day projection uses
 the seven-day mean. Missing tariffs or insufficient history leave cost blank.
 Midnight ticks always use Asia/Singapore, independent of the browser's timezone.
 
+## Storage
+
+PVC inventory (`pvc_class`) controls membership. Usage joins by namespace and
+claim; missing usage never becomes zero. Requested capacity is shown separately
+for unmeasured volumes. TrueNAS storage-class variants share the network-volume
+group, and each group initially shows its 16 fullest claims.
+
+Warning and danger thresholds match Storage Risk Overview at 80 and 90 percent.
+Time-to-full is a least-squares trend from timestamped samples, requiring at least
+12 readings spanning 24 hours. New or flat-history volumes have no projection.
+Only projections under 30 days are shown; under seven days uses danger styling.
+
 ## Delivery and validation
 
 Client primitives live in `apps/exposure-control/pulse.js`, registered in the

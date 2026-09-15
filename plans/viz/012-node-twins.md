@@ -1,6 +1,6 @@
 # 012 — Node twins
 
-- **Status**: IMPLEMENTED — pending live verification
+- **Status**: DONE — live verified 2026-09-16
 - **Commit**: 630906f
 - **Phase**: 1 physical
 - **Category**: Visual; hardware state

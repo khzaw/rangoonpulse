@@ -3805,3 +3805,23 @@ main.is-pulse .pulse-page { grid-row: 1 / span 3; }
 .twin-state { color: var(--green); }
 .is-down .twin-state { color: var(--red); }
 .twin-bar.is-unavailable { background: repeating-conic-gradient(var(--dither-check) 0% 25%, transparent 0% 50%) 0 / 4px 4px; }
+
+.tank-group + .tank-group { padding-top: 28px; margin-top: 26px; border-top: 1px solid var(--border); }
+.tank-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 8px 0 24px; }
+.tank-group-heading h3 { font: 500 12px var(--font-mono); }
+.tank-group-heading h3 span { color: var(--text-2); font-weight: 400; margin-left: 10px; font-size: 10px; }
+.tank-group-heading p { font: 9px var(--font-mono); color: var(--text-2); margin-top: 6px; }
+.tank-more { font-size: 10px; padding: 6px 10px; }
+.tank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 26px 12px; }
+.tank { min-width: 0; text-align: center; margin: 0; color: var(--text-1); }
+.tank-value { font: 12px var(--font-mono); margin-bottom: 10px; }
+.tank svg { display: block; width: 44px; height: 96px; margin: 0 auto 12px; overflow: visible; }
+.tank figcaption { color: var(--text-1); }
+.tank-name { font: 10px/1.5 var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tank-size { font: 8px/1.6 var(--font-mono); color: var(--text-2); margin-top: 3px; white-space: nowrap; }
+.tank-eta, .tank-unavailable { display: block; font: 8px/1.6 var(--font-mono); margin-top: 4px; }
+.tank-unavailable, .tank.is-unmeasured { color: var(--text-2); }
+.tank.warning, .tank-eta.warning { color: var(--yellow); }
+.tank.danger, .tank-eta.danger { color: var(--red); }
+.storage-note { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font: 9px/1.6 var(--font-mono); color: var(--text-2); margin-top: 28px; }
+@media (max-width: 720px) { .tank-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 12px; } .tank-size { font-size: 7.5px; } .tank-group-heading { gap: 10px; } }
