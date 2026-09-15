@@ -65,8 +65,8 @@ BookOrbit stages completed imports in `/data/book-dock` before library ingestion
 filesystems from `/downloads`, so the importer falls back to copying when a hardlink fails across mounts.
 
 BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, enables EPUB metadata and cover
-write-back and file renames, excludes `bookdrop`, and scans every six hours. These are runtime library settings;
-inspect them before a migration instead of assuming older documentation is current. BookOrbit and Shelfmark can
+write-back and file renames, excludes `bookdrop`, and uses a runtime-configured scan schedule. These are runtime library
+settings; inspect them before a migration instead of assuming older documentation is current. BookOrbit and Shelfmark can
 write the shared claim. Avoid editing the same book concurrently in both applications.
 
 Content claim names describe their contents (`books`, `audiobooks`); app-specific state retains an app prefix

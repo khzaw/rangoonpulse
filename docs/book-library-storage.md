@@ -57,7 +57,8 @@ separates Audiobookshelf state without changing the underlying content datasets.
 PVC names cannot be edited in place. For this migration, protect both existing PVs with reclaim policy `Retain`,
 stop every writer, release the old claims, and bind replacement claims explicitly using `spec.volumeName`.
 Do not let the storage provisioner create an empty replacement dataset. The TrueNAS dataset paths, CSI volume
-handles, and PV names remain unchanged; only the claim names and friendly NFS share comments change.
+handles, and PV names remain unchanged; only the claim names and friendly comments on the TrueNAS datasets and NFS
+shares change to `default/books` and `default/audiobooks`.
 
 Keep application content paths stable: BookOrbit's registered files remain beneath `/books`, and Audiobookshelf's
 library remains beneath `/audiobooks`. No catalogue path rewrite is needed. Shelfmark's audiobook mount must use the
@@ -76,8 +77,9 @@ volume root to match Audiobookshelf; its old `subPath: audiobooks` exposed a dif
    `.calnotes`, and `.DS_Store` under BookOrbit's `/data/migration-backups/calibre-20260916`. Verify the archived copies
    before clearing those artifacts from `books`. Keep dormant `calibre` and `calibre-web-automated` directories on
    `app-configs-pvc-nfs` intact.
-5. Rebind both retained content PVs to the explicit new claims, reconcile the Git-managed mounts, update friendly NFS
-   share comments, and resume the applications. Record any temporary Flux suspension and clear it after cutover.
+5. Rebind both retained content PVs to the explicit new claims, reconcile the Git-managed mounts, update friendly
+   comments on the TrueNAS datasets and NFS shares, and resume the applications. Record any temporary Flux suspension
+   and clear it after cutover.
 6. Verify claim/PV identity, application mounts, file checksums, catalogue state, and actual ebook/audio access.
 
 The observed pre-migration baseline on 2026-09-16 was one BookOrbit library named `Books` with 391 books and registered
@@ -96,10 +98,38 @@ kubectl get pods -n default | rg 'bookorbit|audiobookshelf|shelfmark'
 curl --fail --max-time 20 https://bookorbit.khzaw.dev/api/v1/health
 ```
 
-In addition to healthy pods, inspect the mounted paths and application catalogues. Confirm the BookOrbit files are
+Do not use pod readiness alone as application-health evidence. Inspect the mounted paths and application catalogues,
+and check the actual HTTP endpoints. Confirm the BookOrbit files are
 still available, Audiobookshelf users/progress/playback state survived, and an existing ebook and audiobook can be
 opened. Both Shelfmark content paths must show the same files as their managing application. Confirm Calibre's
 legacy root artifacts exist in the backup directory and no app-state files remain in the audiobook content root.
+
+### Recorded cutover evidence (2026-09-16)
+
+- Both replacement content claims bound to the original PVs listed above. Their CSI volume handles and NFS share
+  paths were preserved. TrueNAS dataset and NFS share comments now identify `default/books` and `default/audiobooks`.
+  The `calibre-books-nfs` claim and `infra-storage-calibre` Kustomization were removed.
+- All three existing datasets received a `before-generic-book-storage-20260916` snapshot before migration. A protected
+  local copy of pre-change manifests and the PostgreSQL dump was captured at `/tmp/books-storage-migration-20260916`;
+  this workstation temporary directory is not a durable backup destination.
+- Audiobookshelf state copied to `audiobookshelf-data`: 34 files, 754,019 bytes. Legacy Calibre artifacts copied to the
+  BookOrbit migration-backup directory: 19 files, 397,631,327 bytes. Source/destination hashes, modes, UIDs, and GIDs
+  matched for both copies before the originals were removed from the content volumes.
+- Final content verification matched the pre-cutover manifest exactly: 958 ebook-library files including sidecars
+  (1,817,743,511 bytes) and six audiobook-library files including sidecars (1,680,478,018 bytes). Every file's SHA-256,
+  mode, UID, and GID matched.
+- The running Audiobookshelf SQLite integrity check passed. Its three books, three users, one progress record,
+  one playback record, and zero podcasts were preserved. Two authenticated audio range requests returned HTTP `206`
+  at byte offsets `0` and `1048576`; both responses matched the exact source-file bytes.
+- BookOrbit's catalogue retained 391 books and 931 registered files with unchanged `/books` paths. All 931 registered
+  paths existed in the verified final ebook manifest.
+- An authenticated download through BookOrbit's existing KOReader integration returned HTTP `200` and
+  `application/epub+zip`. The 21,183-byte response matched the registered file size and mounted file's SHA-256.
+  The direct download and audio range checks did not use reading-progress or playback-session mutation endpoints.
+- BookOrbit's HTTPS health endpoint returned HTTP `200` after its startup completed. Shelfmark's health endpoint
+  returned HTTP `200`, and its content mounts were writable.
+- All affected HelmReleases and Flux Kustomizations were Ready and unsuspended. No temporary migration pods,
+  old Calibre claim/Kustomization, or released content PVs remained.
 
 ### Rollback
 
