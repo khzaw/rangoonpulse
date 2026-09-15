@@ -156,6 +156,15 @@ const TRANSMISSION_VPN_WEBUI_URL = expandBaseDomainTokens(
 const RESOURCE_ADVISOR_UI_URL =
   process.env.RESOURCE_ADVISOR_UI_URL ||
   "http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/api/ui.json";
+const PROMETHEUS_URL = process.env.PROMETHEUS_URL ||
+  "http://prometheus-operated.monitoring.svc.cluster.local:9090";
+const METRICS_CACHE_TTL_SECONDS = clampInt(process.env.METRICS_CACHE_TTL_SECONDS, 30, 5, 300);
+const METRICS_HTTP_TIMEOUT_MS = clampInt(process.env.METRICS_HTTP_TIMEOUT_MS, 4000, 100, 10000);
+const METRICS_MAX_RANGE_HOURS = clampInt(process.env.METRICS_MAX_RANGE_HOURS, 168, 1, 168);
+const METRICS_MAX_POINTS = clampInt(process.env.METRICS_MAX_POINTS, 300, 2, 300);
+const METRICS_MAX_RESPONSE_BYTES = 150_000;
+const METRICS_MAX_UPSTREAM_BYTES = 1024 * 1024;
+const METRICS_MAX_CACHE_ENTRIES = 128;
 const GITHUB_API_URL = String(
   process.env.GITHUB_API_URL || "https://api.github.com",
 ).replace(/\/+$/, "");
@@ -374,6 +383,8 @@ const metrics = {
   travelSummaryState: "unknown",
   travelConnectorReady: 0,
   travelConnectorRoutesOk: 0,
+  metricsProxyRequests: { success: 0, error: 0 },
+  metricsProxyCacheHits: 0,
 };
 
 const rateLimits = new Map();
@@ -1013,7 +1024,17 @@ function requestUrl(urlString, options) {
       },
       (res) => {
         const chunks = [];
-        res.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        let bytes = 0;
+        res.on("error", reject);
+        res.on("data", (chunk) => {
+          bytes += chunk.length;
+          if (opts.maxBodyBytes && bytes > opts.maxBodyBytes) {
+            res.destroy(new Error("upstream response exceeded size limit"));
+            req.destroy();
+            return;
+          }
+          chunks.push(Buffer.from(chunk));
+        });
         res.on("end", () => {
           resolve({
             statusCode: res.statusCode || 0,
@@ -1026,6 +1047,10 @@ function requestUrl(urlString, options) {
     req.setTimeout(opts.timeoutMs || IMAGE_UPDATE_HTTP_TIMEOUT_MS, () => {
       req.destroy(new Error("request timeout"));
     });
+    if (opts.totalTimeoutMs) {
+      const deadline = setTimeout(() => req.destroy(new Error("request timeout")), opts.totalTimeoutMs);
+      req.once("close", () => clearTimeout(deadline));
+    }
     req.on("error", reject);
     if (opts.body) req.write(opts.body);
     req.end();
@@ -2167,6 +2192,208 @@ async function getResourceAdvisorUi() {
     }).finally(() => { tuningUiCache.promise = null; });
   }
   return tuningUiCache.promise;
+}
+
+// Named queries are the only Prometheus surface exposed to the browser. Keep
+// scrape selection aligned with the monitoring dashboards to avoid duplicate
+// kubelet /metrics/resource and /metrics/cadvisor samples.
+const METRIC_QUERIES = Object.freeze(Object.fromEntries(Object.entries({
+  cluster_watts: { expr: 'homelab:cluster_estimated_power_watts', kind: "range" },
+  node_watts: { expr: 'homelab:node_estimated_power_watts', kind: "range", labels: "node" },
+  node_cpu: { expr: 'homelab:node_host_cpu_utilization:ratio', kind: "range", labels: "node" },
+  node_mem: { expr: 'homelab:node_host_memory_utilization:ratio', kind: "range", labels: "node" },
+  node_req_cpu: { expr: 'homelab:node_requested_cpu_utilization:ratio', labels: "node" },
+  node_req_mem: { expr: 'homelab:node_requested_memory_utilization:ratio', labels: "node" },
+  node_info: { expr: 'kube_node_info', labels: "node internal_ip kernel_version kubelet_version os_image container_runtime_version" },
+  node_hardware: { expr: 'max by(node,machine)(label_replace(node_uname_info{job="node-exporter"}, "node", "$1", "nodename", "(.+)"))', labels: "node machine" },
+  node_role: { expr: 'kube_node_role', labels: "node role" },
+  node_ready: { expr: 'kube_node_status_condition{condition="Ready",status="true"}', labels: "node" },
+  node_pods: { expr: 'count by(node)(kube_pod_info{node!=""})', labels: "node" },
+  rpi_low_voltage: { expr: 'homelab:node_rpi_low_voltage_alarm', labels: "node" },
+  tariff: { expr: 'homelab:singapore_household_tariff_sgd_per_kwh' },
+  restarts_1h: { expr: 'sum(increase(kube_pod_container_status_restarts_total[1h]))', kind: "range" },
+  pvc_util: { expr: 'homelab:pvc_utilization:ratio', labels: "namespace persistentvolumeclaim storageclass node" },
+  pvc_used: { expr: 'homelab:pvc_used_bytes', labels: "namespace persistentvolumeclaim storageclass node" },
+  pvc_capacity: { expr: 'homelab:pvc_capacity_bytes', labels: "namespace persistentvolumeclaim storageclass node" },
+  pvc_class: { expr: 'kube_persistentvolumeclaim_info', labels: "namespace persistentvolumeclaim storageclass volumename" },
+  pvc_requested: { expr: 'kube_persistentvolumeclaim_resource_requests_storage_bytes', labels: "namespace persistentvolumeclaim" },
+  pvc_util_7d: { expr: 'homelab:pvc_utilization:ratio', kind: "range", fixedRangeHours: 168, minStep: 3600, labels: "namespace persistentvolumeclaim storageclass node" },
+  pod_info: { expr: 'kube_pod_info{node!=""}', labels: "namespace pod node created_by_kind created_by_name" },
+  pod_mem_request: { expr: 'sum by(namespace,pod)(kube_pod_container_resource_requests{resource="memory",unit="byte"})', labels: "namespace pod" },
+  pod_mem_usage: { expr: 'sum by(namespace,pod)(container_memory_working_set_bytes{job="kubelet",metrics_path="/metrics/cadvisor",container!="",container!="POD"})', labels: "namespace pod" },
+  pod_restarts_24h: { expr: 'sum by(namespace,pod)(increase(kube_pod_container_status_restarts_total[24h]))', labels: "namespace pod" },
+  pod_phase: { expr: 'kube_pod_status_phase{phase!="Succeeded"} == 1', labels: "namespace pod phase" },
+  flux_reconciles: { expr: 'sum by(controller,result)(increase(controller_runtime_reconcile_total{job="monitoring/flux-controllers",result=~"success|error|requeue|requeue_after"}[5m]))', kind: "range", labels: "controller result" },
+  flux_errors: { expr: 'sum by(controller)(increase(controller_runtime_reconcile_errors_total{job="monitoring/flux-controllers"}[5m]))', kind: "range", labels: "controller" },
+}).map(([name, query]) => [name, Object.freeze({ kind: "instant", defaultRangeHours: 24, ...query })])));
+
+const metricsQueryCache = new Map();
+const metricsInFlight = new Map();
+const metricsQueryQueue = [];
+let metricsActiveQueries = 0;
+
+function parseMetricsRange(value = "24h") {
+  const match = /^(\d{1,9})(h|d)$/.exec(value);
+  if (!match) throw new Error("range must be an integer followed by h or d");
+  const hours = Number(match[1]) * (match[2] === "d" ? 24 : 1);
+  return Math.max(1, Math.min(METRICS_MAX_RANGE_HOURS, hours));
+}
+
+function metricsStepFor(rangeSeconds, minStep = 300) {
+  // Prometheus includes both endpoints: 300 points means 299 intervals.
+  return Math.max(minStep, 300, Math.ceil(rangeSeconds / (METRICS_MAX_POINTS - 1) / 60) * 60);
+}
+
+function parseMetricsRequest(searchParams) {
+  for (const key of searchParams.keys()) {
+    if (key !== "names" && key !== "range") throw new Error("unsupported parameter: " + key);
+    if (searchParams.getAll(key).length !== 1) throw new Error("duplicate parameter: " + key);
+  }
+  const rawNames = searchParams.get("names") || "";
+  if (!rawNames || rawNames.length > 1024) throw new Error("names must be a comma-separated metric list");
+  const names = rawNames.split(",");
+  if (names.length > Object.keys(METRIC_QUERIES).length) throw new Error("too many metric names");
+  for (const name of names) {
+    if (!Object.hasOwn(METRIC_QUERIES, name)) throw new Error("unknown metric: " + name.slice(0, 80));
+  }
+  return { names: [...new Set(names)], rangeHours: parseMetricsRange(searchParams.get("range") ?? "24h") };
+}
+
+async function withMetricsQuerySlot(worker) {
+  if (metricsActiveQueries < 4) {
+    metricsActiveQueries += 1;
+  } else {
+    if (metricsQueryQueue.length >= 64) throw new Error("metrics query queue is full");
+    await new Promise((resolve, reject) => {
+      const entry = { resolve: () => { clearTimeout(timer); resolve(); } };
+      const timer = setTimeout(() => {
+        const index = metricsQueryQueue.indexOf(entry);
+        if (index >= 0) metricsQueryQueue.splice(index, 1);
+        reject(new Error("metrics query queue timed out"));
+      }, METRICS_HTTP_TIMEOUT_MS);
+      metricsQueryQueue.push(entry);
+    });
+  }
+  try {
+    return await worker();
+  } finally {
+    const next = metricsQueryQueue.shift();
+    if (next) next.resolve();
+    else metricsActiveQueries -= 1;
+  }
+}
+
+function metricUnavailable(query, state, detail, rangeHours) {
+  const rangeSeconds = query.kind === "range" ? rangeHours * 3600 : 0;
+  return {
+    state, kind: query.kind, detail, series: [],
+    rangeSeconds, step: query.kind === "range" ? metricsStepFor(rangeSeconds, query.minStep) : 0,
+  };
+}
+
+function normalizePrometheusMetric(query, payload, rangeHours) {
+  const expectedType = query.kind === "range" ? "matrix" : "vector";
+  if (payload.status !== "success" || payload.data?.resultType !== expectedType || !Array.isArray(payload.data.result)) {
+    throw new Error("invalid Prometheus response");
+  }
+  if (payload.data.result.length > 500) throw new Error("metric exceeded series limit");
+  let finiteValues = 0;
+  const series = payload.data.result.map((row) => {
+    const labels = {};
+    for (const name of (query.labels || "").split(" ").filter(Boolean)) {
+      const value = row?.metric?.[name];
+      if (value === undefined) continue;
+      if (typeof value !== "string" || value.length > 512) throw new Error("invalid Prometheus label");
+      labels[name] = value;
+    }
+    const samples = query.kind === "range" ? row?.values : [row?.value];
+    if (!Array.isArray(samples) || samples.length > METRICS_MAX_POINTS) throw new Error("metric exceeded point limit");
+    const values = samples.map((sample) => {
+      if (!Array.isArray(sample) || sample.length !== 2 || !Number.isFinite(sample[0]) || typeof sample[1] !== "string") {
+        throw new Error("invalid Prometheus sample");
+      }
+      const number = sample[1].trim() ? Number(sample[1]) : NaN;
+      const value = Number.isFinite(number) ? number : null;
+      if (value !== null) finiteValues += 1;
+      return [sample[0], value];
+    });
+    return { labels, values };
+  });
+  const result = {
+    ...metricUnavailable(query, finiteValues ? "live" : "unavailable", "", rangeHours),
+    series,
+  };
+  if (finiteValues) delete result.detail;
+  else result.detail = "No samples available for this window.";
+  if (Buffer.byteLength(JSON.stringify(result)) > METRICS_MAX_RESPONSE_BYTES - 2048) {
+    throw new Error("metric exceeded response size limit");
+  }
+  return result;
+}
+
+async function queryPrometheus(name, requestedRangeHours) {
+  const query = METRIC_QUERIES[name];
+  const rangeHours = Math.min(METRICS_MAX_RANGE_HOURS, query.fixedRangeHours || requestedRangeHours);
+  const key = name + "|" + (query.kind === "range" ? rangeHours : "instant");
+  const cached = metricsQueryCache.get(key);
+  if (cached && Date.now() - cached.at < METRICS_CACHE_TTL_SECONDS * 1000) {
+    metrics.metricsProxyCacheHits += 1;
+    return cached.value;
+  }
+  if (metricsInFlight.has(key)) return metricsInFlight.get(key);
+  const promise = withMetricsQuerySlot(async () => {
+    const url = new URL(query.kind === "range" ? "/api/v1/query_range" : "/api/v1/query", PROMETHEUS_URL);
+    url.searchParams.set("query", query.expr);
+    if (query.kind === "range") {
+      const rangeSeconds = rangeHours * 3600;
+      const end = Math.floor(Date.now() / 1000);
+      url.searchParams.set("start", String(end - rangeSeconds));
+      url.searchParams.set("end", String(end));
+      url.searchParams.set("step", String(metricsStepFor(rangeSeconds, query.minStep)));
+    }
+    const response = await requestUrl(url.toString(), {
+      headers: { accept: "application/json", "user-agent": "exposure-control/1.0" },
+      timeoutMs: METRICS_HTTP_TIMEOUT_MS,
+      totalTimeoutMs: METRICS_HTTP_TIMEOUT_MS,
+      maxBodyBytes: METRICS_MAX_UPSTREAM_BYTES,
+    });
+    if (response.statusCode !== 200) throw new Error("prometheus request failed (" + response.statusCode + ")");
+    const result = normalizePrometheusMetric(query, JSON.parse(response.body), rangeHours);
+    metrics.metricsProxyRequests.success += 1;
+    return result;
+  }).catch((error) => {
+    metrics.metricsProxyRequests.error += 1;
+    return metricUnavailable(query, "degraded", String(error.message).slice(0, 160), rangeHours);
+  }).then((value) => {
+    if (metricsQueryCache.size >= METRICS_MAX_CACHE_ENTRIES) metricsQueryCache.delete(metricsQueryCache.keys().next().value);
+    metricsQueryCache.set(key, { at: Date.now(), value });
+    return value;
+  }).finally(() => metricsInFlight.delete(key));
+  metricsInFlight.set(key, promise);
+  return promise;
+}
+
+async function getMetricsSnapshot(names, rangeHours) {
+  const results = [];
+  await mapWithConcurrency(names, 4, async (name, index) => {
+    results[index] = await queryPrometheus(name, rangeHours);
+  });
+  const snapshot = { at: nowIso(), range: rangeHours + "h", step: metricsStepFor(rangeHours * 3600), metrics: {} };
+  // Reserve room for every requested metric's status. Oversized batches degrade
+  // individual names explicitly; never silently truncate time series or claims.
+  for (const name of names) {
+    snapshot.metrics[name] = metricUnavailable(METRIC_QUERIES[name], "degraded", "Batch exceeded response size limit; request this metric separately.", Math.min(METRICS_MAX_RANGE_HOURS, METRIC_QUERIES[name].fixedRangeHours || rangeHours));
+  }
+  let bytes = Buffer.byteLength(JSON.stringify(snapshot));
+  for (let index = 0; index < names.length; index += 1) {
+    const name = names[index];
+    const nextBytes = bytes - Buffer.byteLength(JSON.stringify(snapshot.metrics[name])) + Buffer.byteLength(JSON.stringify(results[index]));
+    if (nextBytes <= METRICS_MAX_RESPONSE_BYTES) {
+      snapshot.metrics[name] = results[index];
+      bytes = nextBytes;
+    }
+  }
+  return snapshot;
 }
 
 function resourceAdvisorArtifactUrl(pathname) {
@@ -4014,6 +4241,13 @@ function activeExposureCount() {
 
 function renderMetrics() {
   return [
+    "# HELP exposure_control_metrics_proxy_requests_total Prometheus upstream requests by result.",
+    "# TYPE exposure_control_metrics_proxy_requests_total counter",
+    'exposure_control_metrics_proxy_requests_total{result="success"} ' + metrics.metricsProxyRequests.success,
+    'exposure_control_metrics_proxy_requests_total{result="error"} ' + metrics.metricsProxyRequests.error,
+    "# HELP exposure_control_metrics_proxy_cache_hits_total Named metric cache hits.",
+    "# TYPE exposure_control_metrics_proxy_cache_hits_total counter",
+    "exposure_control_metrics_proxy_cache_hits_total " + metrics.metricsProxyCacheHits,
     "# HELP exposure_control_active_exposures Number of currently active temporary public exposures.",
     "# TYPE exposure_control_active_exposures gauge",
     "exposure_control_active_exposures " + activeExposureCount(),
@@ -4404,6 +4638,16 @@ async function handleApi(req, res, parsedUrl) {
     } catch (err) {
       return sendJson(res, 400, { error: err.message });
     }
+  }
+
+  if (req.method === "GET" && pathname === "/api/metrics") {
+    let request;
+    try {
+      request = parseMetricsRequest(parsedUrl.searchParams);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+    return sendJson(res, 200, await getMetricsSnapshot(request.names, request.rangeHours));
   }
 
   if (req.method === "GET" && pathname === "/api/tuning") {

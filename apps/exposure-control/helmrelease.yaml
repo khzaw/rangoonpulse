@@ -86,6 +86,11 @@ spec:
               HELM_UPDATE_HTTP_TIMEOUT_MS: "8000"
               TRAVEL_CACHE_TTL_SECONDS: "30"
               TRAVEL_HTTP_TIMEOUT_MS: "4000"
+              PROMETHEUS_URL: http://prometheus-operated.monitoring.svc.cluster.local:9090
+              METRICS_CACHE_TTL_SECONDS: "30"
+              METRICS_HTTP_TIMEOUT_MS: "4000"
+              METRICS_MAX_RANGE_HOURS: "168"
+              METRICS_MAX_POINTS: "300"
               TRANSMISSION_VPN_NAMESPACE: default
               TRANSMISSION_VPN_CONTROL_CONFIGMAP: transmission-vpn-control
               TRANSMISSION_VPN_RUNTIME_CONFIGMAP: transmission-vpn-state
