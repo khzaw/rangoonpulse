@@ -104,6 +104,8 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}chartsdb.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: ${SHARE_HOST_PREFIX}bento.${BASE_DOMAIN}
+                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}bookorbit.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}shelfmark.${BASE_DOMAIN}

@@ -12,6 +12,13 @@
     "description": "ChartDB"
   },
   {
+    "id": "bento",
+    "name": "BentoPDF",
+    "target": "http://bentopdf.default.svc.cluster.local:8080",
+    "description": "Browser-based PDF tools",
+    "authMode": "cloudflare-access"
+  },
+  {
     "id": "bookorbit",
     "name": "BookOrbit",
     "target": "http://bookorbit.default.svc.cluster.local:3000",

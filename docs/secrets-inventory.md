@@ -25,6 +25,11 @@ Notes:
     - key: `GITHUB_TOKEN` (GitHub API token for dispatching Renovate workflow and listing Renovate runs and PRs)
 
 ### Study Services
+- **bentopdf** (`apps/bentopdf/helmrelease.yaml`)
+  - No application credentials are required.
+  - `default/bentopdf-tls` belongs to cert-manager and is renewed automatically;
+    it is not an editable SOPS Secret in Control Panel.
+
 - **obsidian-livesync** (`apps/obsidian-livesync/helmrelease.yaml`)
   - `default/obsidian-livesync-secret`
     - keys: `COUCHDB_USER`, `COUCHDB_PASSWORD`

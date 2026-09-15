@@ -45,8 +45,9 @@ spec:
               resource:
                 name: cpu
                 target:
-                  type: Utilization
-                  averageUtilization: 70
+                  # Same initial threshold as 70% of 50m, independent of tuned requests.
+                  type: AverageValue
+                  averageValue: 35m
           behavior:
             scaleDown:
               stabilizationWindowSeconds: 300
@@ -74,7 +75,7 @@ spec:
                     path: /
                     port: 8080
                   periodSeconds: 10
-            # Keep CPU requests fixed: HPA uses them as its utilization baseline.
+            # Resource Advisor can tune requests without changing the HPA threshold.
             resources:
               requests:
                 cpu: "50m"

@@ -18,8 +18,10 @@ the application and its static assets.
 - LAN clients connect directly; remote clients need the Tailscale subnet route to
   the ingress VIP.
 - Ingress class `nginx` terminates HTTPS using `letsencrypt-prod`.
-- The hostname has no Cloudflare Tunnel route, public-edge alias, or
-  Exposure Control share entry.
+- Control Panel lists BentoPDF in Exposure as `bento`, disabled by default.
+- Optional `share-bento.khzaw.dev` uses the existing Cloudflare Tunnel and
+  exposure-control gate with Cloudflare Access protection. The canonical
+  hostname remains private when temporary sharing is enabled.
 
 ## Runtime and GitOps
 
@@ -41,7 +43,7 @@ the application and its static assets.
 
 Each replica requests `50m` CPU and `64Mi` memory, with limits of `250m` CPU and
 `128Mi` memory. The HPA maintains one to two replicas with a target average CPU
-utilization of 70% of the request and a 300-second scale-down stabilization window.
+usage of `35m` per replica and a 300-second scale-down stabilization window.
 
 These limits cover static asset serving. PDF size and conversion cost primarily
 affect the browser device's CPU and memory. The service is stateless, so multiple
@@ -49,15 +51,30 @@ replicas do not need shared storage or session affinity.
 
 The chart's `controllers.main.horizontalPodAutoscaler` generates the HPA and
 omits `Deployment.spec.replicas`, leaving replica management to the autoscaler.
-Resource Advisor discovers BentoPDF for reporting, but it is excluded from the
-resource auto-apply allowlist. Adjust requests manually: changing the CPU request
-also changes the amount of CPU at which the utilization-based HPA scales.
+Resource Advisor includes BentoPDF in reporting and the resource auto-apply
+mapping. The absolute CPU target preserves the original threshold (70% of `50m`)
+while allowing request tuning without moving the HPA trigger. Normal data
+maturity, minimum-change, and node-capacity gates still apply. Run a fresh report
+after onboarding so the Tuning page shows the workload immediately.
 
 ## Image updates
 
 The image uses an explicit stable version. Existing Renovate rules and the
 control panel's image discovery cover this HelmRelease automatically; BentoPDF
 does not need a per-service Flux image policy or image writer.
+
+Force-refresh both `/api/image-updates?force=1` and `/api/helm-updates?force=1`
+after onboarding and verify BentoPDF in both Control Panel lists. Their cached
+snapshots can predate the deployment even when the update policy is configured.
+
+## Secrets
+
+BentoPDF has no application credentials, database password, or API key. Its only
+service-specific Secret is `default/bentopdf-tls`, issued and renewed by
+cert-manager. It is not an editable SOPS credential in the Secrets page; do not
+create a placeholder credential. The cluster Secrets page must still be checked
+for healthy inventory during onboarding, and any future application credential
+must be SOPS-managed, documented, and visible there.
 
 ## Verification
 

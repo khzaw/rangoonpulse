@@ -150,7 +150,7 @@ Operational expectation:
 
 ## Current Apply Scope Policy
 Auto-apply (Phase 3 PR commits) is currently enabled for:
-- `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`
+- `adguard`, `adguard-secondary`, `anki-server`, `audiobookshelf`, `autobrr`, `bazarr`, `bentopdf`
 - `chartsdb`, `ersatztv`, `exposure-control`, `flaresolverr`, `dynacat`, `shelfmark`
 - `isponsorblock-tv`, `profilarr`, `tracerr`, `jellyfin`, `jellyseerr`, `nodecast-tv`
 - `bookorbit`, `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `romm`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
@@ -175,8 +175,12 @@ establishes a known-good request floor.
 Analyzed but intentionally excluded from auto-apply (manual-only adjustments):
 - `actualbudget` (non-`app-template` chart), `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,
   `blog`, `mmcal`
-- `bentopdf`: its CPU utilization HPA depends on the fixed `50m` CPU request;
-  resource changes require coordinated review with the HPA target.
+
+BentoPDF participates in normal tuning with the existing maturity and capacity
+gates. Its HPA uses an absolute `35m` average CPU target, initially equivalent to
+70% of its `50m` request, so request tuning does not alter the scaling threshold.
+Keep this independence when onboarding other autoscaled services: percentage
+targets and request tuning must be designed together.
 
 ## Outputs
 The latest report is written to ConfigMap:

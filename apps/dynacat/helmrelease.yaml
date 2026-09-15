@@ -641,6 +641,7 @@ spec:
                           - seerr-team/seerr
                           - chrisbenincasa/tunarr
                           - actualbudget/actual
+                          - alam00000/bentopdf
                           - dani-garcia/vaultwarden
                           - louislam/uptime-kuma
                           - Panonim/dynacat

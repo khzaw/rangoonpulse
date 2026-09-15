@@ -21,7 +21,7 @@ Then pick the smallest focused set of docs below before planning or editing.
 
 Use the smallest matching repo-local skill when the task clearly fits:
 
-- `rangoonpulse-service-deploy` for adding, exposing, renaming, or materially changing a service
+- `rangoonpulse-service-deploy` for adding, exposing, renaming, or materially changing a service, including the complete operator setup in [`docs/service-onboarding.md`](./service-onboarding.md)
 - `rangoonpulse-upgrade` for image or chart bumps
 - `rangoonpulse-cluster-conventions` for shared cluster settings, placement, storage, ingress/TLS, secrets, and default manifest conventions
 - `rangoonpulse-access-and-edge` for Tailscale, public-edge, share hosts, exposure-control, Transmission VPN routing, and access-path exceptions
@@ -29,6 +29,11 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - `rangoonpulse-resource-advisor` for tuning automation and service auto-tuning integration
 
 ## Task Routing
+
+### Service onboarding
+
+- [`docs/service-onboarding.md`](./service-onboarding.md) is required reading for new apps. It defines the mandatory dashboard/monitor, Control Panel image and Helm updates, disabled share setup, tuning/HPA policy, secrets inventory, and live evidence needed before completion.
+- Read the linked domain docs for each touched surface. A working app URL does not replace verification that those operator surfaces contain the new app.
 
 ### Repository-wide configuration
 

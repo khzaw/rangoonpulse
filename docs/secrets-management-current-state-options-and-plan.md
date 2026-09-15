@@ -108,6 +108,27 @@ Important behavior:
 - It does not make permanent live-only Secret patches. Flux remains the source of truth.
 - Delete actions remove the Git-managed Secret file and namespace kustomization entry, then rely on the `secrets` Flux Kustomization with `prune: true`.
 
+New service onboarding must refresh `/api/secrets?force=1` and verify each new
+credential appears with `existsLive: true`, its expected keys, and the correct
+Git-managed path. Check metadata only; do not reveal values for routine checks.
+The inventory reads GitHub before joining live Kubernetes metadata, so an HTTP
+500 `Bad credentials` error can hide valid, deployed Secrets. Check the GitHub
+credential before changing file registration or Kubernetes permissions.
+
+On 2026-09-15, the Control Panel credential was rejected by GitHub. Its existing
+SOPS-managed `default/exposure-control-github` Secret was refreshed from the
+existing saved GitHub CLI credential after verifying repository access and
+workflow-write authorization. Resource Advisor's credential could read status
+but could not dispatch workflows, so it was not reused. Token repair follows the
+normal encrypted commit, Flux reconcile, and workload restart path. Verify both
+inventory reads and required write permissions; a successful status request is
+not sufficient evidence that update-management actions work.
+
+Services without application credentials, such as BentoPDF, record that fact in
+their service doc and inventory. Do not copy cert-manager-owned TLS Secrets into
+SOPS just to make an editable row appear. Full operator checks are in
+[`service-onboarding.md`](./service-onboarding.md).
+
 Security notes:
 - The control panel can read managed runtime Secrets and can create short-lived helper Jobs containing plaintext payloads.
 - Do not expose `controlpanel.khzaw.dev` publicly.

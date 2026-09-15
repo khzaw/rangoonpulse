@@ -31,10 +31,11 @@ focused docs under `docs/`, and project-local skills under `.agents/skills/`.
 - Keep ingress, DNS annotation, and TLS settings aligned for externally reachable apps.
 - For critical redundant services, do not couple both instances into one risky rollout unit.
 - This repo is a shared worktree. Do not revert unrelated edits; stage only your task's hunks.
+- New app deployments include the complete operator setup in [`docs/service-onboarding.md`](docs/service-onboarding.md): dashboard/monitor, update management, disabled share setup, tuning, secrets inventory, and live verification of every surface.
 
 ## Task Routing
 Use the matching project-local skill when the task fits:
-- `rangoonpulse-service-deploy`: add, move, rename, expose, or materially change a service
+- `rangoonpulse-service-deploy`: add, move, rename, expose, or materially change a service; read [`docs/service-onboarding.md`](docs/service-onboarding.md) for the required completion contract
 - `rangoonpulse-upgrade`: bump a chart, image, or service version
 - `rangoonpulse-cluster-conventions`: cluster-wide settings, placement, storage, ingress/TLS, secrets, and ordinary manifest conventions
 - `rangoonpulse-access-and-edge`: Tailscale, ingress VIP access model, public-edge, exposure-control, share hosts, Transmission VPN routing, and hostname exceptions

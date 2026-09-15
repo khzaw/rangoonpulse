@@ -19,6 +19,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "audiobookshelf": "apps/audiobookshelf/helmrelease.yaml",
     "autobrr": "apps/autobrr/helmrelease.yaml",
     "bazarr": "apps/bazarr/helmrelease.yaml",
+    "bentopdf": "apps/bentopdf/helmrelease.yaml",
     "shelfmark": "apps/shelfmark/helmrelease.yaml",
     "chartsdb": "apps/chartsdb/helmrelease.yaml",
     "ersatztv": "apps/ersatztv/helmrelease.yaml",
