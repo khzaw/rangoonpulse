@@ -56,6 +56,8 @@ mapping. The absolute CPU target preserves the original threshold (70% of `50m`)
 while allowing request tuning without moving the HPA trigger. Normal data
 maturity, minimum-change, and node-capacity gates still apply. Run a fresh report
 after onboarding so the Tuning page shows the workload immediately.
+Before the advisor's first hourly p95 sample, the row displays `awaiting metrics`
+and keeps current resources. Missing history must not hide the app from Tuning.
 
 ## Image updates
 
@@ -75,6 +77,10 @@ cert-manager. It is not an editable SOPS credential in the Secrets page; do not
 create a placeholder credential. The cluster Secrets page must still be checked
 for healthy inventory during onboarding, and any future application credential
 must be SOPS-managed, documented, and visible there.
+
+The dashboard's release watcher uses the shared Dynacat integration credential
+`default/dynacat-github`, encrypted in Git and listed on the Secrets page. It is
+an operator integration credential, not a BentoPDF application password.
 
 ## Verification
 

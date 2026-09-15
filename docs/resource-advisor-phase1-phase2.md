@@ -121,6 +121,11 @@ Operational expectation:
 - If metric volume increases enough to hit `retentionSize`, older samples are dropped automatically; advisor keeps running but may report `<14` coverage until utilization stabilizes or limits are adjusted.
 
 ## Guardrails
+- Reports retain every discovered container, including rows awaiting metrics and rows within the deadband.
+  These rows have `no-change` actions and retain their current resources, so they are visible in Tuning without
+  becoming apply candidates. Missing measurements display as awaiting metrics, not zero usage.
+- The 14-day p95 queries sample hourly. A newly deployed workload can have live CPU/memory readings but no p95
+  sample until the next hourly evaluation. Onboarding must show that waiting state rather than omit the app.
 - Max per-run adjustment step is capped (`MAX_STEP_PERCENT`, default 25%).
 - Request/limit buffer percentages are configurable.
 - Deadband policy ignores small deltas:

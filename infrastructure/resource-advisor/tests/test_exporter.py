@@ -11,6 +11,53 @@ import exporter
 
 
 class ExporterTests(unittest.TestCase):
+    def test_ui_preserves_missing_usage_and_distinguishes_measured_zero(self):
+        cases = [
+            ("missing", {}, None, None, True),
+            ("null", {"cpu_p95_m": None, "mem_p95_mi": None}, None, None, True),
+            ("partial", {"cpu_p95_m": 12.5, "mem_p95_mi": None}, 12.5, None, True),
+            ("zero", {"cpu_p95_m": 0, "mem_p95_mi": 0}, 0.0, 0.0, False),
+            ("measured", {"cpu_p95_m": 12.5, "mem_p95_mi": 48.2}, 12.5, 48.2, False),
+            (
+                "awaiting-note",
+                {"cpu_p95_m": 0, "mem_p95_mi": 0, "notes": ["awaiting_metrics"]},
+                0.0,
+                0.0,
+                True,
+            ),
+        ]
+        for name, usage, expected_cpu, expected_memory, awaiting in cases:
+            with self.subTest(name=name), patch.object(exporter, "STATE", exporter.State()):
+                exporter.STATE.report = {
+                    "recommendations": [
+                        {
+                            "namespace": "default",
+                            "workload": "bentopdf",
+                            "release": "bentopdf",
+                            "container": "main",
+                            "action": "no-change",
+                            "replicas": 1,
+                            "current": {"requests": {"cpu": "50m", "memory": "64Mi"}},
+                            "recommended": {"requests": {"cpu": "50m", "memory": "64Mi"}},
+                            **usage,
+                        }
+                    ]
+                }
+
+                payload = exporter.build_ui_payload()
+                rendered = exporter.build_index_html()
+
+                row = payload["report"]["recommendations"][0]
+                self.assertEqual(row["cpu_p95_m"], expected_cpu)
+                self.assertEqual(row["mem_p95_mi"], expected_memory)
+                awaiting_markup = '<div class="usage-line">awaiting metrics</div>'
+                if awaiting:
+                    self.assertIn(awaiting_markup, rendered)
+                    self.assertNotIn('<div class="usage-line">p95 ', rendered)
+                else:
+                    self.assertNotIn(awaiting_markup, rendered)
+                    self.assertIn('<div class="usage-line">p95 ', rendered)
+
     def test_next_cron_occurrence_uses_cronjob_timezone(self):
         now = exporter.dt.datetime(2026, 3, 14, 12, 0, tzinfo=exporter.ZoneInfo("Asia/Singapore"))
         self.assertEqual(

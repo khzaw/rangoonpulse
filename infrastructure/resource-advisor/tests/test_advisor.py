@@ -114,6 +114,102 @@ def make_apply_item(
     }
 
 
+class BuildReportVisibilityTests(unittest.TestCase):
+    def build_report_and_plan(self, resources, cpu_p95, memory_p95):
+        workload = {
+            "metadata": {
+                "name": "bentopdf",
+                "labels": {"app.kubernetes.io/instance": "bentopdf"},
+            },
+            "spec": {
+                "replicas": 1,
+                "template": {"spec": {"containers": [{"name": "main", "resources": resources}]}},
+            },
+        }
+        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube.list_workloads = lambda namespace, kind: (
+            [workload] if namespace == "default" and kind == "deployments" else []
+        )
+
+        def query_scalar(query):
+            if query.startswith("quantile_over_time"):
+                return cpu_p95 if "container_cpu_usage_seconds_total" in query else memory_p95
+            return 0.0
+
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(advisor, "KubeClient", return_value=fake_kube),
+            patch.object(advisor, "PromClient") as prom_client,
+            patch.object(advisor, "estimate_coverage_days", return_value=14.5),
+        ):
+            prom_client.return_value.query_scalar.side_effect = query_scalar
+            report, markdown = advisor.build_report()
+            plan, _ = advisor.build_apply_plan(report)
+        return report, markdown, plan
+
+    def test_new_workload_without_an_hourly_sample_remains_visible_and_cannot_apply(self):
+        resources = {
+            "requests": {"cpu": "50m", "memory": "64Mi"},
+            "limits": {"cpu": "250m", "memory": "128Mi"},
+        }
+        report, markdown, plan = self.build_report_and_plan(resources, None, None)
+
+        self.assertEqual(len(report["recommendations"]), 1)
+        row = report["recommendations"][0]
+        self.assertEqual((row["workload"], row["release"], row["container"]), ("bentopdf", "bentopdf", "main"))
+        self.assertEqual(row["action"], "no-change")
+        self.assertIn("awaiting_metrics", row["notes"])
+        self.assertEqual(row["current"], resources)
+        self.assertEqual(row["recommended"], resources)
+        self.assertIsNone(row["cpu_p95_m"])
+        self.assertIsNone(row["mem_p95_mi"])
+        self.assertTrue(all(value == 0 for value in row["delta_percent"].values()))
+        self.assertEqual(report["summary"]["containers_skipped_no_metrics"], 1)
+        self.assertEqual(report["summary"]["containers_with_metrics"], 0)
+        self.assertEqual(report["summary"]["no_change_count"], 1)
+        self.assertIn("awaiting_metrics", markdown)
+        self.assertEqual(plan["selected"], [])
+        self.assertEqual(plan["next_up"], [])
+
+    def test_within_deadband_workload_remains_visible_without_resource_changes(self):
+        resources = {
+            "requests": {"cpu": "100m", "memory": "256Mi"},
+            "limits": {"cpu": "200m", "memory": "384Mi"},
+        }
+        report, markdown, plan = self.build_report_and_plan(resources, 0.078, 200 * 1024 * 1024)
+
+        self.assertEqual(len(report["recommendations"]), 1)
+        row = report["recommendations"][0]
+        self.assertEqual(row["action"], "no-change")
+        self.assertIn("within_deadband", row["notes"])
+        self.assertEqual(row["current"], resources)
+        self.assertEqual(row["recommended"], resources)
+        self.assertEqual(row["cpu_p95_m"], 78.0)
+        self.assertEqual(row["mem_p95_mi"], 200.0)
+        self.assertTrue(all(value == 0 for value in row["delta_percent"].values()))
+        summary = report["summary"]
+        self.assertEqual(summary["total_current_requests_cpu_m"], summary["total_recommended_requests_cpu_m"])
+        self.assertEqual(summary["total_current_requests_memory_mi"], summary["total_recommended_requests_memory_mi"])
+        self.assertEqual(summary["containers_with_metrics"], 1)
+        self.assertIn("within_deadband", markdown)
+        self.assertEqual(plan["selected"], [])
+        self.assertEqual(plan["next_up"], [])
+
+    def test_measured_zero_usage_is_not_missing_metrics(self):
+        resources = {
+            "requests": {"cpu": "50m", "memory": "64Mi"},
+            "limits": {"cpu": "250m", "memory": "128Mi"},
+        }
+        report, _, _ = self.build_report_and_plan(resources, 0.0, 0.0)
+
+        row = report["recommendations"][0]
+        self.assertNotIn("awaiting_metrics", row["notes"])
+        self.assertEqual(row["cpu_p95_m"], 0.0)
+        self.assertEqual(row["mem_p95_mi"], 0.0)
+        self.assertEqual(report["summary"]["containers_with_metrics"], 1)
+        self.assertEqual(report["summary"]["containers_skipped_no_metrics"], 0)
+
+
 class BuildApplyPlanTests(unittest.TestCase):
     def test_build_apply_plan_uses_default_allowlist_and_populates_next_up(self):
         release_one, release_two = advisor.DEFAULT_APPLY_ALLOWLIST[:2]

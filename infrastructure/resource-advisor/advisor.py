@@ -1061,6 +1061,38 @@ def build_report() -> tuple[dict, str]:
                         skipped_no_metrics += 1
                         total_recommended_req_cpu_m += cur_req_cpu * replicas
                         total_recommended_req_mem_mi += cur_req_mem * replicas
+                        # A new workload may have live samples but none on the
+                        # hourly p95 grid yet. Keep its inventory row visible
+                        # without treating missing usage as zero or tuning it.
+                        current_resources = {
+                            "requests": {"cpu": fmt_cpu_m(cur_req_cpu), "memory": fmt_mem_mi(cur_req_mem)},
+                            "limits": {"cpu": fmt_cpu_m(cur_lim_cpu), "memory": fmt_mem_mi(cur_lim_mem)},
+                        }
+                        recommendations.append(
+                            {
+                                "namespace": namespace,
+                                "kind": kind[:-1],
+                                "workload": workload_name,
+                                "release": release,
+                                "replicas": replicas,
+                                "container": container_name,
+                                "restarts_window": round(restart_lookback, 2),
+                                "cpu_p95_m": None,
+                                "mem_p95_mi": None,
+                                "cpu_throttle_ratio": round(cpu_throttle_ratio, 3),
+                                "cpu_throttled_periods": round(cpu_throttled_periods, 1),
+                                "current": current_resources,
+                                "recommended": {key: dict(value) for key, value in current_resources.items()},
+                                "delta_percent": {
+                                    "requests_cpu": 0.0,
+                                    "requests_memory": 0.0,
+                                    "limits_cpu": 0.0,
+                                    "limits_memory": 0.0,
+                                },
+                                "action": "no-change",
+                                "notes": ["awaiting_metrics"],
+                            }
+                        )
                         continue
 
                     containers_with_data += 1
@@ -1122,9 +1154,6 @@ def build_report() -> tuple[dict, str]:
                             rec_lim_mem = cur_lim_mem
                         notes.append("downscale_excluded")
 
-                    total_recommended_req_cpu_m += rec_req_cpu * replicas
-                    total_recommended_req_mem_mi += rec_req_mem * replicas
-
                     req_cpu_delta = pct_delta(cur_req_cpu, rec_req_cpu)
                     req_mem_delta = pct_delta(cur_req_mem, rec_req_mem)
                     lim_cpu_delta = pct_delta(cur_lim_cpu, rec_lim_cpu)
@@ -1164,7 +1193,16 @@ def build_report() -> tuple[dict, str]:
                         )
                     )
                     if not significant_change:
-                        continue
+                        # No actionable delta still belongs in the inventory.
+                        # Pin the proposal and totals to the current resources.
+                        rec_req_cpu, rec_req_mem = cur_req_cpu, cur_req_mem
+                        rec_lim_cpu, rec_lim_mem = cur_lim_cpu, cur_lim_mem
+                        req_cpu_delta = req_mem_delta = lim_cpu_delta = lim_mem_delta = 0.0
+                        req_cpu_abs_delta = req_mem_abs_delta = lim_cpu_abs_delta = lim_mem_abs_delta = 0.0
+                        notes.append("within_deadband")
+
+                    total_recommended_req_cpu_m += rec_req_cpu * replicas
+                    total_recommended_req_mem_mi += rec_req_mem * replicas
 
                     up_signal = (
                         (rec_req_cpu > cur_req_cpu)

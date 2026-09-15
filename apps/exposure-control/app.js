@@ -1526,6 +1526,10 @@
           const cpuDelta = Number(String(recommendedCpu).replace(/m$/, '')) - Number(String(currentCpu).replace(/m$/, ''));
           const memDelta = Number(String(recommendedMem).replace(/Mi$/, '')) - Number(String(currentMem).replace(/Mi$/, ''));
           const notesMarkup = notes.length ? notes.map((note) => '<span class="note-pill ' + noteTone(note) + '">' + note.replace(/_/g, ' ') + '</span>').join('') : '<span class="muted">—</span>';
+          const awaitingMetrics = notes.includes('awaiting_metrics') || row.cpu_p95_m == null || row.mem_p95_mi == null;
+          const usageText = awaitingMetrics
+            ? 'awaiting metrics'
+            : 'p95 ' + withUnitSpace(String(row.cpu_p95_m) + 'm') + ' · ' + withUnitSpace(String(row.mem_p95_mi) + 'Mi');
 
           const tr = document.createElement('tr');
           tr.innerHTML =
@@ -1533,7 +1537,7 @@
             '<td><span class="action ' + action + '">' + action + '</span></td>' +
             '<td><div class="metric-pair"><span>' + withUnitSpace(currentCpu) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedCpu) + '</span></div><div class="metric-delta ' + (cpuDelta > 0 ? 'positive' : cpuDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(cpuDelta, 'm', 0)) + '</div></td>' +
             '<td><div class="metric-pair"><span>' + withUnitSpace(currentMem) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedMem) + '</span></div><div class="metric-delta ' + (memDelta > 0 ? 'positive' : memDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(memDelta, 'Mi', 0)) + '</div></td>' +
-            '<td><div class="usage-line">p95 ' + withUnitSpace(String(row.cpu_p95_m || 0) + 'm') + ' · ' + withUnitSpace(String(row.mem_p95_mi || 0) + 'Mi') + '</div><div class="workload-meta">' + String(row.replicas || 0) + ' replica(s)</div></td>' +
+            '<td><div class="usage-line">' + usageText + '</div><div class="workload-meta">' + String(row.replicas || 0) + ' replica(s)</div></td>' +
             '<td><div class="usage-line">' + withUnitSpace(String((tuning.report && tuning.report.metricsCoverageDaysEstimate) || 0).replace(/\\.0$/, '') + 'd') + '</div><div class="workload-meta">' + ((tuning.report && tuning.report.metricsWindow) || 'advisor window') + '</div></td>' +
             '<td><div class="usage-line">' + String(row.restarts_window || 0) + ' historical / 14d</div><div class="workload-meta">current live restarts: ' + String(row.current_restarts || 0) + ' on ' + String(row.matched_pods || 0) + ' pod(s)</div></td>' +
             '<td><div class="notes-cell">' + notesMarkup + '</div></td>';

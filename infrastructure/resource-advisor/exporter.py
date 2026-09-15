@@ -716,8 +716,8 @@ def build_ui_payload() -> dict[str, Any]:
                 "replicas": int(rec.get("replicas") or 0),
                 "current": rec.get("current") or {},
                 "recommended": rec.get("recommended") or {},
-                "cpu_p95_m": float(rec.get("cpu_p95_m") or 0.0),
-                "mem_p95_mi": float(rec.get("mem_p95_mi") or 0.0),
+                "cpu_p95_m": float(rec["cpu_p95_m"]) if rec.get("cpu_p95_m") is not None else None,
+                "mem_p95_mi": float(rec["mem_p95_mi"]) if rec.get("mem_p95_mi") is not None else None,
                 "restarts_window": float(rec.get("restarts_window") or 0.0),
                 "current_restarts": int(live_restart.get("current_restarts") or 0),
                 "matched_pods": int(live_restart.get("matched_pods") or 0),
@@ -973,8 +973,17 @@ def build_index_html() -> str:
         cpu_delta_m = advisor.parse_cpu_to_m(recommended_cpu) - advisor.parse_cpu_to_m(current_cpu)
         mem_delta_mi = advisor.parse_mem_to_mi(recommended_mem) - advisor.parse_mem_to_mi(current_mem)
 
-        cpu_p95 = _fmt_decimal(rec.get("cpu_p95_m") or 0.0)
-        mem_p95 = _fmt_decimal(rec.get("mem_p95_mi") or 0.0)
+        awaiting_metrics = (
+            "awaiting_metrics" in notes
+            or rec.get("cpu_p95_m") is None
+            or rec.get("mem_p95_mi") is None
+        )
+        if awaiting_metrics:
+            usage_text = "awaiting metrics"
+        else:
+            cpu_p95 = _with_unit_space(f"{_fmt_decimal(rec['cpu_p95_m'])}m")
+            mem_p95 = _with_unit_space(f"{_fmt_decimal(rec['mem_p95_mi'])}Mi")
+            usage_text = f"p95 {cpu_p95} · {mem_p95}"
         restarts_window = float(rec.get("restarts_window") or 0.0)
         replicas = int(rec.get("replicas") or 0)
         live_restart = live_restart_stats.get(_rec_key(namespace, workload, container)) or {}
@@ -1024,7 +1033,7 @@ def build_index_html() -> str:
                 <div class="metric-delta {'positive' if mem_delta_mi > 0 else 'negative' if mem_delta_mi < 0 else 'neutral'}">{html.escape(_with_unit_space(_fmt_signed(mem_delta_mi, 'Mi', 0)))}</div>
               </td>
               <td>
-                <div class="usage-line">p95 {html.escape(_with_unit_space(f"{cpu_p95}m"))} · {html.escape(_with_unit_space(f"{mem_p95}Mi"))}</div>
+                <div class="usage-line">{html.escape(usage_text)}</div>
                 <div class="workload-meta">{html.escape(str(replicas))} replica(s)</div>
               </td>
               <td>
