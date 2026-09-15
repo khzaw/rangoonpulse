@@ -1,0 +1,13 @@
+# Issue TLS independently of ingress so hostname cutovers can be verified first.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dynacat-tls
+  namespace: default
+spec:
+  secretName: dynacat-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - rangoonpulse.${BASE_DOMAIN}
