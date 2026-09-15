@@ -7,7 +7,7 @@ This cluster now runs `metrics-server` for real-time Kubernetes resource metrics
 It enables:
 - `kubectl top nodes`
 - `kubectl top pods -A`
-- future HPA experiments if you decide to use them
+- CPU-based autoscaling for [BentoPDF](./bentopdf.md), bounded to one or two replicas
 
 Prometheus remains the source for historical analysis and Resource Advisor inputs.
 

@@ -171,6 +171,8 @@ advisor policy:
 Analyzed but intentionally excluded from auto-apply (manual-only adjustments):
 - `actualbudget` (non-`app-template` chart), `immich`, `immich-postgres`, `media-postgres`, `vaultwarden-postgres`,
   `blog`, `mmcal`
+- `bentopdf`: its CPU utilization HPA depends on the fixed `50m` CPU request;
+  resource changes require coordinated review with the HPA target.
 
 ## Outputs
 The latest report is written to ConfigMap:

@@ -50,6 +50,7 @@ resources:
   - ./kustomizations/audiobookshelf.yaml
   - ./kustomizations/shelfmark.yaml
   - ./kustomizations/chartsdb.yaml
+  - ./kustomizations/bentopdf.yaml
   - ./kustomizations/speedtest.yaml
   - ./kustomizations/exposure-control.yaml
   - ./kustomizations/obsidian-livesync.yaml

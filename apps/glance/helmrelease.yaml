@@ -254,6 +254,9 @@ spec:
                               - title: Reactive Resume
                                 url: https://build-resume.${BASE_DOMAIN}
                                 icon: mdi:file-account-outline
+                              - title: BentoPDF
+                                url: https://bento.${BASE_DOMAIN}
+                                icon: mdi:file-pdf-box
                               - title: AdGuard
                                 url: https://adguard.${BASE_DOMAIN}
                                 icon: di:adguard-home
@@ -714,6 +717,10 @@ spec:
                             url: https://chartsdb.${BASE_DOMAIN}
                             check-url: http://chartsdb.default.svc.cluster.local
                             icon: mdi:database-outline
+                          - title: BentoPDF
+                            url: https://bento.${BASE_DOMAIN}
+                            check-url: http://bentopdf.default.svc.cluster.local:8080
+                            icon: mdi:file-pdf-box
                           - title: Diagrams
                             url: https://diagrams.${BASE_DOMAIN}
                             check-url: http://kroki.default.svc.cluster.local:8000
@@ -847,6 +854,10 @@ spec:
                             url: https://actual.${BASE_DOMAIN}
                             check-url: http://actualbudget.default.svc.cluster.local:5006
                             icon: di:actual-budget
+                          - title: BentoPDF
+                            url: https://bento.${BASE_DOMAIN}
+                            check-url: http://bentopdf.default.svc.cluster.local:8080
+                            icon: mdi:file-pdf-box
                           - title: Operator Cockpit
                             url: https://controlpanel.${BASE_DOMAIN}
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz

@@ -161,6 +161,7 @@ Current cluster status: both nodes are functional and schedulable.
 |---------|-------------|
 | **Actual Budget** | Personal finance tracking |
 | **Reactive Resume** | Resume builder and PDF export |
+| **[BentoPDF](docs/bentopdf.md)** | Private browser-based PDF tools at `bento.khzaw.dev` |
 | **Vaultwarden** | Password manager |
 | **ChartDB** | Database schema diagrams |
 | **Obsidian LiveSync** | Note sync via CouchDB |

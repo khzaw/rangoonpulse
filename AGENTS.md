@@ -43,6 +43,8 @@ Use the matching project-local skill when the task fits:
 
 If no skill applies, route through `docs/README.md` and read the smallest focused doc set for the touched domain.
 
+Service reference: [`docs/bentopdf.md`](docs/bentopdf.md) covers BentoPDF's private access and autoscaling.
+
 ## Docs Hygiene
 - If you change a stable operating convention, update `docs/README.md` and the focused doc that owns it.
 - If you add a recurring workflow or dense operator procedure, prefer a project-local skill or focused doc instead of growing this file.
