@@ -67,6 +67,15 @@ Migration check on 2026-09-15 found the existing Jellyfin widget credential retu
 `/Users`, and `/Sessions`; the old dashboard showed the same empty results. Renew the shared `JELLYFIN_API_KEY`
 through the encrypted-secret workflow to restore these widgets. This migration preserves the existing credential.
 
+## Retirement cleanup
+
+Removing the old GitOps resources does not guarantee every generated object disappears. During this migration,
+cert-manager left an unreferenced TLS Secret without an owner reference. external-dns removed the CNAME and its
+current prefixed ownership TXT on the next five-minute sync, but a legacy ownership TXT at the bare hostname survived.
+Both orphan objects were removed after checking their exact ownership and confirming no current consumer remained.
+For future retirements, inspect the generated Secrets and authoritative DNS as well as Flux/Helm readiness; DNS API
+changes can take a short time to reach all authoritative servers.
+
 ## Verification
 
 Before push, render the Flux substitutions, Helm chart, and embedded dashboard YAML. Validate the resulting config
