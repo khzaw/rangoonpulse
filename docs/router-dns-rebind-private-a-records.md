@@ -21,6 +21,19 @@ dig @10.0.0.1 someapp.khzaw.dev A +noall +comments +cmd
 ## Root Cause
 Router-side DNS rebind protection or filtering of "public hostname -> private IP" responses.
 
+For a newly deployed hostname, first rule out cached empty answers. ExternalDNS
+runs every five minutes, and queries before it publishes the record can remain
+cached after authoritative DNS is correct. During BentoPDF deployment, public
+DNS and the secondary AdGuard returned the new address while the primary
+AdGuard, router, and Mac still held empty answers. Clearing the primary's DNS
+cache resolved that layer; the router recovered without configuration changes.
+
+Compare the authoritative/public resolver, each AdGuard, the router, and the
+client separately before changing rebind settings. Use AdGuard's existing
+authenticated admin session to clear its cache when needed; avoid restarting
+both DNS instances. A browser can recover before another client using the OS
+resolver does. Recheck the actual HTTPS URL after resolution recovers.
+
 Even if the router uses `1.1.1.1` for upstream DNS, it may still drop the response before returning it to clients.
 
 ## Fix
@@ -32,4 +45,3 @@ On the router DNS:
 Client-side workarounds:
 - Temporarily set DNS to `1.1.1.1`/`8.8.8.8`, or
 - Add a `hosts` entry mapping the hostname to the ingress IP.
-
