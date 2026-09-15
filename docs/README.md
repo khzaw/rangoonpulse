@@ -67,7 +67,8 @@ Use the smallest matching repo-local skill when the task clearly fits:
 ### Storage, stateful services, and recovery
 
 - [`docs/media-postgres.md`](./media-postgres.md) for shared TimescaleDB placement and constraints.
-- [`docs/calibre-storage-migration-to-truenas-nfs.md`](./calibre-storage-migration-to-truenas-nfs.md) for ebook storage patterns.
+- [`docs/book-library-storage.md`](./book-library-storage.md) for the generic `books` and `audiobooks` content claims, separate app data, and claim-renaming recovery.
+- [`docs/calibre-storage-migration-to-truenas-nfs.md`](./calibre-storage-migration-to-truenas-nfs.md) for the historical Calibre NFS migration and retained retirement artifacts.
 - [`docs/uptime-kuma-sqlite-on-nfs-timeouts.md`](./uptime-kuma-sqlite-on-nfs-timeouts.md) for the node-local Uptime Kuma decision.
 - [`docs/interview-prep.md`](./interview-prep.md) for the Interview Prep runtime, SQLite persistence, image automation, and recovery path.
 - [`docs/retirement.md`](./retirement.md) for the private retirement dashboard, image automation, and tailnet-only access boundary.

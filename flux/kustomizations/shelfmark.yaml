@@ -20,6 +20,5 @@ spec:
   timeout: 5m
   dependsOn:
     - name: infra-storage-media
-    - name: infra-storage-calibre
     - name: ingress-nginx
     - name: external-dns

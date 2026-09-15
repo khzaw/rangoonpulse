@@ -37,6 +37,24 @@ spec:
   accessModes:
     - ReadWriteMany
   storageClassName: truenas-nfs
+  # Retained ebook volume, formerly claimed as calibre-books-nfs.
+  volumeName: pvc-443b0925-0156-4098-b22b-4080367204e5
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobooks
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: truenas-nfs
+  # Retained audiobook volume, formerly claimed as books.
+  volumeName: pvc-5073628a-9305-4aa9-bc84-a5b26ab564a7
   resources:
     requests:
       storage: 20Gi

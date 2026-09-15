@@ -119,10 +119,10 @@ spec:
               - path: /config
                 subPath: shelfmark
 
-      calibre-books:
+      books:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: calibre-books-nfs
+        existingClaim: books
         advancedMounts:
           main:
             main:
@@ -133,9 +133,8 @@ spec:
       audiobooks:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: books
+        existingClaim: audiobooks
         advancedMounts:
           main:
             main:
               - path: /audiobooks
-                subPath: audiobooks

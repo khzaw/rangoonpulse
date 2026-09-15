@@ -191,7 +191,7 @@ spec:
       books:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: calibre-books-nfs
+        existingClaim: books
         advancedMounts:
           main:
             main:

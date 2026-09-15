@@ -79,12 +79,19 @@ spec:
               - audiobookshelf.${BASE_DOMAIN}
 
     persistence:
+      audiobooks:
+        enabled: true
+        type: persistentVolumeClaim
+        existingClaim: audiobooks
+        globalMounts:
+          - path: /audiobooks
+
       data:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: books
+        existingClaim: audiobookshelf-data
         globalMounts:
-          - path: /audiobooks
-          - path: /podcasts
           - path: /config
+            subPath: config
           - path: /metadata
+            subPath: metadata

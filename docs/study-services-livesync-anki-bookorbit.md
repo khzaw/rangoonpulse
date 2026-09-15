@@ -33,7 +33,8 @@ Keep Exposure Control authentication set to `none` for these non-browser clients
 KOReader and OPDS credentials at the application layer.
 
 Stump and its private SQLite/config PVC were retired after BookOrbit was populated and verified. No Stump database
-state was migrated. The book files remained on the existing `calibre-books-nfs` claim throughout the replacement.
+state was migrated. The book files remained on the existing `calibre-books-nfs` claim throughout the replacement;
+the same underlying volume is now named `books`. See [book library storage](./book-library-storage.md).
 
 ## Mochi Cards Status
 
@@ -47,8 +48,9 @@ Writable app state is separate from the shared library:
 - `obsidian-livesync`: `/opt/couchdb/data` on a dedicated `5Gi` `local-path` PVC.
 - `anki-server`: `/anki_data` on a dedicated expandable `5Gi` PVC.
 - `bookorbit` database: shared `media-postgres` `20Gi` `local-path` PVC; isolated from the other apps by role and database.
-- `bookorbit`: `/data` on a dedicated expandable `5Gi` NFS PVC.
-- `bookorbit`: `/books` from existing claim `calibre-books-nfs`, mounted read-write so enabled metadata write-back can
+- `bookorbit`: `/data` on the dedicated expandable `5Gi` NFS claim `bookorbit`, for covers, author images, user assets,
+  import staging, and retained migration backups.
+- `bookorbit`: `/books` from the generic `20Gi` RWX content claim `books`, mounted read-write so enabled metadata write-back can
   update the embedded metadata and cover in the existing book file.
 - `bookorbit`: `/downloads` from existing claim `downloads`, mounted read-write at the same path as Transmission,
   Radarr, and Sonarr.
@@ -63,8 +65,13 @@ BookOrbit stages completed imports in `/data/book-dock` before library ingestion
 filesystems from `/downloads`, so the importer falls back to copying when a hardlink fails across mounts.
 
 BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, enables EPUB metadata and cover
-write-back, keeps file renames disabled, excludes `bookdrop`, and scans every six hours. BookOrbit and Shelfmark can
+write-back and file renames, excludes `bookdrop`, and scans every six hours. These are runtime library settings;
+inspect them before a migration instead of assuming older documentation is current. BookOrbit and Shelfmark can
 write the shared claim. Avoid editing the same book concurrently in both applications.
+
+Content claim names describe their contents (`books`, `audiobooks`); app-specific state retains an app prefix
+(`bookorbit`, `audiobookshelf-data`). Renaming a claim must preserve BookOrbit's `/books` path and existing PostgreSQL
+catalogue references. The claim/PV mapping and migration checks are in [book library storage](./book-library-storage.md).
 
 ## Node Placement and Resources
 
@@ -91,18 +98,19 @@ Flux Kustomizations:
 
 ## Library Safety Verification
 
-Before replacement, record the shared claim identity, file count, byte count, and a content checksum. After the first
-BookOrbit scan and again after Stump removal, confirm those values are unchanged. For the current metadata write-back
-mode, verify that the rendered and live BookOrbit pod specs mount `calibre-books-nfs` at `/books` with `readOnly: false`,
-that the live mount options show `rw`, that the `Books` library keeps file renames disabled, and that a metadata save
-completes without leaving a sibling `.tmp` file behind.
+Before a storage migration, record the shared claim/PV identity, library and registered-file counts, byte count, and
+content checksums with writers stopped. After cutover, confirm the intended files and catalogue references are
+unchanged. Account separately for explicitly moved legacy Calibre artifacts. For the current metadata write-back
+mode, verify that the rendered and live BookOrbit pod specs mount `books` at `/books` with `readOnly: false`, that the
+live mount options show `rw`, and that the runtime library settings are preserved. A metadata save must complete
+without leaving a sibling `.tmp` file behind.
 
 ## Quick Checks
 
 ```bash
 flux get kustomizations | rg 'obsidian-livesync|anki-server|bookorbit'
 kubectl get hr -n default | rg 'obsidian-livesync|anki-server|bookorbit'
-kubectl get pods,pvc -n default | rg 'obsidian-livesync|anki-server|bookorbit|calibre-books-nfs'
+kubectl get pods,pvc -n default | rg 'obsidian-livesync|anki-server|bookorbit|books'
 curl --fail --max-time 20 https://bookorbit.khzaw.dev/api/v1/health
 curl -I --max-time 20 https://books.khzaw.dev/
 ```

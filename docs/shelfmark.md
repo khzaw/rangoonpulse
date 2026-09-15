@@ -12,15 +12,20 @@ existing book and audiobook stack.
 
 ## Storage Mapping
 - `/config` -> `app-configs-pvc-nfs` (subPath `shelfmark`)
-- `/books` -> `calibre-books-nfs`
-- `/bookdrop` -> `calibre-books-nfs` (subPath `bookdrop`)
-- `/audiobooks` -> `books` PVC (subPath `audiobooks`)
+- `/books` -> `books` PVC (volume root)
+- `/bookdrop` -> `books` PVC (subPath `bookdrop`)
+- `/audiobooks` -> `audiobooks` PVC (volume root)
 
 Operational intent:
 - Ebook downloads can land on the shared ebook library PVC.
-- BookOrbit and Shelfmark both mount `calibre-books-nfs` read-write. BookOrbit owns library browsing and metadata;
+- BookOrbit and Shelfmark both mount `books` read-write. BookOrbit owns library browsing and metadata;
   Shelfmark writes downloaded files into the library or `bookdrop`.
-- Audiobookshelf handoff can target `/audiobooks`.
+- Audiobookshelf and Shelfmark see the same content at `/audiobooks`; do not restore Shelfmark's former
+  `subPath: audiobooks`, which pointed at a different directory beneath the library root.
+- Audiobookshelf's configuration and metadata live on `audiobookshelf-data` and are not exposed to Shelfmark.
+
+The generic content claim names, retained PV identities, and migration procedure are recorded in
+[book library storage](./book-library-storage.md).
 
 ## Runtime Defaults
 - Node: `talos-7nf-osf`
