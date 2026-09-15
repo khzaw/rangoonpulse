@@ -4744,6 +4744,10 @@ const CONTROL_PANEL_ASSETS = new Map([
     filePath: path.join(APP_DIR, "update-policy.js"),
     contentType: "application/javascript; charset=utf-8",
   }],
+  ["/assets/pulse.js", {
+    filePath: path.join(APP_DIR, "pulse.js"),
+    contentType: "application/javascript; charset=utf-8",
+  }],
   ["/assets/app.js", {
     filePath: path.join(APP_DIR, "app.js"),
     contentType: "application/javascript; charset=utf-8",
@@ -4853,7 +4857,7 @@ function renderCombinedCockpitHtml(template) {
       /__TRANSMISSION_VPN_WEBUI_URL__/g,
       escapeHtml(TRANSMISSION_VPN_WEBUI_URL),
     )
-    .replace(/\/assets\/(styles\.css|thinking-orb\.js|app\.js)/g, (match) => {
+    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|app\.js)/g, (match) => {
       const asset = CONTROL_PANEL_ASSETS.get(match);
       if (!asset) return match;
       return match + "?v=" + loadStaticAsset(asset.filePath).version;

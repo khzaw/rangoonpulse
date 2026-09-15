@@ -75,6 +75,7 @@
       </section>
 
       <nav class="section-nav" aria-label="Section navigation">
+        <a class="nav-pill" data-page-link href="#pulse">pulse</a>
         <a class="nav-pill" data-page-link href="#updates">updates</a>
         <a class="nav-pill" data-page-link href="#deploy">deploy sites</a>
         <a class="nav-pill" data-page-link href="#travel">travel</a>
@@ -97,6 +98,25 @@
           <div id="overviewMeta" class="overview-meta-cluster"></div>
           <div id="overviewDetail" class="result-count"></div>
         </div>
+      </section>
+
+      <section id="pulse" class="section pulse-page" data-page-section hidden>
+        <div class="section-bar pulse-heading">
+          <div>
+            <div class="pulse-kicker">01 / cluster telemetry</div>
+            <h1 class="section-heading">pulse<span class="pulse-title-dot" aria-hidden="true">.</span></h1>
+            <p class="section-copy">Two machines. One cluster. A closer look at what’s running.</p>
+          </div>
+          <div id="pulseStatus" class="pulse-status" role="status">Waiting for telemetry</div>
+        </div>
+        <div id="pulseStrip" class="overview-strip pulse-strip"></div>
+        <div id="nodeTwins" class="pulse-block"></div>
+        <div id="powerTicker" class="pulse-block"></div>
+        <div id="placementMap" class="pulse-block"></div>
+        <div id="storageTanks" class="pulse-block"></div>
+        <div id="fluxRibbon" class="pulse-block"></div>
+        <div id="alertBoard" class="pulse-block"></div>
+        <div class="pulse-footer"><span>rangoonpulse / live telemetry</span><span>60 s refresh · Asia/Singapore</span></div>
       </section>
 
       <section id="exposure" class="section" data-page-section>
@@ -531,6 +551,7 @@
     </main>
     <script src="/assets/thinking-orb.js" defer></script>
     <script src="/assets/update-policy.js" defer></script>
+    <script src="/assets/pulse.js" defer></script>
     <script src="/assets/app.js" defer></script>
 
   </body>

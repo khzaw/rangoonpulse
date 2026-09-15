@@ -124,6 +124,7 @@
         siteDeployments: null,
         secrets: null,
         selectedSecret: null,
+        metrics: {},
       };
       let activePage = normalizePage(window.location.hash || '#updates');
       let hasLoadedDashboard = false;
@@ -244,7 +245,7 @@
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
         if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
+        const knownPages = new Set(['pulse', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
         if (knownPages.has(candidate)) return candidate;
         return 'updates';
       }
@@ -253,7 +254,11 @@
         const requestedPage = String(page || '').replace(/^#/, '').trim().toLowerCase();
         const nextPage = normalizePage(page);
         const replace = Boolean(options && options.replace);
+        const previousPage = activePage;
         activePage = nextPage;
+        document.querySelector('main').classList.toggle('is-pulse', nextPage === 'pulse');
+        document.getElementById('overviewPanel').hidden = nextPage === 'pulse';
+        if (nextPage === 'pulse' && previousPage !== 'pulse') loadPulse({ silent: true });
         pageSections.forEach((section) => {
           section.hidden = section.id !== nextPage;
           section.classList.toggle('page-active', section.id === nextPage);
@@ -800,6 +805,7 @@
           '<section class="overview-segment">' +
             '<div class="overview-segment-head"><span class="overview-label">' + label + '</span>' + eyebrow + '</div>' +
             '<div class="overview-value">' + value + '</div>' +
+            (options && options.series ? '<div class="overview-spark">' + window.Pulse.sparkline(options.series, { dot: true }) + '</div>' : '') +
             '<div class="overview-subtitle">' + subtitle + '</div>' +
             '<div class="overview-meter"><span class="overview-meter-fill ' + tone + '" style="width:' + barPct.toFixed(1) + '%"></span></div>' +
           '</section>'
@@ -2140,6 +2146,53 @@
         setLoadState('Exposure state refreshed ' + fmtTime(new Date()));
       }
 
+      let pulseRequest = null;
+      const pulseNames = ['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h'];
+      const pulseMetric = (name, range = '24h') => dashboardState.metrics[name + '|' + range];
+
+      function renderPulseStrip() {
+        const P = window.Pulse;
+        const cpu = pulseMetric('node_cpu')?.series || [];
+        const primary = cpu.find((series) => series.labels.node === 'talos-7nf-osf') || cpu[0];
+        const memory = pulseMetric('node_mem')?.series?.find((series) => series.labels.node === primary?.labels.node);
+        const definitions = [
+          ['cpu', primary, P.fmt.pct, .7, 'primary node'],
+          ['memory', memory, P.fmt.pct, .8, 'primary node'],
+          ['power', pulseMetric('cluster_watts')?.series?.[0], P.fmt.watts, Infinity, 'cluster · estimated'],
+          ['restarts', pulseMetric('restarts_1h')?.series?.[0], (value) => P.number(value, 0), 0, 'rolling hour'],
+        ];
+        document.getElementById('pulseStrip').innerHTML = definitions.map(([label, series, format, threshold, eyebrow]) => {
+          const current = P.last(series);
+          const history = P.values(series);
+          const finite = history.filter(P.numeric);
+          const subtitle = finite.length ? '24 h / ' + format(Math.min(...finite)) + ' — ' + format(Math.max(...finite)) : 'Telemetry unavailable';
+          return overviewSegment(label, format(current), subtitle, { eyebrow, series: history, tone: current > threshold ? 'warning' : 'neutral', barPct: label === 'cpu' || label === 'memory' ? current * 100 : 0 });
+        }).join('');
+      }
+
+      async function loadPulse() {
+        if (pulseRequest) return pulseRequest;
+        const status = document.getElementById('pulseStatus');
+        pulseRequest = (async () => {
+          try {
+            const snapshot = await window.Pulse.fetch(pulseNames, '24h');
+            for (const [name, metric] of Object.entries(snapshot.metrics)) dashboardState.metrics[name + '|24h'] = metric;
+            const degraded = Object.values(snapshot.metrics).filter((metric) => metric.state !== 'live').length;
+            status.dataset.state = degraded ? 'degraded' : 'live';
+            status.textContent = (degraded ? degraded + ' signals unavailable' : 'Live') + ' · ' + new Date(snapshot.at).toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
+            renderPulseStrip();
+          } catch (error) {
+            status.dataset.state = 'degraded';
+            status.textContent = 'Telemetry unavailable · retrying in 60 s';
+            for (const name of pulseNames) dashboardState.metrics[name + '|24h'] = { state: 'degraded', series: [] };
+            renderPulseStrip();
+          } finally {
+            pulseRequest = null;
+          }
+        })();
+        return pulseRequest;
+      }
+
       async function loadDashboard(options) {
         const silent = Boolean(options && options.silent);
         if (!silent) {
@@ -2180,6 +2233,7 @@
             includeJobs ? request('/api/jobs', 'GET') : Promise.resolve(null),
             includeSiteDeployments ? request('/api/site-deployments', 'GET') : Promise.resolve(null),
             includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
+            activePage === 'pulse' ? loadPulse() : Promise.resolve(null),
           ]);
 
           if (svcData.status !== 'fulfilled') throw svcData.reason;
@@ -2514,7 +2568,14 @@
         setActivePage(window.location.hash, { replace: true });
       });
 
+      setInterval(() => {
+        if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
+      }, 60000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
+      });
       setInterval(tickExpiryCountdowns, 1000);
+      renderPulseStrip();
       applyThemeMode(storedThemeMode());
       setActivePage(window.location.hash || '#updates', { replace: true });
       loadDashboard();

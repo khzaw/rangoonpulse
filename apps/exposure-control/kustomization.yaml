@@ -10,6 +10,7 @@ configMapGenerator:
   - name: exposure-control-app-files
     files:
       - app.js
+      - pulse.js
       - index.html
       - renovate-dashboard.js
       - server.js

@@ -80,6 +80,8 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Monitoring, dashboards, and resource tuning
 
+- [`docs/controlpanel-pulse.md`](./controlpanel-pulse.md) for the cockpit Pulse page, bounded metrics access, and visualization verification.
+
 - [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the current tuning workflow, apply-PR model, and cockpit/exporter contract.
 - [`docs/homelab-operations-dashboards.md`](./homelab-operations-dashboards.md) for the Grafana operations dashboards.
 - [`docs/dashboards-dynacat.md`](./dashboards-dynacat.md) for the Dynacat dashboard, monitors, and widget-specific gotchas.
