@@ -5,6 +5,10 @@
 # directories with `du` every five minutes and writes a Prometheus textfile
 # that node-exporter's textfile collector serves alongside its own metrics.
 # Labels come from the directory name: pvc-<uid>_<namespace>_<claim>.
+# Shell expansions are written as $${...} because this Kustomization runs
+# Flux post-build substitution; Flux rewrites them to ${...}.
+# The textfile lives under /var/mnt because Talos keeps /var/lib at 0700 and
+# node-exporter runs as UID 65534.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,17 +19,17 @@ data:
     #!/bin/sh
     # Emit metrics for every local-path PVC directory on this node.
     set -u
-    ROOT="${HOST_VAR:-/host/var}"
-    NODE="${NODE_NAME:-unknown}"
+    ROOT="$${HOST_VAR:-/host/var}"
+    NODE="$${NODE_NAME:-unknown}"
     echo "# HELP local_path_pvc_used_bytes Apparent bytes used inside a local-path PVC directory."
     echo "# TYPE local_path_pvc_used_bytes gauge"
     for dir in "$ROOT"/mnt/local-path-provisioner/pvc-* "$ROOT"/lib/local-path-provisioner/pvc-*; do
       [ -d "$dir" ] || continue
-      base="${dir##*/}"
-      volume="${base%%_*}"
-      rest="${base#*_}"
-      ns="${rest%%_*}"
-      claim="${rest#*_}"
+      base="$${dir##*/}"
+      volume="$${base%%_*}"
+      rest="$${base#*_}"
+      ns="$${rest%%_*}"
+      claim="$${rest#*_}"
       kb="$(du -sk "$dir" 2>/dev/null | cut -f1)"
       [ -n "$kb" ] || continue
       echo "local_path_pvc_used_bytes{namespace=\"$ns\",persistentvolumeclaim=\"$claim\",volumename=\"$volume\",node=\"$NODE\"} $((kb * 1024))"
@@ -37,14 +41,14 @@ data:
     #!/bin/sh
     # Write atomically so node-exporter never reads a half-written file.
     set -u
-    OUT="${TEXTFILE_DIR:-/textfile}/local_path_pvc.prom"
+    OUT="$${TEXTFILE_DIR:-/textfile}/local_path_pvc.prom"
     while true; do
       if sh /opt/exporter/collect.sh > "$OUT.tmp"; then
         mv "$OUT.tmp" "$OUT"
       else
         rm -f "$OUT.tmp"
       fi
-      sleep "${INTERVAL_SECONDS:-300}"
+      sleep "$${INTERVAL_SECONDS:-300}"
     done
 ---
 apiVersion: apps/v1
@@ -120,5 +124,5 @@ spec:
             type: Directory
         - name: textfile
           hostPath:
-            path: /var/lib/node-exporter-textfile
+            path: /var/mnt/node-exporter-textfile
             type: DirectoryOrCreate

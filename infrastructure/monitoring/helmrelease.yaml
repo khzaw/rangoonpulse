@@ -206,7 +206,7 @@ spec:
       # (infrastructure/storage/local-path-provisioner/usage-exporter.yaml)
       # through the existing read-only host root mount.
       extraArgs:
-        - --collector.textfile.directory=/host/root/var/lib/node-exporter-textfile
+        - --collector.textfile.directory=/host/root/var/mnt/node-exporter-textfile
       livenessProbe:
         failureThreshold: 6
         timeoutSeconds: 5
