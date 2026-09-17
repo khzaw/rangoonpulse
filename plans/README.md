@@ -2,7 +2,13 @@
 
 These plans were written against commit `4b5fb68`. They are intentionally
 scoped to the `apps/exposure-control` cockpit and preserve its literal white and
-black bases.
+black bases. As of `1153031` none of them has landed; the reduced-motion block
+in `styles.css` is still the blanket `animation: none` rule and the mode
+controls still animate `width` with the 420 ms spring.
+
+The visualization plans in [`viz/`](viz/README.md) reference plan 003 for
+their reduced-motion contract. Until 003 lands, each pulse block carries its
+own `prefers-reduced-motion` override.
 
 | Plan | Title | Severity | Status | Dependencies |
 | --- | --- | --- | --- | --- |
