@@ -23,6 +23,7 @@ resources:
   - grafana-dashboard-stateful-services-risk.yaml
   - grafana-dashboard-tls-certificate-audit.yaml
   - servicemonitor-cert-manager.yaml
+  - servicemonitor-flux-operator.yaml
   - prometheusrule-power-estimation.yaml
   - prometheusrule-node-capacity-overview.yaml
   - prometheusrule-control-plane-visibility.yaml
@@ -34,4 +35,5 @@ resources:
   - prometheusrule-retirement-litestream.yaml
   - prometheusrule-seventyfivesoft-litestream.yaml
   - prometheusrule-cronjob-deadman.yaml
+  - prometheusrule-flux-reconciliation.yaml
   - alertmanagerconfig-homelab.yaml

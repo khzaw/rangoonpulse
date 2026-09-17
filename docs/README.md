@@ -94,6 +94,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/flux-web-ui.md`](./flux-web-ui.md) for the Flux Operator web UI at `fluxui.khzaw.dev`.
 - [`docs/kube-state-metrics-oomkills.md`](./kube-state-metrics-oomkills.md) for the known kube-state-metrics sizing issue.
 - [`docs/cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md) for CronJob dead-man's-switch alerts and staleness/failure routing.
+- [`docs/flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md) for alerts on Flux objects that are not ready, stuck, or suspended too long.
 
 ### Secrets and auth
 

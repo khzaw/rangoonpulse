@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+# Flux reconciliation health, sourced from the Flux Operator's flux_resource_info
+# gauge (see servicemonitor-flux-operator.yaml). Covers HelmRelease, Kustomization,
+# GitRepository, HelmRepository, HelmChart, ImageRepository, ImagePolicy, and
+# ImageUpdateAutomation. `exported_namespace` is the Flux object's namespace;
+# `namespace` is the scrape target (flux-system).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux-reconciliation
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab-flux-reconciliation.rules
+      interval: 2m
+      rules:
+        - alert: FluxResourceNotReady
+          expr: >
+            max by (kind, exported_namespace, name, reason, revision) (
+              flux_resource_info{ready="False", suspended="False"}
+            ) == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is not ready"
+            description: "{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has reported Ready=False for over 15m (reason: {{ $labels.reason }}, revision: {{ $labels.revision }}). A HelmRelease that rolled back keeps serving the previous release, so the app may look healthy while the upgrade is stuck. Inspect with `flux get {{ $labels.kind | toLower }} {{ $labels.name }} -n {{ $labels.exported_namespace }}` or at fluxui.khzaw.dev, then `flux reconcile ... --force` or fix the manifest."
+
+        - alert: FluxResourceReconcileStuck
+          expr: >
+            max by (kind, exported_namespace, name, reason) (
+              flux_resource_info{ready="Unknown", suspended="False"}
+            ) == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has been reconciling for over 30m"
+            description: "{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has been in Ready=Unknown (reason: {{ $labels.reason }}) for over 30m. This usually means a Helm upgrade or health check is hanging past its timeout, or the owning controller is not making progress. Check the controller logs in flux-system and `flux get {{ $labels.kind | toLower }} {{ $labels.name }} -n {{ $labels.exported_namespace }}`."
+
+        - alert: FluxResourceSuspendedTooLong
+          expr: >
+            max by (kind, exported_namespace, name) (
+              flux_resource_info{suspended="True"}
+            ) == 1
+          for: 3d
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has been suspended for over 3 days"
+            description: "{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is suspended, so Git changes to it are not being applied. If this was a temporary suspend for debugging, resume it with `flux resume {{ $labels.kind | toLower }} {{ $labels.name }} -n {{ $labels.exported_namespace }}`."
+
+        - alert: FluxOperatorMetricsAbsent
+          expr: absent(flux_resource_info)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux Operator metrics are absent; Flux health alerts are blind"
+            description: "Prometheus has had no flux_resource_info series for 15m. Either the flux-operator pod in flux-system is down, or the monitoring/flux-operator ServiceMonitor no longer matches its Service. Until this resolves, FluxResourceNotReady and related alerts cannot fire."

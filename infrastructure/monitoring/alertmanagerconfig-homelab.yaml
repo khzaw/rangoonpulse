@@ -36,6 +36,14 @@ spec:
           - name: alertname
             matchType: "=~"
             value: HomelabCronJob.*
+      - receiver: critical-multi
+        matchers:
+          - name: severity
+            matchType: "="
+            value: warning
+          - name: alertname
+            matchType: "=~"
+            value: Flux.*
       - receiver: "null"
   receivers:
     - name: critical-multi
