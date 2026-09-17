@@ -158,6 +158,9 @@ spec:
     - port: metrics
       path: /metrics
       interval: 60s
+      # busybox httpd sends no Content-Type for an extensionless file and
+      # Prometheus 3 refuses such targets without a declared fallback.
+      fallbackScrapeProtocol: PrometheusText0.0.4
       # The exporter's own namespace label names the PVC's namespace, not
       # local-path-storage; keep it.
       honorLabels: true
