@@ -2,13 +2,16 @@
 ---
 # local-path volumes are hostPath directories, so the kubelet never reports
 # kubelet_volume_stats_* for them. This DaemonSet walks the provisioner
-# directories with `du` every five minutes and writes a Prometheus textfile
-# that node-exporter's textfile collector serves alongside its own metrics.
+# directories with `du` every five minutes, writes the result as Prometheus
+# text into an emptyDir, and serves it with busybox httpd for a PodMonitor.
 # Labels come from the directory name: pvc-<uid>_<namespace>_<claim>.
+#
 # Shell expansions are written as $${...} because this Kustomization runs
 # Flux post-build substitution; Flux rewrites them to ${...}.
-# The textfile lives under /var/mnt because Talos keeps /var/lib at 0700 and
-# node-exporter runs as UID 65534.
+#
+# It does not use node-exporter's textfile collector: Talos keeps /var/lib at
+# 0700 and /var/mnt read-only, so there is no host path a root writer and the
+# UID 65534 node-exporter can both use.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -39,9 +42,13 @@ data:
     echo "local_path_pvc_exporter_last_run_timestamp_seconds{node=\"$NODE\"} $(date +%s)"
   run.sh: |
     #!/bin/sh
-    # Write atomically so node-exporter never reads a half-written file.
+    # Serve /metrics from an emptyDir and refresh it atomically so a scrape
+    # never sees a half-written file.
     set -u
-    OUT="$${TEXTFILE_DIR:-/textfile}/local_path_pvc.prom"
+    WWW="$${WWW_DIR:-/www}"
+    OUT="$WWW/metrics"
+    : > "$OUT"
+    httpd -f -p "$${PORT:-9101}" -h "$WWW" &
     while true; do
       if sh /opt/exporter/collect.sh > "$OUT.tmp"; then
         mv "$OUT.tmp" "$OUT"
@@ -68,7 +75,7 @@ spec:
         app.kubernetes.io/name: local-path-usage-exporter
     spec:
       automountServiceAccountToken: false
-      priorityClassName: system-node-critical
+      terminationGracePeriodSeconds: 5
       tolerations:
         - operator: Exists
           effect: NoSchedule
@@ -83,10 +90,21 @@ spec:
                   fieldPath: spec.nodeName
             - name: HOST_VAR
               value: /host/var
-            - name: TEXTFILE_DIR
-              value: /textfile
+            - name: WWW_DIR
+              value: /www
+            - name: PORT
+              value: "9101"
             - name: INTERVAL_SECONDS
               value: "300"
+          ports:
+            - name: metrics
+              containerPort: 9101
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            periodSeconds: 30
           resources:
             requests:
               cpu: 5m
@@ -96,8 +114,7 @@ spec:
               memory: 32Mi
           securityContext:
             # Root plus DAC_READ_SEARCH so du can enter directories owned by
-            # arbitrary app UIDs; nothing else is needed and nothing is written
-            # outside the textfile directory.
+            # arbitrary app UIDs; nothing is written outside the emptyDir.
             runAsUser: 0
             runAsGroup: 0
             readOnlyRootFilesystem: true
@@ -112,8 +129,8 @@ spec:
             - name: host-var
               mountPath: /host/var
               readOnly: true
-            - name: textfile
-              mountPath: /textfile
+            - name: www
+              mountPath: /www
       volumes:
         - name: script
           configMap:
@@ -122,7 +139,25 @@ spec:
           hostPath:
             path: /var
             type: Directory
-        - name: textfile
-          hostPath:
-            path: /var/mnt/node-exporter-textfile
-            type: DirectoryOrCreate
+        - name: www
+          emptyDir:
+            sizeLimit: 1Mi
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: local-path-usage-exporter
+  namespace: local-path-storage
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: local-path-usage-exporter
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 60s
+      # The exporter's own namespace label names the PVC's namespace, not
+      # local-path-storage; keep it.
+      honorLabels: true
