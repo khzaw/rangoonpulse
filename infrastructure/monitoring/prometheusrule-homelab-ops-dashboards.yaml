@@ -12,6 +12,27 @@ spec:
     - name: homelab-ops-dashboards.rules
       interval: 2m
       rules:
+        # local-path claims are hostPath directories with no kubelet volume
+        # stats. The usage exporter DaemonSet walks them with du; joining on
+        # volumename drops orphaned directories left behind by deleted PVs.
+        # Capacity is the claim's requested size: local-path enforces no quota,
+        # so the request is the operator's intended budget.
+        - record: homelab:local_path_pvc_used_bytes
+          expr: >
+            max by (namespace, persistentvolumeclaim, storageclass, node) (
+              local_path_pvc_used_bytes
+              * on(namespace, persistentvolumeclaim, volumename) group_left(storageclass)
+                kube_persistentvolumeclaim_info
+            )
+
+        - record: homelab:local_path_pvc_capacity_bytes
+          expr: >
+            max by (namespace, persistentvolumeclaim, storageclass, node) (
+              homelab:local_path_pvc_used_bytes * 0
+              + on(namespace, persistentvolumeclaim) group_left()
+                kube_persistentvolumeclaim_resource_requests_storage_bytes
+            )
+
         - record: homelab:pvc_used_bytes
           expr: >
             max by (namespace, persistentvolumeclaim, storageclass, node) (
@@ -19,6 +40,7 @@ spec:
               * on(namespace, persistentvolumeclaim) group_left(storageclass)
                 kube_persistentvolumeclaim_info
             )
+            or homelab:local_path_pvc_used_bytes
 
         - record: homelab:pvc_capacity_bytes
           expr: >
@@ -27,6 +49,7 @@ spec:
               * on(namespace, persistentvolumeclaim) group_left(storageclass)
                 kube_persistentvolumeclaim_info
             )
+            or homelab:local_path_pvc_capacity_bytes
 
         - record: homelab:pvc_available_bytes
           expr: >
@@ -34,6 +57,12 @@ spec:
               kubelet_volume_stats_available_bytes
               * on(namespace, persistentvolumeclaim) group_left(storageclass)
                 kube_persistentvolumeclaim_info
+            )
+            or clamp_min(
+              homelab:local_path_pvc_capacity_bytes
+              - on(namespace, persistentvolumeclaim, storageclass, node)
+                homelab:local_path_pvc_used_bytes,
+              0
             )
 
         - record: homelab:pvc_utilization:ratio

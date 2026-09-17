@@ -202,6 +202,11 @@ spec:
       enabled: true
 
     prometheus-node-exporter:
+      # Serve textfiles written by the local-path usage exporter
+      # (infrastructure/storage/local-path-provisioner/usage-exporter.yaml)
+      # through the existing read-only host root mount.
+      extraArgs:
+        - --collector.textfile.directory=/host/root/var/lib/node-exporter-textfile
       livenessProbe:
         failureThreshold: 6
         timeoutSeconds: 5

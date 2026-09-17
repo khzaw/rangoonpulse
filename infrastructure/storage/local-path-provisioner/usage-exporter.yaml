@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+# local-path volumes are hostPath directories, so the kubelet never reports
+# kubelet_volume_stats_* for them. This DaemonSet walks the provisioner
+# directories with `du` every five minutes and writes a Prometheus textfile
+# that node-exporter's textfile collector serves alongside its own metrics.
+# Labels come from the directory name: pvc-<uid>_<namespace>_<claim>.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-path-usage-exporter
+  namespace: local-path-storage
+data:
+  collect.sh: |
+    #!/bin/sh
+    # Emit metrics for every local-path PVC directory on this node.
+    set -u
+    ROOT="${HOST_VAR:-/host/var}"
+    NODE="${NODE_NAME:-unknown}"
+    echo "# HELP local_path_pvc_used_bytes Apparent bytes used inside a local-path PVC directory."
+    echo "# TYPE local_path_pvc_used_bytes gauge"
+    for dir in "$ROOT"/mnt/local-path-provisioner/pvc-* "$ROOT"/lib/local-path-provisioner/pvc-*; do
+      [ -d "$dir" ] || continue
+      base="${dir##*/}"
+      volume="${base%%_*}"
+      rest="${base#*_}"
+      ns="${rest%%_*}"
+      claim="${rest#*_}"
+      kb="$(du -sk "$dir" 2>/dev/null | cut -f1)"
+      [ -n "$kb" ] || continue
+      echo "local_path_pvc_used_bytes{namespace=\"$ns\",persistentvolumeclaim=\"$claim\",volumename=\"$volume\",node=\"$NODE\"} $((kb * 1024))"
+    done
+    echo "# HELP local_path_pvc_exporter_last_run_timestamp_seconds Unix time of the last completed walk on this node."
+    echo "# TYPE local_path_pvc_exporter_last_run_timestamp_seconds gauge"
+    echo "local_path_pvc_exporter_last_run_timestamp_seconds{node=\"$NODE\"} $(date +%s)"
+  run.sh: |
+    #!/bin/sh
+    # Write atomically so node-exporter never reads a half-written file.
+    set -u
+    OUT="${TEXTFILE_DIR:-/textfile}/local_path_pvc.prom"
+    while true; do
+      if sh /opt/exporter/collect.sh > "$OUT.tmp"; then
+        mv "$OUT.tmp" "$OUT"
+      else
+        rm -f "$OUT.tmp"
+      fi
+      sleep "${INTERVAL_SECONDS:-300}"
+    done
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: local-path-usage-exporter
+  namespace: local-path-storage
+  labels:
+    app.kubernetes.io/name: local-path-usage-exporter
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: local-path-usage-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: local-path-usage-exporter
+    spec:
+      automountServiceAccountToken: false
+      priorityClassName: system-node-critical
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: exporter
+          image: busybox:1.37
+          command: ["sh", "/opt/exporter/run.sh"]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: HOST_VAR
+              value: /host/var
+            - name: TEXTFILE_DIR
+              value: /textfile
+            - name: INTERVAL_SECONDS
+              value: "300"
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          securityContext:
+            # Root plus DAC_READ_SEARCH so du can enter directories owned by
+            # arbitrary app UIDs; nothing else is needed and nothing is written
+            # outside the textfile directory.
+            runAsUser: 0
+            runAsGroup: 0
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["DAC_READ_SEARCH"]
+          volumeMounts:
+            - name: script
+              mountPath: /opt/exporter
+              readOnly: true
+            - name: host-var
+              mountPath: /host/var
+              readOnly: true
+            - name: textfile
+              mountPath: /textfile
+      volumes:
+        - name: script
+          configMap:
+            name: local-path-usage-exporter
+        - name: host-var
+          hostPath:
+            path: /var
+            type: Directory
+        - name: textfile
+          hostPath:
+            path: /var/lib/node-exporter-textfile
+            type: DirectoryOrCreate
