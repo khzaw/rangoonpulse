@@ -81,7 +81,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: exporter
-          image: busybox:1.37
+          image: busybox:1.38
           command: ["sh", "/opt/exporter/run.sh"]
           env:
             - name: NODE_NAME
