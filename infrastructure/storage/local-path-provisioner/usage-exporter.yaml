@@ -3,7 +3,8 @@
 # local-path volumes are hostPath directories, so the kubelet never reports
 # kubelet_volume_stats_* for them. This DaemonSet walks the provisioner
 # directories with `du` every five minutes, writes the result as Prometheus
-# text into an emptyDir, and serves it with busybox httpd for a PodMonitor.
+# text into an emptyDir, and serves it as /metrics.txt with busybox httpd
+# for a PodMonitor.
 # Labels come from the directory name: pvc-<uid>_<namespace>_<claim>.
 #
 # Shell expansions are written as $${...} because this Kustomization runs
@@ -46,7 +47,7 @@ data:
     # never sees a half-written file.
     set -u
     WWW="$${WWW_DIR:-/www}"
-    OUT="$WWW/metrics"
+    OUT="$WWW/metrics.txt"
     : > "$OUT"
     httpd -f -p "$${PORT:-9101}" -h "$WWW" &
     while true; do
@@ -102,7 +103,7 @@ spec:
               protocol: TCP
           readinessProbe:
             httpGet:
-              path: /metrics
+              path: /metrics.txt
               port: metrics
             periodSeconds: 30
           resources:
@@ -156,11 +157,10 @@ spec:
       app.kubernetes.io/name: local-path-usage-exporter
   podMetricsEndpoints:
     - port: metrics
-      path: /metrics
-      interval: 60s
       # busybox httpd sends no Content-Type for an extensionless file and
-      # Prometheus 3 refuses such targets without a declared fallback.
-      fallbackScrapeProtocol: PrometheusText0.0.4
+      # Prometheus 3 refuses such targets; the .txt suffix maps to text/plain.
+      path: /metrics.txt
+      interval: 60s
       # The exporter's own namespace label names the PVC's namespace, not
       # local-path-storage; keep it.
       honorLabels: true
