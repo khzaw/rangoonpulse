@@ -42,8 +42,10 @@ This doc defines the current split between service dependency updates and direct
 - Jellyfin accepts stable two- or three-component app versions. Ubuntu base versions (`ubu####`) and
   LinuxServer rebuild numbers (`ls###`) are ordered numeric build/revision fields, not compatibility locks.
   App upgrades, base transitions, and rebuilds stay reviewable Renovate PRs; nightly and floating tags are excluded.
-- Jackett uses an inline custom-manager hint to track stable `Jackett/Jackett` GitHub releases while preserving
-  the three-component image tag (`0.24.2228`). Its LinuxServer Docker dependency is disabled because that
+- Jackett uses an inline custom-manager hint to track `linuxserver/docker-jackett` GitHub build releases while preserving
+  the three-component image tag (`v0.24.2605-ls31` → `0.24.2605`). These packaging releases follow the multi-architecture
+  image push; upstream `Jackett/Jackett` releases can precede image availability by hours and must not drive deployments.
+  Its LinuxServer Docker dependency is disabled because that
   registry's very large tag history makes the datasource lookup incomplete; do not include Jackett in the
   four-component Sonarr/Radarr/Prowlarr rule
 - The two AdGuard Home image references are intentionally split into file-specific branches and PRs:

@@ -42,7 +42,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/shared-cluster-settings.md`](./shared-cluster-settings.md) when touching base domain, timezone, node names, node IPs,
   ingress VIPs, LAN-service IPs, or Flux post-build substitutions.
 - [`docs/dependency-updates-renovate-and-flux-image-automation.md`](./dependency-updates-renovate-and-flux-image-automation.md)
-  for service update PR automation, rollout-safety package rules, and self-built image promotion cadence.
+  for service update PR automation, published-image release sources, rollout-safety package rules, and self-built image promotion cadence.
 
 ### Networking, ingress, DNS, and access
 
@@ -94,7 +94,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/flux-web-ui.md`](./flux-web-ui.md) for the Flux Operator web UI at `fluxui.khzaw.dev`.
 - [`docs/kube-state-metrics-oomkills.md`](./kube-state-metrics-oomkills.md) for the known kube-state-metrics sizing issue.
 - [`docs/cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md) for CronJob dead-man's-switch alerts and staleness/failure routing.
-- [`docs/flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md) for alerts on Flux objects that are not ready, stuck, or suspended too long.
+- [`docs/flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md) for alerts on Flux objects that are not ready, stuck, or suspended too long, including Jackett's missing-image rollback recovery.
 
 ### Secrets and auth
 

@@ -90,6 +90,41 @@ kubectl get --raw /api/v1/namespaces/flux-system/services/flux-operator:8080/pro
 
 and confirm `monitoring/flux-operator` appears as `up` under Prometheus → Status → Targets.
 
+## Jackett Missing-Image Rollback (2026-09-18)
+
+Jackett's desired image `lscr.io/linuxserver/jackett:0.24.2605` reached Git before LinuxServer
+published it. All four Helm upgrade attempts on September 17 timed out, ending at
+12:42 UTC, and rollback kept `0.24.2595` serving. Helm's final error mentioned a client
+rate-limiter deadline; the node's kubelet logs exposed the actual failure:
+`lscr.io/linuxserver/jackett:0.24.2605: not found` / `ImagePullBackOff`.
+NFS mounts succeeded, and the chart version had not changed.
+
+The upstream application release appeared at 05:55 UTC, but the
+[LinuxServer build release](https://github.com/linuxserver/docker-jackett/releases/tag/v0.24.2605-ls31)
+did not appear until 13:52 UTC. Publishing the missing image later does not reset
+Flux's exhausted remediation attempts; the resource stays stalled until reset or changed.
+
+Recovery was to verify the desired tag and `linux/arm64` manifest exist, then reset
+the release's failure counter through Flux:
+
+```bash
+crane manifest lscr.io/linuxserver/jackett:0.24.2605
+flux reconcile hr jackett -n default --reset --timeout=7m
+kubectl rollout status deployment/jackett -n default
+```
+
+The image pulled in 22 seconds and Helm revision 80 succeeded with `Ready=True`.
+The HTTPS login page returned 200 with valid TLS; both Prometheus and Alertmanager
+cleared the alert after the operator scrape and rule evaluation. The alert rule remains enabled.
+
+Prevention: the existing Renovate custom manager now tracks `linuxserver/docker-jackett`
+GitHub releases and extracts `0.24.2605` from `v0.24.2605-ls31`. LinuxServer's
+[packaging pipeline](https://github.com/linuxserver/docker-jackett/blob/145d952bcbf9ad1139b9276f73a9b692dee45673/Jenkinsfile#L965)
+pushes the multi-architecture images and semver aliases before creating the GitHub
+release. This avoids both the upstream-publication race and the excessive Docker tag
+enumeration that originally required the custom manager. See the
+[dependency-update policy](./dependency-updates-renovate-and-flux-image-automation.md).
+
 ## Verification Performed
 
 - `kubectl kustomize infrastructure/monitoring` builds.

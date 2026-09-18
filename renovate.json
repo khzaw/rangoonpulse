@@ -44,7 +44,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Track Jackett app releases without enumerating the LinuxServer image tag history.",
+      "description": "Track published LinuxServer Jackett builds without enumerating the image tag history.",
       "managerFilePatterns": [
         "/^apps/jackett/helmrelease\\.yaml$/"
       ],
@@ -52,7 +52,7 @@
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+tag:\\s*(?<currentValue>\\S+)"
       ],
       "versioningTemplate": "semver",
-      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$"
+      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)-ls\\d+$"
     }
   ],
   "packageRules": [
@@ -77,7 +77,7 @@
       "enabled": false
     },
     {
-      "description": "Use Jackett's upstream releases because the LinuxServer registry tag history is too large for reliable lookup.",
+      "description": "Use LinuxServer Jackett build releases because its registry tag history is too large for reliable lookup.",
       "matchManagers": [
         "flux",
         "helm-values"

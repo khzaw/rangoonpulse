@@ -48,6 +48,7 @@ If no skill applies, route through `docs/README.md` and read the smallest focuse
 Service reference: [`docs/bentopdf.md`](docs/bentopdf.md) covers BentoPDF's private access and autoscaling.
 Dashboard reference: [`docs/dashboards-dynacat.md`](docs/dashboards-dynacat.md) covers Dynacat at `rangoonpulse.khzaw.dev`.
 Service reference: [`docs/romm.md`](docs/romm.md) covers RomM's shared PostgreSQL hook and expandable NAS library.
+Incident reference: [`docs/flux-reconciliation-alerts.md`](docs/flux-reconciliation-alerts.md) covers stuck rollbacks and Jackett's image-publication race.
 
 ## Docs Hygiene
 - If you change a stable operating convention, update `docs/README.md` and the focused doc that owns it.
