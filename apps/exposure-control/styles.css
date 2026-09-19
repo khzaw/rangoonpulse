@@ -116,7 +116,7 @@
     --soft-hover: #0c0c0c;
     --soft-hover-subtle: #080808;
     --table-divider: #202020;
-    --table-row-hover: #0b0b0b;
+    --table-row-hover: #111111;
     --table-head-bg: #070707;
     --code-bg: #161616;
     --terminal-bg: #000000;
@@ -181,7 +181,7 @@
   --soft-hover: #0c0c0c;
   --soft-hover-subtle: #080808;
   --table-divider: #202020;
-  --table-row-hover: #0b0b0b;
+  --table-row-hover: #111111;
   --table-head-bg: #070707;
   --code-bg: #161616;
   --terminal-bg: #000000;
@@ -3524,3 +3524,6 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
   border-bottom: 1px solid var(--link-border);
 }
 .report-links a:hover { color: var(--text-1); border-bottom-color: var(--link-border-hover); }
+
+/* A message slot with nothing in it should not hold its padding open. */
+.content-block:has(> .msg:only-child:empty) { display: none; }
