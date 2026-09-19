@@ -3548,3 +3548,20 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
 
 /* A message slot with nothing in it should not hold its padding open. */
 .content-block:has(> .msg:only-child:empty) { display: none; }
+
+/* Tuning table scrolls sideways; keep the workload name in view. */
+.tuning-table th:nth-child(1),
+.tuning-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg-panel);
+  box-shadow: inset -1px 0 0 var(--border);
+}
+.tuning-table th:nth-child(1) {
+  z-index: 3;
+  background: var(--table-head-bg);
+}
+.tuning-table tbody tr:hover td:nth-child(1) {
+  background: var(--table-row-hover);
+}
