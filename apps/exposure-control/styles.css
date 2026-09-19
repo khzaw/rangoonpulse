@@ -355,7 +355,7 @@ main {
   height: 5px;
   border-radius: 999px;
   background: var(--green);
-  animation: statusPulse 2.6s ease-out infinite;
+  animation: none;
 }
 
 .control-activity {
@@ -411,7 +411,7 @@ main {
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--chip-bg);
 }
 
@@ -422,13 +422,12 @@ main {
   padding: 0 11px;
   gap: 6px;
   border: none;
-  border-radius: calc(var(--radius-control) - 3px);
+  border-radius: 0;
   background: transparent;
   color: var(--text-3);
   font-size: 11.5px;
   box-shadow: none;
-  transition:
-    color 220ms var(--ease-snappy),
+  transition: color 220ms var(--ease-snappy),
     background 220ms var(--ease-snappy),
     opacity 220ms var(--ease-snappy);
 }
@@ -487,7 +486,7 @@ main {
   left: 0;
   width: 0;
   z-index: 0;
-  border-radius: calc(var(--radius-control) - 3px);
+  border-radius: 0;
   background: var(--bg-panel-strong);
   box-shadow: inset 0 0 0 1px var(--border-strong);
   overflow: hidden;
@@ -548,11 +547,10 @@ main {
   padding: 0;
   flex-shrink: 0;
   border: 1px solid var(--control-border);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--meter-bg);
   overflow: hidden;
-  transition:
-    border-color 300ms var(--ease-snappy),
+  transition: border-color 300ms var(--ease-snappy),
     background 300ms var(--ease-snappy);
 }
 
@@ -582,8 +580,7 @@ main {
   margin-top: -9px;
   border-radius: 0;
   background: var(--text-3);
-  transition:
-    transform 420ms var(--ease-spring),
+  transition: transform 420ms var(--ease-spring),
     width 200ms var(--ease-snappy),
     background 300ms var(--ease-snappy);
   will-change: transform;
@@ -638,7 +635,7 @@ button {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   font-size: 12.5px;
   font-weight: 500;
   letter-spacing: 0.005em;
@@ -653,7 +650,8 @@ button:hover,
 }
 
 button:hover {
-  transform: translateY(-1px);
+  transform: none;
+  box-shadow: none;
 }
 
 button:active {
@@ -736,26 +734,29 @@ button:disabled {
 
 .primary-button {
   color: var(--text-1);
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
+  border-color: var(--border-strong);
+  background: var(--bg-panel-strong);
+  border-radius: 0;
 }
 
 .primary-button:hover {
   border-color: var(--accent-hover-border);
   background: var(--accent-hover-bg);
+  transform: none;
+  box-shadow: none;
 }
 
 .control-select {
   min-height: 34px;
   padding: 0 12px;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   color: var(--text-2);
 }
 
 .search-shell {
   min-height: 34px;
   padding: 0 12px;
-  border-radius: var(--radius-control);
+  border-radius: 0;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -794,14 +795,13 @@ button:disabled {
   gap: 9px;
   padding: 0 12px;
   border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--control-bg);
   color: var(--text-2);
   font-size: 12px;
   cursor: pointer;
   user-select: none;
-  transition:
-    border-color 160ms var(--ease-snappy),
+  transition: border-color 160ms var(--ease-snappy),
     background 160ms var(--ease-snappy),
     color 160ms var(--ease-snappy);
 }
@@ -999,7 +999,7 @@ main {
 }
 
 .section[data-page-section].page-active {
-  animation: pageReveal 380ms var(--ease-out);
+  animation: none;
 }
 
 .overview-shared {
@@ -1059,7 +1059,8 @@ main {
 .section-detail {
   color: var(--text-2);
   text-align: right;
-  font-size: 12.5px;
+  font-size: 11px;
+  font-family: var(--font-mono);
 }
 
 .content-block {
@@ -1067,7 +1068,7 @@ main {
 }
 
 .toolbar {
-  padding-top: 20px;
+  padding: 21px 26px 16px;
 }
 
 /* Bordered shells that sit directly under a rule bar need breathing room,
@@ -1083,7 +1084,6 @@ main {
 }
 
 .site-deploy-toolbar {
-  padding-bottom: 8px;
   border-bottom: none;
 }
 
@@ -1108,9 +1108,10 @@ main {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   border: 1px solid var(--border);
-  border-radius: var(--radius-shell);
+  border-radius: 0;
   background: var(--bg-panel);
   overflow: hidden;
+  box-shadow: none;
 }
 
 .overview-strip.tuning-strip {
@@ -1128,7 +1129,7 @@ main {
   position: relative;
   isolation: isolate;
   box-shadow: none;
-  animation: rowReveal 420ms var(--ease-out) both;
+  animation: none;
   transition: background 220ms var(--ease-snappy);
 }
 
@@ -1243,6 +1244,8 @@ main {
   flex-wrap: wrap;
   gap: 16px;
   color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 /* ------------------------------------------------------------- planner */
@@ -1263,9 +1266,10 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-shell);
+  border-radius: 0;
   background: var(--bg-panel);
   overflow: hidden;
+  box-shadow: none;
 }
 
 .support-card,
@@ -1368,6 +1372,8 @@ main {
 .audit-scroll {
   max-height: 420px;
   overscroll-behavior: contain;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 table {
@@ -1389,9 +1395,7 @@ td {
 }
 
 tbody tr {
-  /* Retaining translateY(0) creates a stacking context that traps row tooltips
-     underneath sticky table headers after the reveal animation completes. */
-  animation: rowReveal 280ms var(--ease-out) backwards;
+  animation: none;
   transition: background 160ms var(--ease-snappy);
 }
 
@@ -1663,7 +1667,7 @@ tr:hover td {
   gap: 8px;
   padding: 5px 10px;
   border: 1px solid var(--chip-border);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--chip-bg-strong);
   color: var(--text-2);
   font-family: var(--font-mono);
@@ -1945,6 +1949,8 @@ tr:hover td {
 
 .terminal-shell {
   background: var(--terminal-bg);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .runtime-markdown {
@@ -2214,7 +2220,7 @@ tr:hover td {
   min-height: 25px;
   padding: 0 11px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 11px;
   font-family: var(--font-mono);
   text-transform: lowercase;
@@ -2268,13 +2274,14 @@ tr:hover td {
 .job-card {
   display: grid;
   gap: 16px;
-  padding: 24px 0 0;
+  padding: 20px 0;
   border-top: 1px solid var(--border);
 }
 
 .job-card:first-child {
-  border-top: none;
+  border-top: 1px solid var(--border);
   padding-top: 0;
+  padding: 20px 0;
 }
 
 .job-card-head,
@@ -2330,7 +2337,7 @@ tr:hover td {
   width: 100%;
   padding: 0 12px;
   border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--control-bg);
   color: var(--text-1);
   font-family: var(--font-mono);
@@ -2354,7 +2361,7 @@ tr:hover td {
   gap: 8px !important;
   padding: 0 12px;
   border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--control-bg);
 }
 
@@ -2386,12 +2393,13 @@ tr:hover td {
   display: grid;
   grid-template-columns: minmax(330px, 430px) minmax(0, 1fr);
   border: 1px solid var(--border);
-  border-radius: var(--radius-shell);
+  border-radius: 0;
   overflow: hidden;
   background: var(--bg-panel);
-  margin-top: 20px;
+  margin-top: 0;
   border-right: 0;
   border-left: 0;
+  box-shadow: none;
 }
 
 .secrets-list-panel,
@@ -2602,7 +2610,7 @@ tr:hover td {
 
 .secret-list-item:hover {
   background: var(--secret-hover-bg);
-  transform: translateX(2px);
+  transform: none;
   box-shadow: none;
 }
 
@@ -2911,32 +2919,13 @@ button.is-loading::after {
 
 /* ---------------------------------------------- cockpit layout */
 
-.brand-mark,
-.env-pill,
-.seg-switch,
-.seg-switch > button,
-.seg-thumb,
-.toggle-switch,
-.toggle-knob,
-button,
 .top-button,
-.primary-button,
-.control-select,
-.search-shell,
-.toggle-filter,
-.token,
 .note-pill,
 .stat-pill,
-.update-chip,
-.travel-state-pill,
-.job-input,
-.job-checkbox,
-.updates-action-btn,
 .updates-version-diff::after {
   border-radius: 0;
 }
 
-.env-pill::before,
 .badge,
 .status-chip,
 .badge::before,
@@ -2963,16 +2952,9 @@ button,
   padding-bottom: 28px;
 }
 
-.section[data-page-section].page-active,
-.overview-segment,
-tbody tr {
-  animation: none;
-}
-
 .section-bar,
 .panel-actions,
-.updates-toolbar,
-.toolbar {
+.updates-toolbar {
   padding: 21px 26px 16px;
 }
 
@@ -2988,10 +2970,8 @@ h3.section-heading {
   letter-spacing: -0.015em;
 }
 
-.section-detail,
 .result-count,
 .updates-meta,
-.overview-meta-cluster,
 .overview-meta-row .result-count {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -3007,8 +2987,7 @@ h3.section-heading {
 .subsection-bar + .audit-scroll,
 .updates-toolbar + .updates-scroll,
 .toolbar + .table-shell,
-.toolbar + .jobs-list,
-.secrets-layout {
+.toolbar + .jobs-list {
   margin-top: 0;
 }
 
@@ -3031,18 +3010,13 @@ h3.section-heading {
   border-left: 0;
 }
 
-.overview-strip,
 .planner-grid,
 .focus-grid,
-.support-grid,
 .table-shell,
 .updates-scroll,
-.audit-scroll,
-.terminal-shell,
 .travel-grid .support-card,
 .travel-support-grid .support-card,
-.site-deploy-grid .support-card,
-.secrets-layout {
+.site-deploy-grid .support-card {
   border-radius: 0;
   box-shadow: none;
 }
@@ -3056,36 +3030,23 @@ h3.section-heading {
 
 #rows td { vertical-align: middle; }
 
-button:hover,
 .top-button:hover,
-.primary-button:hover,
 .travel-grid .support-card:hover,
 .travel-support-grid .support-card:hover,
-.site-deploy-grid .support-card:hover,
-.secret-list-item:hover {
+.site-deploy-grid .support-card:hover {
   transform: none;
   box-shadow: none;
 }
 
-.primary-button,
 button.mode-active,
 button.filter-btn.active {
   background: var(--bg-panel-strong);
   border-color: var(--border-strong);
 }
 
-.token,
 .note-pill,
-.stat-pill,
-.travel-state-pill,
-.update-chip {
+.stat-pill {
   border-radius: 0;
-}
-
-.job-card,
-.job-card:first-child {
-  padding: 20px 0;
-  border-top: 1px solid var(--border);
 }
 
 @media (max-width: 980px) {
@@ -3127,10 +3088,10 @@ button.filter-btn.active {
   .seg-switch > button > span:not(.seg-icon) { display: none; }
   .seg-switch > button { padding: 0 8px; }
   .section-bar,
-  .panel-actions,
-  .updates-toolbar,
-  .toolbar,
-  .overview-meta-row {
+.panel-actions,
+.updates-toolbar,
+.toolbar,
+.overview-meta-row {
     padding-right: 18px;
     padding-left: 18px;
   }
