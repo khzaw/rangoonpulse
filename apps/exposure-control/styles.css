@@ -3271,18 +3271,20 @@ button.filter-btn.active {
     gap: 8px 10px;
   }
 
-  .crumbs { flex: 1 1 auto; }
+  /* Two deliberate rows: crumbs + theme on the first, the two actions on the second. */
+  .crumbs { flex: 1 1 auto; order: 1; }
   .crumbs > span:nth-child(3) { display: none; }
 
-  .top-actions { gap: 6px; }
+  .top-actions { display: contents; }
+  .control-activity { order: 2; }
+  .theme-switcher { order: 3; }
+  #refreshAllBtn { order: 4; flex: 1 1 40%; padding: 0 10px; }
+  #emergencyBtn { order: 5; flex: 1 1 40%; margin-left: 0; padding-left: 12px; }
+  #emergencyBtn::before { display: none; }
 
   /* Icons only; the thumb re-measures on resize. */
   .seg-switch > button > span:not(.seg-icon) { display: none; }
   .seg-switch > button { padding: 0 8px; }
-
-  #refreshAllBtn { padding: 0 10px; }
-  #emergencyBtn { margin-left: 4px; padding-left: 12px; }
-  #emergencyBtn::before { display: none; }
 
   main {
     padding: 0;
