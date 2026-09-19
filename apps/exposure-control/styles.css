@@ -285,23 +285,26 @@ select {
   z-index: 20;
   border-bottom: 1px solid var(--border);
   background: var(--glass-topbar);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
 }
 
 .topbar-inner,
 main {
-  max-width: 1360px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
 .topbar-inner {
   min-height: var(--topbar-h);
-  padding: 0 28px;
+  padding: 0 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
 }
 
 .crumbs {
@@ -317,8 +320,8 @@ main {
 }
 
 .brand-mark {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--chip-border);
   border-radius: 0;
   display: inline-flex;
@@ -328,7 +331,7 @@ main {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.02em;
-  background: var(--chip-bg);
+  background: var(--bg-panel-strong);
 }
 
 .env-pill {
@@ -485,14 +488,13 @@ main {
   width: 0;
   z-index: 0;
   border-radius: calc(var(--radius-control) - 3px);
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent-border);
+  background: var(--bg-panel-strong);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
   will-change: transform, width;
-  transition:
-    transform 420ms var(--ease-spring),
+  transition: transform 420ms var(--ease-spring),
     width 420ms var(--ease-spring),
     opacity 240ms var(--ease-snappy),
     background 300ms var(--ease-snappy),
@@ -690,12 +692,13 @@ button:disabled {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
-  /* 1-bit checkerboard: the classic dithered "disabled" fill. */
+  checkerboard: the classic dithered "disabled" fill. */
   background-image: repeating-conic-gradient(
     var(--dither-check) 0% 25%,
     transparent 0% 50%
   );
   background-size: 4px 4px;
+  background-image: none;
 }
 
 .seg-switch > button:disabled,
@@ -875,7 +878,16 @@ button:disabled {
 /* --------------------------------------------------------------- layout */
 
 main {
-  padding: 44px 28px 72px;
+  padding: 0;
+  min-height: calc(100dvh - var(--topbar-h));
+  margin: 0 auto 48px;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  background: var(--bg-panel);
 }
 
 .section-copy,
@@ -914,49 +926,67 @@ main {
 /* --------------------------------------------------------- section nav */
 
 .section-nav {
-  gap: 22px;
+  gap: 2px;
   margin-bottom: 44px;
-  align-items: flex-end;
+  align-items: stretch;
   padding-bottom: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
   position: sticky;
   top: var(--topbar-h);
   z-index: 15;
   background: var(--glass-section-nav);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   padding-top: 10px;
   margin-left: -28px;
   margin-right: -28px;
   padding-left: 28px;
   padding-right: 28px;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  min-width: 0;
+  min-height: calc(100dvh - var(--topbar-h));
+  max-height: calc(100dvh - var(--topbar-h));
+  box-sizing: border-box;
+  margin: 0;
+  padding: 20px 8px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
 }
 
 .nav-pill {
   display: inline-flex;
   align-items: center;
-  min-height: auto;
-  padding: 4px 0 13px;
+  min-height: 34px;
+  padding: 8px 10px;
   border: none;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   justify-content: flex-start;
-  color: var(--text-dim);
+  color: var(--text-2);
   position: relative;
-  line-height: 1.2;
-  font-size: 13px;
+  line-height: 1.35;
+  font-size: 11.5px;
   letter-spacing: 0.01em;
   transition: color 180ms var(--ease-snappy), opacity 180ms var(--ease-snappy);
+  width: 100%;
+  font-family: var(--font-mono);
 }
 
 .nav-pill:hover {
-  color: var(--text-2);
+  color: var(--text-1);
+  background: var(--soft-hover) !important;
 }
 
 .nav-pill.active {
   color: var(--text-1);
-  font-weight: 550;
+  font-weight: 500;
+  background: var(--bg-panel-strong) !important;
 }
 
 /* ------------------------------------------------------------- sections */
@@ -995,15 +1025,18 @@ main {
 }
 
 .section-heading {
-  font-size: 19px;
-  font-weight: 550;
-  letter-spacing: -0.022em;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
   text-transform: lowercase;
 }
 
 .section-copy {
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 12.5px;
+  max-width: 68ch;
+  font-family: var(--font-sans);
+  line-height: 1.55;
 }
 
 .subsection-bar {
@@ -1011,7 +1044,7 @@ main {
   justify-content: space-between;
   gap: 14px;
   align-items: flex-end;
-  padding: 26px 0 14px;
+  padding: 20px 0 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1030,7 +1063,7 @@ main {
 }
 
 .content-block {
-  padding: 20px 0 24px;
+  padding: 18px 26px 22px;
 }
 
 .toolbar {
@@ -1065,7 +1098,7 @@ main {
 /* The toolbar rule already tops the jobs list; a border on the first
    card would draw a second parallel line right under it. */
 .toolbar + .jobs-list .job-card:first-child {
-  border-top: none;
+  border-top: 0;
   padding-top: 0;
 }
 
@@ -1085,16 +1118,16 @@ main {
 }
 
 .overview-segment {
-  padding: 22px 24px;
+  padding: 16px 18px;
   border-right: 1px solid var(--border);
-  min-height: 168px;
+  min-height: 126px;
   min-width: 0;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
   position: relative;
   isolation: isolate;
-  box-shadow: 0 1px 0 var(--border);
+  box-shadow: none;
   animation: rowReveal 420ms var(--ease-out) both;
   transition: background 220ms var(--ease-snappy);
 }
@@ -1146,35 +1179,36 @@ main {
 }
 
 .overview-value {
-  margin-top: 16px;
-  font-size: 24px;
-  font-size: clamp(20px, 20cqw, 30px);
+  margin-top: 9px;
+  font-size: clamp(19px, 17cqw, 25px);
   line-height: 1.1;
   letter-spacing: -0.025em;
-  font-weight: 380;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   overflow-wrap: break-word;
+  font-family: var(--font-mono);
 }
 
 .overview-subtitle {
-  margin-top: 10px;
+  margin-top: 7px;
   flex: 1;
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
 .overview-meter {
-  margin-top: 20px;
+  margin-top: 13px;
   height: 2px;
   border-radius: 0;
-  /* Dithered track: solid fill reads as signal against the halftone rest. */
+  track: solid fill reads as signal against the halftone rest. */
   background-image: repeating-linear-gradient(
     90deg,
     var(--subtle-line-strong) 0 3px,
     transparent 3px 6px
   );
   overflow: hidden;
+  background: var(--meter-bg);
 }
 
 .overview-meter-fill {
@@ -1201,7 +1235,7 @@ main {
 .overview-meta-row {
   border-bottom: none;
   align-items: flex-start;
-  padding: 16px 0 0;
+  padding: 12px 26px 14px;
 }
 
 .overview-meta-cluster {
@@ -1349,7 +1383,7 @@ table {
 th,
 td {
   text-align: left;
-  padding: 13px 16px;
+  padding: 11px 15px;
   border-top: 1px solid var(--table-divider);
   vertical-align: top;
 }
@@ -1375,8 +1409,8 @@ th {
   top: 0;
   z-index: 2;
   background: var(--table-head-bg);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -2017,7 +2051,9 @@ tr:hover td {
 .travel-support-grid,
 .site-deploy-grid {
   display: grid;
-  gap: 14px;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 
 .travel-grid,
@@ -2036,6 +2072,10 @@ tr:hover td {
   border-radius: var(--radius-shell);
   background: var(--bg-panel);
   transition: border-color 220ms var(--ease-snappy), transform 220ms var(--ease-snappy);
+  border-top: 0;
+  border-left: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .travel-grid .support-card:hover,
@@ -2221,7 +2261,8 @@ tr:hover td {
 
 .jobs-list {
   display: grid;
-  gap: 22px;
+  gap: 0;
+  padding: 0 26px;
 }
 
 .job-card {
@@ -2349,6 +2390,8 @@ tr:hover td {
   overflow: hidden;
   background: var(--bg-panel);
   margin-top: 20px;
+  border-right: 0;
+  border-left: 0;
 }
 
 .secrets-list-panel,
@@ -2762,10 +2805,26 @@ button.is-loading::after {
     align-items: flex-start;
   }
   .section-nav {
-    position: static;
-    background: transparent;
+    position: sticky;
+    background: var(--glass-section-nav);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    top: var(--topbar-h);
+    z-index: 15;
+    min-height: 0;
+    max-height: none;
+    padding: 8px 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, black calc(100% - 40px), transparent);
+    mask-image: linear-gradient(90deg, black calc(100% - 40px), transparent);
+    scroll-padding-inline: 12px;
   }
   .section-detail {
     text-align: left;
@@ -2809,7 +2868,10 @@ button.is-loading::after {
   .travel-grid .support-card,
   .travel-support-grid .support-card,
   .site-deploy-grid .support-card {
-    border: 1px solid var(--border);
+    border-top: 0;
+    border-left: 0;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
   .secrets-layout {
     grid-template-columns: 1fr;
@@ -2831,45 +2893,23 @@ button.is-loading::after {
 
 @media (max-width: 820px) {
   .topbar-inner {
-    padding: 12px 16px;
+    padding: 8px 14px;
+    min-height: var(--topbar-h);
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
   }
   main {
-    padding: 28px 16px 52px;
+    padding: 0;
   }
   .section-nav {
-    margin-left: -16px;
-    margin-right: -16px;
-    padding-left: 16px;
-    padding-right: 16px;
+    position: static;
   }
   
 }
 
-/* ------------------------------------------------ reference-led cockpit */
-
-body {
-  background: var(--bg-base);
-  font-size: 13px;
-}
-
-.topbar {
-  border: 0;
-  background: var(--glass-topbar);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-.topbar-inner,
-main {
-  max-width: 1440px;
-}
-
-.topbar-inner {
-  min-height: var(--topbar-h);
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  background: var(--bg-panel);
-}
+/* ---------------------------------------------- cockpit layout */
 
 .brand-mark,
 .env-pill,
@@ -2896,56 +2936,12 @@ button,
   border-radius: 0;
 }
 
-.brand-mark {
-  width: 26px;
-  height: 26px;
-  background: var(--bg-panel-strong);
-}
-
 .env-pill::before,
 .badge,
 .status-chip,
 .badge::before,
 .status-chip::before {
   animation: none;
-}
-
-main {
-  min-height: calc(100dvh - var(--topbar-h));
-  margin: 0 auto 48px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-  background: var(--bg-panel);
-}
-
-.section-nav {
-  grid-column: 1;
-  grid-row: 1;
-  position: sticky;
-  top: var(--topbar-h);
-  align-self: start;
-  min-width: 0;
-  min-height: calc(100dvh - var(--topbar-h));
-  max-height: calc(100dvh - var(--topbar-h));
-  box-sizing: border-box;
-  margin: 0;
-  padding: 20px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  flex-wrap: nowrap;
-  gap: 2px;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-  border-bottom: 0;
-  background: var(--glass-section-nav);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 
 .section-nav::before {
@@ -2957,28 +2953,6 @@ main {
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.nav-pill {
-  width: 100%;
-  min-height: 34px;
-  padding: 8px 10px;
-  justify-content: flex-start;
-  color: var(--text-2);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  line-height: 1.35;
-}
-
-.nav-pill:hover {
-  color: var(--text-1);
-  background: var(--soft-hover) !important;
-}
-
-.nav-pill.active {
-  color: var(--text-1);
-  background: var(--bg-panel-strong) !important;
-  font-weight: 500;
 }
 
 .section[data-page-section] {
@@ -3003,11 +2977,6 @@ tbody tr {
 }
 
 /* Type rule: sans for sentences, mono for identifiers, values and labels. */
-.section-heading {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-}
 
 h2.section-heading {
   font-size: 22px;
@@ -3017,14 +2986,6 @@ h2.section-heading {
 h3.section-heading {
   font-size: 15px;
   letter-spacing: -0.015em;
-}
-
-.section-copy {
-  max-width: 68ch;
-  margin-top: 4px;
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  line-height: 1.55;
 }
 
 .section-detail,
@@ -3041,14 +3002,6 @@ h3.section-heading {
   white-space: nowrap;
 }
 
-.subsection-bar {
-  padding: 20px 0 12px;
-}
-
-.content-block {
-  padding: 18px 26px 22px;
-}
-
 .section-bar + .overview-strip,
 .panel-actions + .table-shell,
 .subsection-bar + .audit-scroll,
@@ -3061,6 +3014,7 @@ h3.section-heading {
 
 /* The deploy grid is a direct child of the section; inset it so its own
    border does not stack on the sidebar rule and the toolbar rule. */
+
 .section[data-page-section] > .site-deploy-grid {
   margin: 18px 26px 0;
 }
@@ -3093,55 +3047,11 @@ h3.section-heading {
   box-shadow: none;
 }
 
-.overview-segment {
-  min-height: 126px;
-  padding: 16px 18px;
-  box-shadow: none;
-}
-
-.overview-value {
-  margin-top: 9px;
-  font-family: var(--font-mono);
-  font-size: clamp(19px, 17cqw, 25px);
-  font-weight: 500;
-}
-
-.overview-subtitle {
-  margin-top: 7px;
-  font-size: 11px;
-}
-
-.overview-meter {
-  height: 2px;
-  margin-top: 13px;
-  border-radius: 0;
-  background: var(--meter-bg);
-}
-
-.overview-meter-fill {
-  border-radius: 0;
-}
-
-.overview-meta-row {
-  padding: 12px 26px 14px;
-}
-
 .section > .table-shell,
 .section > .updates-scroll,
 .section > .audit-scroll {
   border-right: 0;
   border-left: 0;
-}
-
-th {
-  background: var(--table-head-bg);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-th,
-td {
-  padding: 11px 15px;
 }
 
 #rows td { vertical-align: middle; }
@@ -3155,15 +3065,6 @@ button:hover,
 .secret-list-item:hover {
   transform: none;
   box-shadow: none;
-}
-
-button:disabled {
-  background-image: none;
-}
-
-.seg-thumb {
-  background: var(--bg-panel-strong);
-  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .primary-button,
@@ -3181,41 +3082,10 @@ button.filter-btn.active {
   border-radius: 0;
 }
 
-.travel-grid,
-.travel-support-grid,
-.site-deploy-grid {
-  gap: 0;
-  border-top: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-}
-
-.travel-grid .support-card,
-.travel-support-grid .support-card,
-.site-deploy-grid .support-card {
-  border-top: 0;
-  border-left: 0;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.jobs-list {
-  gap: 0;
-  padding: 0 26px;
-}
-
 .job-card,
 .job-card:first-child {
   padding: 20px 0;
   border-top: 1px solid var(--border);
-}
-
-.toolbar + .jobs-list .job-card:first-child {
-  border-top: 0;
-}
-
-.secrets-layout {
-  border-right: 0;
-  border-left: 0;
 }
 
 @media (max-width: 980px) {
@@ -3223,48 +3093,30 @@ button.filter-btn.active {
     flex-direction: row;
     align-items: center;
   }
-
   main {
     min-height: calc(100dvh - var(--topbar-h));
     display: block;
   }
-
-  .section-nav {
-    position: sticky;
-    top: var(--topbar-h);
-    z-index: 15;
-    min-height: 0;
-    max-height: none;
-    padding: 8px 12px;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
   .section-nav::before {
     display: none;
   }
-
   .nav-pill {
     width: auto;
     white-space: nowrap;
   }
-
   .section[data-page-section] {
     width: 100%;
   }
 }
 
 /* Emergency action sits apart from routine ones. */
+
 #emergencyBtn {
   margin-left: 10px;
   padding-left: 14px;
   position: relative;
 }
+
 #emergencyBtn::before {
   content: "";
   position: absolute;
@@ -3276,50 +3128,23 @@ button.filter-btn.active {
 }
 
 /* Section nav on narrow screens: fade the clipped edge so overflow is legible. */
+
 @media (max-width: 980px) {
-  .section-nav {
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(90deg, black calc(100% - 40px), transparent);
-    mask-image: linear-gradient(90deg, black calc(100% - 40px), transparent);
-    scroll-padding-inline: 12px;
-  }
   .section-nav::-webkit-scrollbar { display: none; }
   .section-nav::after { content: ""; flex: 0 0 32px; }
 }
 
 @media (max-width: 820px) {
-  .topbar-inner {
-    min-height: var(--topbar-h);
-    padding: 8px 14px;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 10px;
-  }
-
-  /* Two deliberate rows: crumbs + theme on the first, the two actions on the second. */
   .crumbs { flex: 1 1 auto; order: 1; }
   .crumbs > span:nth-child(3) { display: none; }
-
   .top-actions { display: contents; }
   .control-activity { order: 2; }
   .theme-switcher { order: 3; }
   #refreshAllBtn { order: 4; flex: 1 1 40%; padding: 0 10px; }
   #emergencyBtn { order: 5; flex: 1 1 40%; margin-left: 0; padding-left: 12px; }
   #emergencyBtn::before { display: none; }
-
-  /* Icons only; the thumb re-measures on resize. */
   .seg-switch > button > span:not(.seg-icon) { display: none; }
   .seg-switch > button { padding: 0 8px; }
-
-  main {
-    padding: 0;
-  }
-
-  .section-nav {
-    position: static;
-  }
-
   .section-bar,
   .panel-actions,
   .updates-toolbar,
@@ -3328,7 +3153,6 @@ button.filter-btn.active {
     padding-right: 18px;
     padding-left: 18px;
   }
-
   .content-block {
     padding-right: 18px;
     padding-left: 18px;
