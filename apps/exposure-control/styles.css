@@ -3565,3 +3565,19 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
 .tuning-table tbody tr:hover td:nth-child(1) {
   background: var(--table-row-hover);
 }
+
+/* Update chips: the normal state is plain text, only actionable states get a box. */
+.update-chip.current,
+.update-chip.unknown,
+.update-chip.external {
+  min-width: 0;
+  padding-inline: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-2);
+}
+.update-chip.current::before { background: var(--green); opacity: .8; }
+.update-chip.unknown::before,
+.update-chip.external::before { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
+.update-chip.unknown,
+.update-chip.external { color: var(--text-3); }
