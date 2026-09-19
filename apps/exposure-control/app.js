@@ -244,10 +244,10 @@
 
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
-        if (candidate === 'overview' || candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['pulse', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
+        if (candidate === 'audit' || candidate === 'transmission') return 'exposure';
+        const knownPages = new Set(['overview', 'pulse', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
         if (knownPages.has(candidate)) return candidate;
-        return 'updates';
+        return 'overview';
       }
 
       function setActivePage(page, options) {
@@ -256,8 +256,6 @@
         const replace = Boolean(options && options.replace);
         const previousPage = activePage;
         activePage = nextPage;
-        document.querySelector('main').classList.toggle('is-pulse', nextPage === 'pulse');
-        document.getElementById('overviewPanel').hidden = nextPage === 'pulse';
         if (nextPage === 'pulse' && previousPage !== 'pulse') loadPulse({ silent: true });
         pageSections.forEach((section) => {
           section.hidden = section.id !== nextPage;

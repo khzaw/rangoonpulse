@@ -3235,12 +3235,9 @@ body {
 }
 
 body::before,
-.hero::before,
-.hero::after,
 .overview-segment::after,
 .terminal-shell::after,
-.empty-state::before,
-.hero-eyebrow::before {
+.empty-state::before {
   content: none;
   display: none;
 }
@@ -3309,50 +3306,16 @@ main {
   padding: 0;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: minmax(0, 1fr);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   border-left: 1px solid var(--border);
   background: var(--bg-panel);
 }
 
-.hero {
-  grid-column: 2;
-  grid-row: 1;
-  margin: 0;
-  padding: 28px 28px 24px;
-  border-bottom: 1px solid var(--border);
-  animation: none;
-}
-
-.hero-eyebrow {
-  margin-bottom: 8px;
-  color: var(--text-3);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-}
-
-.hero h1 {
-  color: var(--text-1);
-  font-family: var(--font-sans);
-  font-size: 26px;
-  font-style: normal;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1.15;
-}
-
-.hero-subtitle {
-  max-width: 760px;
-  margin-top: 7px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  line-height: 1.6;
-}
-
 .section-nav {
   grid-column: 1;
-  grid-row: 1 / span 3;
+  grid-row: 1;
   position: sticky;
   top: var(--topbar-h);
   align-self: start;
@@ -3411,17 +3374,9 @@ main {
   display: none;
 }
 
-.overview-shared {
-  grid-column: 2;
-  grid-row: 2;
-  min-width: 0;
-  margin: 0;
-  border-bottom: 1px solid var(--border);
-}
-
 .section[data-page-section] {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 1;
   min-width: 0;
   margin: 0;
   padding-bottom: 28px;
@@ -3473,7 +3428,6 @@ tbody tr {
   margin-top: 0;
 }
 
-.overview-shared > .overview-strip,
 .section[data-page-section] > .overview-strip {
   border-top: 0;
   border-right: 0;
@@ -3654,7 +3608,6 @@ button.filter-btn.active {
     white-space: nowrap;
   }
 
-  .overview-shared,
   .section[data-page-section] {
     width: 100%;
   }
@@ -3676,14 +3629,6 @@ button.filter-btn.active {
     position: static;
   }
 
-  .hero {
-    padding: 24px 18px 20px;
-  }
-
-  .hero h1 {
-    font-size: 24px;
-  }
-
   .section-bar,
   .panel-actions,
   .updates-toolbar,
@@ -3700,8 +3645,6 @@ button.filter-btn.active {
 }
 
 /* Pulse: a quiet, ink-on-paper instrument panel. */
-main.is-pulse .hero { display: none; }
-main.is-pulse .pulse-page { grid-row: 1 / span 3; }
 .pulse-heading { align-items: flex-end; padding: 36px 32px 28px; }
 .pulse-kicker { font: 10px var(--font-mono); letter-spacing: .13em; color: var(--text-2); text-transform: uppercase; margin-bottom: 12px; }
 .pulse-heading .section-heading { font-size: 54px; font-weight: 500; letter-spacing: -.055em; line-height: 1; }

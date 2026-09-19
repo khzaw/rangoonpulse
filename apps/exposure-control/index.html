@@ -64,17 +64,8 @@
       </div>
     </header>
     <main>
-      <section class="hero">
-        <div>
-          <div class="hero-eyebrow">rangoonpulse / control plane</div>
-          <h1>controlpanel</h1>
-          <div class="hero-subtitle">
-            Cluster operations across deployments, travel readiness, exposure control, resource tuning, managed jobs, and secrets.
-          </div>
-        </div>
-      </section>
-
       <nav class="section-nav" aria-label="Section navigation">
+        <a class="nav-pill" data-page-link href="#overview">overview</a>
         <a class="nav-pill" data-page-link href="#pulse">pulse</a>
         <a class="nav-pill" data-page-link href="#updates">updates</a>
         <a class="nav-pill" data-page-link href="#deploy">deploy sites</a>
@@ -85,11 +76,11 @@
         <a class="nav-pill" data-page-link href="#secrets">secrets</a>
       </nav>
 
-      <section id="overviewPanel" class="section overview-shared">
+      <section id="overview" class="section" data-page-section>
         <div class="section-bar">
           <div>
             <h2 class="section-heading">overview</h2>
-            <p class="section-copy">Current operator posture across both backends.</p>
+            <p class="section-copy">Operator posture across exposure, routing, updates, and the advisor.</p>
           </div>
           <div id="loadState" class="result-count">Loading dashboard state...</div>
         </div>
