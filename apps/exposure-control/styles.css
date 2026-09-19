@@ -2368,8 +2368,18 @@ tr:hover td {
   border-bottom: none;
   align-items: center;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(128px, 160px) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
+}
+
+/* Search gets the full first row; the 330px column cannot fit all three side by side. */
+.secrets-toolbar .search-shell {
+  grid-column: 1 / -1;
+}
+
+.secrets-toolbar .search-shell input {
+  min-width: 0;
+  width: 100%;
 }
 
 .secrets-toolbar .search-shell {
