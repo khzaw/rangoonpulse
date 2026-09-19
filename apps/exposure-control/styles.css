@@ -3449,3 +3449,12 @@ button.ghost {
   background: transparent;
 }
 button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
+
+.travel-state-mark {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin: 0 8px;
+  background: var(--text-dim);
+}
+.travel-state-mark.status { background: var(--green); opacity: .7; }

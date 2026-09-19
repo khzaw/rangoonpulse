@@ -828,6 +828,14 @@
         return '<span class="travel-state-pill ' + escapeHtml(travelTone(state)) + '">' + escapeHtml(travelStateLabel(state)) + '</span>';
       }
 
+      // Targets inside a bundle: a quiet tick when ready, a full pill only when something deviates.
+      function travelTargetMark(state) {
+        if (String(state || '').toLowerCase() === 'ready') {
+          return '<span class="travel-state-mark status" title="ready" aria-label="ready"></span>';
+        }
+        return travelStatusPill(state);
+      }
+
       function renderOverview() {
         const services = dashboardState.services || [];
         const updates = dashboardState.updates || null;
@@ -1267,7 +1275,7 @@
               '<li class="travel-target-item">' +
                 '<div class="travel-target-head">' +
                   '<a href="' + escapeHtml(target.url || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(target.name || target.id || 'target') + '</a>' +
-                  travelStatusPill(target.state) +
+                  travelTargetMark(target.state) +
                 '</div>' +
                 '<div class="travel-target-meta">' + escapeHtml(String(target.access || 'tailnet-private').replace(/-/g, ' ')) + ' · ' + escapeHtml(target.detail || 'no probe detail') + '</div>' +
               '</li>'
