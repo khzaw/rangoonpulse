@@ -3581,3 +3581,7 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
 .update-chip.external::before { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
 .update-chip.unknown,
 .update-chip.external { color: var(--text-3); }
+
+/* Tile tone: a good state stays ink; only attention states colour the value. */
+.overview-segment[data-tone="warning"] .overview-value { color: var(--yellow); }
+.overview-segment[data-tone="danger"] .overview-value { color: var(--red); }

@@ -797,15 +797,17 @@
 
       function overviewSegment(label, value, subtitle, options) {
         const eyebrow = options && options.eyebrow ? '<span class="overview-eyebrow">' + options.eyebrow + '</span>' : '';
-        const barPct = Math.max(0, Math.min(100, Number(options && options.barPct || 0)));
+        // The bar means "share of a whole". State tiles pass no barPct and get no bar.
+        const hasBar = options && options.barPct !== undefined && options.barPct !== null;
+        const barPct = hasBar ? Math.max(0, Math.min(100, Number(options.barPct) || 0)) : 0;
         const tone = options && options.tone ? options.tone : 'neutral';
         return (
-          '<section class="overview-segment">' +
+          '<section class="overview-segment" data-tone="' + tone + '">' +
             '<div class="overview-segment-head"><span class="overview-label">' + label + '</span>' + eyebrow + '</div>' +
             '<div class="overview-value">' + value + '</div>' +
             (options && options.series ? '<div class="overview-spark">' + window.Pulse.sparkline(options.series, { dot: true }) + '</div>' : '') +
             '<div class="overview-subtitle">' + subtitle + '</div>' +
-            '<div class="overview-meter"><span class="overview-meter-fill ' + tone + '" style="width:' + barPct.toFixed(1) + '%"></span></div>' +
+            (hasBar ? '<div class="overview-meter"><span class="overview-meter-fill ' + tone + '" style="width:' + barPct.toFixed(1) + '%"></span></div>' : '') +
           '</section>'
         );
       }
@@ -866,7 +868,6 @@
           }) +
           overviewSegment('transmission', desiredMode, 'running ' + runningMode, {
             eyebrow: 'desired route',
-            barPct: desiredMode === 'vpn' ? 100 : 35,
             tone: desiredMode === 'vpn' ? 'warning' : 'status',
           }) +
           overviewSegment('planner', String(selectedNow), recommendations + ' recommendations in current report', {
@@ -886,12 +887,10 @@
           }) +
           overviewSegment('travel', travelState, travelHeadline, {
             eyebrow: 'remote posture',
-            barPct: travelState === 'ready' ? 100 : travelState === 'degraded' ? 55 : travelState === 'blocked' ? 15 : 30,
             tone: travelTone(travelState),
           }) +
           overviewSegment('advisor fetch', fetchState, fetchDetail, {
             eyebrow: 'resource-advisor',
-            barPct: fetchState === 'live' ? 100 : 25,
             tone: fetchState === 'live' ? 'status' : 'danger',
           });
 
@@ -938,7 +937,6 @@
           }) +
           overviewSegment('active runs', String(running), 'currently running pods from managed CronJobs', {
             eyebrow: 'runtime',
-            barPct: running ? 100 : 0,
             tone: running ? 'warning' : 'status',
           }) +
           overviewSegment('suspended', String(suspended), 'CronJobs paused from schedule', {
@@ -1057,10 +1055,10 @@
         const errorCount = items.filter((item) => item && item.errors && item.errors.length).length;
         siteDeploySummaryEl.textContent = String(items.length) + ' target' + (items.length === 1 ? '' : 's') + ' · ' + String(readyCount) + ' ready';
         siteDeployOverviewStripEl.innerHTML =
-          overviewSegment('targets', String(items.length), 'Flux image-automated sites', { eyebrow: 'static deploys', barPct: 100, tone: 'neutral' }) +
+          overviewSegment('targets', String(items.length), 'Flux image-automated sites', { eyebrow: 'static deploys' }) +
           overviewSegment('ready', String(readyCount), 'kustomization and helm ready', { eyebrow: 'runtime state', barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
-          overviewSegment('errors', String(errorCount), errorCount ? 'some Flux objects unavailable' : 'inventory clean', { eyebrow: 'api inventory', barPct: errorCount ? Math.min(100, errorCount * 25) : 0, tone: errorCount ? 'danger' : 'status' }) +
-          overviewSegment('checked', fmtTime(data.checkedAt), 'latest control-panel snapshot', { eyebrow: 'snapshot', barPct: 100, tone: 'neutral' });
+          overviewSegment('errors', String(errorCount), errorCount ? 'some Flux objects unavailable' : 'inventory clean', { eyebrow: 'api inventory' }) +
+          overviewSegment('checked', fmtTime(data.checkedAt), 'latest control-panel snapshot', { eyebrow: 'snapshot' });
 
         if (!items.length) {
           siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
@@ -1244,22 +1242,18 @@
         travelOverviewStripEl.innerHTML =
           overviewSegment('private path', travelStateLabel(privateAccess.state), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', {
             eyebrow: 'tailnet/private',
-            barPct: privateAccess.state === 'ready' ? 100 : privateAccess.state === 'degraded' ? 55 : privateAccess.state === 'blocked' ? 15 : 30,
             tone: travelTone(privateAccess.state),
           }) +
           overviewSegment('exit node', travelStateLabel(exitNode.state), connector.name || 'connector', {
             eyebrow: 'home egress',
-            barPct: exitNode.state === 'ready' ? 100 : exitNode.state === 'degraded' ? 55 : exitNode.state === 'blocked' ? 15 : 30,
             tone: travelTone(exitNode.state),
           }) +
           overviewSegment('transmission', transmission.desiredMode || 'unknown', 'running ' + (transmission.effectiveMode || 'unknown'), {
             eyebrow: transmission.placeholderConfig ? 'placeholder vpn config' : 'download path',
-            barPct: transmission.desiredMode === 'vpn' ? 100 : 42,
             tone: transmission.rolloutPending ? 'warning' : transmission.desiredMode === 'vpn' ? 'warning' : 'status',
           }) +
           overviewSegment('public shares', String(activeShareCount), activeShareCount ? 'disable if not needed' : 'private-only posture', {
             eyebrow: 'share hosts',
-            barPct: activeShareCount > 0 ? Math.min(100, activeShareCount * 18) : 0,
             tone: activeShareCount > 0 ? 'warning' : 'status',
           });
         travelOverviewMetaEl.innerHTML =
@@ -2197,7 +2191,7 @@
           const history = P.values(series);
           const finite = history.filter(P.numeric);
           const subtitle = finite.length ? '24 h / ' + format(Math.min(...finite)) + ' — ' + format(Math.max(...finite)) : 'Telemetry unavailable';
-          return overviewSegment(label, format(current), subtitle, { eyebrow, series: history, tone: current > threshold ? 'warning' : 'neutral', barPct: label === 'cpu' || label === 'memory' ? current * 100 : 0 });
+          return overviewSegment(label, format(current), subtitle, { eyebrow, series: history, tone: current > threshold ? 'warning' : 'neutral', barPct: label === 'cpu' || label === 'memory' ? current * 100 : null });
         }).join('');
       }
 
