@@ -889,6 +889,20 @@
           '</article>';
       }
 
+      // Compact posture line under the sidebar nav, visible from every page.
+      function renderNavHealth(state) {
+        const el = document.getElementById('navHealth');
+        if (!el) return;
+        function row(label, value, tone) {
+          return '<div class="nav-health-row' + (tone ? ' ' + tone : '') + '"><span>' + label + '</span><span>' + escapeHtml(String(value)) + '</span></div>';
+        }
+        el.innerHTML =
+          row('public', state.shares, state.shares > 0 ? 'danger' : '') +
+          row('updates', state.updates, state.updates > 0 ? 'warning' : '') +
+          row('route', state.route, state.route === 'vpn' ? 'warning' : '') +
+          row('travel', state.travel, state.travel === 'ready' ? '' : state.travel === 'degraded' ? 'warning' : 'danger');
+      }
+
       function renderOverview() {
         const services = dashboardState.services || [];
         const updates = dashboardState.updates || null;
@@ -964,6 +978,12 @@
         overviewMetaEl.innerHTML = meta.join('');
         overviewDetailEl.textContent = fetchDetail;
         renderOverviewDigest(services, updateItems, helmUpdateItems);
+        renderNavHealth({
+          shares: activeExposures,
+          updates: updatesAvailable + helmUpdatesAvailable,
+          route: desiredMode,
+          travel: travelState,
+        });
         exposureMetaEl.textContent = activeExposures + ' active exposure' + (activeExposures === 1 ? '' : 's');
         vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
         auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';

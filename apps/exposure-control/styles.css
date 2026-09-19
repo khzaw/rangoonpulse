@@ -2928,7 +2928,9 @@ main {
   top: var(--topbar-h);
   align-self: start;
   min-width: 0;
+  min-height: calc(100dvh - var(--topbar-h));
   max-height: calc(100dvh - var(--topbar-h));
+  box-sizing: border-box;
   margin: 0;
   padding: 20px 8px;
   display: flex;
@@ -3229,6 +3231,7 @@ button.filter-btn.active {
     position: sticky;
     top: var(--topbar-h);
     z-index: 15;
+    min-height: 0;
     max-height: none;
     padding: 8px 12px;
     flex-direction: row;
@@ -3649,3 +3652,23 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
 #emergencyBtn { margin-left: 0; padding-left: 15px; }
 #emergencyBtn::before { display: none; }
 .secrets-toolbar { padding: 0; }
+
+.nav-health {
+  margin-top: auto;
+  padding: 16px 10px 4px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.nav-health:empty { display: none; }
+.nav-health-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+}
+.nav-health-row > span:last-child { color: var(--text-2); }
+.nav-health-row.warning > span:last-child { color: var(--yellow); }
+.nav-health-row.danger > span:last-child { color: var(--red); }
+@media (max-width: 980px) { .nav-health { display: none; } }
