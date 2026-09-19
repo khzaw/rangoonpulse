@@ -3040,10 +3040,21 @@ h3.section-heading {
 .subsection-bar + .audit-scroll,
 .updates-toolbar + .updates-scroll,
 .toolbar + .table-shell,
-.toolbar + .site-deploy-grid,
 .toolbar + .jobs-list,
 .secrets-layout {
   margin-top: 0;
+}
+
+/* The deploy grid is a direct child of the section; inset it so its own
+   border does not stack on the sidebar rule and the toolbar rule. */
+.section[data-page-section] > .site-deploy-grid {
+  margin: 18px 26px 0;
+}
+
+@media (max-width: 820px) {
+  .section[data-page-section] > .site-deploy-grid {
+    margin: 18px 18px 0;
+  }
 }
 
 .section[data-page-section] > .overview-strip {
