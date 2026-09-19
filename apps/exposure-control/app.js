@@ -1580,8 +1580,8 @@
 
           const statusTd = document.createElement('td');
           const statusBadge = document.createElement('span');
-          statusBadge.className = 'update-chip ' + (svc.enabled ? 'current' : 'not-installed');
-          statusBadge.textContent = svc.enabled ? 'enabled' : 'disabled';
+          statusBadge.className = 'exposure-state ' + (svc.enabled ? 'on' : 'off');
+          statusBadge.textContent = svc.enabled ? 'public' : 'off';
           statusTd.appendChild(statusBadge);
 
           const authTd = document.createElement('td');
@@ -1592,6 +1592,7 @@
 
           const urlTd = document.createElement('td');
           const publicLink = document.createElement('a');
+          publicLink.className = 'public-host';
           publicLink.href = String(svc.publicUrl || '#');
           publicLink.target = '_blank';
           publicLink.rel = 'noreferrer';
@@ -1612,70 +1613,87 @@
           const controls = document.createElement('div');
           controls.className = 'controls';
 
-          const expirySelect = document.createElement('select');
-          expirySelect.className = 'control-select';
-          [0.25, 0.5, 1, 2, 6, 12, 24].forEach((hours) => {
-            const opt = document.createElement('option');
-            opt.value = String(hours);
-            opt.textContent = hours < 1 ? Math.round(hours * 60) + 'm' : String(hours) + 'h';
-            if (hours === Number(svc.defaultExpiryHours || 1)) opt.selected = true;
-            expirySelect.appendChild(opt);
-          });
-          const untilDisabledOpt = document.createElement('option');
-          untilDisabledOpt.value = 'until-disabled';
-          untilDisabledOpt.textContent = 'Until turned off';
-          expirySelect.appendChild(untilDisabledOpt);
-
-          const authSelect = document.createElement('select');
-          authSelect.className = 'control-select';
-          ['none', 'cloudflare-access'].forEach((mode) => {
-            const opt = document.createElement('option');
-            opt.value = mode;
-            opt.textContent = mode === 'cloudflare-access' ? 'cf-access' : mode;
-            if (mode === 'none') opt.selected = true;
-            authSelect.appendChild(opt);
-          });
-
-          const enableBtn = document.createElement('button');
-          enableBtn.textContent = 'Enable';
-          enableBtn.onclick = async () => {
+          async function runMutation(btn, path, body, doneText) {
             try {
               mutationInFlight += 1;
-              setBtnLoading(enableBtn, true);
-              const hours = expirySelect.value === 'until-disabled'
-                ? null
-                : Number(expirySelect.value);
-              await request('/api/services/' + svc.id + '/enable', 'POST', {
-                hours,
-                authMode: authSelect.value,
-              });
-              setMsg('Enabled ' + svc.id);
+              setBtnLoading(btn, true);
+              await request(path, 'POST', body);
+              setMsg(doneText);
               await loadDashboard({ silent: true });
             } catch (err) {
               setMsg(err.message, true);
             } finally {
               mutationInFlight = Math.max(0, mutationInFlight - 1);
             }
-          };
+          }
 
-          const disableBtn = document.createElement('button');
-          disableBtn.textContent = 'Disable';
-          disableBtn.className = 'danger';
-          disableBtn.onclick = async () => {
-            try {
-              mutationInFlight += 1;
-              setBtnLoading(disableBtn, true);
-              await request('/api/services/' + svc.id + '/disable', 'POST');
-              setMsg('Disabled ' + svc.id);
-              await loadDashboard({ silent: true });
-            } catch (err) {
-              setMsg(err.message, true);
-            } finally {
-              mutationInFlight = Math.max(0, mutationInFlight - 1);
+          function renderIdleControls() {
+            controls.replaceChildren();
+            if (svc.enabled) {
+              const disableBtn = document.createElement('button');
+              disableBtn.textContent = 'Disable';
+              disableBtn.className = 'danger';
+              disableBtn.onclick = () => runMutation(disableBtn, '/api/services/' + svc.id + '/disable', undefined, 'Disabled ' + svc.id);
+              controls.appendChild(disableBtn);
+              return;
             }
-          };
+            const shareBtn = document.createElement('button');
+            shareBtn.textContent = 'Share';
+            shareBtn.onclick = () => renderShareControls();
+            controls.appendChild(shareBtn);
+          }
 
-          controls.append(expirySelect, authSelect, enableBtn, disableBtn);
+          function renderShareControls() {
+            controls.replaceChildren();
+            tr.classList.add('is-configuring');
+
+            const expirySelect = document.createElement('select');
+            expirySelect.className = 'control-select';
+            expirySelect.setAttribute('aria-label', 'Expiry for ' + svc.id);
+            [0.25, 0.5, 1, 2, 6, 12, 24].forEach((hours) => {
+              const opt = document.createElement('option');
+              opt.value = String(hours);
+              opt.textContent = hours < 1 ? Math.round(hours * 60) + 'm' : String(hours) + 'h';
+              if (hours === Number(svc.defaultExpiryHours || 1)) opt.selected = true;
+              expirySelect.appendChild(opt);
+            });
+            const untilDisabledOpt = document.createElement('option');
+            untilDisabledOpt.value = 'until-disabled';
+            untilDisabledOpt.textContent = 'Until turned off';
+            expirySelect.appendChild(untilDisabledOpt);
+
+            const authSelect = document.createElement('select');
+            authSelect.className = 'control-select';
+            authSelect.setAttribute('aria-label', 'Auth mode for ' + svc.id);
+            ['none', 'cloudflare-access'].forEach((mode) => {
+              const opt = document.createElement('option');
+              opt.value = mode;
+              opt.textContent = mode === 'cloudflare-access' ? 'cf-access' : mode;
+              if (mode === (svc.authMode || 'none')) opt.selected = true;
+              authSelect.appendChild(opt);
+            });
+
+            const confirmBtn = document.createElement('button');
+            confirmBtn.textContent = 'Go public';
+            confirmBtn.className = 'danger';
+            confirmBtn.onclick = () => {
+              const hours = expirySelect.value === 'until-disabled' ? null : Number(expirySelect.value);
+              runMutation(confirmBtn, '/api/services/' + svc.id + '/enable', { hours, authMode: authSelect.value }, 'Enabled ' + svc.id);
+            };
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'ghost';
+            cancelBtn.onclick = () => {
+              tr.classList.remove('is-configuring');
+              renderIdleControls();
+            };
+
+            controls.append(expirySelect, authSelect, confirmBtn, cancelBtn);
+            expirySelect.focus();
+          }
+
+          renderIdleControls();
           controlsTd.appendChild(controls);
           tr.appendChild(controlsTd);
           rowsEl.appendChild(tr);

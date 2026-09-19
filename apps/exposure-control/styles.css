@@ -3084,8 +3084,10 @@ th {
 
 th,
 td {
-  padding: 12px 15px;
+  padding: 11px 15px;
 }
+
+#rows td { vertical-align: middle; }
 
 button:hover,
 .top-button:hover,
@@ -3383,3 +3385,42 @@ button.filter-btn.active {
 .placement-node text { font-family: var(--font-mono); }
 
 .placement-pod-rect { pointer-events: all; }
+
+/* Exposure table: quiet when everything is private, loud only for live shares. */
+.exposure-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+.exposure-state::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  background: currentColor;
+}
+.exposure-state.off { color: var(--text-3); }
+.exposure-state.off::before { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
+.exposure-state.on { color: var(--red); font-weight: 500; }
+.exposure-state.on::before { animation: exposure-blink 1.6s steps(2, end) infinite; }
+@keyframes exposure-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .exposure-state.on::before { animation: none; } }
+
+tbody tr.is-enabled { background: color-mix(in srgb, var(--red) 4%, transparent); }
+tbody tr.is-enabled .public-host { color: var(--text-1); font-weight: 500; }
+tbody tr:not(.is-enabled) .public-host { color: var(--text-2); }
+tbody tr.is-configuring { background: var(--soft-hover); }
+
+#rows .controls { justify-content: flex-end; }
+#rows .controls .control-select { min-width: 0; }
+button.ghost {
+  color: var(--text-2);
+  border-color: transparent;
+  background: transparent;
+}
+button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
