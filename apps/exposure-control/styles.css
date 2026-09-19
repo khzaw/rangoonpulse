@@ -3672,3 +3672,11 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
 .nav-health-row.warning > span:last-child { color: var(--yellow); }
 .nav-health-row.danger > span:last-child { color: var(--red); }
 @media (max-width: 980px) { .nav-health { display: none; } }
+
+/* A section-detail that carries a sentence rather than a value. */
+.section-detail-prose {
+  max-width: 44ch;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+}
