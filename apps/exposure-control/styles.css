@@ -3109,24 +3109,6 @@ button.filter-btn.active {
   }
 }
 
-/* Emergency action sits apart from routine ones. */
-
-#emergencyBtn {
-  margin-left: 10px;
-  padding-left: 14px;
-  position: relative;
-}
-
-#emergencyBtn::before {
-  content: "";
-  position: absolute;
-  left: -11px;
-  top: 6px;
-  bottom: 6px;
-  width: 1px;
-  background: var(--border);
-}
-
 /* Section nav on narrow screens: fade the clipped edge so overflow is legible. */
 
 @media (max-width: 980px) {
@@ -3141,8 +3123,7 @@ button.filter-btn.active {
   .control-activity { order: 2; }
   .theme-switcher { order: 3; }
   #refreshAllBtn { order: 4; flex: 1 1 40%; padding: 0 10px; }
-  #emergencyBtn { order: 5; flex: 1 1 40%; margin-left: 0; padding-left: 12px; }
-  #emergencyBtn::before { display: none; }
+  #emergencyBtn { order: 5; flex: 1 1 40%; padding-left: 12px; }
   .seg-switch > button > span:not(.seg-icon) { display: none; }
   .seg-switch > button { padding: 0 8px; }
   .section-bar,
@@ -3475,8 +3456,6 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
   gap: 12px;
   flex: 0 0 auto;
 }
-#emergencyBtn { margin-left: 0; padding-left: 15px; }
-#emergencyBtn::before { display: none; }
 .secrets-toolbar { padding: 0; }
 
 .nav-health {
