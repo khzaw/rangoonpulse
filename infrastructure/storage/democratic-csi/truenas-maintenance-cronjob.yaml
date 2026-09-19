@@ -7,8 +7,9 @@ metadata:
   namespace: democratic-csi
 spec:
   schedule: "0 4 * * 1"
-  timeZone: "${TIMEZONE}"
+  timeZone: "Asia/Singapore"
   startingDeadlineSeconds: 3600
+  suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3
