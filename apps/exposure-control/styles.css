@@ -3591,3 +3591,51 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
   gap: 4px;
 }
 .travel-note-item .travel-state-mark { margin: 6px 8px 0 0; }
+
+/* Overview: tiles link to their page; the digest below lists what matters on landing. */
+a.overview-segment { color: inherit; text-decoration: none; }
+a.overview-segment:hover { background: var(--soft-hover); }
+a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outline-offset: -2px; }
+
+.overview-digest {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.digest-card { min-width: 0; }
+.digest-card.is-hot { background: color-mix(in srgb, var(--red) 4%, transparent); }
+.digest-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.digest-link {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--link-border);
+}
+.digest-link:hover { color: var(--text-1); border-bottom-color: var(--link-border-hover); }
+.digest-list { list-style: none; margin: 0; padding: 0; }
+.digest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid var(--subtle-line);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.digest-item:first-child { border-top: 0; padding-top: 0; }
+.digest-item > a { color: var(--text-1); border-bottom: 1px solid var(--link-border); }
+.digest-item > span:first-child { color: var(--text-1); }
+.digest-detail { color: var(--text-3); font-size: 10.5px; white-space: nowrap; }
+@media (max-width: 980px) {
+  .overview-digest { grid-template-columns: 1fr; }
+  .overview-digest .support-card { border-right: 0; border-bottom: 1px solid var(--border); }
+  .overview-digest .support-card:last-child { border-bottom: 0; }
+}

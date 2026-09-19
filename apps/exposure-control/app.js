@@ -2,6 +2,7 @@
       const overviewStripEl = document.getElementById('overviewStrip');
       const overviewMetaEl = document.getElementById('overviewMeta');
       const overviewDetailEl = document.getElementById('overviewDetail');
+      const overviewDigestEl = document.getElementById('overviewDigest');
       const travelSummaryEl = document.getElementById('travelSummary');
       const travelOverviewStripEl = document.getElementById('travelOverviewStrip');
       const travelOverviewMetaEl = document.getElementById('travelOverviewMeta');
@@ -55,6 +56,7 @@
       const renovateLinksEl = document.getElementById('renovateLinks');
       const vpnMetaEl = document.getElementById('vpnMeta');
       const transmissionPanelEl = document.getElementById('transmissionPanel');
+      const auditPanelEl = document.getElementById('auditPanel');
       const msgEl = document.getElementById('msg');
       const vpnMsgEl = document.getElementById('vpnMsg');
       const renovateMsgEl = document.getElementById('renovateMsg');
@@ -273,6 +275,8 @@
         }
         if (requestedPage === 'transmission' && nextPage === 'exposure' && transmissionPanelEl) {
           transmissionPanelEl.scrollIntoView({ block: 'start', behavior: 'auto' });
+        } else if (requestedPage === 'audit' && nextPage === 'exposure' && auditPanelEl) {
+          auditPanelEl.scrollIntoView({ block: 'start', behavior: 'auto' });
         } else {
           window.scrollTo({ top: 0, behavior: 'auto' });
         }
@@ -801,14 +805,15 @@
         const hasBar = options && options.barPct !== undefined && options.barPct !== null;
         const barPct = hasBar ? Math.max(0, Math.min(100, Number(options.barPct) || 0)) : 0;
         const tone = options && options.tone ? options.tone : 'neutral';
+        const href = options && options.href ? escapeHtml(options.href) : '';
         return (
-          '<section class="overview-segment" data-tone="' + tone + '">' +
+          (href ? '<a class="overview-segment" href="' + href + '" data-tone="' + tone + '">' : '<section class="overview-segment" data-tone="' + tone + '">') +
             '<div class="overview-segment-head"><span class="overview-label">' + label + '</span>' + eyebrow + '</div>' +
             '<div class="overview-value">' + value + '</div>' +
             (options && options.series ? '<div class="overview-spark">' + window.Pulse.sparkline(options.series, { dot: true }) + '</div>' : '') +
             '<div class="overview-subtitle">' + subtitle + '</div>' +
             (hasBar ? '<div class="overview-meter"><span class="overview-meter-fill ' + tone + '" style="width:' + barPct.toFixed(1) + '%"></span></div>' : '') +
-          '</section>'
+          (href ? '</a>' : '</section>')
         );
       }
 
@@ -838,6 +843,52 @@
         return travelStatusPill(state);
       }
 
+      // The three things worth seeing on landing: what is public, what wants
+      // updating, and what was last touched.
+      function renderOverviewDigest(services, updateItems, helmUpdateItems) {
+        if (!overviewDigestEl) return;
+        const activeServices = services.filter((svc) => svc.enabled);
+        const pending = updateItems.filter((item) => item && item.status === 'update').map((item) => ({
+          name: item.name || item.id || 'service',
+          detail: (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
+        })).concat(helmUpdateItems.filter((item) => item && item.status === 'update').map((item) => ({
+          name: item.name || item.release || item.id || 'release',
+          detail: 'chart ' + (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
+        })));
+        const audit = (dashboardState.audit || []).slice(0, 5);
+
+        function list(items, empty) {
+          if (!items.length) return '<p class="support-copy">' + escapeHtml(empty) + '</p>';
+          return '<ul class="digest-list">' + items.map((item) =>
+            '<li class="digest-item">' +
+              (item.href ? '<a href="' + escapeHtml(item.href) + '" target="_blank" rel="noreferrer">' + escapeHtml(item.name) + '</a>' : '<span>' + escapeHtml(item.name) + '</span>') +
+              '<span class="digest-detail">' + escapeHtml(item.detail) + '</span>' +
+            '</li>'
+          ).join('') + '</ul>';
+        }
+
+        overviewDigestEl.innerHTML =
+          '<article class="support-card digest-card' + (activeServices.length ? ' is-hot' : '') + '">' +
+            '<div class="digest-head"><div class="support-card-title">public shares</div><a class="digest-link" href="#exposure">exposure control</a></div>' +
+            list(activeServices.map((svc) => ({
+              name: svc.publicHost || svc.name || svc.id,
+              href: svc.publicUrl,
+              detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
+            })), 'Nothing is public right now.') +
+          '</article>' +
+          '<article class="support-card digest-card">' +
+            '<div class="digest-head"><div class="support-card-title">pending updates</div><a class="digest-link" href="#updates">updates</a></div>' +
+            list(pending.slice(0, 6), 'Everything tracked is on its latest known version.') +
+          '</article>' +
+          '<article class="support-card digest-card">' +
+            '<div class="digest-head"><div class="support-card-title">recent actions</div><a class="digest-link" href="#audit">audit</a></div>' +
+            list(audit.map((entry) => ({
+              name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
+              detail: fmtDateTime(entry.ts),
+            })), 'No control actions recorded yet.') +
+          '</article>';
+      }
+
       function renderOverview() {
         const services = dashboardState.services || [];
         const updates = dashboardState.updates || null;
@@ -863,34 +914,41 @@
         overviewStripEl.innerHTML =
           overviewSegment('exposures', String(activeExposures), services.length + ' configured share targets', {
             eyebrow: 'temporary public',
+            href: '#exposure',
             barPct: services.length ? activeExposures / services.length * 100 : 0,
             tone: activeExposures > 0 ? 'warning' : 'status',
           }) +
           overviewSegment('transmission', desiredMode, 'running ' + runningMode, {
             eyebrow: 'desired route',
+            href: '#transmission',
             tone: desiredMode === 'vpn' ? 'warning' : 'status',
           }) +
           overviewSegment('planner', String(selectedNow), recommendations + ' recommendations in current report', {
             eyebrow: 'selected now',
+            href: '#tuning',
             barPct: recommendations ? selectedNow / recommendations * 100 : 0,
             tone: hardFitOk ? 'status' : 'warning',
           }) +
           overviewSegment('image updates', String(updatesAvailable), updateItems.length ? updateItems.length + ' tracked workloads' : 'cached report unavailable', {
             eyebrow: 'updates available',
+            href: '#updates',
             barPct: updateItems.length ? updatesAvailable / updateItems.length * 100 : 0,
             tone: updatesAvailable > 0 ? 'warning' : 'status',
           }) +
           overviewSegment('chart updates', String(helmUpdatesAvailable), helmUpdateItems.length ? helmUpdateItems.length + ' helm releases' : 'cached report unavailable', {
             eyebrow: 'updates available',
+            href: '#updates',
             barPct: helmUpdateItems.length ? helmUpdatesAvailable / helmUpdateItems.length * 100 : 0,
             tone: helmUpdatesAvailable > 0 ? 'warning' : 'status',
           }) +
           overviewSegment('travel', travelState, travelHeadline, {
             eyebrow: 'remote posture',
+            href: '#travel',
             tone: travelTone(travelState),
           }) +
           overviewSegment('advisor fetch', fetchState, fetchDetail, {
             eyebrow: 'resource-advisor',
+            href: '#tuning',
             tone: fetchState === 'live' ? 'status' : 'danger',
           });
 
@@ -905,6 +963,7 @@
         if (travel && travel.checkedAt) meta.push('<span>travel checked ' + fmtDateTime(travel.checkedAt) + '</span>');
         overviewMetaEl.innerHTML = meta.join('');
         overviewDetailEl.textContent = fetchDetail;
+        renderOverviewDigest(services, updateItems, helmUpdateItems);
         exposureMetaEl.textContent = activeExposures + ' active exposure' + (activeExposures === 1 ? '' : 's');
         vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
         auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';
