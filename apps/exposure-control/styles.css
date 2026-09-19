@@ -1598,12 +1598,14 @@ tr:hover td {
   color: var(--text-2);
 }
 
+/* Audit colour marks a change to the public surface. Routine actions stay ink. */
 .action-enable {
-  color: var(--green);
+  color: var(--red);
 }
 
-.action-disable {
-  color: var(--red);
+.action-disable,
+.action-routine {
+  color: var(--text-2);
 }
 
 .action-emergency {
@@ -3680,3 +3682,9 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
   font-size: 12px;
   line-height: 1.5;
 }
+
+.vpn-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.audit-action { font-family: var(--font-mono); font-size: 11.5px; }

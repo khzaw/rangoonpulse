@@ -595,10 +595,10 @@
         const meta = [];
         const activeRun = renovate.activeRun || null;
         const lastRun = activeRun || renovate.lastRun || null;
-        meta.push('Run: ' + (lastRun ? (lastRun.status === 'completed' ? (lastRun.conclusion || 'completed') : lastRun.status) : 'idle'));
-        if (lastRun && lastRun.updatedAt) meta.push('Updated: ' + fmtDateTime(lastRun.updatedAt));
-        meta.push('Open PRs: ' + String(renovate.openPrCount || 0));
-        renovateMetaEl.textContent = meta.join(' | ');
+        meta.push('run ' + (lastRun ? (lastRun.status === 'completed' ? (lastRun.conclusion || 'completed') : lastRun.status) : 'idle'));
+        if (lastRun && lastRun.updatedAt) meta.push('updated ' + fmtDateTime(lastRun.updatedAt));
+        meta.push('open PRs ' + String(renovate.openPrCount || 0));
+        renovateMetaEl.textContent = meta.join(' · ');
         renovateRunBtn.disabled = Boolean(activeRun);
 
         const links = [];
@@ -1416,7 +1416,7 @@
         if (status.podName) meta.push('pod/' + status.podName);
         if (status.rolloutPending) meta.push('rollout pending');
         if (status.placeholderConfig) meta.push('placeholder credentials scaffolded');
-        vpnMetaEl.textContent = meta.join(' | ');
+        vpnMetaEl.textContent = meta.join(' · ');
         const vpnOn = desiredMode === 'vpn';
         vpnSwitch.disabled = mutationInFlight > 0;
         vpnSwitch.classList.toggle('on', vpnOn);
@@ -1800,11 +1800,11 @@
           if (entry.disabled != null) parts.push('disabled: ' + entry.disabled);
           const actionClass = entry.action === 'enable'
             ? 'action-enable'
-            : entry.action === 'disable'
-              ? 'action-disable'
-              : entry.action === 'transmission-vpn-set'
-                ? 'action-enable'
-                : 'action-emergency';
+            : entry.action === 'emergency-disable-all'
+              ? 'action-emergency'
+              : entry.action === 'disable' || entry.action === 'auto-expire'
+                ? 'action-disable'
+                : 'action-routine';
           tr.innerHTML =
             '<td class="audit-time">' + fmtDateTime(entry.ts) + '</td>' +
             '<td class="audit-action ' + actionClass + '">' + (entry.action || '') + '</td>' +
@@ -1866,8 +1866,8 @@
         const source = payload && payload.source ? payload.source : 'unknown';
         const staleText = payload && payload.stale ? ' · stale cache' : '';
         const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
-        const filterText = items.length && visibleItems.length !== items.length ? ' | Showing: ' + visibleItems.length + '/' + items.length : '';
-        updatesMetaEl.textContent = 'Checked: ' + checkedAt + ' | Next check: ' + nextCheckAt + ' | Source: ' + source + staleText + refreshingText + filterText;
+        const filterText = items.length && visibleItems.length !== items.length ? ' · showing ' + visibleItems.length + '/' + items.length : '';
+        updatesMetaEl.textContent = 'checked ' + checkedAt + ' · next ' + nextCheckAt + ' · ' + source + staleText + refreshingText + filterText;
       }
 
       async function loadUpdates(options) {
@@ -1949,7 +1949,7 @@
         const source = payload && payload.source ? payload.source : 'unknown';
         const staleText = payload && payload.stale ? ' · stale cache' : '';
         const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
-        helmUpdatesMetaEl.textContent = 'Checked: ' + checkedAt + ' | Next check: ' + nextCheckAt + ' | Source: ' + source + staleText + refreshingText;
+        helmUpdatesMetaEl.textContent = 'checked ' + checkedAt + ' · next ' + nextCheckAt + ' · ' + source + staleText + refreshingText;
       }
 
       async function loadHelmUpdates(options) {
