@@ -2935,7 +2935,7 @@ main {
 }
 
 .section-nav::before {
-  content: "workspace";
+  content: "control panel";
   display: block;
   padding: 0 10px 10px;
   color: var(--text-3);
@@ -3510,3 +3510,17 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
   background: var(--text-dim);
 }
 .travel-state-mark.status { background: var(--green); opacity: .7; }
+
+.section-detail-stack { text-align: right; }
+.report-links {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+.report-links a {
+  margin-left: 8px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--link-border);
+}
+.report-links a:hover { color: var(--text-1); border-bottom-color: var(--link-border-hover); }
