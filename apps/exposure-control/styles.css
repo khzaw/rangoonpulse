@@ -2981,18 +2981,43 @@ tbody tr {
   padding: 21px 26px 16px;
 }
 
+/* Type rule: sans for sentences, mono for identifiers, values and labels. */
 .section-heading {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.025em;
 }
 
+h2.section-heading {
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+h3.section-heading {
+  font-size: 15px;
+  letter-spacing: -0.015em;
+}
+
 .section-copy {
-  max-width: 76ch;
-  margin-top: 3px;
+  max-width: 68ch;
+  margin-top: 4px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.section-detail,
+.result-count,
+.updates-meta,
+.overview-meta-cluster,
+.overview-meta-row .result-count {
   font-family: var(--font-mono);
   font-size: 11px;
-  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.overview-meta-cluster > span {
+  white-space: nowrap;
 }
 
 .subsection-bar {
