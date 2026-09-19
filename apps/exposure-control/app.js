@@ -1298,7 +1298,7 @@
           : '<p class="support-copy">No temporary public shares are active.</p>';
         travelNotesEl.innerHTML = notes.length
           ? notes.map((note) =>
-            '<div class="travel-note-item">' + travelStatusPill(note.level === 'warn' ? 'degraded' : 'ready') +
+            '<div class="travel-note-item">' + travelTargetMark(note.level === 'warn' ? 'degraded' : 'ready') +
               '<span>' + escapeHtml(note.message || '') + '</span></div>'
           ).join('')
           : '<p class="support-copy">No additional travel notes right now.</p>';

@@ -3585,3 +3585,9 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
 /* Tile tone: a good state stays ink; only attention states colour the value. */
 .overview-segment[data-tone="warning"] .overview-value { color: var(--yellow); }
 .overview-segment[data-tone="danger"] .overview-value { color: var(--red); }
+
+.travel-note-item {
+  justify-content: flex-start;
+  gap: 4px;
+}
+.travel-note-item .travel-state-mark { margin: 6px 8px 0 0; }
