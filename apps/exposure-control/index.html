@@ -58,7 +58,6 @@
               <span>Dark</span>
             </button>
           </div>
-          <button id="refreshAllBtn" type="button">Refresh all</button>
           <button id="emergencyBtn" class="danger danger-ghost" type="button">Disable all exposures</button>
         </div>
       </div>
@@ -82,7 +81,10 @@
             <h2 class="section-heading">overview</h2>
             <p class="section-copy">Operator posture across exposure, routing, updates, and the advisor.</p>
           </div>
-          <div id="loadState" class="result-count">loading…</div>
+          <div class="section-bar-actions">
+            <div id="loadState" class="result-count">loading…</div>
+            <button id="refreshAllBtn" type="button">Refresh</button>
+          </div>
         </div>
         <div id="overviewStrip" class="overview-strip"></div>
         <div class="overview-meta-row">
@@ -119,7 +121,10 @@
             <h2 class="section-heading">exposure control</h2>
             <p class="section-copy">Public exposure control on __SHARE_HOST_PREFIX__&lt;id&gt;.__PUBLIC_DOMAIN__. Default expiry is __DEFAULT_EXPIRY_HOURS__h; choose Until turned off when needed.</p>
           </div>
-          <div id="exposureMeta" class="section-detail"></div>
+          <div class="section-bar-actions">
+            <div id="exposureMeta" class="section-detail"></div>
+            <button id="exposureRefreshBtn" type="button">Refresh</button>
+          </div>
         </div>
         <div class="table-shell">
           <table>

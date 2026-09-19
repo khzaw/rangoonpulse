@@ -3639,3 +3639,13 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
   .overview-digest .support-card { border-right: 0; border-bottom: 1px solid var(--border); }
   .overview-digest .support-card:last-child { border-bottom: 0; }
 }
+
+.section-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+#emergencyBtn { margin-left: 0; padding-left: 15px; }
+#emergencyBtn::before { display: none; }
+.secrets-toolbar { padding: 0; }

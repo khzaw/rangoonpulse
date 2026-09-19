@@ -2607,6 +2607,8 @@
       }
 
       refreshAllBtn.onclick = () => loadDashboard();
+      const exposureRefreshBtn = document.getElementById('exposureRefreshBtn');
+      if (exposureRefreshBtn) exposureRefreshBtn.onclick = () => loadDashboard();
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
       updatesSearchInputEl.addEventListener('input', () => {
         updatesFilterQuery = updatesSearchInputEl.value || '';
