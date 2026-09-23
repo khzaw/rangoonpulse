@@ -30,7 +30,7 @@ spec:
             image:
               repository: lscr.io/linuxserver/jackett
               # renovate: datasource=github-releases depName=linuxserver/docker-jackett
-              tag: 0.24.2644
+              tag: 0.24.2651
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
