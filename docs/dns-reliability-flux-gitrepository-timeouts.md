@@ -30,7 +30,7 @@ Added:
 `kube-system/coredns` is now GitOps-managed with deterministic public recursive upstreams:
 - `1.1.1.1`
 - `1.0.0.1`
-- `9.9.9.9`
+- `8.8.8.8`
 
 Forwarding plugin settings used:
 - `max_concurrent 1000`
@@ -44,6 +44,14 @@ Rationale:
 - Removes dependency on node `/etc/resolv.conf` resolver chain for external lookups.
 - Improves upstream failover behavior and stale-connection handling.
 - Keeps in-cluster service discovery unchanged (`kubernetes cluster.local ...`).
+
+On **2026-09-24**, `8.8.8.8` replaced the original `9.9.9.9` CoreDNS upstream.
+Both CoreDNS pods repeatedly reported health-check failures to `9.9.9.9` even
+while DNS continued to answer. Over a 15-minute sample, its upstream p95 was
+about 470 ms versus 66–74 ms for the Cloudflare upstreams. A probe from a pod
+on the utility node completed 10/10 root-NS queries to `8.8.8.8`, while
+`9.9.9.9` completed 9/10 and took substantially longer. The Talos node
+nameservers below are separate and were not changed by this CoreDNS update.
 
 ### 2a) Talos Node Nameserver Pinning
 Talos machine configs now pin node-level upstream resolvers to:
