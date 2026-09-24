@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: prometheus-blackbox-exporter
-      version: "11.18.x"
+      version: "11.19.x"
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
