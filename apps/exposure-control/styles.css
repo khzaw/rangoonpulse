@@ -3211,7 +3211,6 @@ button.filter-btn.active {
 .pulse-heading { align-items: flex-end; padding: 36px 32px 28px; }
 .pulse-kicker { font: 10px var(--font-mono); letter-spacing: .13em; color: var(--text-2); text-transform: uppercase; margin-bottom: 12px; }
 .pulse-heading .section-heading { font-size: 54px; font-weight: 500; letter-spacing: -.055em; line-height: 1; }
-.pulse-title-dot { color: var(--text-2); }
 .pulse-heading .section-copy { margin-top: 12px; color: var(--text-2); }
 .pulse-status { font: 10px var(--font-mono); color: var(--text-2); white-space: nowrap; padding-bottom: 3px; }
 .pulse-status::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 8px; background: var(--text-dim); }
