@@ -79,19 +79,23 @@
       <section id="overview" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">overview</h2>
-            <p class="section-copy">Operator posture across exposure, routing, updates, and the advisor.</p>
+            <h2 class="section-heading">Overview</h2>
+            <p class="section-copy">What needs your attention, and what’s running quietly.</p>
           </div>
           <div class="section-bar-actions">
             <div id="loadState" class="result-count">loading…</div>
             <button id="refreshAllBtn" type="button">Refresh</button>
           </div>
         </div>
-        <div id="overviewStrip" class="overview-strip"></div>
-        <div class="overview-meta-row">
-          <div id="overviewMeta" class="overview-meta-cluster"></div>
-          <div id="overviewDetail" class="result-count"></div>
-        </div>
+        <div id="overviewStrip" class="overview-strip overview-priorities"></div>
+        <div id="overviewPosture" class="overview-posture"></div>
+        <details class="overview-timestamps">
+          <summary>Snapshot details</summary>
+          <div class="overview-meta-row">
+            <div id="overviewMeta" class="overview-meta-cluster"></div>
+            <div id="overviewDetail" class="result-count"></div>
+          </div>
+        </details>
         <div class="content-block">
           <div id="overviewDigest" class="overview-digest"></div>
         </div>
@@ -119,7 +123,7 @@
       <section id="exposure" class="section" data-page-section>
         <div class="panel-actions">
           <div>
-            <h2 class="section-heading">exposure control</h2>
+            <h2 class="section-heading">Exposure control</h2>
             <p class="section-copy">Public exposure control on __SHARE_HOST_PREFIX__&lt;id&gt;.__PUBLIC_DOMAIN__. Default expiry is __DEFAULT_EXPIRY_HOURS__h; choose Until turned off when needed.</p>
           </div>
           <div class="section-bar-actions">
@@ -203,16 +207,16 @@
       <section id="deploy" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">deploy sites</h2>
-            <p class="section-copy">Force Flux image automation and app reconciliation for the static sites, without opening a terminal.</p>
+            <h2 class="section-heading">Deploy sites</h2>
+            <p class="section-copy">Bring a site up to its latest published image.</p>
           </div>
           <div id="siteDeploySummary" class="section-detail">loads when opened</div>
         </div>
         <div id="siteDeployOverviewStrip" class="overview-strip site-deploy-strip"></div>
         <div class="toolbar site-deploy-toolbar">
           <div>
-            <h3 class="section-heading">targets</h3>
-            <p class="section-copy">Pressing a button scans GHCR, resolves the Flux image policy, runs image automation, refreshes Git, and reconciles the app.</p>
+            <h3 class="section-heading">Your sites</h3>
+            <p class="section-copy">Scan for a published image and reconcile through Flux. Readiness reflects the latest controller snapshot.</p>
           </div>
           <div class="site-deploy-toolbar-actions">
             <button id="siteDeployRefreshBtn" type="button">Refresh</button>
@@ -221,14 +225,14 @@
         </div>
         <div id="siteDeployList" class="site-deploy-grid"></div>
         <div class="content-block">
-          <div id="siteDeployMsg" class="msg"></div>
+          <div id="siteDeployMsg" class="msg" role="status" aria-live="polite"></div>
         </div>
       </section>
 
       <section id="updates" class="section" data-page-section>
         <div class="updates-toolbar">
           <div>
-            <h2 class="section-heading">renovate</h2>
+            <h2 class="section-heading">Updates</h2>
             <div id="renovateMeta" class="updates-meta">loading…</div>
           </div>
           <div class="updates-toolbar-actions">
@@ -241,7 +245,7 @@
         </div>
         <div class="updates-toolbar">
           <div>
-            <h2 class="section-heading">image updates</h2>
+            <h3 class="section-heading">Container images</h3>
             <div id="updatesMeta" class="updates-meta">no check yet</div>
           </div>
           <div class="updates-toolbar-actions">
@@ -257,7 +261,7 @@
           </div>
         </div>
         <div class="updates-scroll">
-          <table class="updates-table">
+          <table class="updates-table" role="table" aria-label="Container image updates">
             <thead>
               <tr>
                 <th>service</th>
@@ -275,13 +279,13 @@
         </div>
         <div class="updates-toolbar" style="padding-top:24px">
           <div>
-            <h2 class="section-heading">helm chart updates</h2>
+            <h3 class="section-heading">Helm charts</h3>
             <div id="helmUpdatesMeta" class="updates-meta">no check yet</div>
           </div>
           <button id="helmUpdatesRefreshBtn" type="button">Check Now</button>
         </div>
         <div class="updates-scroll">
-          <table>
+          <table class="helm-updates-table" role="table" aria-label="Helm chart updates">
             <thead>
               <tr>
                 <th>release</th>
@@ -303,7 +307,7 @@
       <section id="travel" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">travel</h2>
+            <h2 class="section-heading">Travel</h2>
             <p class="section-copy">Remote-life readiness across the Tailscale connector, key hostnames, public-share posture, and Transmission routing.</p>
           </div>
           <div id="travelSummary" class="section-detail section-detail-prose">loading…</div>
@@ -369,7 +373,7 @@
       <section id="tuning" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">tuning</h2>
+            <h2 class="section-heading">Tuning</h2>
             <p class="section-copy">Resource-advisor recommendations and live apply preflight, inside the shared cockpit.</p>
           </div>
           <div class="section-detail-stack">
@@ -480,7 +484,7 @@
       <section id="jobs" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">jobs</h2>
+            <h2 class="section-heading">Jobs</h2>
             <p class="section-copy">Managed Kubernetes CronJobs with operator-facing configuration, manual runs, and recent logs.</p>
           </div>
           <div id="jobsSummary" class="section-detail">loading…</div>
@@ -504,7 +508,7 @@
       <section id="secrets" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">secrets</h2>
+            <h2 class="section-heading">Secrets</h2>
             <p class="section-copy">GitOps-managed SOPS Secret keys from infrastructure/secrets, committed back to master and reconciled through Flux.</p>
           </div>
           <div id="secretsSummary" class="section-detail">loading…</div>

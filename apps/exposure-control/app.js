@@ -102,8 +102,8 @@
       let pendingExpiryRefresh = false;
       let transmissionVpnState = null;
       let activitySequence = 0;
-      let activityHideTimer = 0;
       const requestActivities = new Map();
+      const siteDeployOperations = new Map();
       const controlActivityOrb = window.ThinkingOrbs?.create(controlActivityOrbEl, {
         state: 'searching',
         size: 20,
@@ -376,45 +376,51 @@
 
       function describeRequestActivity(path, method) {
         const target = String(path || '');
-        const readOnly = String(method || 'GET').toUpperCase() === 'GET';
+        const readOnly = /^(GET|HEAD)$/.test(String(method || 'GET').toUpperCase());
         if (readOnly) {
-          if (/image-updates|helm-updates|renovate/.test(target)) return { state: 'searching', label: 'Checking updates' };
+          if (/image-updates|helm-updates|renovate/.test(target)) return { state: 'searching', label: 'Loading update report' };
           if (/site-deployments/.test(target)) return { state: 'searching', label: 'Checking deploy targets' };
-          if (/secrets/.test(target)) return { state: 'searching', label: 'Loading secrets' };
-          if (/jobs/.test(target)) return { state: 'searching', label: 'Loading jobs' };
-          if (/tuning/.test(target)) return { state: 'solving', label: 'Reading resource advisor' };
-          if (/travel/.test(target)) return { state: 'searching', label: 'Checking travel readiness' };
-          return { state: 'listening', label: 'Syncing control plane' };
+          if (/secrets/.test(target)) return { state: 'working', label: 'Loading secrets' };
+          if (/jobs/.test(target)) return { state: 'working', label: 'Loading jobs' };
+          if (/tuning/.test(target)) return { state: 'working', label: 'Reading resource advisor' };
+          if (/travel/.test(target)) return { state: 'working', label: 'Checking travel readiness' };
+          return { state: 'working', label: 'Syncing control plane' };
         }
-        if (/secrets/.test(target)) return { state: 'shaping', label: 'Updating secrets' };
-        if (/renovate/.test(target)) return { state: 'searching', label: 'Running Renovate' };
-        if (/site-deployments/.test(target)) return { state: 'composing', label: 'Deploying site' };
-        if (/tuning/.test(target)) return { state: 'solving', label: 'Applying recommendation' };
-        if (/jobs/.test(target)) return { state: 'working', label: 'Running managed job' };
+        if (/secrets/.test(target)) return { state: 'working', label: 'Updating secrets' };
+        if (/renovate/.test(target)) return { state: 'working', label: 'Requesting Renovate run' };
+        if (/site-deployments/.test(target)) return { state: 'working', label: 'Reconciling deployment' };
+        if (/tuning/.test(target)) return { state: 'working', label: 'Applying recommendation' };
+        if (/jobs/.test(target)) return { state: 'working', label: 'Starting managed job' };
         return { state: 'working', label: 'Applying control-plane change' };
       }
 
       function syncControlActivity() {
         if (!controlActivityEl || !controlActivityLabelEl) return;
         const activities = Array.from(requestActivities.values());
-        const active = activities.length ? activities[activities.length - 1] : null;
-        window.clearTimeout(activityHideTimer);
+        const mutations = activities.filter((activity) => activity.mutation);
+        // A background refresh must not replace the user's active operation.
+        const candidates = (mutations.length ? mutations : activities).filter((activity) => activity.visible);
+        const active = candidates[candidates.length - 1];
+        controlActivityEl.hidden = !active;
+        controlActivityOrb?.setPaused(!active);
         if (active) {
           controlActivityLabelEl.textContent = active.label;
-          controlActivityEl.hidden = false;
           controlActivityOrb?.setState(active.state);
-          controlActivityOrb?.setPaused(false);
-          return;
         }
-        activityHideTimer = window.setTimeout(() => {
-          controlActivityEl.hidden = true;
-          controlActivityOrb?.setPaused(true);
-        }, 180);
       }
 
       async function request(path, method, body) {
         const activityId = ++activitySequence;
-        requestActivities.set(activityId, describeRequestActivity(path, method));
+        const activity = {
+          ...describeRequestActivity(path, method),
+          mutation: !/^(GET|HEAD)$/.test(String(method || 'GET').toUpperCase()),
+          visible: false,
+        };
+        requestActivities.set(activityId, activity);
+        const revealTimer = window.setTimeout(() => {
+          activity.visible = true;
+          syncControlActivity();
+        }, 2000);
         syncControlActivity();
         try {
           const res = await fetch(path, {
@@ -426,6 +432,7 @@
           if (!res.ok) throw new Error(data.error || 'request failed');
           return data;
         } finally {
+          window.clearTimeout(revealTimer);
           requestActivities.delete(activityId);
           syncControlActivity();
         }
@@ -868,8 +875,12 @@
         }
 
         overviewDigestEl.innerHTML =
+          '<article class="support-card digest-card">' +
+            '<div class="digest-head"><div class="support-card-title">Pending updates</div><a class="digest-link" href="#updates">View updates</a></div>' +
+            list(pending.slice(0, 6), dashboardState.updates && dashboardState.helmUpdates ? 'No updates in the latest reports.' : 'Update reports are unavailable.') +
+          '</article>' +
           '<article class="support-card digest-card' + (activeServices.length ? ' is-hot' : '') + '">' +
-            '<div class="digest-head"><div class="support-card-title">public shares</div><a class="digest-link" href="#exposure">exposure control</a></div>' +
+            '<div class="digest-head"><div class="support-card-title">Public shares</div><a class="digest-link" href="#exposure">Manage shares</a></div>' +
             list(activeServices.map((svc) => ({
               name: svc.publicHost || svc.name || svc.id,
               href: svc.publicUrl,
@@ -877,11 +888,7 @@
             })), 'Nothing is public right now.') +
           '</article>' +
           '<article class="support-card digest-card">' +
-            '<div class="digest-head"><div class="support-card-title">pending updates</div><a class="digest-link" href="#updates">updates</a></div>' +
-            list(pending.slice(0, 6), 'Everything tracked is on its latest known version.') +
-          '</article>' +
-          '<article class="support-card digest-card">' +
-            '<div class="digest-head"><div class="support-card-title">recent actions</div><a class="digest-link" href="#audit">audit</a></div>' +
+            '<div class="digest-head"><div class="support-card-title">Recent activity</div><a class="digest-link" href="#audit">View log</a></div>' +
             list(audit.map((entry) => ({
               name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
               detail: fmtDateTime(entry.ts),
@@ -916,7 +923,7 @@
         const helmUpdateItems = helmUpdates && Array.isArray(helmUpdates.items) ? helmUpdates.items : [];
         const helmUpdatesAvailable = helmUpdateItems.filter((item) => item && item.status === 'update').length;
         const selectedNow = tuning && tuning.applyPreflight ? Number(tuning.applyPreflight.selectedCount || 0) : 0;
-        const recommendations = tuning && tuning.report ? Number(tuning.report.recommendationCount || 0) : 0;
+        const hasApplyPreview = Boolean(tuning && tuning.applyPreflight && Date.parse(tuning.applyPreflight.builtAt) > 0);
         const hardFitOk = tuning && tuning.applyPreflight ? Boolean(tuning.applyPreflight.hardFitOk) : false;
         const fetchState = tuning && tuning.fetch ? tuning.fetch.state : 'degraded';
         const fetchDetail = tuning && tuning.fetch ? tuning.fetch.detail : 'resource-advisor unavailable';
@@ -925,46 +932,30 @@
         const travelState = travel && travel.summary ? travel.summary.state : 'unknown';
         const travelHeadline = travel && travel.summary ? travel.summary.headline : 'travel snapshot unavailable';
 
+        const updateCount = updatesAvailable + helmUpdatesAvailable;
+        const reportsAvailable = Boolean(updates && helmUpdates);
+        const updateDetail = reportsAvailable
+          ? updatesAvailable + ' image' + (updatesAvailable === 1 ? '' : 's') + ' and ' + helmUpdatesAvailable + ' chart' + (helmUpdatesAvailable === 1 ? '' : 's') + ' in the latest reports'
+          : 'Some update reports are unavailable';
         overviewStripEl.innerHTML =
-          overviewSegment('exposures', String(activeExposures), services.length + ' configured share targets', {
-            eyebrow: 'temporary public',
-            href: '#exposure',
-            barPct: services.length ? activeExposures / services.length * 100 : 0,
-            tone: activeExposures > 0 ? 'warning' : 'status',
+          overviewSegment('Updates to review', reportsAvailable ? String(updateCount) : (updateCount ? updateCount + '+' : '—'), updateDetail, {
+            href: '#updates', tone: updateCount || !reportsAvailable ? 'warning' : 'status',
           }) +
-          overviewSegment('transmission', desiredMode, 'running ' + runningMode, {
-            eyebrow: 'desired route',
-            href: '#transmission',
-            tone: desiredMode === 'vpn' ? 'warning' : 'status',
+          overviewSegment('Public shares', String(activeExposures), activeExposures ? 'Check access and expiry for active shares' : 'All share links are closed', {
+            href: '#exposure', tone: activeExposures > 0 ? 'warning' : 'status',
           }) +
-          overviewSegment('planner', String(selectedNow), recommendations + ' recommendations in current report', {
-            eyebrow: 'selected now',
-            href: '#tuning',
-            barPct: recommendations ? selectedNow / recommendations * 100 : 0,
-            tone: hardFitOk ? 'status' : 'warning',
-          }) +
-          overviewSegment('image updates', String(updatesAvailable), updateItems.length ? updateItems.length + ' tracked workloads' : 'cached report unavailable', {
-            eyebrow: 'updates available',
-            href: '#updates',
-            barPct: updateItems.length ? updatesAvailable / updateItems.length * 100 : 0,
-            tone: updatesAvailable > 0 ? 'warning' : 'status',
-          }) +
-          overviewSegment('chart updates', String(helmUpdatesAvailable), helmUpdateItems.length ? helmUpdateItems.length + ' helm releases' : 'cached report unavailable', {
-            eyebrow: 'updates available',
-            href: '#updates',
-            barPct: helmUpdateItems.length ? helmUpdatesAvailable / helmUpdateItems.length * 100 : 0,
-            tone: helmUpdatesAvailable > 0 ? 'warning' : 'status',
-          }) +
-          overviewSegment('travel', travelState, travelHeadline, {
-            eyebrow: 'remote posture',
-            href: '#travel',
-            tone: travelTone(travelState),
-          }) +
-          overviewSegment('advisor fetch', fetchState, fetchDetail, {
-            eyebrow: 'resource-advisor',
-            href: '#tuning',
-            tone: fetchState === 'live' ? 'status' : 'danger',
+          overviewSegment('Resource plan', hasApplyPreview ? String(selectedNow) : '—', hasApplyPreview ? 'Selected in the current apply preview' : 'Advisor snapshot unavailable', {
+            href: '#tuning', tone: hardFitOk ? 'status' : 'warning',
           });
+
+        function posture(label, value, href, tone, detail) {
+          return '<a class="posture-item" href="' + href + '" data-tone="' + tone + '" title="' + attrText(detail) + '"><span class="posture-label">' + label + '</span><span class="posture-value">' + escapeHtml(value) + '</span></a>';
+        }
+        document.getElementById('overviewPosture').innerHTML =
+          posture('Travel', travelState, '#travel', travelTone(travelState), travelHeadline) +
+          posture('Transmission', runningMode, '#transmission', runningMode === 'unknown' ? 'warning' : 'status', 'Desired route: ' + desiredMode) +
+          posture('Advisor', fetchState === 'live' ? 'Connected' : 'Unavailable', '#tuning', fetchState === 'live' ? 'status' : 'warning', fetchDetail) +
+          '<a class="posture-item posture-telemetry" href="#pulse"><span class="posture-label">CPU, memory & storage</span><span class="posture-value">Open Pulse</span></a>';
 
         const meta = [];
         if (tuning && tuning.fetch) {
@@ -1117,8 +1108,9 @@
       function shortHash(value) {
         const text = String(value || '');
         if (!text || text === 'n/a') return 'n/a';
-        if (text.length <= 22) return text;
-        return text.slice(0, 13) + '…' + text.slice(-7);
+        const hashTag = text.match(/^(.*?)([a-f0-9]{12,64})$/i);
+        if (hashTag) return hashTag[1] + hashTag[2].slice(0, 7);
+        return text.length <= 26 ? text : text.slice(0, 25) + '…';
       }
 
       function deployTag(label, value) {
@@ -1126,9 +1118,63 @@
         return '<span class="site-deploy-tag has-full-tooltip" title="' + attrText(full) + '" data-full-tooltip="' + attrText(full) + '"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(shortHash(full)) + '</strong></span>';
       }
 
+      function syncSiteDeploymentActivity() {
+        const all = siteDeployOperations.get('*');
+        const allPending = Boolean(all && all.pending);
+        const pendingOperations = Array.from(siteDeployOperations.values()).filter((operation) => operation.pending);
+        const beamOperation = allPending ? null : pendingOperations.filter((operation) => operation.beaming).at(-1);
+        const anyPending = pendingOperations.length > 0;
+        siteDeployAllBtn.disabled = anyPending;
+        siteDeployAllBtn.textContent = allPending ? 'Reconciling all…' : 'Deploy all';
+        siteDeployMsgEl.classList.toggle('is-deploying', allPending);
+        siteDeployMsgEl.classList.toggle('is-beaming', Boolean(allPending && all.beaming));
+        siteDeployListEl.querySelectorAll('[data-site-id]').forEach((card) => {
+          const operation = siteDeployOperations.get(card.dataset.siteId);
+          const pending = Boolean(operation && operation.pending);
+          card.classList.toggle('is-deploying', pending);
+          card.classList.toggle('is-beaming', Boolean(pending && operation === beamOperation));
+          const button = card.querySelector('[data-site-deploy-run]');
+          button.disabled = pending || allPending;
+          button.textContent = pending ? 'Reconciling…' : 'Deploy';
+          const progress = card.querySelector('.deploy-progress');
+          progress.textContent = operation ? operation.label : '';
+          progress.classList.toggle('is-error', Boolean(operation && operation.error));
+          progress.title = operation ? operation.detail || '' : '';
+        });
+      }
+
+      function beginSiteDeployment(siteId) {
+        const allPending = siteDeployOperations.get('*')?.pending;
+        const samePending = siteDeployOperations.get(siteId)?.pending;
+        const anyPending = Array.from(siteDeployOperations.values()).some((operation) => operation.pending);
+        if (allPending || samePending || (siteId === '*' && anyPending)) return null;
+        if (siteId === '*') siteDeployOperations.clear();
+        const operation = { pending: true, beaming: false, label: 'Requesting Flux reconcile…' };
+        // Keep insertion order aligned with request start, including retries.
+        siteDeployOperations.delete(siteId);
+        siteDeployOperations.set(siteId, operation);
+        operation.timer = window.setTimeout(() => {
+          operation.beaming = true;
+          syncSiteDeploymentActivity();
+        }, 3000);
+        syncSiteDeploymentActivity();
+        return operation;
+      }
+
+      function finishSiteDeployment(operation, error, detail) {
+        window.clearTimeout(operation.timer);
+        operation.pending = false;
+        operation.beaming = false;
+        operation.error = Boolean(error);
+        operation.label = error ? 'Reconcile request failed' : 'Reconcile requested';
+        operation.detail = detail || '';
+        syncSiteDeploymentActivity();
+      }
+
       function renderSiteDeployments(payload) {
         const data = payload || { items: [] };
         const items = Array.isArray(data.items) ? data.items : [];
+        const focusedSite = document.activeElement?.dataset.siteDeployRun;
         dashboardState.siteDeployments = data;
         const readyCount = items.filter((item) => item && item.ready).length;
         const errorCount = items.filter((item) => item && item.errors && item.errors.length).length;
@@ -1141,95 +1187,108 @@
 
         if (!items.length) {
           siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
+          syncSiteDeploymentActivity();
           return;
         }
-        siteDeployListEl.innerHTML = items.map((item, index) => {
+        siteDeployListEl.innerHTML = items.map((item) => {
           const ready = item.ready;
           const latest = item.latestTag || 'n/a';
           const current = item.currentTag || 'n/a';
-          const buttonText = 'Deploy';
-          const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">open site</a>' : '<span class="muted">cluster-internal</span>';
+          const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">Open site <span aria-hidden="true">↗</span></a>' : '<span class="muted">Cluster-internal</span>';
           const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
-          const enterDelay = Math.min(index * 30, 120);
+          const readyDetail = 'Kustomization: ' + conditionLabel(item.kustomizationReady) + ' · Helm: ' + conditionLabel(item.helmReleaseReady);
           return (
-            '<article class="support-card site-deploy-card" style="--deploy-enter-delay:' + enterDelay + 'ms">' +
+            '<article class="support-card site-deploy-card" data-site-id="' + attrText(item.id) + '">' +
               '<div class="site-deploy-card-head">' +
-                '<div class="support-card-title">' + escapeHtml(item.title || item.id) + '</div>' +
+                '<h4 class="site-deploy-name">' + escapeHtml(item.title || item.id) + '</h4>' +
                 '<span class="status-chip ' + (ready ? 'ok' : 'warning') + '">' + (ready ? 'ready' : 'check') + '</span>' +
               '</div>' +
-              '<div class="site-deploy-meta">' +
+              '<div class="site-deploy-versions">' +
                 deployTag('current', current) +
                 deployTag('policy', latest) +
-                '<span>scan ' + escapeHtml(fmtDateTime(item.lastScanTime)) + '</span>' +
-                '<span>kustomization ' + escapeHtml(conditionLabel(item.kustomizationReady)) + '</span>' +
-                '<span>helm ' + escapeHtml(conditionLabel(item.helmReleaseReady)) + '</span>' +
               '</div>' +
+              '<div class="site-deploy-meta">' +
+                '<span title="' + attrText(fmtDateTime(item.lastScanTime)) + '">Scanned ' + escapeHtml(fmtTime(item.lastScanTime)) + '</span>' +
+                '<span title="' + attrText(readyDetail) + '">' + (ready ? 'Flux ready' : escapeHtml(readyDetail)) + '</span>' +
+              '</div>' +
+              '<div class="deploy-progress" role="status" aria-live="polite"></div>' +
               errorText +
               '<div class="site-deploy-actions">' +
                 link +
-                '<button type="button" data-site-deploy-run="' + escapeHtml(item.id) + '">' + buttonText + '</button>' +
+                '<button type="button" data-site-deploy-run="' + attrText(item.id) + '">Deploy</button>' +
               '</div>' +
             '</article>'
           );
         }).join('');
-        const renderedCards = Array.from(siteDeployListEl.querySelectorAll('.site-deploy-card'));
-        window.setTimeout(() => {
-          renderedCards.forEach((card) => {
-            card.style.removeProperty('--deploy-enter-delay');
-          });
-        }, 320);
+        syncSiteDeploymentActivity();
+        if (focusedSite) {
+          siteDeployListEl.querySelector('[data-site-deploy-run="' + CSS.escape(focusedSite) + '"]:not(:disabled)')?.focus({ preventScroll: true });
+        }
       }
 
       async function loadSiteDeployments(options) {
         const force = Boolean(options && options.force);
+        const hasPendingOperation = () => Array.from(siteDeployOperations.values()).some((operation) => operation.pending);
         if (force) {
           setBtnLoading(siteDeployRefreshBtn, true);
-          setSiteDeployMsg('Refreshing deploy targets...');
+          if (!hasPendingOperation()) setSiteDeployMsg('Refreshing deploy targets...');
         }
         try {
           const payload = await request('/api/site-deployments', 'GET');
           renderSiteDeployments(payload);
-          if (force) setSiteDeployMsg('Deploy targets refreshed.');
+          if (force && !hasPendingOperation()) setSiteDeployMsg('Deploy targets refreshed.');
         } catch (err) {
-          siteDeploySummaryEl.textContent = 'Site deploys unavailable';
-          siteDeployOverviewStripEl.innerHTML = '';
-          siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
-          setSiteDeployMsg(err.message, true);
+          siteDeploySummaryEl.textContent = 'Deploy snapshot unavailable';
+          // Keep existing controls and any in-flight operation visible on a failed refresh.
+          if (!dashboardState.siteDeployments) {
+            siteDeployOverviewStripEl.innerHTML = '';
+            siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
+          }
+          if (!hasPendingOperation()) setSiteDeployMsg('Could not refresh deploy targets: ' + err.message, true);
         } finally {
           if (force) setBtnLoading(siteDeployRefreshBtn, false);
         }
       }
 
       async function runSiteDeployment(siteId, button) {
-        setBtnLoading(button, true);
-        setSiteDeployMsg('Reconciling only ' + siteId + ' through its Flux image automation...');
+        const restoreFocus = document.activeElement === button;
+        const operation = beginSiteDeployment(siteId);
+        if (!operation) return;
+        setSiteDeployMsg('Reconciling ' + siteId + ' through Flux image automation…');
         try {
           const payload = await request('/api/site-deployments/' + encodeURIComponent(siteId) + '/run', 'POST', {});
           const handled = (payload.steps || []).filter((step) => step.handled).length;
           const total = (payload.steps || []).length;
-          setSiteDeployMsg((payload.message || 'Deploy reconcile requested.') + ' ' + handled + '/' + total + ' controller(s) acknowledged the request.');
+          const acknowledgment = handled + '/' + total + ' controllers acknowledged the request. Readiness is shown separately.';
+          finishSiteDeployment(operation, false, acknowledgment);
+          setSiteDeployMsg('Reconcile requested for ' + siteId + '. ' + acknowledgment);
           await loadSiteDeployments();
         } catch (err) {
+          finishSiteDeployment(operation, true, err.message);
           setSiteDeployMsg(err.message, true);
         } finally {
-          setBtnLoading(button, false);
+          if (restoreFocus && activePage === 'deploy' && document.activeElement === document.body) {
+            siteDeployListEl.querySelector('[data-site-deploy-run="' + CSS.escape(siteId) + '"]:not(:disabled)')?.focus({ preventScroll: true });
+          }
         }
       }
 
       async function runAllSiteDeployments(button) {
-        setBtnLoading(button, true);
-        setSiteDeployMsg('Reconciling all static sites through their Flux image automations...');
+        const operation = beginSiteDeployment('*');
+        if (!operation) return;
+        setSiteDeployMsg('Reconciling all sites through Flux image automation…');
         try {
           const payload = await request('/api/site-deployments/run', 'POST', {});
           const steps = (payload.results || []).flatMap((result) => result.steps || []);
           const handled = steps.filter((step) => step.handled).length;
           const total = steps.length;
-          setSiteDeployMsg((payload.message || 'Deploy reconcile requested for all static sites.') + ' ' + handled + '/' + total + ' controller(s) acknowledged the request.');
+          const acknowledgment = handled + '/' + total + ' controllers acknowledged the request. Readiness is shown separately.';
+          finishSiteDeployment(operation, false, acknowledgment);
+          setSiteDeployMsg('Reconcile requested for all sites. ' + acknowledgment);
           await loadSiteDeployments();
         } catch (err) {
+          finishSiteDeployment(operation, true, err.message);
           setSiteDeployMsg(err.message, true);
-        } finally {
-          setBtnLoading(button, false);
         }
       }
 
@@ -1832,6 +1891,8 @@
         } else {
           visibleItems.forEach((item) => {
             const tr = document.createElement('tr');
+            tr.className = 'update-row';
+            tr.setAttribute('role', 'row');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
             const imageLabel = item.imageRepo || item.image || '—';
             const imageDetail = [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ');
@@ -1853,11 +1914,11 @@
               }
             }
             tr.innerHTML =
-              '<td><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
-              '<td class="updates-version-cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
-              '<td class="updates-status-cell"><span class="update-chip ' + (item.status || 'unknown') + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
-              '<td class="updates-context-cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(imageDetail) + '</div></td>' +
-              '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
+              '<td class="updates-service-cell" data-label="Service" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
+              '<td class="updates-version-cell" data-label="Version" role="cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
+              '<td class="updates-status-cell" data-label="Status" role="cell"><span class="update-chip ' + (item.status || 'unknown') + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
+              '<td class="updates-context-cell" data-label="Image" role="cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(imageDetail) + '</div></td>' +
+              '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
         }
@@ -1920,6 +1981,8 @@
         } else {
           items.forEach((item) => {
             const tr = document.createElement('tr');
+            tr.className = 'update-row';
+            tr.setAttribute('role', 'row');
             const nsPrefix = item.namespace ? item.namespace + '/' : '';
             const matchingPr = findMatchingRenovatePr(item, 'helm');
             let actionHtml = '<span class="updates-action-note">—</span>';
@@ -1935,12 +1998,12 @@
               }
             }
             tr.innerHTML =
-              '<td><div class="svc-name">' + (item.name || item.id || '') + '</div><div class="svc-id">' + nsPrefix + (item.id || '') + '</div></td>' +
-              '<td class="updates-version updates-cell-center">' + (item.currentVersion || '—') + '</td>' +
-              '<td class="updates-version updates-cell-center">' + (item.latestVersion || '—') + '</td>' +
-              '<td class="updates-cell-center"><span class="update-chip ' + (item.status || 'unknown') + '">' + String(item.statusText || 'unknown').toLowerCase() + '</span></td>' +
-              '<td class="updates-context-cell"><div class="updates-version">' + (item.chart || '—') + '</div><div class="updates-sub">' + (item.repo || '—') + (item.detail ? ' · ' + item.detail : '') + '</div></td>' +
-              '<td class="updates-cell-center updates-action-cell">' + actionHtml + '</td>';
+              '<td class="updates-service-cell" data-label="Release" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
+              '<td class="updates-version updates-cell-center helm-current-cell" data-label="Current" role="cell">' + escapeHtml(item.currentVersion || '—') + '</td>' +
+              '<td class="updates-version updates-cell-center helm-latest-cell" data-label="Latest" role="cell">' + escapeHtml(item.latestVersion || '—') + '</td>' +
+              '<td class="updates-cell-center updates-status-cell" data-label="Status" role="cell"><span class="update-chip ' + attrText(item.status || 'unknown') + '">' + escapeHtml(String(item.statusText || 'unknown').toLowerCase()) + '</span></td>' +
+              '<td class="updates-context-cell" data-label="Chart" role="cell"><div class="updates-version">' + escapeHtml(item.chart || '—') + '</div><div class="updates-sub">' + escapeHtml((item.repo || '—') + (item.detail ? ' · ' + item.detail : '')) + '</div></td>' +
+              '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
             helmUpdatesRowsEl.appendChild(tr);
           });
         }
@@ -2477,7 +2540,7 @@
           setUpdatesMsg('Loading cached update report...');
           setTravelMsg('Refreshing travel readiness...');
           setBtnLoading(refreshAllBtn, true);
-          overviewStripEl.innerHTML = skeletonOverviewStrip(7);
+          overviewStripEl.innerHTML = skeletonOverviewStrip(3);
           travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           tuningOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
@@ -2852,7 +2915,9 @@
       setInterval(() => {
         if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
       }, 60000);
+      document.documentElement.classList.toggle('is-backgrounded', document.hidden);
       document.addEventListener('visibilitychange', () => {
+        document.documentElement.classList.toggle('is-backgrounded', document.hidden);
         if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
       });
       setInterval(tickExpiryCountdowns, 1000);

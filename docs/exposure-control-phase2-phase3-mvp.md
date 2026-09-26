@@ -98,6 +98,30 @@ Default exposure expiry:
 - asset URLs carry a content-hash `?v=` and are browser-cached immutable; the HTML re-renders when any asset hash changes
 - CSP allows Google Fonts (`fonts.googleapis.com` styles, `fonts.gstatic.com` font files) and hash-pins the inline theme-bootstrap script; all other sources remain `'self'`
 
+## Cockpit presentation
+
+Overview puts update reviews, public shares, and the resource plan first. Travel,
+Transmission, and advisor connectivity sit in a compact status strip; exact
+snapshot times remain available under **Snapshot details**. Missing update
+reports and advisor snapshots stay explicitly unavailable.
+
+Deploy targets use three columns on desktop, two on tablets, and one on phones.
+A target's pending request stays visible across inventory refreshes. After three
+seconds, a thin CSS beam marks the active target; a deploy-all request uses one
+shared activity cue. The beam is a native adaptation of the Libraries.dev pattern,
+with no React or runtime dependency. Reduced motion retains a static cue, and
+hidden tabs pause the animation.
+
+The existing Thinking Orbs adaptation appears only when a request lasts at least
+two seconds. Operator writes take priority over background reads. Its label
+describes the request, while report text separately describes background scans.
+Controller acknowledgment is shown as **Reconcile requested**, not proof that a
+new image is serving; the card's readiness comes from the latest Flux snapshot.
+
+Image and chart update tables become labelled records on narrow screens so
+versions, status, and actions remain visible together. Both themes retain the
+IBM Plex type system, with color reserved for operational state.
+
 ## Validation Checklist (Passed)
 
 1. Control plane health:
