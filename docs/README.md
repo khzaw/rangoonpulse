@@ -83,7 +83,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 - [`docs/controlpanel-pulse.md`](./controlpanel-pulse.md) for the cockpit Pulse page, bounded metrics access, and visualization verification.
 
-- [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the current tuning workflow, apply-PR model, and cockpit/exporter contract.
+- [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for the tuning workflow, read-only proposed-change ledger, apply-PR model, and cockpit/exporter evidence contract.
 - [`docs/homelab-operations-dashboards.md`](./homelab-operations-dashboards.md) for the Grafana operations dashboards.
 - [`docs/dashboards-dynacat.md`](./dashboards-dynacat.md) for the Dynacat dashboard, monitors, and widget-specific gotchas.
 - [`docs/gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md) for rollout/change timeline interpretation.

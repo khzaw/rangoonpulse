@@ -11,6 +11,7 @@ configMapGenerator:
     files:
       - app.js
       - pulse.js
+      - tuning.js
       - index.html
       - renovate-dashboard.js
       - server.js

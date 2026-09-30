@@ -371,114 +371,54 @@
       </section>
 
       <section id="tuning" class="section" data-page-section>
-        <div class="section-bar">
-          <div>
-            <h2 class="section-heading">Tuning</h2>
-            <p class="section-copy">Resource-advisor recommendations and live apply preflight, inside the shared cockpit.</p>
+        <div class="tuning-heading">
+          <h2 class="section-heading">Tuning</h2>
+          <span class="tuning-subtle">Resource advisor · read-only preview</span>
+        </div>
+        <div id="tuningSummary" class="tuning-summary"><p>Loading tuning evidence…</p></div>
+        <div class="tuning-ledger-tools">
+          <div class="tuning-views" role="group" aria-label="Tuning selection filters">
+            <button type="button" data-tuning-view="selected" aria-pressed="true">Proposed PR changes</button>
+            <button type="button" data-tuning-view="deferred" aria-pressed="false">Deferred</button>
+            <button type="button" data-tuning-view="unchanged" aria-pressed="false">No change</button>
+            <button type="button" data-tuning-view="all" aria-pressed="false">All workloads</button>
           </div>
-          <div class="section-detail-stack">
-            <div id="tuningSummary" class="section-detail">loading…</div>
-            <div class="report-links">report:
-              <a href="/api/tuning/latest.json" target="_blank" rel="noreferrer">json</a>
-              <a href="/api/tuning/latest.md" target="_blank" rel="noreferrer">markdown</a>
-              <a href="/api/tuning/metrics" target="_blank" rel="noreferrer">metrics</a>
-            </div>
-          </div>
-        </div>
-        <div class="content-block">
-          <div id="tuningOverviewStrip" class="overview-strip tuning-strip"></div>
-          <div class="overview-meta-row">
-            <div id="tuningOverviewMeta" class="overview-meta-cluster"></div>
-            <div id="tuningOverviewDetail" class="result-count"></div>
-          </div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">apply preflight</h3>
-            <p class="section-copy">Live selection preview for the weekly apply job, using hard node-fit blocking and advisory cluster pressure ordering.</p>
-          </div>
-          <div id="plannerMeta" class="section-detail">planner unavailable</div>
-        </div>
-        <div class="content-block" style="padding-top:18px">
-          <div id="plannerGrid" class="planner-grid"></div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">recommendation focus</h3>
-            <p class="section-copy">Highest-signal slices from the current advisor window.</p>
-          </div>
-          <div id="tuningFocusMeta" class="section-detail"></div>
-        </div>
-        <div class="content-block" style="padding-top:18px">
-          <div id="tuningFocusGrid" class="focus-grid"></div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">control notes</h3>
-            <p class="section-copy">Planner bounds and recurring note patterns behind the current recommendation set.</p>
-          </div>
-          <div id="tuningControlMeta" class="section-detail"></div>
-        </div>
-        <div class="content-block" style="padding-top:18px">
-          <div id="tuningControlGrid" class="support-grid"></div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">recommendation set</h3>
-            <p class="section-copy">Filterable live view from the current configmap report, with live pod restart counts beside historical 14d restart activity.</p>
-          </div>
-          <div id="tuningTableMeta" class="section-detail"></div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <div class="filter-group" role="tablist" aria-label="Tuning action filters">
-              <button class="filter-btn active" type="button" data-filter-action="all">all</button>
-              <button class="filter-btn" type="button" data-filter-action="upsize">upsize</button>
-              <button class="filter-btn" type="button" data-filter-action="downsize">downsize</button>
-              <button class="filter-btn" type="button" data-filter-action="no-change">no change</button>
-            </div>
-            <select id="noteFilter" class="control-select" aria-label="Tuning note filter">
-              <option value="all">all notes</option>
+          <div class="tuning-filters">
+            <input id="searchInput" type="search" aria-label="Search tuning workloads" placeholder="Search workload, container, reason…" />
+            <select id="tuningAction" aria-label="Tuning action filter">
+              <option value="all">All actions</option>
+              <option value="upsize">Increase</option>
+              <option value="downsize">Reduce</option>
+              <option value="no-change">No change</option>
             </select>
-          </div>
-          <div class="toolbar-right">
-            <label class="search-shell">
-              <span class="input-prefix">&gt;</span>
-              <input id="searchInput" type="search" placeholder="Filter workloads..." />
-            </label>
-            <div id="tuningCount" class="result-count">0 visible rows</div>
+            <select id="noteFilter" aria-label="Tuning note filter"><option value="all">All notes</option></select>
+            <span id="tuningCount" class="tuning-subtle" role="status">Loading containers…</span>
           </div>
         </div>
-        <div class="table-shell tuning-table-shell">
-          <table class="tuning-table">
-            <thead>
-              <tr>
-                <th>workload</th>
-                <th>action</th>
-                <th>cpu request</th>
-                <th>memory request</th>
-                <th>observed usage</th>
-                <th>basis</th>
-                <th>restart signal</th>
-                <th>notes</th>
-              </tr>
-            </thead>
-            <tbody id="tuningRows"></tbody>
-          </table>
-          <div id="tuningEmpty" class="empty-state" hidden>No rows match the current filters.</div>
+        <div class="tuning-ledger" role="region" aria-label="Resource change ledger">
+          <div class="tuning-ledger-head" aria-hidden="true"><span>Workload / container</span><span>Selection / reason</span><span>CPU request</span><span>Memory request</span><span>Evidence</span></div>
+          <div id="tuningRows"></div>
+          <p id="tuningEmpty" class="tuning-empty" hidden>No changes selected. Choose All workloads to inspect the report.</p>
         </div>
-        <div class="content-block">
-          <div class="section-bar" style="padding:0 0 14px;border-bottom:none">
-            <div>
-              <h3 class="section-heading">system output</h3>
-              <p class="section-copy">Rendered preview from the runtime-owned advisor markdown report.</p>
-            </div>
-            <div id="tuningRuntimeMeta" class="section-detail"></div>
+        <details class="tuning-disclosure">
+          <summary>Capacity and policy</summary>
+          <div id="tuningDiagnostics" class="tuning-disclosure-body"></div>
+        </details>
+        <details class="tuning-disclosure">
+          <summary>Diagnostics and raw output</summary>
+          <div class="tuning-disclosure-body">
+            <p class="report-links">Download:
+              <a href="/api/tuning/latest.json" target="_blank" rel="noopener noreferrer">Report JSON</a>
+              <a href="/api/tuning/latest.md" target="_blank" rel="noopener noreferrer">Report Markdown</a>
+              <a href="/api/tuning/metrics" target="_blank" rel="noopener noreferrer">Metrics</a>
+              <a href="/api/tuning" target="_blank" rel="noopener noreferrer">Full snapshot JSON</a>
+            </p>
+            <h3>Report output</h3>
+            <pre id="tuningRawReport">Report output unavailable.</pre>
+            <h3>Last execution output</h3>
+            <pre id="tuningRawExecution">Execution output unavailable.</pre>
           </div>
-          <div class="terminal-shell">
-            <div id="runtimeLines" class="runtime-markdown"></div>
-          </div>
-        </div>
+        </details>
       </section>
 
       <section id="jobs" class="section" data-page-section>
@@ -553,6 +493,7 @@
     <script src="/assets/thinking-orb.js" defer></script>
     <script src="/assets/update-policy.js" defer></script>
     <script src="/assets/pulse.js" defer></script>
+    <script src="/assets/tuning.js" defer></script>
     <script src="/assets/app.js" defer></script>
 
   </body>

@@ -1379,11 +1379,6 @@ table {
   border-collapse: collapse;
 }
 
-.tuning-table {
-  min-width: 1460px;
-  table-layout: fixed;
-}
-
 th,
 td {
   text-align: left;
@@ -1431,55 +1426,6 @@ tr:hover td {
 .audit-scroll table td:first-child,
 .audit-scroll table td:nth-child(2) {
   white-space: nowrap;
-}
-
-.tuning-table th:nth-child(1),
-.tuning-table td:nth-child(1) {
-  width: 25%;
-}
-.tuning-table th:nth-child(2),
-.tuning-table td:nth-child(2) {
-  width: 8%;
-}
-.tuning-table th:nth-child(3),
-.tuning-table td:nth-child(3),
-.tuning-table th:nth-child(4),
-.tuning-table td:nth-child(4),
-.tuning-table th:nth-child(5),
-.tuning-table td:nth-child(5) {
-  width: 10%;
-}
-.tuning-table th:nth-child(6),
-.tuning-table td:nth-child(6) {
-  width: 6%;
-}
-.tuning-table th:nth-child(7),
-.tuning-table td:nth-child(7) {
-  width: 14%;
-}
-.tuning-table th:nth-child(8),
-.tuning-table td:nth-child(8) {
-  width: 17%;
-}
-
-.tuning-table .metric-pair,
-.tuning-table .usage-line {
-  white-space: nowrap;
-}
-
-.tuning-table .metric-delta,
-.tuning-table .workload-meta {
-  margin-top: 6px;
-}
-
-.tuning-table .workload-meta {
-  line-height: 1.45;
-}
-
-.tuning-table .notes-cell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .updates-table,
@@ -3425,23 +3371,6 @@ button.ghost:hover { color: var(--text-1); background: var(--soft-hover); }
 /* A message slot with nothing in it should not hold its padding open. */
 .content-block:has(> .msg:only-child:empty) { display: none; }
 
-/* Tuning table scrolls sideways; keep the workload name in view. */
-.tuning-table th:nth-child(1),
-.tuning-table td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--bg-panel);
-  box-shadow: inset -1px 0 0 var(--border);
-}
-.tuning-table th:nth-child(1) {
-  z-index: 3;
-  background: var(--table-head-bg);
-}
-.tuning-table tbody tr:hover td:nth-child(1) {
-  background: var(--table-row-hover);
-}
-
 /* Update chips: the normal state is plain text, only actionable states get a box. */
 .update-chip.current,
 .update-chip.unknown,
@@ -3757,3 +3686,153 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
   font-size: 11px;
 }
 .audit-action { font-family: var(--font-mono); font-size: 11.5px; }
+
+/* Tuning is a decision ledger, not a second dashboard of report totals. */
+#tuning { container: tuning / inline-size; }
+#tuning .tuning-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 18px 22px 8px;
+}
+#tuning .tuning-summary { padding: 8px 22px 16px; }
+#tuning .tuning-subtle,
+#tuning .tuning-label,
+#tuning .tuning-freshness { color: var(--text-2); font-size: 12px; }
+#tuning .tuning-decision {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+#tuning .tuning-decision h3 { font-size: clamp(22px, 2.4cqi, 30px); line-height: 1.2; font-weight: 550; margin-bottom: 8px; }
+#tuning .tuning-impact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+#tuning .tuning-impact > div { border-left: 1px solid var(--border); padding-left: 16px; }
+#tuning .tuning-impact span,
+#tuning .tuning-impact-value { display: block; }
+#tuning .tuning-impact-value { font-family: var(--font-mono); font-size: 23px; font-weight: 500; line-height: 1.4; }
+#tuning .tuning-scope { margin-top: 10px; }
+#tuning .tuning-checks { display: flex; flex-wrap: wrap; gap: 4px 24px; padding-block: 10px; }
+#tuning .tuning-checks strong { font-weight: 550; margin-right: 6px; }
+#tuning .tuning-run-lines { border-top: 1px solid var(--border); padding-top: 8px; }
+#tuning .tuning-run-lines p { margin: 2px 0; }
+#tuning .tuning-run-lines strong { display: inline-block; min-width: 104px; font-weight: 550; }
+#tuning a { text-decoration: underline; text-underline-offset: 3px; }
+#tuning .tuning-freshness { margin-top: 8px; font-size: 11.5px; }
+#tuning .tuning-warning { color: var(--text-1); border-left: 2px solid var(--yellow); padding-left: 8px; }
+#tuning .tuning-ledger-tools { border-top: 1px solid var(--border); padding: 12px 22px; }
+#tuning .tuning-views { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 10px; }
+#tuning .tuning-views button {
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-2);
+  min-height: 38px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+#tuning .tuning-views button span { margin-left: 5px; font-family: var(--font-mono); }
+#tuning .tuning-views button[aria-pressed="true"] { color: var(--text-1); border-bottom-color: var(--text-1); background: var(--bg-panel-strong); }
+#tuning .tuning-views button:hover { background: var(--bg-hover); color: var(--text-1); }
+#tuning .tuning-filters { display: grid; grid-template-columns: minmax(180px, 1fr) 130px minmax(140px, 210px) auto; align-items: center; gap: 10px; }
+#tuning .tuning-filters input,
+#tuning .tuning-filters select {
+  min-width: 0;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid var(--control-border);
+  border-radius: 0;
+  color: var(--text-1);
+  background: var(--control-bg);
+}
+#tuning .tuning-filters input::placeholder { color: var(--text-2); opacity: 1; }
+#tuning .tuning-ledger { border-top: 1px solid var(--border); }
+#tuning .tuning-ledger-head,
+#tuning .tuning-row > summary {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(180px, 1.55fr) minmax(125px, 1fr) minmax(155px, 1.1fr) 65px;
+  align-items: start;
+  gap: 18px;
+  padding: 14px 22px;
+}
+#tuning .tuning-ledger-head { color: var(--text-2); font-size: 11px; padding-block: 8px; background: var(--table-head-bg); }
+#tuning .tuning-row { border-bottom: 1px solid var(--border); background: transparent; border-radius: 0; box-shadow: none; }
+#tuning .tuning-row > summary { list-style: none; cursor: pointer; }
+#tuning .tuning-row > summary::-webkit-details-marker { display: none; }
+#tuning .tuning-row > summary:hover { background: var(--table-row-hover); }
+#tuning .tuning-row > summary > span { min-width: 0; overflow-wrap: anywhere; }
+#tuning .tuning-identity,
+#tuning .tuning-selection,
+#tuning .tuning-resource { display: grid; gap: 3px; }
+#tuning .tuning-identity > strong { font-size: 14px; font-weight: 550; }
+#tuning .tuning-selection > strong { font-weight: 500; }
+#tuning .tuning-pair { font-family: var(--font-mono); font-size: 12px; }
+#tuning .tuning-pair strong { font-weight: 550; }
+#tuning .tuning-arrow { color: var(--text-2); }
+#tuning .tuning-resource > .tuning-label { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+#tuning .tuning-limit-flag { font-size: 11px; font-weight: 550; color: var(--text-1); }
+#tuning .tuning-details-label { font-size: 12px; text-decoration: underline; text-underline-offset: 3px; padding-top: 2px; }
+#tuning .tuning-row[open] .tuning-details-label > span { display: inline-block; transform: rotate(180deg); }
+#tuning .tuning-row-detail { padding: 16px 22px; background: var(--bg-panel-strong); border-top: 1px solid var(--border); }
+#tuning .tuning-row-detail > p { color: var(--text-2); margin-bottom: 12px; }
+#tuning .tuning-evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 24px; }
+#tuning .tuning-evidence > div { min-width: 0; overflow-wrap: anywhere; }
+#tuning .tuning-evidence dt { color: var(--text-2); font-size: 12px; }
+#tuning .tuning-evidence dd { margin-top: 3px; }
+#tuning .tuning-empty { padding: 24px 22px; color: var(--text-2); }
+#tuning .tuning-disclosure { border-bottom: 1px solid var(--border); }
+#tuning .tuning-disclosure > summary { padding: 16px 22px; cursor: pointer; color: var(--text-2); }
+#tuning .tuning-disclosure-body { padding: 4px 22px 20px; }
+#tuning .tuning-disclosure-body h3,
+#tuning .tuning-disclosure-body h4 { font-size: 14px; margin: 16px 0 8px; font-weight: 550; }
+#tuning .tuning-disclosure-body p { margin: 8px 0; color: var(--text-2); }
+#tuning .tuning-disclosure-body ul { padding-left: 18px; }
+#tuning .tuning-node { border-top: 1px solid var(--border); margin-top: 16px; }
+#tuning pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--bg-panel-strong); padding: 14px; margin-top: 12px; }
+#tuning .report-links { flex-wrap: wrap; }
+#tuning .tuning-row:not([open]) > .tuning-row-detail,
+#tuning .tuning-disclosure:not([open]) > .tuning-disclosure-body { display: none; }
+
+@container tuning (max-width: 900px) {
+  #tuning .tuning-decision { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  #tuning .tuning-filters { grid-template-columns: minmax(150px, 1fr) 130px minmax(140px, 1fr); }
+  #tuning #tuningCount { grid-column: 1 / -1; }
+  #tuning .tuning-ledger-head { display: none; }
+  #tuning .tuning-row > summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 65px; gap: 12px; }
+  #tuning .tuning-identity { grid-column: 1 / 2; }
+  #tuning .tuning-selection { grid-column: 2 / 3; }
+  #tuning .tuning-details-label { grid-column: 3; grid-row: 1 / 3; }
+  #tuning .tuning-resource { grid-row: 2; }
+  #tuning .tuning-resource > .tuning-label { position: static; width: auto; height: auto; clip-path: none; overflow: visible; }
+  #tuning .tuning-evidence { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container tuning (max-width: 560px) {
+  #tuning .tuning-heading,
+  #tuning .tuning-summary,
+  #tuning .tuning-ledger-tools,
+  #tuning .tuning-row > summary,
+  #tuning .tuning-row-detail,
+  #tuning .tuning-disclosure > summary,
+  #tuning .tuning-disclosure-body { padding-inline: 14px; }
+  #tuning .tuning-decision { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  #tuning .tuning-impact > div { padding-left: 0; border-left: 0; }
+  #tuning .tuning-checks { display: grid; gap: 6px; }
+  #tuning .tuning-run-lines strong { min-width: 0; margin-right: 6px; }
+  #tuning .tuning-views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #tuning .tuning-views button { padding-inline: 6px; text-align: left; min-height: 44px; }
+  #tuning .tuning-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #tuning .tuning-filters input { grid-column: 1 / -1; }
+  #tuning .tuning-filters input,
+  #tuning .tuning-filters select { min-height: 42px; }
+  #tuning .tuning-row > summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #tuning .tuning-identity { grid-column: 1 / -1; grid-row: 1; padding-right: 60px; }
+  #tuning .tuning-selection { grid-column: 1 / -1; grid-row: 2; }
+  #tuning .tuning-resource { grid-row: 3; }
+  #tuning .tuning-details-label { grid-column: 2; grid-row: 1; justify-self: end; }
+  #tuning .tuning-evidence { grid-template-columns: minmax(0, 1fr); }
+}

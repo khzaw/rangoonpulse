@@ -3,7 +3,7 @@ title: Resource Advisor Automation
 summary: Living reference for the resource-advisor report/apply workflow, exporter surface, guardrails, and operator checks.
 status: active
 owner: homelab
-last_reviewed: 2026-04-08
+last_reviewed: 2026-09-30
 ---
 
 # Resource Advisor Automation
@@ -75,6 +75,57 @@ Apply PR cleanliness:
   - `exporter.py` is mounted from a ConfigMap; after a Git change to the exporter code, reconcile alone updates the file but does not restart the running Python process.
   - Run `kubectl rollout restart deployment/resource-advisor-exporter -n monitoring` after the reconcile when you need the new code live immediately.
 
+### Reading the Tuning page
+
+The page is a read-only preview, not a job trigger or evidence that resources have
+been applied. The scheduled apply job opens PRs; review, merge, and Flux rollout
+remain separate steps.
+
+- Start with **changes that would be proposed**, derived from the valid live
+  `applyPreflight.selected` list. A missing/invalid preflight timestamp, degraded
+  fetch, missing report, inconsistent selected count, or ambiguous selected identity
+  makes the preview unavailable rather than showing a passing/zero-change result.
+- CPU and memory impact use `currentRequests` and
+  `projectedRequestsAfterSelected`: whole-cluster pod request reservations, including
+  replicas. They are not usage savings or the delta across all report recommendations.
+- **Hard node fit** and **advisory pressure** are separate. Exceeding an advisory
+  ceiling affects ordering; it does not itself block PR selection. A missing fit
+  verdict is unknown, not passing.
+- **Next PR run** uses the supplied schedule and timezone. **Last actual run** uses
+  persisted `lastApply` execution evidence and validated GitHub PR links, not the
+  current preview. A recorded PR result does not confirm merge or deployment.
+- Report generation time, metrics coverage, and preflight capture time are shown
+  separately. No new frontend freshness threshold is used.
+
+The change ledger defaults to **Proposed PR changes**. **Deferred**, **No change**,
+and **All workloads** retain every reported container, including those awaiting
+metrics. Counts are container rows, not service/PR counts. Action, note, and search
+filters compose with those views. With no selection, the empty state points to the
+other views rather than implying there is nothing to inspect.
+
+Selected rows display the exact adjusted current/proposed requests and limits from
+`applyPreflight.selected`, not the raw recommendation. Limit-only changes remain
+selected and are explicitly labelled. Other rows show **Report advice**, not queued
+changes. Row details contain limits, observed p95, historical-window versus current
+live restart counts, notes, replicas, and source provenance. Missing measurements
+remain missing; a real zero remains zero.
+
+Selection joins use namespace, workload, container, and release together. Skip
+entries that contain only release/container are attributed only when they uniquely
+match a report row across the complete inventory. Ambiguous entries get a generic
+not-selected explanation; no-change/awaiting-metrics classification takes precedence
+over skip labels. The frontend does not recalculate policy or infer hard blocking
+for every deferred row.
+
+Filters, search, and row disclosures survive periodic refresh, including an
+unavailable response followed by recovery. Unavailable/empty responses clear old
+rows without resetting controls. Capacity/policy and raw report/execution output
+are collapsed below the ledger; JSON, Markdown, metrics, and full-snapshot links
+remain available there. Narrow screens stack rows instead of horizontally scrolling
+an eight-column table. The implementation lives in
+`apps/exposure-control/tuning.js`; synthetic regressions run with
+`node --test apps/exposure-control/tuning.test.js` and `npm run check`.
+
 ## What It Analyzes
 - Deployments and StatefulSets in namespaces configured by `TARGET_NAMESPACES`.
 - Per-container p95 CPU and memory from Prometheus over a 14-day window (`METRICS_WINDOW=14d`).
@@ -122,8 +173,8 @@ Operational expectation:
 
 ## Guardrails
 - Reports retain every discovered container, including rows awaiting metrics and rows within the deadband.
-  These rows have `no-change` actions and retain their current resources, so they are visible in Tuning without
-  becoming apply candidates. Missing measurements display as awaiting metrics, not zero usage.
+  These rows have `no-change` actions and remain visible in Tuning without becoming apply candidates;
+  below-threshold advice may still differ from current resources. Missing measurements display as awaiting metrics, not zero usage.
 - The 14-day p95 queries sample hourly. A newly deployed workload can have live CPU/memory readings but no p95
   sample until the next hourly evaluation. Onboarding must show that waiting state rather than omit the app.
 - Max per-run adjustment step is capped (`MAX_STEP_PERCENT`, default 25%).

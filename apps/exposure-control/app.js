@@ -13,24 +13,7 @@
       const travelNotesMetaEl = document.getElementById('travelNotesMeta');
       const travelSharesEl = document.getElementById('travelShares');
       const travelNotesEl = document.getElementById('travelNotes');
-      const tuningSummaryEl = document.getElementById('tuningSummary');
-      const tuningOverviewStripEl = document.getElementById('tuningOverviewStrip');
-      const tuningOverviewMetaEl = document.getElementById('tuningOverviewMeta');
-      const tuningOverviewDetailEl = document.getElementById('tuningOverviewDetail');
-      const plannerMetaEl = document.getElementById('plannerMeta');
-      const plannerGridEl = document.getElementById('plannerGrid');
-      const tuningFocusMetaEl = document.getElementById('tuningFocusMeta');
-      const tuningFocusGridEl = document.getElementById('tuningFocusGrid');
-      const tuningControlMetaEl = document.getElementById('tuningControlMeta');
-      const tuningControlGridEl = document.getElementById('tuningControlGrid');
-      const tuningTableMetaEl = document.getElementById('tuningTableMeta');
-      const noteFilterEl = document.getElementById('noteFilter');
-      const searchInputEl = document.getElementById('searchInput');
-      const tuningCountEl = document.getElementById('tuningCount');
-      const tuningRowsEl = document.getElementById('tuningRows');
-      const tuningEmptyEl = document.getElementById('tuningEmpty');
-      const runtimeLinesEl = document.getElementById('runtimeLines');
-      const tuningRuntimeMetaEl = document.getElementById('tuningRuntimeMeta');
+      const tuningView = window.Tuning.createView(document.getElementById('tuning'));
       const jobsSummaryEl = document.getElementById('jobsSummary');
       const jobsOverviewStripEl = document.getElementById('jobsOverviewStrip');
       const jobsOverviewMetaEl = document.getElementById('jobsOverviewMeta');
@@ -110,7 +93,6 @@
         paused: true,
         'aria-label': 'Control panel activity',
       });
-      let tuningFilterAction = 'all';
       let updatesFilterQuery = '';
       let updatesOnlyAvailable = false;
       let dashboardState = {
@@ -662,148 +644,6 @@
           setRenovateMsg('Dispatching Renovate workflow for ' + targetLabel + '...');
         }
         await runRenovate();
-      }
-
-      function renderInlineMarkdown(value) {
-        return escapeHtml(value)
-          .replace(/`([^`]+)`/g, '<code>$1</code>')
-          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      }
-
-      function isMarkdownTableDelimiter(line) {
-        return /^\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?$/.test(String(line || '').trim());
-      }
-
-      function parseMarkdownTableRow(line) {
-        const trimmed = String(line || '').trim().replace(/^\|/, '').replace(/\|$/, '');
-        return trimmed.split('|').map((cell) => renderInlineMarkdown(cell.trim()));
-      }
-
-      function renderRuntimeMarkdown(markdown) {
-        const source = String(markdown || '').replace(/\r\n/g, '\n').trim();
-        if (!source) return '<p class="md-paragraph">no advisor markdown available.</p>';
-
-        const lines = source.split('\n');
-        const blocks = [];
-
-        for (let index = 0; index < lines.length; ) {
-          const line = lines[index];
-          const trimmed = line.trim();
-
-          if (!trimmed) {
-            index += 1;
-            continue;
-          }
-
-          const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
-          if (headingMatch) {
-            const level = headingMatch[1].length;
-            blocks.push('<h4 class="md-heading level-' + level + '">' + renderInlineMarkdown(headingMatch[2]) + '</h4>');
-            index += 1;
-            continue;
-          }
-
-          if (/^- /.test(trimmed)) {
-            const items = [];
-            while (index < lines.length && /^- /.test(lines[index].trim())) {
-              items.push('<li>' + renderInlineMarkdown(lines[index].trim().slice(2)) + '</li>');
-              index += 1;
-            }
-            blocks.push('<ul class="md-list">' + items.join('') + '</ul>');
-            continue;
-          }
-
-          if (trimmed.includes('|') && index + 1 < lines.length && isMarkdownTableDelimiter(lines[index + 1])) {
-            const header = parseMarkdownTableRow(trimmed);
-            const rows = [];
-            index += 2;
-            while (index < lines.length) {
-              const rowLine = lines[index].trim();
-              if (!rowLine || !rowLine.includes('|')) break;
-              rows.push(parseMarkdownTableRow(rowLine));
-              index += 1;
-            }
-            blocks.push(
-              '<div class="md-table-shell"><table class="md-table"><thead><tr>' +
-                header.map((cell) => '<th>' + cell + '</th>').join('') +
-              '</tr></thead><tbody>' +
-                rows.map((cells) => '<tr>' + cells.map((cell) => '<td>' + cell + '</td>').join('') + '</tr>').join('') +
-              '</tbody></table></div>'
-            );
-            continue;
-          }
-
-          const paragraphLines = [];
-          while (index < lines.length) {
-            const current = lines[index].trim();
-            const next = index + 1 < lines.length ? lines[index + 1].trim() : '';
-            if (!current) break;
-            if (/^(#{1,3})\s+/.test(current)) break;
-            if (/^- /.test(current)) break;
-            if (current.includes('|') && next && isMarkdownTableDelimiter(next)) break;
-            paragraphLines.push(current);
-            index += 1;
-          }
-          blocks.push('<p class="md-paragraph">' + renderInlineMarkdown(paragraphLines.join(' ')) + '</p>');
-        }
-
-        return blocks.join('');
-      }
-
-      function fmtSigned(value, suffix, digits) {
-        const number = Number(value || 0);
-        const fixed = number.toFixed(Number.isFinite(digits) ? digits : 1).replace(/\\.0+$/, '').replace(/(\\.\\d*?)0+$/, '$1');
-        return (number > 0 ? '+' : '') + fixed + suffix;
-      }
-
-      function parseCpuToM(value) {
-        const text = String(value || '0').trim().toLowerCase();
-        if (!text) return 0;
-        if (text.endsWith('m')) return Number(text.slice(0, -1)) || 0;
-        return (Number(text) || 0) * 1000;
-      }
-
-      function parseMemToMi(value) {
-        const text = String(value || '0').trim();
-        const match = text.match(/^([+-]?\\d+(?:\\.\\d+)?)([A-Za-z]+)?$/);
-        if (!match) return 0;
-        const amount = Number(match[1]) || 0;
-        const unit = String(match[2] || 'Mi');
-        const scale = {
-          Ki: 1 / 1024,
-          Mi: 1,
-          Gi: 1024,
-          Ti: 1024 * 1024,
-        };
-        return amount * (scale[unit] || 1);
-      }
-
-      function noteTone(note) {
-        const value = String(note || '').toLowerCase();
-        if (value.includes('excluded')) return 'excluded';
-        if (value.includes('guard')) return 'guarded';
-        return 'neutral';
-      }
-
-      function statPill(label, value, tone) {
-        return '<span class="stat-pill ' + (tone || 'neutral') + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
-      }
-
-      function tokenPill(label, value) {
-        return '<span class="token"><span>' + label + '</span><strong>' + value + '</strong></span>';
-      }
-
-      function buildFocusCard(title, subtitle, items) {
-        const rows = Array.isArray(items) && items.length
-          ? items.map((item) => '<li>' + item + '</li>').join('')
-          : '<li><span class="muted">no items in the current snapshot.</span></li>';
-        return (
-          '<article class="focus-card"><div class="focus-card-body">' +
-            '<div class="focus-card-title">' + title + '</div>' +
-            '<div class="focus-subtitle">' + subtitle + '</div>' +
-            '<ul class="focus-list">' + rows + '</ul>' +
-          '</div></article>'
-        );
       }
 
       function overviewSegment(label, value, subtitle, options) {
@@ -1488,208 +1328,7 @@
       }
 
       function renderPlanner(tuning) {
-        if (!tuning || !tuning.applyPreflight || !tuning.report) {
-          tuningSummaryEl.textContent = 'Advisor data unavailable';
-          tuningOverviewStripEl.innerHTML = '';
-          tuningOverviewMetaEl.innerHTML = '';
-          tuningOverviewDetailEl.textContent = 'advisor unavailable';
-          plannerMetaEl.textContent = 'planner unavailable';
-          plannerGridEl.innerHTML = '<article class="support-card"><div class="support-card-title">apply preflight</div><p class="support-copy">resource-advisor data is unavailable from the exporter.</p></article>';
-          tuningFocusMetaEl.textContent = 'advisor unavailable';
-          tuningFocusGridEl.innerHTML = buildFocusCard('largest memory shifts', 'absolute request-memory deltas across all recommendations.', []);
-          tuningControlMetaEl.textContent = 'advisor unavailable';
-          tuningControlGridEl.innerHTML =
-            '<article class="support-card"><div class="support-card-title">policy guardrails</div><p class="support-copy">no policy data available.</p></article>' +
-            '<article class="support-card"><div class="support-card-title">common notes</div><p class="support-copy">no note data available.</p></article>';
-          tuningTableMetaEl.textContent = '0 recommendations';
-          tuningRuntimeMetaEl.textContent = 'advisor unavailable';
-          runtimeLinesEl.innerHTML = renderRuntimeMarkdown('');
-          noteFilterEl.innerHTML = '<option value="all">all notes</option>';
-          tuningRowsEl.innerHTML = '';
-          tuningEmptyEl.hidden = false;
-          tuningCountEl.textContent = '0 visible rows';
-          return;
-        }
-
-        const report = tuning.report;
-        const apply = tuning.applyPreflight;
-        const summary = report.summary || {};
-        const selected = Array.isArray(apply.selected) ? apply.selected : [];
-        const skipSummary = Array.isArray(apply.skipSummary) ? apply.skipSummary : [];
-        const budgets = apply.budgets || {};
-        const current = apply.currentRequests || {};
-        const projected = apply.projectedRequestsAfterSelected || {};
-        const noteOptions = Array.isArray(report.topNotes) ? report.topNotes : [];
-        const policy = report.policy || {};
-        const budget = report.budget || {};
-        const currentPct = budget.current_requests_percent_of_allocatable || {};
-        const allocatable = budget.allocatable || {};
-        const coverageDays = Number(report.metricsCoverageDaysEstimate || 0);
-        const metricsWindow = report.metricsWindow || 'advisor window';
-        const selectedCount = Number(apply.selectedCount || 0);
-        const recommendationCount = Number(report.recommendationCount || 0);
-        const summaryWindowLabel = metricsWindow.replace(/^\\s+|\\s+$/g, '');
-        const summaryData = report.summary || {};
-        const currentCpuM = Number(summaryData.total_current_requests_cpu_m || 0);
-        const recommendedCpuM = Number(summaryData.total_recommended_requests_cpu_m || 0);
-        const currentMemMi = Number(summaryData.total_current_requests_memory_mi || 0);
-        const recommendedMemMi = Number(summaryData.total_recommended_requests_memory_mi || 0);
-
-        tuningSummaryEl.textContent = String(recommendationCount) + ' recommendations · ' + String(selectedCount) + ' selected now';
-        tuningOverviewStripEl.innerHTML =
-          overviewSegment('recommendations', String(recommendationCount), String(summary.upsize_count || 0) + ' upsize, ' + String(summary.downsize_count || 0) + ' downsize, ' + String(summary.no_change_count || 0) + ' steady', {
-            eyebrow: String(summary.containers_with_metrics || 0) + '/' + String(summary.containers_analyzed || 0) + ' with metrics',
-            barPct: Number(summary.containers_analyzed || 0) ? Number(summary.containers_with_metrics || 0) / Number(summary.containers_analyzed || 0) * 100 : 0,
-            tone: 'neutral',
-          }) +
-          overviewSegment('cpu request posture', withUnitSpace(String(Math.round(currentCpuM)) + 'm'), String(currentPct.cpu || 0).replace(/\\.0$/, '') + '% of ' + withUnitSpace(String(allocatable.cpu || 'n/a')) + ' allocatable', {
-            eyebrow: withUnitSpace(fmtSigned(recommendedCpuM - currentCpuM, 'm', 0)),
-            barPct: Number(currentPct.cpu || 0),
-            tone: 'warning',
-          }) +
-          overviewSegment('memory request posture', withUnitSpace(String(Math.round(currentMemMi)) + 'Mi'), String(currentPct.memory || 0).replace(/\\.0$/, '') + '% of ' + withUnitSpace(String(allocatable.memory || 'n/a')) + ' allocatable', {
-            eyebrow: withUnitSpace(fmtSigned(recommendedMemMi - currentMemMi, 'Mi', 0)),
-            barPct: Number(currentPct.memory || 0),
-            tone: 'danger',
-          }) +
-          overviewSegment('planner', selectedCount + ' selected', 'hard fit ' + (apply.hardFitOk ? 'ok' : 'blocked') + ' · cpu pressure ' + (apply.advisoryPressure && apply.advisoryPressure.cpu ? 'on' : 'off'), {
-            eyebrow: 'apply preflight',
-            barPct: recommendationCount ? selectedCount / recommendationCount * 100 : 0,
-            tone: apply.hardFitOk ? 'status' : 'warning',
-          });
-        tuningOverviewMetaEl.innerHTML =
-          '<span>last run ' + fmtDateTime(tuning.fetch && tuning.fetch.lastRunAt) + '</span>' +
-          '<span>browser tz ' + Intl.DateTimeFormat().resolvedOptions().timeZone + '</span>' +
-          '<span>mode ' + (tuning.fetch && tuning.fetch.mode ? tuning.fetch.mode : 'n/a') + '</span>' +
-          '<span>allocatable <strong>' + withUnitSpace(String(allocatable.cpu || 'n/a')) + '</strong> cpu <strong>' + withUnitSpace(String(allocatable.memory || 'n/a')) + '</strong> memory</span>';
-        tuningOverviewDetailEl.textContent = tuning.fetch && tuning.fetch.detail ? tuning.fetch.detail : 'advisor unavailable';
-        plannerMetaEl.textContent = String(selectedCount) + ' selected right now';
-        tuningFocusMetaEl.textContent = withUnitSpace(String(coverageDays).replace(/\\.0$/, '') + 'd') + ' of metrics coverage';
-        tuningControlMetaEl.textContent = String(recommendationCount) + ' total recommendations';
-        tuningTableMetaEl.textContent = String(recommendationCount) + ' visible in current report';
-
-        const selectedMarkup = selected.slice(0, 5).map((item) => {
-          const currentReq = item && item.current && item.current.requests ? item.current.requests : {};
-          const recommendedReq = item && item.recommended && item.recommended.requests ? item.recommended.requests : {};
-          return '<li><span class="focus-path">' + (item.release || 'unknown') + '/' + (item.container || 'main') + '</span><span class="focus-inline">cpu ' + withUnitSpace(currentReq.cpu || '0m') + ' → ' + withUnitSpace(recommendedReq.cpu || '0m') + ' · mem ' + withUnitSpace(currentReq.memory || '0Mi') + ' → ' + withUnitSpace(recommendedReq.memory || '0Mi') + ' · ' + String(item.selection_reason || 'selected').replace(/_/g, ' ') + '</span></li>';
-        }).join('');
-
-        const postureMarkup = [
-          '<li><span class="focus-path">current requests</span><span class="focus-inline">cpu ' + withUnitSpace((current.cpu_m || 0) + 'm') + ' · mem ' + withUnitSpace((current.memory_mi || 0) + 'Mi') + '</span></li>',
-          '<li><span class="focus-path">projected after selection</span><span class="focus-inline">cpu ' + withUnitSpace((projected.cpu_m || 0) + 'm') + ' · mem ' + withUnitSpace((projected.memory_mi || 0) + 'Mi') + '</span></li>',
-          '<li><span class="focus-path">advisory ceilings</span><span class="focus-inline">cpu ' + withUnitSpace((budgets.cpu_m || 0) + 'm') + ' · mem ' + withUnitSpace((budgets.memory_mi || 0) + 'Mi') + '</span></li>'
-        ].join('');
-
-        const skippedMarkup = skipSummary.slice(0, 5).map((item) => {
-          return '<li><span class="focus-path">' + String(item.reason || 'unknown').replace(/_/g, ' ') + '</span><span class="focus-inline">' + String(item.count || 0) + ' row(s)</span></li>';
-        }).join('');
-
-        plannerGridEl.innerHTML =
-          '<article class="support-card"><div class="support-card-title">if apply ran now</div><div class="planner-lead"><div class="policy-grid">' +
-            statPill('hard fit', apply.hardFitOk ? 'ok' : 'blocked', apply.hardFitOk ? 'ok' : 'excluded') +
-            statPill('cpu pressure', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.cpu ? 'guarded' : 'ok') +
-            statPill('mem pressure', apply.advisoryPressure && apply.advisoryPressure.memory ? 'on' : 'off', apply.advisoryPressure && apply.advisoryPressure.memory ? 'guarded' : 'ok') +
-          '</div></div><ul class="focus-list">' + (selectedMarkup || '<li><span class="muted">no changes would be selected from the current report.</span></li>') + '</ul><p class="support-copy">selection uses per-service tuning signals, hard node-fit blocking, and advisory cluster pressure for ordering only.</p></article>' +
-          '<article class="support-card"><div class="support-card-title">planner posture</div><ul class="focus-list">' + postureMarkup + '</ul><p class="support-copy">advisory pressure remains visible, but hard node-fit stays the gate.</p></article>' +
-          '<article class="support-card"><div class="support-card-title">skip summary</div><ul class="focus-list">' + (skippedMarkup || '<li><span class="muted">no skipped rows in current snapshot.</span></li>') + '</ul><p class="support-copy">current reasons rows were deferred from the live apply selection order.</p></article>';
-
-        const recommendations = Array.isArray(report.recommendations) ? report.recommendations.slice() : [];
-        const biggestMem = recommendations
-          .slice()
-          .sort((left, right) => {
-            const leftCurrent = left.current && left.current.requests ? left.current.requests : {};
-            const leftRecommended = left.recommended && left.recommended.requests ? left.recommended.requests : {};
-            const rightCurrent = right.current && right.current.requests ? right.current.requests : {};
-            const rightRecommended = right.recommended && right.recommended.requests ? right.recommended.requests : {};
-            return Math.abs(parseMemToMi(rightRecommended.memory) - parseMemToMi(rightCurrent.memory)) - Math.abs(parseMemToMi(leftRecommended.memory) - parseMemToMi(leftCurrent.memory));
-          })
-          .slice(0, 4)
-          .map((row) => {
-            const currentReq = row.current && row.current.requests ? row.current.requests : {};
-            const recommendedReq = row.recommended && row.recommended.requests ? row.recommended.requests : {};
-            const deltaMem = parseMemToMi(recommendedReq.memory) - parseMemToMi(currentReq.memory);
-            return '<span class="focus-path">' + (row.namespace || 'default') + '/' + (row.workload || 'unknown') + '</span><span class="focus-inline">' + (row.container || 'main') + ' · ' + withUnitSpace(fmtSigned(deltaMem, 'Mi', 0)) + ' memory shift</span>';
-          });
-        const restartGuarded = recommendations
-          .filter((row) => Array.isArray(row.notes) && row.notes.includes('restart_guard'))
-          .slice(0, 4)
-          .map((row) => '<span class="focus-path">' + (row.namespace || 'default') + '/' + (row.workload || 'unknown') + '</span><span class="focus-inline">' + (row.container || 'main') + ' · ' + String(row.restarts_window || 0) + ' historical restarts / ' + summaryWindowLabel + '</span>');
-        const highestRestarts = recommendations
-          .slice()
-          .sort((left, right) => Number(right.restarts_window || 0) - Number(left.restarts_window || 0))
-          .slice(0, 4)
-          .map((row) => '<span class="focus-path">' + (row.namespace || 'default') + '/' + (row.workload || 'unknown') + '</span><span class="focus-inline">' + (row.container || 'main') + ' · ' + String(row.restarts_window || 0) + ' historical restarts / ' + summaryWindowLabel + '</span>');
-        tuningFocusGridEl.innerHTML =
-          buildFocusCard('largest memory shifts', 'absolute request-memory deltas across all recommendations.', biggestMem) +
-          buildFocusCard('restart-guarded items', 'rows where historical restart activity is directly influencing the advice.', restartGuarded) +
-          buildFocusCard('highest restart volume', 'most restart-heavy rows in the historical advisor window.', highestRestarts);
-
-        const noteMarkup = noteOptions.length
-          ? noteOptions.map((item) => '<span class="note-pill ' + noteTone(item.note) + '">' + item.note.replace(/_/g, ' ') + ' <strong>' + item.count + '</strong></span>').join('')
-          : '<span class="muted">no recurring notes in the current snapshot.</span>';
-        tuningControlGridEl.innerHTML =
-          '<article class="support-card"><div class="support-card-title">policy guardrails</div><div class="policy-grid">' +
-            tokenPill('step', String(policy.max_step_percent || 0).replace(/\\.0$/, '') + '%') +
-            tokenPill('req buffer', String(policy.request_buffer_percent || 0).replace(/\\.0$/, '') + '%') +
-            tokenPill('limit buffer', String(policy.limit_buffer_percent || 0).replace(/\\.0$/, '') + '%') +
-            tokenPill('deadband', String(policy.deadband_percent || 0).replace(/\\.0$/, '') + '%') +
-            tokenPill('cpu floor', withUnitSpace(String(policy.deadband_cpu_m || 0) + 'm')) +
-            tokenPill('mem floor', withUnitSpace(String(policy.deadband_mem_mi || 0) + 'Mi')) +
-          '</div><p class="support-copy">active tuning bounds applied to each report and apply pass.</p></article>' +
-          '<article class="support-card"><div class="support-card-title">common notes</div><div class="policy-grid">' + noteMarkup + '</div><p class="support-copy">most common skip reasons and advisory annotations in the current window.</p></article>';
-
-        noteFilterEl.innerHTML = '<option value="all">all notes</option>' + noteOptions.map((item) => '<option value="' + item.note + '">' + item.note + ' (' + item.count + ')</option>').join('');
-        tuningRuntimeMetaEl.textContent = 'window ' + (report.metricsWindow || 'n/a') + ' · last run ' + fmtDateTime(tuning.fetch && tuning.fetch.lastRunAt);
-        runtimeLinesEl.innerHTML = renderRuntimeMarkdown(tuning.runtime && tuning.runtime.latestMarkdown);
-      }
-
-      function renderTuningRows() {
-        const tuning = dashboardState.tuning;
-        const rows = tuning && tuning.report && Array.isArray(tuning.report.recommendations) ? tuning.report.recommendations : [];
-        tuningRowsEl.innerHTML = '';
-        const query = (searchInputEl.value || '').trim().toLowerCase();
-        const noteValue = noteFilterEl.value || 'all';
-        let visible = 0;
-
-        rows.forEach((row) => {
-          const notes = Array.isArray(row.notes) ? row.notes : [];
-          const action = String(row.action || 'unknown');
-          const currentReq = row.current && row.current.requests ? row.current.requests : {};
-          const recommendedReq = row.recommended && row.recommended.requests ? row.recommended.requests : {};
-          const searchBlob = [row.namespace, row.workload, row.container, row.release, action, notes.join(' '), currentReq.cpu, currentReq.memory, recommendedReq.cpu, recommendedReq.memory].join(' ').toLowerCase();
-          const actionMatch = tuningFilterAction === 'all' || action === tuningFilterAction;
-          const noteMatch = noteValue === 'all' || notes.includes(noteValue);
-          const searchMatch = !query || searchBlob.includes(query);
-          if (!actionMatch || !noteMatch || !searchMatch) return;
-          visible += 1;
-
-          const currentCpu = String(currentReq.cpu || '0m');
-          const currentMem = String(currentReq.memory || '0Mi');
-          const recommendedCpu = String(recommendedReq.cpu || '0m');
-          const recommendedMem = String(recommendedReq.memory || '0Mi');
-          const cpuDelta = Number(String(recommendedCpu).replace(/m$/, '')) - Number(String(currentCpu).replace(/m$/, ''));
-          const memDelta = Number(String(recommendedMem).replace(/Mi$/, '')) - Number(String(currentMem).replace(/Mi$/, ''));
-          const notesMarkup = notes.length ? notes.map((note) => '<span class="note-pill ' + noteTone(note) + '">' + note.replace(/_/g, ' ') + '</span>').join('') : '<span class="muted">—</span>';
-          const awaitingMetrics = notes.includes('awaiting_metrics') || row.cpu_p95_m == null || row.mem_p95_mi == null;
-          const usageText = awaitingMetrics
-            ? 'awaiting metrics'
-            : 'p95 ' + withUnitSpace(String(row.cpu_p95_m) + 'm') + ' · ' + withUnitSpace(String(row.mem_p95_mi) + 'Mi');
-
-          const tr = document.createElement('tr');
-          tr.innerHTML =
-            '<td><div class="workload">' + (row.workload || 'unknown') + '</div><div class="workload-meta">' + (row.namespace || 'default') + ' · ' + (row.release || 'n/a') + ' · ' + (row.container || 'main') + '</div></td>' +
-            '<td><span class="action ' + action + '">' + action + '</span></td>' +
-            '<td><div class="metric-pair"><span>' + withUnitSpace(currentCpu) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedCpu) + '</span></div><div class="metric-delta ' + (cpuDelta > 0 ? 'positive' : cpuDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(cpuDelta, 'm', 0)) + '</div></td>' +
-            '<td><div class="metric-pair"><span>' + withUnitSpace(currentMem) + '</span><span class="arrow">→</span><span>' + withUnitSpace(recommendedMem) + '</span></div><div class="metric-delta ' + (memDelta > 0 ? 'positive' : memDelta < 0 ? 'negative' : 'neutral') + '">' + withUnitSpace(fmtSigned(memDelta, 'Mi', 0)) + '</div></td>' +
-            '<td><div class="usage-line">' + usageText + '</div><div class="workload-meta">' + String(row.replicas || 0) + ' replica(s)</div></td>' +
-            '<td><div class="usage-line">' + withUnitSpace(String((tuning.report && tuning.report.metricsCoverageDaysEstimate) || 0).replace(/\\.0$/, '') + 'd') + '</div><div class="workload-meta">' + ((tuning.report && tuning.report.metricsWindow) || 'advisor window') + '</div></td>' +
-            '<td><div class="usage-line">' + String(row.restarts_window || 0) + ' historical / 14d</div><div class="workload-meta">current live restarts: ' + String(row.current_restarts || 0) + ' on ' + String(row.matched_pods || 0) + ' pod(s)</div></td>' +
-            '<td><div class="notes-cell">' + notesMarkup + '</div></td>';
-          tuningRowsEl.appendChild(tr);
-        });
-
-        tuningCountEl.textContent = visible + ' visible row' + (visible === 1 ? '' : 's');
-        tuningEmptyEl.hidden = visible !== 0;
+        tuningView.render(tuning);
       }
 
       function renderRows(services) {
@@ -2542,14 +2181,12 @@
           setBtnLoading(refreshAllBtn, true);
           overviewStripEl.innerHTML = skeletonOverviewStrip(3);
           travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
-          tuningOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
           updatesRowsEl.innerHTML = skeletonTableRows(5, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
-          tuningRowsEl.innerHTML = skeletonTableRows(8, 5);
           if (activePage === 'jobs') jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           if (activePage === 'deploy') siteDeployListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           if (activePage === 'secrets') secretsListEl.innerHTML = skeletonTableRows(1, 5);
@@ -2573,6 +2210,14 @@
             includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
           ]);
 
+          // Keep tuning evidence independent of unrelated dashboard failures.
+          if (tuningData.status === 'fulfilled') {
+            dashboardState.tuning = tuningData.value;
+            renderPlanner(dashboardState.tuning);
+          } else {
+            dashboardState.tuning = null;
+            renderPlanner(null);
+          }
           if (svcData.status !== 'fulfilled') throw svcData.reason;
           dashboardState.services = svcData.value.services || [];
           renderRows(dashboardState.services);
@@ -2588,14 +2233,6 @@
             dashboardState.vpn = null;
             renderTransmissionVpn(null);
             setVpnMsg(vpnData.reason.message, true);
-          }
-          if (tuningData.status === 'fulfilled') {
-            dashboardState.tuning = tuningData.value;
-            renderPlanner(dashboardState.tuning);
-            renderTuningRows();
-          } else {
-            dashboardState.tuning = null;
-            renderPlanner(null);
           }
           if (updatesData.status === 'fulfilled') {
             dashboardState.updates = updatesData.value;
@@ -2892,17 +2529,6 @@
         });
       });
 
-      document.querySelectorAll('[data-filter-action]').forEach((button) => {
-        button.addEventListener('click', () => {
-          tuningFilterAction = button.dataset.filterAction || 'all';
-          document.querySelectorAll('[data-filter-action]').forEach((peer) => {
-            peer.classList.toggle('active', peer === button);
-          });
-          renderTuningRows();
-        });
-      });
-      noteFilterEl.addEventListener('change', renderTuningRows);
-      searchInputEl.addEventListener('input', renderTuningRows);
       window.addEventListener('hashchange', () => {
         setActivePage(window.location.hash, { replace: true });
       });
