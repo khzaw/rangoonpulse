@@ -62,7 +62,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 - [`docs/talos-kubelet-image-garbage-collection.md`](./talos-kubelet-image-garbage-collection.md) for the cluster-wide seven-day CRI image-retention policy, threshold tuning, and mount-aware `/var` verification.
 - [`docs/arm64-node-canal-flexvol-exec-format-error.md`](./arm64-node-canal-flexvol-exec-format-error.md) for the historical ARM64 Canal crashloop incident and recovery steps.
-- [`docs/talos-userspace-oom-control-plane-cgroups.md`](./talos-userspace-oom-control-plane-cgroups.md) when Talos userspace OOM kills control-plane or other pod cgroups and `kubectl` cannot reach the API server.
+- [`docs/talos-userspace-oom-control-plane-cgroups.md`](./talos-userspace-oom-control-plane-cgroups.md) when Talos userspace OOM kills control-plane or other pod cgroups and `kubectl` cannot reach the API server. etcd `memory.max` stays unset on Talos v1.13.5.
 
 ### Storage, stateful services, and recovery
 

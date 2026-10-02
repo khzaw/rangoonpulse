@@ -90,6 +90,32 @@ The chart components `kubeScheduler`, `kubeControllerManager`, and `kubeProxy` a
 
 Do not rely only on `kubectl get pods --field-selector=status.phase!=Running`. A pod can have phase `Running` while one container is in `CrashLoopBackOff` or not ready.
 
+## etcd memory.max
+
+etcd is a Talos system service in the cgroup `/podruntime/etcd`. It is not a static pod, and Talos v1.13.5 has no field that sets its `memory.max`.
+
+Checked on 2026-10-03 on `talos-7nf-osf` (Talos v1.13.5):
+
+- `memory.current` was 277 MiB, and `memory.peak` was 679 MiB.
+- `memory.low` is 256 MiB. That is the compiled soft protection `CgroupEtcdReservedMemory`.
+- `memory.max` is `max`.
+
+Talos v1.13.5 `pkg/machinery/constants` defines `CgroupEtcd` as `/podruntime/etcd`, `CgroupEtcdReservedMemory` as 256 MiB, and `CgroupEtcdMillicores` as 2000. There is no `CgroupEtcdMaxMemory`. The etcd service puts the process in that cgroup, sets OOM score adj `-998`, and does not set an OCI memory limit. Talos v1.14.2 still has those same etcd constants and still has no hard max. Do not upgrade the cluster to chase this cap.
+
+`cluster.apiServer.resources`, `cluster.controllerManager.resources`, and `cluster.scheduler.resources` are already applied (4 GiB, 1 GiB, and 512 MiB). `cluster.etcd` only accepts the image, CA, extra args, and advertised or listen subnets. It has no `resources` field.
+
+Do not invent a cap with one of these:
+
+- `quota-backend-bytes` in `cluster.etcd.extraArgs` is the on-disk MVCC database quota. The etcd default is 2 GiB. It does not limit RSS. A bad value stops etcd from accepting writes until `talosctl etcd alarm disarm`, and changing extra args restarts etcd.
+- `GOMEMLIMIT` in `machine.env` is not etcd-specific. The etcd service builds its environment with `environment.Get(r.Config())`, so machine env is shared with the other Talos services that read it.
+- A `machine.sysfs` write of `/sys/fs/cgroup/podruntime/etcd/memory.max` is not a supported control. Talos recreates that cgroup when the etcd service starts.
+
+```sh
+talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 2 'podruntime/etcd'
+```
+
+Expect `memory.max` to stay `max` and usage to stay near the figures above. If a later Talos release adds a real etcd memory limit, patch only `10.0.0.197` with `talosctl patch machineconfig --mode no-reboot`, confirm etcd stays healthy and `memory.max` is finite, and copy the non-secret setting into the secure source machine config.
+
 ## Caveats
 
 The generated Talos machine config files under `talos/` are ignored because they contain sensitive material. If a live no-reboot Talos patch is used, make sure the source machine config that will be used for future Talos maintenance receives the same non-secret resource settings through the secure config workflow.
