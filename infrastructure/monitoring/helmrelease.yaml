@@ -215,3 +215,22 @@ spec:
         limits:
           cpu: 150m
           memory: 128Mi
+
+    # Talos does not publish scheduler :10259, controller-manager :10257, or
+    # kube-proxy :10249. These scrapes stay down and keep TargetDown plus the
+    # InstanceUnreachable rules firing. Pod readiness is still covered by
+    # control-plane-visibility.
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false
+
+    # Requests cannot fit on the utility node if the primary node is lost, so
+    # these stock rules fire on a healthy two-node cluster. PrimaryNodeNotReady
+    # is the failure that matters.
+    defaultRules:
+      disabled:
+        KubeCPUOvercommit: true
+        KubeMemoryOvercommit: true

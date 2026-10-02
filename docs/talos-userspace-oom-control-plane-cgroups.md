@@ -81,7 +81,12 @@ This class of incident should alert at critical severity. The cluster has a `con
 
 - control-plane static pod restarts,
 - monitoring stack restarts,
-- critical control-plane or monitoring containers becoming unready.
+- critical control-plane or monitoring containers becoming unready,
+- the primary node staying NotReady for 5 minutes (`PrimaryNodeNotReady`).
+
+`KubeCPUOvercommit` and `KubeMemoryOvercommit` are disabled in the kube-prometheus-stack HelmRelease. On this two-node cluster almost all requests sit on the primary node, so those stock rules fire while CPU and memory use are still modest. Losing the primary node is the failure `PrimaryNodeNotReady` reports.
+
+The chart components `kubeScheduler`, `kubeControllerManager`, and `kubeProxy` are disabled. Talos does not expose `:10259`, `:10257`, or `:10249`, so their ServiceMonitors kept `TargetDown`, `KubeSchedulerInstanceUnreachable`, `KubeControllerManagerInstanceUnreachable`, and `KubeProxyInstanceUnreachable` firing. Scheduler and controller-manager readiness still come from kube-state-metrics through this rule. The kube-etcd scrape stays enabled.
 
 Do not rely only on `kubectl get pods --field-selector=status.phase!=Running`. A pod can have phase `Running` while one container is in `CrashLoopBackOff` or not ready.
 

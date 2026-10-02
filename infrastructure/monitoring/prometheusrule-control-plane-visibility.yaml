@@ -54,3 +54,19 @@ spec:
           annotations:
             summary: "Critical control-plane or monitoring container is not ready"
             description: "{{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} has been unready for at least 2 minutes. Check CrashLoopBackOff, exit code 137, and Talos OOM actions."
+
+        - alert: PrimaryNodeNotReady
+          expr: >
+            (
+              kube_node_status_condition{node="${PRIMARY_NODE_NAME}",condition="Ready",status="true"} == 0
+            )
+            or
+            (
+              absent(kube_node_status_condition{node="${PRIMARY_NODE_NAME}",condition="Ready",status="true"})
+            )
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Primary node is not Ready"
+            description: "Node ${PRIMARY_NODE_NAME} has been NotReady for 5 minutes, or its Ready condition is missing. Workloads pinned to that node, local-path data, and the control plane stop with it."
