@@ -63,7 +63,6 @@ spec:
             cpu: 50m
             memory: 128Mi
           limits:
-            cpu: 500m
             memory: 512Mi
 
     node:
@@ -84,7 +83,6 @@ spec:
             cpu: 50m
             memory: 256Mi
           limits:
-            cpu: 500m
             memory: 1Gi
       driverRegistrar:
         resources:
@@ -92,7 +90,6 @@ spec:
             cpu: 20m
             memory: 48Mi
           limits:
-            cpu: 200m
             memory: 128Mi
 
     csiProxy:
