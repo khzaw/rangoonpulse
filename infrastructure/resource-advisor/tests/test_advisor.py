@@ -11,6 +11,27 @@ if str(ROOT) not in sys.path:
 import advisor
 
 
+class ReleaseFileMapTests(unittest.TestCase):
+    def test_adguard_releases_map_to_their_helmreleases(self):
+        self.assertEqual(
+            advisor.APP_TEMPLATE_RELEASE_FILE_MAP["adguard"],
+            "apps/adguard/primary/helmrelease.yaml",
+        )
+        self.assertEqual(
+            advisor.APP_TEMPLATE_RELEASE_FILE_MAP["adguard-secondary"],
+            "apps/adguard/secondary/helmrelease.yaml",
+        )
+
+    def test_all_apply_release_files_exist(self):
+        repository_root = ROOT.parents[1]
+        missing = {
+            release: path
+            for release, path in advisor.APP_TEMPLATE_RELEASE_FILE_MAP.items()
+            if not (repository_root / path).is_file()
+        }
+        self.assertEqual(missing, {})
+
+
 class FakeKubeClient:
     def __init__(self, nodes, pods):
         self._nodes = nodes

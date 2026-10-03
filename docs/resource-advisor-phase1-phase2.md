@@ -212,6 +212,8 @@ Auto-apply (Phase 3 PR commits) is currently enabled for:
 - `bookorbit`, `obsidian-livesync`, `prowlarr`, `jackett`, `radarr`, `reactive-resume`, `romm`, `sabnzbd`, `sonarr`, `speedtest`, `transmission`, `tunarr`
 - `uptime-kuma`, `vaultwarden`
 
+The two AdGuard releases map to separate HelmReleases under `apps/adguard/primary/` and `apps/adguard/secondary/`.
+
 Service-aware tuning profiles are enabled for bursty/manual media paths where p95 automation metrics have
 underrepresented interactive headroom needs:
 - `jellyseerr`, `sonarr`, `radarr`, `prowlarr`, `jackett`, `flaresolverr`, `sabnzbd`
