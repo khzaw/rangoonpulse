@@ -31,7 +31,7 @@ spec:
           main:
             image:
               repository: ghcr.io/coaxk/subarr
-              tag: "2.7.15"
+              tag: "2.7.16"
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
