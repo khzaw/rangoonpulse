@@ -3306,7 +3306,7 @@ button.filter-btn.active {
 
 .placement-pod-rect { pointer-events: all; }
 
-/* Exposure table: quiet when everything is private, loud only for live shares. */
+/* Exposure table: quiet when everything is private, clear when a share is live. */
 .exposure-state {
   display: inline-flex;
   align-items: center;
@@ -3326,12 +3326,12 @@ button.filter-btn.active {
 }
 .exposure-state.off { color: var(--text-3); }
 .exposure-state.off::before { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
-.exposure-state.on { color: var(--red); font-weight: 500; }
+.exposure-state.on { color: var(--green); font-weight: 500; }
 .exposure-state.on::before { animation: exposure-blink 1.6s steps(2, end) infinite; }
 @keyframes exposure-blink { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .exposure-state.on::before { animation: none; } }
 
-tbody tr.is-enabled { background: color-mix(in srgb, var(--red) 4%, transparent); }
+tbody tr.is-enabled { background: color-mix(in srgb, var(--green) 4%, transparent); }
 tbody tr.is-enabled .public-host { color: var(--text-1); font-weight: 500; }
 tbody tr:not(.is-enabled) .public-host { color: var(--text-2); }
 tbody tr.is-configuring { background: var(--soft-hover); }
@@ -3491,7 +3491,7 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
   border-top: 1px solid var(--border-strong);
   background: transparent;
 }
-.digest-card.is-hot .support-card-title { color: var(--red); }
+.digest-card.is-hot .support-card-title { color: var(--green); }
 .digest-card .support-card-title { color: var(--text-1); font-size: 14px; }
 .digest-card .support-copy { font-size: 12px; }
 .digest-head {
@@ -3669,6 +3669,7 @@ a.overview-segment:focus-visible { outline: 2px solid var(--accent-border); outl
   padding: 3px 0;
 }
 .nav-health-row > span:last-child { color: var(--text-2); }
+.nav-health-row.active > span:last-child { color: var(--green); }
 .nav-health-row.warning > span:last-child { color: var(--yellow); }
 .nav-health-row.danger > span:last-child { color: var(--red); }
 @media (max-width: 980px) { .nav-health { display: none; } }

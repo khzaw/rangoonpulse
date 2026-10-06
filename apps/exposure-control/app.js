@@ -744,7 +744,7 @@
           return '<div class="nav-health-row' + (tone ? ' ' + tone : '') + '"><span>' + label + '</span><span>' + escapeHtml(String(value)) + '</span></div>';
         }
         el.innerHTML =
-          row('public', state.shares, state.shares > 0 ? 'danger' : '') +
+          row('public', state.shares, state.shares > 0 ? 'active' : '') +
           row('updates', state.updates, state.updates > 0 ? 'warning' : '') +
           row('route', state.route, state.route === 'vpn' ? 'warning' : '') +
           row('travel', state.travel, state.travel === 'ready' ? '' : state.travel === 'degraded' ? 'warning' : 'danger');
