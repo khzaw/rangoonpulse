@@ -36,7 +36,7 @@ spec:
               privileged: true
             image:
               repository: lscr.io/linuxserver/jellyfin
-              tag: 12.2ubu2604-ls54
+              tag: 12.2ubu2604-ls55
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
