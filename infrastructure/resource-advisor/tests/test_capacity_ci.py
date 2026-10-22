@@ -24,9 +24,10 @@ class CapacityCITests(unittest.TestCase):
         pod['initContainers'] = [{'restartPolicy': 'Always', 'resources': {'requests': {'cpu': '25m'}}}]
         pod['overhead'] = {'cpu': '10m'}
         pod['volumes'] = [{'secret': {'secretName': 'private-secret'}}]
+        obj['status'] = {'conditions': [{'type': 'Available', 'status': 'True', 'message': 'private-status-detail'}]}
         clean = capacity_snapshot.sanitize(obj)
         text = json.dumps(clean)
-        for excluded in ['PASSWORD', 'private-value', 'private-secret', 'example/test', 'volumes', 'env']:
+        for excluded in ['PASSWORD', 'private-value', 'private-secret', 'example/test', 'volumes', 'env', 'private-status-detail']:
             self.assertNotIn(excluded, text)
         self.assertEqual(capacity.cpu(clean), 535)
         self.assertEqual(capacity.placement(capacity.pod_spec(clean)), capacity.placement(pod))

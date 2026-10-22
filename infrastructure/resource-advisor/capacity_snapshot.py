@@ -39,7 +39,11 @@ def sanitize(obj):
         **{k: copy.deepcopy(spec[k]) for k in ('replicas', 'parallelism', 'strategy', 'updateStrategy') if k in spec},
         'template': {'spec': template},
     }
-    result['status'] = {k: copy.deepcopy(obj.get('status', {})[k]) for k in ('phase', 'conditions') if k in obj.get('status', {})}
+    status = obj.get('status', {})
+    result['status'] = {'conditions': [{k: c[k] for k in ('type', 'status') if k in c}
+                                      for c in status.get('conditions', [])]}
+    if 'phase' in status:
+        result['status']['phase'] = status['phase']
     return result
 
 
