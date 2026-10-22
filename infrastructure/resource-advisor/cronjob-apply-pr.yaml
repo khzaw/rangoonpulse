@@ -81,6 +81,10 @@ spec:
                   value: 1d
                 - name: MAX_REQUESTS_PERCENT_CPU
                   value: "60"
+                - name: MIN_FREE_CPU_M_PER_NODE
+                  value: "1000"
+                - name: JOB_CPU_RESERVE_M_PER_NODE
+                  value: "150"
                 - name: MAX_REQUESTS_PERCENT_MEMORY
                   value: "65"
                 - name: MIN_DATA_DAYS_FOR_UPSIZE

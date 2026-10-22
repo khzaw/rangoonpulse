@@ -476,6 +476,18 @@ def build_metrics() -> str:
         metrics.append(_prom_line("resource_advisor_apply_preflight_next_up_total", None, float(len(next_up))))
 
     if isinstance(apply_plan, dict):
+        headroom = (apply_plan.get("node_fit") or {}).get("cpu_headroom") or {}
+        for field, metric, help_text in (
+            ("required_cpu_headroom_m", "required", "CPU reserved for a replacement pod and jobs"),
+            ("free_cpu_after_upsizes_m", "free", "Free CPU after all proposed increases without downsize credits"),
+            ("shortfall_cpu_m", "shortfall", "CPU missing from the protected rollout and job reserve"),
+        ):
+            name = f"resource_advisor_apply_cpu_headroom_{metric}_m"
+            metrics.append(f"# HELP {name} {help_text}, in millicores.\n")
+            metrics.append(f"# TYPE {name} gauge\n")
+            for node, row in sorted((headroom.get("nodes") or {}).items()):
+                metrics.append(_prom_line(name, {"node": node}, float(row[field])))
+
         metrics.append("# HELP resource_advisor_apply_preflight_selected_by_reason Selected live-preflight candidates grouped by selection reason.\n")
         metrics.append("# TYPE resource_advisor_apply_preflight_selected_by_reason gauge\n")
         for reason, count in sorted((apply_plan.get("selected_reason_counts") or {}).items()):
@@ -777,6 +789,7 @@ def build_ui_payload() -> dict[str, Any]:
                 "memory": bool(advisory_pressure.get("memory")),
             },
             "nodeFit": node_fit,
+            "cpuHeadroom": node_fit.get("cpu_headroom") or {},
             "hardFitOk": bool(node_fit.get("hard_fit_ok")) if isinstance(node_fit, dict) else False,
             "budgets": apply_plan.get("budgets") or {},
             "currentRequests": apply_plan.get("current_requests") or {},

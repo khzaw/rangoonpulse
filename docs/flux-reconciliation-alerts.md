@@ -168,6 +168,8 @@ per-object route and templates; Discord and Telegram recorded notification
 deliveries with zero failures during recovery. Template rendering also verified
 mixed firing/resolved alerts and escaped Telegram annotation text.
 Both Prometheus and Alertmanager subsequently reported zero active Flux alerts.
+Resource Advisor now enforces a [per-node rollout/job CPU reserve](./resource-advisor-phase1-phase2.md#node-constraint-awareness)
+for request increases, including independent-PR ordering and stale-report guards.
 
 ## Verification Performed
 

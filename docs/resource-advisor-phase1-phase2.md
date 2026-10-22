@@ -3,7 +3,7 @@ title: Resource Advisor Automation
 summary: Living reference for the resource-advisor report/apply workflow, exporter surface, guardrails, and operator checks.
 status: active
 owner: homelab
-last_reviewed: 2026-09-30
+last_reviewed: 2026-10-22
 ---
 
 # Resource Advisor Automation
@@ -137,7 +137,27 @@ an eight-column table. The implementation lives in
 The report and apply planner are aware of cluster posture, but the hard safety gate is node capacity:
 - Uses allocatable node CPU/memory from Kubernetes API.
 - Phase 2 uses live pod request footprint (Kubernetes API) for planner context (includes replicas and all namespaces).
-- Phase 2 runs a node-fit simulation based on current pod placement and blocks only changes that would exceed allocatable node capacity.
+- Phase 2 runs a node-fit simulation based on current pod placement. Allocatable CPU/memory remain hard ceilings;
+  a separate per-node CPU headroom gate also blocks increases that would crowd out rollouts and jobs.
+- The apply CronJob and live exporter use the same explicit settings:
+  - `MIN_FREE_CPU_M_PER_NODE=1000`: minimum unreserved CPU on each node.
+  - `JOB_CPU_RESERVE_M_PER_NODE=150`: room for a job alongside a full replacement pod.
+- Each node must retain `max(1000m, largest replacement pod request + 150m)` after proposed CPU increases.
+  The largest pod includes sidecars, init requests, pod overhead, and proposed increases. Init-dominated pods
+  are conservatively charged the entire container increase. The reserve covers one full replacement pod and
+  the job allowance; multiple simultaneous rollouts can need more capacity.
+- The guard uses each node's live footprint, including replicas and pinned pending pods. Capacity on the utility
+  node cannot pay for a primary-node increase. Unknown pending-pod placement blocks CPU increases until placement
+  is known. Terminal Jobs do not consume the reserve.
+- Separate service PRs share a conservative growth budget: all selected CPU increases must fit even if they merge
+  before any selected downsizes. Unmerged request reductions never fund another PR. CPU-neutral changes and safe
+  downsizes remain eligible while the reserve is short, subject to existing capacity and maturity gates.
+- A missing candidate placement or a live CPU request that differs from the report defers that candidate. Refresh
+  the report after manual sizing or rollouts instead of applying a stale CPU delta.
+- Apply plans expose `node_fit.cpu_headroom`: required reserve, current requests, free CPU after all proposed
+  increases, and shortfall per node. This is worst-case evidence across the proposed PRs, with no downsize credits.
+  The live Tuning API also exposes it as `applyPreflight.cpuHeadroom`. Headroom blocks use `cpu_headroom_block`;
+  missing placement uses `cpu_headroom_unknown_placement`; stale CPU requests use `live_cpu_request_changed`.
 - Advisory request ceilings are still computed and shown in the report/UI:
   - `MAX_REQUESTS_PERCENT_CPU` (default 60%)
   - `MAX_REQUESTS_PERCENT_MEMORY` (default 65%)
@@ -270,6 +290,9 @@ Live exporter-only surfaces:
   - `/apply-plan.md`
 - `https://controlpanel.khzaw.dev/api/tuning` exposes the structured tuning payload consumed by the cockpit UI.
 - Prometheus metrics include:
+  - `resource_advisor_apply_cpu_headroom_required_m{node}`
+  - `resource_advisor_apply_cpu_headroom_free_m{node}`
+  - `resource_advisor_apply_cpu_headroom_shortfall_m{node}`
   - `resource_advisor_apply_plan_selected_total`
   - `resource_advisor_apply_advisory_cpu_pressure`
   - `resource_advisor_apply_advisory_memory_pressure`

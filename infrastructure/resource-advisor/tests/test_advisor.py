@@ -135,6 +135,23 @@ def make_apply_item(
     }
 
 
+def pods_for_report(report: dict) -> list[dict]:
+    pods = []
+    for rec in report["recommendations"]:
+        pods.append({
+            "metadata": {
+                "namespace": rec["namespace"],
+                "labels": {"app.kubernetes.io/instance": rec["release"]},
+            },
+            "spec": {
+                "nodeName": "node-a",
+                "containers": [{"name": rec["container"], "resources": rec["current"]}],
+            },
+            "status": {"phase": "Running"},
+        })
+    return pods
+
+
 class BuildReportVisibilityTests(unittest.TestCase):
     def build_report_and_plan(self, resources, cpu_p95, memory_p95):
         workload = {
@@ -252,7 +269,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 ),
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -288,7 +305,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a", cpu="100m", memory="256Mi")], [])
+        fake_kube = FakeKubeClient([make_node("node-a", cpu="100m", memory="256Mi")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -318,7 +335,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -349,7 +366,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -381,7 +398,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -416,7 +433,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -446,7 +463,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -476,7 +493,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -508,7 +525,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,
@@ -538,7 +555,7 @@ class BuildApplyPlanTests(unittest.TestCase):
                 )
             ]
         )
-        fake_kube = FakeKubeClient([make_node("node-a")], [])
+        fake_kube = FakeKubeClient([make_node("node-a")], pods_for_report(report))
 
         with patch.dict(
             os.environ,

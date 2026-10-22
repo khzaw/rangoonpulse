@@ -3,6 +3,7 @@
 import base64
 import datetime as dt
 import json
+import math
 import os
 import re
 import ssl
@@ -657,7 +658,73 @@ def pod_effective_requests(pod: dict) -> tuple[float, float]:
 
     cont_cpu_m, cont_mem_mi = sum_requests(spec.get("containers"))
     init_cpu_m, init_mem_mi = max_requests(spec.get("initContainers"))
-    return max(cont_cpu_m, init_cpu_m), max(cont_mem_mi, init_mem_mi)
+    overhead = spec.get("overhead", {}) or {}
+    return (
+        max(cont_cpu_m, init_cpu_m) + parse_cpu_to_m(overhead.get("cpu")),
+        max(cont_mem_mi, init_mem_mi) + parse_mem_to_mi(overhead.get("memory")),
+    )
+
+
+def active_pod(pod: dict) -> bool:
+    return str((pod.get("status") or {}).get("phase") or "").lower() not in ("succeeded", "failed")
+
+
+def pod_target_node(pod: dict, node_alloc: dict) -> str:
+    spec = pod.get("spec") or {}
+    node = spec.get("nodeName") or (spec.get("nodeSelector") or {}).get("kubernetes.io/hostname")
+    return str(node) if node in node_alloc else ""
+
+
+def cpu_headroom_snapshot(
+    node_alloc: dict[str, dict[str, float]],
+    pods: list[dict],
+    cpu_overrides: dict[tuple[str, str, str], float],
+    min_free_cpu_m: float,
+    job_cpu_m: float,
+) -> dict:
+    """Budget all proposed CPU increases without spending unmerged downsizes.
+
+    Reserve one replacement pod plus a job on each node, with an absolute floor.
+    Init-dominated pods are conservatively charged the full container increase.
+    """
+    rows = {
+        name: {"current_cpu_m": 0.0, "cpu_after_upsizes_m": 0.0, "largest_replacement_cpu_m": 0.0}
+        for name in node_alloc
+    }
+    unknown_placement = False
+    for pod in pods:
+        if not active_pod(pod):
+            continue
+        current_cpu, _ = pod_effective_requests(pod)
+        node = pod_target_node(pod, node_alloc)
+        if not node:
+            unknown_placement = unknown_placement or current_cpu > 0.0
+            continue
+        meta = pod.get("metadata") or {}
+        namespace = str(meta.get("namespace") or "default")
+        release = (meta.get("labels") or {}).get("app.kubernetes.io/instance", "")
+        growth = 0.0
+        for container in (pod.get("spec") or {}).get("containers") or []:
+            current = parse_cpu_to_m(((container.get("resources") or {}).get("requests") or {}).get("cpu"))
+            desired = cpu_overrides.get((namespace, release, container.get("name", "")), current)
+            growth += max(0.0, desired - current)
+        row = rows[node]
+        row["current_cpu_m"] += current_cpu
+        row["cpu_after_upsizes_m"] += current_cpu + growth
+        row["largest_replacement_cpu_m"] = max(row["largest_replacement_cpu_m"], current_cpu + growth)
+
+    for name, row in rows.items():
+        row["required_cpu_headroom_m"] = max(min_free_cpu_m, row["largest_replacement_cpu_m"] + job_cpu_m)
+        row["free_cpu_after_upsizes_m"] = node_alloc[name]["cpu_m"] - row["cpu_after_upsizes_m"]
+        row["shortfall_cpu_m"] = max(0.0, row["required_cpu_headroom_m"] - row["free_cpu_after_upsizes_m"])
+        rows[name] = {key: round(value, 1) for key, value in row.items()}
+    return {
+        "min_free_cpu_m_per_node": min_free_cpu_m,
+        "job_cpu_reserve_m_per_node": job_cpu_m,
+        "unknown_placement": unknown_placement,
+        "fit_ok": bool(rows) and not unknown_placement and all(row["shortfall_cpu_m"] <= 0.01 for row in rows.values()),
+        "nodes": rows,
+    }
 
 
 def pod_has_container_name(pod: dict, container_name: str) -> bool:
@@ -673,6 +740,8 @@ def build_pod_placement_index(pods: list[dict]) -> dict[tuple[str, str], dict[st
 
     index: dict[tuple[str, str], dict[str, int]] = {}
     for pod in pods:
+        if not active_pod(pod):
+            continue
         spec = pod.get("spec", {}) or {}
         node = spec.get("nodeName")
         if not node:
@@ -1467,6 +1536,10 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
     min_upsize_cpu_m_total = max(0.0, env_float("MIN_APPLY_UPSIZE_CPU_M_TOTAL", 25.0))
     min_upsize_mem_mi_total = max(0.0, env_float("MIN_APPLY_UPSIZE_MEMORY_MI_TOTAL", 128.0))
     allow_limit_downsize = env_bool("ALLOW_APPLY_LIMIT_DOWNSIZE", False)
+    min_free_cpu_m = env_float("MIN_FREE_CPU_M_PER_NODE", 1000.0)
+    job_cpu_m = env_float("JOB_CPU_RESERVE_M_PER_NODE", 150.0)
+    if any(not math.isfinite(value) or value < 0.0 for value in (min_free_cpu_m, job_cpu_m)):
+        raise ValueError("CPU headroom settings must be finite and non-negative")
 
     allowlist_default = ",".join(DEFAULT_APPLY_ALLOWLIST)
     allowlist = set(env_list("APPLY_ALLOWLIST", allowlist_default))
@@ -1494,7 +1567,18 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         alloc_mem_mi += mem_mi
 
     node_current, current_cpu_m, current_mem_mi = build_node_request_footprint(pods)
-    placement_index = build_pod_placement_index(pods)
+    live_cpu_index: dict[tuple[str, str, str], list[tuple[str, float]]] = {}
+    for pod in pods:
+        if not active_pod(pod):
+            continue
+        meta = pod.get("metadata") or {}
+        namespace = str(meta.get("namespace") or "default")
+        release = (meta.get("labels") or {}).get("app.kubernetes.io/instance", "")
+        node = pod_target_node(pod, node_alloc)
+        for container in (pod.get("spec") or {}).get("containers") or []:
+            key = (namespace, release, container.get("name", ""))
+            cpu = parse_cpu_to_m(((container.get("resources") or {}).get("requests") or {}).get("cpu"))
+            live_cpu_index.setdefault(key, []).append((node, cpu))
 
     cpu_budget_m = alloc_cpu_m * (cpu_budget_pct / 100.0)
     mem_budget_mi = alloc_mem_mi * (mem_budget_pct / 100.0)
@@ -1619,6 +1703,14 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             continue
 
         cur_req_cpu = parse_cpu_to_m(rec.get("current", {}).get("requests", {}).get("cpu"))
+        key = (str(rec.get("namespace") or "default"), release, container)
+        live_containers = live_cpu_index.get(key, [])
+        if not live_containers or any(not node for node, _ in live_containers):
+            skipped.append({"reason": "cpu_headroom_unknown_placement", "release": release, "container": container})
+            continue
+        if any(abs(cpu - cur_req_cpu) > 0.01 for _, cpu in live_containers):
+            skipped.append({"reason": "live_cpu_request_changed", "release": release, "container": container})
+            continue
         cur_req_mem = parse_mem_to_mi(rec.get("current", {}).get("requests", {}).get("memory"))
         rec_req_cpu = parse_cpu_to_m(rec.get("recommended", {}).get("requests", {}).get("cpu"))
         rec_req_mem = parse_mem_to_mi(rec.get("recommended", {}).get("requests", {}).get("memory"))
@@ -1689,7 +1781,9 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         if all(abs(delta) < 1.0 for delta in (delta_cpu, delta_mem, delta_lim_cpu, delta_lim_mem)):
             continue
 
-        placement = placement_index.get((release, container), {})
+        placement: dict[str, int] = {}
+        for node, _ in live_containers:
+            placement[node] = placement.get(node, 0) + 1
         replicas_estimate = sum(placement.values()) if placement else 0
         if replicas_estimate <= 0:
             replicas_estimate = safe_int(rec.get("replicas"), 1)
@@ -1852,6 +1946,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         projected_by_node[name]["mem_mi"] = float((node_current.get(name) or {}).get("mem_mi", 0.0) or 0.0)
 
     selected: list[dict] = []
+    cpu_overrides: dict[tuple[str, str, str], float] = {}
 
     pressure_friendly_upsizes: list[dict] = []
     deferred_upsizes: list[dict] = []
@@ -1890,6 +1985,23 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
                 )
                 continue
 
+            if item["delta"]["requests_cpu_m"] > 0.0:
+                overrides = dict(cpu_overrides)
+                key = (str(item.get("namespace") or "default"), item["release"], item["container"])
+                overrides[key] = parse_cpu_to_m(item["recommended"]["requests"]["cpu"])
+                headroom = cpu_headroom_snapshot(node_alloc, pods, overrides, min_free_cpu_m, job_cpu_m)
+                if headroom["unknown_placement"] or any(
+                    headroom["nodes"][node]["shortfall_cpu_m"] > 0.01 for node in item["placement"]
+                ):
+                    skipped.append({
+                        "reason": "cpu_headroom_unknown_placement" if headroom["unknown_placement"] else "cpu_headroom_block",
+                        "release": item["release"],
+                        "container": item["container"],
+                        "cpu_headroom": headroom,
+                    })
+                    continue
+                cpu_overrides = overrides
+
             projected_by_node = test
             item["selection_reason"] = selection_reason
             selected.append(item)
@@ -1906,6 +2018,8 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         "metrics_window": report.get("metrics_window"),
         "metrics_coverage_days_estimate": coverage_days,
         "constraints": {
+            "min_free_cpu_m_per_node": min_free_cpu_m,
+            "job_cpu_reserve_m_per_node": job_cpu_m,
             "max_request_percent_cpu": cpu_budget_pct,
             "max_request_percent_memory": mem_budget_pct,
             "min_data_days_for_upsize": min_days_upsize,
@@ -1942,8 +2056,14 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
             "memory": advisory_mem_pressure,
         },
         "node_fit": {
-            "assumptions": "Node-fit simulation is based on current pod placement (by label app.kubernetes.io/instance) and current replica counts. Hard blocking uses allocatable node capacity; soft request budgets remain advisory posture signals only.",
+            "assumptions": (
+                "Node-fit simulation uses live pod placement and replica counts. "
+                f"CPU increases leave at least {min_free_cpu_m:g}m free per node, or the largest replacement pod "
+                f"plus {job_cpu_m:g}m for a job, whichever is larger. "
+                "Proposed downsizes do not fund other PRs. Soft request budgets remain advisory."
+            ),
             "hard_fit_ok": final_fit_ok,
+            "cpu_headroom": cpu_headroom_snapshot(node_alloc, pods, cpu_overrides, min_free_cpu_m, job_cpu_m),
             "projected_overages": final_fit,
             "nodes": [
                 {
@@ -2005,6 +2125,7 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         ),
         f"- Apply limit downsizes allowed: `{plan['constraints']['allow_apply_limit_downsize']}`",
         f"- Advisory CPU request ceiling: `{plan['budgets']['cpu_m']}m`",
+        f"- Hard CPU headroom floor per node: `{min_free_cpu_m}m`; replacement pod plus job reserve: `{job_cpu_m}m`",
         f"- Advisory memory request ceiling: `{plan['budgets']['memory_mi']}Mi`",
         f"- Current CPU requests: `{plan['current_requests']['cpu_m']}m`",
         f"- Current Memory requests: `{plan['current_requests']['memory_mi']}Mi`",
@@ -2264,6 +2385,7 @@ def build_selection_projection_summary(plan: dict, selected: list[dict]) -> dict
         },
         "node_fit": {
             "assumptions": node_fit.get("assumptions"),
+            "cpu_headroom": node_fit.get("cpu_headroom") or {},
             "hard_fit_ok": hard_fit_ok,
             "projected_overages": projected_overages,
             "nodes": projected_nodes,
@@ -2427,6 +2549,11 @@ def build_apply_pr_body(report: dict, plan: dict, selected: list[dict]) -> str:
             f"`{plan.get('constraints', {}).get('allow_apply_limit_downsize')}`\n"
         ),
         f"- Advisory CPU request ceiling: `{plan.get('budgets', {}).get('cpu_m')}m`\n",
+        (
+            f"- Hard CPU headroom per node: at least `{plan.get('constraints', {}).get('min_free_cpu_m_per_node')}m`, "
+            f"or the largest replacement pod plus `{plan.get('constraints', {}).get('job_cpu_reserve_m_per_node')}m` "
+            "for a job, whichever is larger. Proposed downsizes do not fund other PRs.\n"
+        ),
         f"- Advisory memory request ceiling: `{plan.get('budgets', {}).get('memory_mi')}Mi`\n",
         (
             f"- Current requests: CPU `{plan.get('current_requests', {}).get('cpu_m')}m`, "

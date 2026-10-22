@@ -34,12 +34,16 @@ requests reached 5943m of 5950m allocatable CPU and blocked even a 12m blog pod.
 See [Flux reconciliation alerts](./flux-reconciliation-alerts.md#cpu-reservation-exhaustion-2026-10-22)
 for the incident and request-only recovery.
 
-Keep roughly 1000m of primary-node CPU unreserved for rollout overlap and jobs.
+Keep at least 1000m of primary-node CPU unreserved for rollout overlap and jobs.
 Check placement-specific requests and the largest replacement pod before adding
 or increasing reservations. Whole-cluster free CPU includes utility-node capacity
-that pinned primary-node apps cannot use. Resource Advisor's current hard-fit gate
-checks steady-state allocatable capacity; its advisory budgets do not guarantee
-this rollout headroom.
+that pinned primary-node apps cannot use. Resource Advisor now hard-blocks CPU
+increases unless each affected node retains the larger of 1000m or its largest
+replacement pod plus 150m for a job. Separate PRs cannot spend unmerged downsize
+savings. Its live preflight exposes the reserve and shortfall per node; see
+[Resource Advisor's policy](./resource-advisor-phase1-phase2.md#node-constraint-awareness).
+This protects Advisor-generated proposals. Manual resource changes and new
+deployments still need the same placement-specific capacity check.
 
 ## Workload drilldowns
 

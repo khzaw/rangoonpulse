@@ -11,6 +11,22 @@ import exporter
 
 
 class ExporterTests(unittest.TestCase):
+    def test_cpu_headroom_is_exposed_in_preflight_and_metrics(self):
+        headroom = {
+            "fit_ok": True,
+            "nodes": {"primary": {
+                "required_cpu_headroom_m": 1000.0,
+                "free_cpu_after_upsizes_m": 1011.0,
+                "shortfall_cpu_m": 0.0,
+            }},
+        }
+        with patch.object(exporter, "STATE", exporter.State()):
+            exporter.STATE.apply_plan = {"node_fit": {"cpu_headroom": headroom}}
+            self.assertEqual(exporter.build_ui_payload()["applyPreflight"]["cpuHeadroom"], headroom)
+            metrics = exporter.build_metrics()
+        self.assertIn('resource_advisor_apply_cpu_headroom_required_m{node="primary"} 1000', metrics)
+        self.assertIn('resource_advisor_apply_cpu_headroom_free_m{node="primary"} 1011', metrics)
+
     def test_ui_preserves_missing_usage_and_distinguishes_measured_zero(self):
         cases = [
             ("missing", {}, None, None, True),

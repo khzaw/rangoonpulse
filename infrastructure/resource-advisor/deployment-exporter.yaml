@@ -43,6 +43,10 @@ spec:
               value: resource-advisor-latest
             - name: REFRESH_SECONDS
               value: "300"
+            - name: MIN_FREE_CPU_M_PER_NODE
+              value: "1000"
+            - name: JOB_CPU_RESERVE_M_PER_NODE
+              value: "150"
             - name: PORT
               value: "8081"
           ports:
