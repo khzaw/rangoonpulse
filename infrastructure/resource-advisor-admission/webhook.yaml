@@ -1,0 +1,55 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: resource-advisor-cpu-headroom
+  annotations:
+    cert-manager.io/inject-ca-from: monitoring/resource-advisor-admission
+webhooks:
+  - name: cpu-headroom.khzaw.dev
+    admissionReviewVersions: [v1]
+    sideEffects: NoneOnDryRun
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    timeoutSeconds: 15
+    clientConfig:
+      service:
+        namespace: monitoring
+        name: resource-advisor-exporter
+        path: /validate
+        port: 8443
+    matchConditions:
+      - name: exclude-backend-recovery
+        expression: >-
+          !(request.namespace == 'monitoring' &&
+            ((request.resource.resource == 'deployments' && request.name == 'resource-advisor-exporter') ||
+             (request.resource.resource in ['pods', 'replicasets'] &&
+              object.metadata.name.startsWith('resource-advisor-exporter-') &&
+              has(object.metadata.labels) && 'app.kubernetes.io/name' in object.metadata.labels &&
+              object.metadata.labels['app.kubernetes.io/name'] == 'resource-advisor-exporter')))
+      - name: exclude-kubelet-mirror-pods
+        expression: >-
+          !(request.resource.resource == 'pods' && has(object.metadata.annotations) &&
+            'kubernetes.io/config.mirror' in object.metadata.annotations)
+    rules:
+      - operations: [CREATE, UPDATE]
+        apiGroups: [apps]
+        apiVersions: [v1]
+        scope: Namespaced
+        resources:
+          - deployments
+          - deployments/scale
+          - statefulsets
+          - statefulsets/scale
+          - daemonsets
+          - replicasets
+          - replicasets/scale
+      - operations: [CREATE, UPDATE]
+        apiGroups: [batch]
+        apiVersions: [v1]
+        scope: Namespaced
+        resources: [jobs, cronjobs]
+      - operations: [CREATE, UPDATE]
+        apiGroups: ['']
+        apiVersions: [v1]
+        scope: Namespaced
+        resources: [pods, pods/resize]

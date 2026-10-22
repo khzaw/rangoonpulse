@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: resource-advisor-admission
+  namespace: flux-system
+spec:
+  interval: 24h
+  path: ./infrastructure/resource-advisor-admission
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  timeout: 5m
+  dependsOn:
+    - name: resource-advisor

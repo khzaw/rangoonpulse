@@ -17,5 +17,14 @@ spec:
       - kind: ConfigMap
         name: cluster-settings
   timeout: 5m
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: resource-advisor-exporter
+      namespace: monitoring
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: resource-advisor-admission
+      namespace: monitoring
   dependsOn:
     - name: monitoring
