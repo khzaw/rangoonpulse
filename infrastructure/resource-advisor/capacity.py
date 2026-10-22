@@ -222,12 +222,10 @@ class Guard:
         )]
         pending = [p for _, p in self.pending]
         kind = obj["kind"]
-        # Pin-preserving updates that do not increase reservations remain available
-        # even while headroom is short (including restarts and recovery downsizes).
+        # Existing intent is grandfathered, including no-op SSA reconciliation.
+        # A placement change or reservation increase still requires a full check.
         if old is not None and cpu(obj) <= cpu(old) and replicas(obj) <= replicas(old) and surge(obj) <= surge(old):
-            if placement(pod_spec(obj)) == placement(pod_spec(old)) and (
-                pod_spec(obj).get("nodeName") or (pod_spec(obj).get("nodeSelector") or {}).get("kubernetes.io/hostname")
-            ):
+            if placement(pod_spec(obj)) == placement(pod_spec(old)):
                 return {"allowed": True, "reason": "CPU-neutral update or recovery downsize"}
         ref = owner(obj)
         if ref and (kind == "ReplicaSet" or (kind == "Pod" and old is None)):

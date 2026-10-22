@@ -11,7 +11,7 @@ last_reviewed: 2026-10-22
 The Resource Advisor TLS admission endpoint enforces the same per-node CPU reserve
 as its proposal planner: `max(1000m, replacement CPU + 150m for a job)`. It checks
 rendered Kubernetes workloads, so chart defaults and manual Kubernetes API writes
-are covered alongside GitOps changes. CPU-neutral pinned updates and recovery
+are covered alongside GitOps changes. CPU-neutral updates preserving placement and recovery
 reductions remain available when the reserve is short.
 
 ## What is checked

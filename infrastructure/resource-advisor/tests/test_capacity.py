@@ -102,6 +102,16 @@ class AdmissionCapacityTests(unittest.TestCase):
         changed['spec']['template']['spec']['containers'][0]['image'] = 'example/test:2'
         self.assertTrue(self.guard.evaluate(changed, old, baseline()+[old])['allowed'])
 
+    def test_unchanged_unpinned_intent_does_not_block_flux_noop_reconciliation(self):
+        deployment = workload('utility-controller', '200m', host='utility')
+        deployment['spec']['template']['spec'].pop('nodeSelector')
+        rs = child(deployment, 'utility-rs', kind='ReplicaSet')
+        running = child(rs, 'utility-pod')
+        running['spec']['nodeName'] = 'utility'
+        changed = copy.deepcopy(deployment)
+        changed['metadata']['annotations'] = {'reconcile-test': 'true'}
+        self.assertTrue(self.guard.evaluate(changed, deployment, baseline()+[deployment, rs, running])['allowed'])
+
     def test_utility_capacity_cannot_pay_for_primary_growth(self):
         self.assertFalse(self.guard.evaluate(workload('new', '200m'), None, baseline())['allowed'])
         self.assertTrue(self.guard.evaluate(workload('new', '200m', host='utility'), None, baseline())['allowed'])
