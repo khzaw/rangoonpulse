@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/cronjob-batch-v1.json
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: resource-advisor-capacity-snapshot
+  namespace: monitoring
+spec:
+  schedule: "*/15 * * * *"
+  startingDeadlineSeconds: 300
+  timeZone: "${TIMEZONE}"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 120
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 21600
+      template:
+        spec:
+          serviceAccountName: resource-advisor
+          # The secondary node's CNI is currently unhealthy; pin to primary node for reliability.
+          nodeSelector:
+            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: advisor
+              image: python:3.15-alpine
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "-c"]
+              args:
+                - python /opt/resource-advisor/capacity_snapshot.py
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: false
+                capabilities:
+                  drop: ["ALL"]
+              env:
+                - name: GITHUB_REPOSITORY
+                  value: khzaw/rangoonpulse
+                - name: GITHUB_COMMIT_AUTHOR_NAME
+                  value: Kaung Htet
+                - name: GITHUB_COMMIT_AUTHOR_EMAIL
+                  value: kayhzaw@gmail.com
+                - name: GITHUB_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: resource-advisor-github
+                      key: token
+              volumeMounts:
+                - name: advisor-script
+                  mountPath: /opt/resource-advisor
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 5m
+                  memory: 32Mi
+                limits:
+                  cpu: 250m
+                  memory: 128Mi
+          volumes:
+            - name: advisor-script
+              configMap:
+                name: resource-advisor-script
+                defaultMode: 0555

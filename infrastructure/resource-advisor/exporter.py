@@ -571,12 +571,6 @@ def build_metrics() -> str:
         metrics.append("# TYPE resource_advisor_recommended_requests_percent_memory gauge\n")
         metrics.append(_prom_line("resource_advisor_recommended_requests_percent_memory", None, float(rec_pct.get("memory") or 0.0)))
 
-    if os.getenv("ADMISSION_ENABLED") == "true":
-        import admission
-        metrics.append("# HELP resource_advisor_cpu_admission_total CPU admission decisions by kind and result.\n")
-        metrics.append("# TYPE resource_advisor_cpu_admission_total counter\n")
-        for (kind, allowed), count in sorted(admission.DECISIONS.copy().items()):
-            metrics.append(_prom_line("resource_advisor_cpu_admission_total", {"kind": kind, "allowed": allowed}, count))
     return "".join(metrics)
 
 
@@ -1433,10 +1427,6 @@ def main() -> int:
 
     t = threading.Thread(target=refresher_loop, daemon=True)
     t.start()
-
-    if os.getenv("ADMISSION_ENABLED") == "true":
-        import admission
-        admission.start()
 
     server = HTTPServer((listen, port), Handler)
     advisor.log(f"resource-advisor-exporter listening on {listen}:{port}")

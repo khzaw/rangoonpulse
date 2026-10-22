@@ -81,7 +81,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Monitoring, dashboards, and resource tuning
 
-- [`docs/cpu-headroom-admission.md`](./cpu-headroom-admission.md) for live CPU reservation enforcement on manual changes, new deployments, scaling, and rollout/job recovery.
+- [`docs/cpu-headroom-validation.md`](./cpu-headroom-validation.md) for Git/CI CPU reservation validation for manual resource edits, new deployments, and scaling.
 
 - [`docs/controlpanel-pulse.md`](./controlpanel-pulse.md) for the cockpit Pulse page, bounded metrics access, and visualization verification.
 

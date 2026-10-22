@@ -2,7 +2,7 @@
 .PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-retirement deploy-rangoon-mapper deploy-static-sites
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
-.PHONY: validate check-capacity validate-kustomize validate-all check-docs check-node check-shell test-python
+.PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell test-python
 
 CLUSTER_SETTINGS_FILE ?= flux/cluster-settings.yaml
 PRIMARY_NODE := $(shell awk '/^  PRIMARY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))
@@ -135,6 +135,9 @@ validate: ## Dry-run validate a manifest (usage: make validate FILE=apps/blog/he
 
 check-capacity: ## Check live CPU headroom for rendered workloads (usage: make check-capacity FILE=rendered.yaml)
 	uv run --no-project python scripts/check_capacity.py --file $(FILE)
+
+check-git-capacity: ## Check changed Git workloads (usage: make check-git-capacity BASE=origin/master)
+	uv run --no-project --with PyYAML==6.0.3 python scripts/check_git_capacity.py --base $(BASE)
 
 validate-kustomize: ## Render the Flux entrypoint with Kustomize
 	kubectl kustomize flux >/tmp/rangoonpulse-flux-rendered.yaml

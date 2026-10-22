@@ -1,4 +1,4 @@
-"""CPU admission policy shared by Kubernetes and the local read-only preflight."""
+"""CPU reservation policy shared by Git/CI and the local read-only preflight."""
 
 import copy
 import math

@@ -347,6 +347,7 @@ make deploy-retirement
 | [`flux-web-ui.md`](docs/flux-web-ui.md) | Flux Operator web UI deployment and checks |
 | [`dns-access-path-dashboard.md`](docs/dns-access-path-dashboard.md) | DNS health and access surface |
 | [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource advisor automation and apply-PR model |
+| [`cpu-headroom-validation.md`](docs/cpu-headroom-validation.md) | Git/CI rollout and job CPU reserve checks |
 | [`node-capacity-dashboard.md`](docs/node-capacity-dashboard.md) | Whole-host node CPU/RAM dashboard |
 | [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |
 | [`pangolin-fit-analysis.md`](docs/pangolin-fit-analysis.md) | Historical analysis of where Pangolin could fit in the access model |

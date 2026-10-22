@@ -16,7 +16,4 @@ spec:
     - name: http
       port: 8081
       targetPort: http
-    - name: admission
-      port: 8443
-      targetPort: admission
 

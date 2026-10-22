@@ -40,7 +40,6 @@ resources:
   - ./kustomizations/metrics-server.yaml
   - ./kustomizations/dns-reliability.yaml
   - ./kustomizations/resource-advisor.yaml
-  - ./kustomizations/resource-advisor-admission.yaml
   - ./kustomizations/image-automation.yaml
   - ./kustomizations/flux-operator.yaml
 

@@ -15,14 +15,13 @@ resources:
   - service-exporter.yaml
   - servicemonitor-exporter.yaml
   - grafana-dashboard-resource-advisor.yaml
-  - admission-tls.yaml
-  - admission-networkpolicy.yaml
+  - cronjob-capacity-snapshot.yaml
 configMapGenerator:
   - name: resource-advisor-script
     files:
       - advisor.py
       - capacity.py
-      - admission.py
+      - capacity_snapshot.py
       - exporter.py
       - index.html
       - index.css

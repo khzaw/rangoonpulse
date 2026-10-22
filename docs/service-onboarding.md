@@ -108,9 +108,9 @@ Set explicit requests and limits, and define a bounded HPA when requested or app
 capacity at the maximum replica count, including rollout overlap. Integrate the workload into the advisor's
 report scope and make an intentional choice for automated resource changes.
 
-Run the [CPU capacity preflight](./cpu-headroom-admission.md) against rendered
-workload manifests before pushing. Live admission also enforces this for new
-Deployments, resource changes, and replica scaling. Check the maximum intended
+Run the [CPU capacity preflight](./cpu-headroom-validation.md) against rendered
+workload manifests before pushing. CI renders changed workloads and validates
+new Deployments, resource changes, and replica scaling. Check the maximum intended
 replicas and surge settings, and preserve the per-node rollout/job reserve.
 
 Inspect `TARGET_NAMESPACES`, `APP_TEMPLATE_RELEASE_FILE_MAP`, any `APPLY_ALLOWLIST` override, service profiles,

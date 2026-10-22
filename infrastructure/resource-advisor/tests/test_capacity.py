@@ -2,9 +2,6 @@ import copy
 import importlib.util
 import json
 import os
-import threading
-import urllib.request
-from http.server import HTTPServer
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -12,7 +9,6 @@ from unittest.mock import patch
 from test_advisor import make_node
 import advisor
 import capacity
-import admission
 
 
 def node(name, cpu='5950m'):
@@ -44,7 +40,7 @@ def baseline():
     return [node('primary'), node('utility', '3950m')] + [workload('other-'+str(i), '400m') for i in range(12)]
 
 
-class AdmissionCapacityTests(unittest.TestCase):
+class CapacityTests(unittest.TestCase):
     def setUp(self):
         self.env = patch.dict(os.environ, {}, clear=True)
         self.env.start()
@@ -80,12 +76,6 @@ class AdmissionCapacityTests(unittest.TestCase):
         for changed in [workload('current', '200m'), workload('current', '100m', replicas=2)]:
             with self.subTest(changed=changed['spec']):
                 self.assertFalse(self.guard.evaluate(changed, old, baseline()+[old], dry_run=True)['allowed'])
-
-    def test_scale_subresource_cannot_bypass_the_guard(self):
-        old = workload('current', '100m')
-        review = {'resource': {'resource': 'deployments'}, 'subResource': 'scale', 'namespace': 'default',
-                  'name': 'current', 'object': {'spec': {'replicas': 2}}, 'dryRun': True}
-        self.assertFalse(admission.evaluate_review(review, baseline()+[old], self.guard)['allowed'])
 
     def test_recovery_downsize_is_allowed_while_reserve_is_short(self):
         old = workload('current', '500m')
@@ -190,14 +180,6 @@ class AdmissionCapacityTests(unittest.TestCase):
         obj['spec']['template']['spec'].pop('nodeSelector')
         self.assertFalse(self.guard.evaluate(obj, None, baseline())['allowed'])
 
-    def test_pod_resize_cannot_bypass_the_guard(self):
-        old = workload('pod', '100m', kind='Pod')
-        old['spec'] = old['spec']['template']['spec']
-        changed = copy.deepcopy(old)
-        changed['spec']['containers'][0]['resources']['requests']['cpu'] = '200m'
-        review = {'resource': {'resource': 'pods'}, 'subResource': 'resize', 'oldObject': old, 'object': changed, 'dryRun': True}
-        self.assertFalse(admission.evaluate_review(review, baseline()+[old], self.guard)['allowed'])
-
     def test_preflight_reads_kubectl_multi_document_json_stream(self):
         path = Path(__file__).resolve().parents[3] / 'scripts/check_capacity.py'
         spec = importlib.util.spec_from_file_location('check_capacity', path)
@@ -206,24 +188,3 @@ class AdmissionCapacityTests(unittest.TestCase):
         one, two = workload('one'), workload('two')
         raw = (json.dumps(one)+'\n'+json.dumps({'kind': 'List', 'items': [two]})).encode()
         self.assertEqual(module.decode_objects(raw), [one, two])
-
-    def test_apiserver_timeout_query_preserves_admission_request_uid(self):
-        server = HTTPServer(('127.0.0.1', 0), admission.Handler)
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        try:
-            request = {'uid': 'protocol-regression', 'object': workload('new', '100m'),
-                       'kind': {'kind': 'Deployment'}, 'resource': {'resource': 'deployments'}, 'dryRun': True}
-            payload = json.dumps({'request': request}).encode()
-            with patch.object(admission.READER, 'read', return_value=baseline()):
-                with urllib.request.urlopen(urllib.request.Request(
-                    f'http://127.0.0.1:{server.server_port}/validate?timeout=15s',
-                    data=payload, headers={'Content-Type': 'application/json'},
-                )) as response:
-                    decision = json.load(response)['response']
-            self.assertEqual(decision['uid'], request['uid'])
-            self.assertTrue(decision['allowed'])
-        finally:
-            server.shutdown()
-            server.server_close()
-            thread.join()

@@ -235,6 +235,15 @@ const SECRET_EDITOR_FLUX_NAMESPACE = String(
 ).trim();
 const MANAGED_JOBS = [
   {
+    id: "resource-advisor-capacity-snapshot",
+    title: "Resource advisor capacity snapshot",
+    namespace: "monitoring",
+    cronJob: "resource-advisor-capacity-snapshot",
+    description: "Publishes credential-free CPU capacity inputs for Git and CI validation every 15 minutes.",
+    repoPath: "infrastructure/resource-advisor/cronjob-capacity-snapshot.yaml",
+    fluxKustomization: "resource-advisor",
+  },
+  {
     id: "truenas-management-plane-refresh",
     title: "TrueNAS management refresh",
     namespace: "democratic-csi",

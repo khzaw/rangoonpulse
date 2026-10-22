@@ -23,9 +23,5 @@ spec:
       kind: Deployment
       name: resource-advisor-exporter
       namespace: monitoring
-    - apiVersion: cert-manager.io/v1
-      kind: Certificate
-      name: resource-advisor-admission
-      namespace: monitoring
-  # Remain repairable when admission has blocked other workloads. Bootstrap
-  # retries until the monitoring namespace and cert-manager CRDs exist.
+  dependsOn:
+    - name: monitoring

@@ -137,9 +137,10 @@ an eight-column table. The implementation lives in
 
 ## Node Constraint Awareness
 
-The [CPU admission guard](./cpu-headroom-admission.md) extends this reserve to
-manual Kubernetes/GitOps changes, new workloads, and replica scaling. The shared
-preflight command checks rendered workload batches before push.
+The [Git/CI capacity validator](./cpu-headroom-validation.md) extends this reserve to
+manual Git resource edits, new workloads, and replica scaling. The shared
+preflight command checks rendered workload batches before push. Kubernetes API
+writes are not intercepted.
 The report and apply planner are aware of cluster posture, but the hard safety gate is node capacity:
 - Uses allocatable node CPU/memory from Kubernetes API.
 - Phase 2 uses live pod request footprint (Kubernetes API) for planner context (includes replicas and all namespaces).
