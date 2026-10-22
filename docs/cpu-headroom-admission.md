@@ -60,6 +60,15 @@ not an authorization boundary against cluster administrators.
   them. Deletes, status updates, and mirror Pods are outside its rules. The
   exporter's own Deployment and its labelled Pods/ReplicaSets are exempt so the
   admission backend can recover without calling itself.
+- Controller-created Pods and ReplicaSets in core networking, DNS, Flux, TLS,
+  storage, ingress, and Tailscale namespaces can also bootstrap without the
+  webhook. Their Deployment/StatefulSet/DaemonSet templates, scaling, and Pod
+  resource resizing still pass the guard. This prevents a cold-start dependency
+  cycle in which CNI/DNS would need a webhook Pod that cannot start without CNI.
+- The backend has no workload-readiness dependencies and retries failed bootstrap
+  applies every minute until its namespace and cert-manager CRDs exist. A blocked
+  workload update must not prevent delivery of an admission repair. Activation
+  still waits for the backend Deployment and TLS Certificate to become ready.
 - `resource_advisor_cpu_admission_total{kind,allowed}` records decisions alongside
   the existing headroom metrics. Tuning remains at `controlpanel.khzaw.dev`.
 

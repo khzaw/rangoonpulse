@@ -30,6 +30,12 @@ webhooks:
         expression: >-
           !(request.resource.resource == 'pods' && has(object.metadata.annotations) &&
             'kubernetes.io/config.mirror' in object.metadata.annotations)
+      - name: allow-core-controller-bootstrap
+        expression: >-
+          !(request.operation == 'CREATE' && request.resource.resource in ['pods', 'replicasets'] &&
+            request.namespace in ['kube-system', 'flux-system', 'cert-manager', 'metallb-system',
+                                  'democratic-csi', 'local-path-storage', 'ingress-nginx', 'tailscale'] &&
+            has(object.metadata.ownerReferences) && object.metadata.ownerReferences.exists(r, has(r.controller) && r.controller))
     rules:
       - operations: [CREATE, UPDATE]
         apiGroups: [apps]
