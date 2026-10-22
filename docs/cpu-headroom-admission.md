@@ -45,6 +45,8 @@ not an authorization boundary against cluster administrators.
 ## Runtime and TLS
 
 - Code: `infrastructure/resource-advisor/capacity.py` and `admission.py`.
+- Script ConfigMaps use content hashes, so code changes update the Pod template
+  and automatically replace the running backend; CronJobs use the same hash.
 - Backend: existing `monitoring/resource-advisor-exporter`, HTTPS port 8443,
   `/validate`; no public ingress or separate application hostname.
 - Cert-manager owns `resource-advisor-admission-ca` and

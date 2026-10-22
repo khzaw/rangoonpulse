@@ -27,5 +27,3 @@ configMapGenerator:
       - index.html
       - index.css
       - index.js
-generatorOptions:
-  disableNameSuffixHash: true

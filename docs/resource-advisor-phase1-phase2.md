@@ -72,8 +72,10 @@ Apply PR cleanliness:
 - Source files:
   - `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/exporter.py`
 - Operational note:
-  - `exporter.py` is mounted from a ConfigMap; after a Git change to the exporter code, reconcile alone updates the file but does not restart the running Python process.
-  - Run `kubectl rollout restart deployment/resource-advisor-exporter -n monitoring` after the reconcile when you need the new code live immediately.
+  - The script ConfigMap has a content hash in its name. Kustomize rewrites the exporter and CronJob volume references;
+    policy/exporter code changes therefore roll the exporter automatically. Verify its rollout and live API after reconciliation.
+  - A manual `kubectl rollout restart deployment/resource-advisor-exporter -n monitoring` is only needed for recovery
+    when the normal Deployment update could not complete.
 
 ### Reading the Tuning page
 
