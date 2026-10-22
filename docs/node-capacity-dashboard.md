@@ -26,7 +26,22 @@ The top row therefore answers:
 - RAM used out of total bytes
 - utilization percentages for the selected node scope
 
-## Drilldown Model
+## Scheduling and rollout headroom
+
+CPU utilization and CPU requests answer different questions. Kubernetes schedules
+against requests even when a node is mostly idle. On October 22, 2026, primary-node
+requests reached 5943m of 5950m allocatable CPU and blocked even a 12m blog pod.
+See [Flux reconciliation alerts](./flux-reconciliation-alerts.md#cpu-reservation-exhaustion-2026-10-22)
+for the incident and request-only recovery.
+
+Keep roughly 1000m of primary-node CPU unreserved for rollout overlap and jobs.
+Check placement-specific requests and the largest replacement pod before adding
+or increasing reservations. Whole-cluster free CPU includes utility-node capacity
+that pinned primary-node apps cannot use. Resource Advisor's current hard-fit gate
+checks steady-state allocatable capacity; its advisory budgets do not guarantee
+this rollout headroom.
+
+## Workload drilldowns
 
 The lower panels pivot into Kubernetes workloads and pods:
 

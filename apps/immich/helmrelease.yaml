@@ -43,7 +43,7 @@ spec:
               PGDATA: "/var/lib/postgresql/data/pgdata"
             resources:
               requests:
-                cpu: "150m"
+                cpu: "75m"
                 memory: "1Gi"
               limits:
                 cpu: "500m"
@@ -147,7 +147,7 @@ spec:
                 tag: v3.3.3
               resources:
                 requests:
-                  cpu: "300m"
+                  cpu: "100m"
                   memory: "1Gi"
                 limits:
                   cpu: "1200m"
@@ -170,7 +170,7 @@ spec:
                 tag: v3.3.3
               resources:
                 requests:
-                  cpu: "200m"
+                  cpu: "100m"
                   memory: "768Mi"
                 limits:
                   cpu: "1000m"

@@ -88,13 +88,13 @@ Use the smallest matching repo-local skill when the task clearly fits:
 - [`docs/dashboards-dynacat.md`](./dashboards-dynacat.md) for the Dynacat dashboard, monitors, and widget-specific gotchas.
 - [`docs/gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md) for rollout/change timeline interpretation.
 - [`docs/dns-access-path-dashboard.md`](./dns-access-path-dashboard.md) for DNS and ingress path troubleshooting.
-- [`docs/node-capacity-dashboard.md`](./node-capacity-dashboard.md) for node fit and capacity views.
+- [`docs/node-capacity-dashboard.md`](./node-capacity-dashboard.md) for node fit, CPU reservation and rollout headroom, and capacity views.
 - [`docs/power-estimation-dashboard.md`](./power-estimation-dashboard.md) for estimated node power and cost data.
 - [`docs/metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md) when working with the Metrics API or `kubectl top`.
 - [`docs/flux-web-ui.md`](./flux-web-ui.md) for the Flux Operator web UI at `fluxui.khzaw.dev`.
 - [`docs/kube-state-metrics-oomkills.md`](./kube-state-metrics-oomkills.md) for the known kube-state-metrics sizing issue.
 - [`docs/cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md) for CronJob dead-man's-switch alerts and staleness/failure routing.
-- [`docs/flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md) for alerts on Flux objects that are not ready, stuck, or suspended too long, including Jackett's missing-image rollback recovery.
+- [`docs/flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md) for per-object Flux failure notifications, CPU reservation exhaustion, and Jackett's missing-image rollback recovery.
 
 ### Secrets and auth
 

@@ -37,6 +37,11 @@ spec:
             matchType: "=~"
             value: HomelabCronJob.*
       - receiver: critical-multi
+        groupBy:
+          - alertname
+          - exported_namespace
+          - kind
+          - name
         matchers:
           - name: severity
             matchType: "="
@@ -52,12 +57,12 @@ spec:
             name: alertmanager-receivers
             key: DISCORD_WEBHOOK_URL
           title: >-
-            [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}
-          message: >-
-            {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}{{ .CommonLabels.alertname }}{{ end }}
-            {{ if .CommonAnnotations.description }}
+            [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}{{ if .CommonLabels.name }}: {{ .CommonLabels.exported_namespace }}/{{ .CommonLabels.name }}{{ end }}
+          message: |
+            {{ range .Alerts -}}
+            [{{ .Status | toUpper }}] {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}
+            {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
 
-            {{ .CommonAnnotations.description }}
             {{ end }}
           sendResolved: true
       telegramConfigs:
@@ -65,12 +70,12 @@ spec:
             name: alertmanager-receivers
             key: TELEGRAM_BOT_TOKEN
           chatID: 19198668
-          message: >-
-            [{{ .Status | toUpper }}] {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}{{ .CommonLabels.alertname }}{{ end }}
-            {{ if .CommonAnnotations.description }}
+          message: |
+            {{ range .Alerts -}}
+            [{{ .Status | toUpper }}] {{ if .Annotations.summary }}{{ .Annotations.summary | html }}{{ else }}{{ .Labels.alertname | html }}{{ end }}
+            {{ if .Annotations.description }}{{ .Annotations.description | html }}{{ end }}
 
-            {{ .CommonAnnotations.description }}
             {{ end }}
-          parseMode: Markdown
+          parseMode: HTML
           sendResolved: true
     - name: "null"

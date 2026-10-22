@@ -81,7 +81,7 @@ spec:
               NODE_MAX_OLD_SPACE_SIZE: auto
             resources:
               requests:
-                cpu: "100m"
+                cpu: "50m"
                 memory: "512Mi"
               limits:
                 cpu: "1000m"

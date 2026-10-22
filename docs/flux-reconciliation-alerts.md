@@ -50,8 +50,12 @@ Kinds covered: `GitRepository`, `HelmRepository`, `HelmChart`, `HelmRelease`,
 `Kustomization`, `ImageRepository`, `ImagePolicy`, `ImageUpdateAutomation`.
 
 Label note: `exported_namespace` is the Flux object's namespace. The plain `namespace`
-label is the scrape target (`flux-system`), which is why Alertmanager groups all Flux
-alerts together.
+label on the source metric is the scrape target (`flux-system`); the alert expressions
+drop it. The Flux warning route groups by `alertname`, `exported_namespace`, `kind`,
+and `name`, so each object has its own notification and recovery state. Discord titles
+include the namespace/name. Both receivers render each alert's own summary,
+description, and status, including resolved members of a still-firing group.
+Telegram uses HTML mode with escaped annotation text.
 
 ## Alert Families
 
@@ -124,6 +128,35 @@ pushes the multi-architecture images and semver aliases before creating the GitH
 release. This avoids both the upstream-publication race and the excessive Docker tag
 enumeration that originally required the custom manager. See the
 [dependency-update policy](./dependency-updates-renovate-and-flux-image-automation.md).
+
+## CPU Reservation Exhaustion (2026-10-22)
+
+Immich and Grafana upgrades had been failing since October 16. Blog, Subarr,
+Bazarr, and blackbox-exporter subsequently hit the same unschedulable-pod pattern.
+The primary node reserved 5943m of its 5950m allocatable CPU, despite using about
+18% CPU. Scheduler events confirmed `Insufficient cpu`; the utility node was
+excluded by workload placement. Helm's deadline/rate-limiter errors were a symptom
+of waiting for pods, not evidence that the Kubernetes API needed higher rate limits.
+
+Manual request-only sizing used the retained 14-day CPU history. Jellyfin now
+reserves 400m (observed p95 247m), Immich ML/server/Postgres 100m/100m/75m,
+media-postgres 125m (p99 94m), Bazarr 50m (p95 23m), Audiobookshelf 25m, and
+BookOrbit 50m. This releases 1016m of steady-state reservations. Memory and CPU
+limits remain unchanged so interactive work can still burst. Existing Recreate
+rollouts release old reservations first; Immich's rolling replacement needs
+additional headroom while old and new pods overlap.
+
+Recover exhausted Helm retries with `flux reconcile hr <name> -n <namespace>
+--reset` after the request changes reconcile. Verify deployment readiness and
+application endpoints, then wait for both Prometheus and Alertmanager to clear.
+Healthy old pods alone do not prove the desired release has deployed.
+
+The old receiver grouped every Flux failure together and used only
+`CommonAnnotations`. With multiple services, no common summary or description
+existed, producing generic `FluxResourceNotReady` messages. Group membership
+changes triggered updates on the five-minute group interval, independently of
+the four-hour repeat interval. Object grouping and per-alert rendering fix that
+loss of context without disabling failure alerts.
 
 ## Verification Performed
 

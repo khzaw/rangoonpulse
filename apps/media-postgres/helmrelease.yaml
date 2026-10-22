@@ -77,7 +77,7 @@ spec:
                     key: POSTGRES_PASSWORD
             resources:
               requests:
-                cpu: "225m"
+                cpu: "125m"
                 memory: "1536Mi"
               limits:
                 cpu: "2000m"
