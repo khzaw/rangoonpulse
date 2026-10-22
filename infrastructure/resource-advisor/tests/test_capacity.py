@@ -2,6 +2,9 @@ import copy
 import importlib.util
 import json
 import os
+import threading
+import urllib.request
+from http.server import HTTPServer
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -187,3 +190,24 @@ class AdmissionCapacityTests(unittest.TestCase):
         one, two = workload('one'), workload('two')
         raw = (json.dumps(one)+'\n'+json.dumps({'kind': 'List', 'items': [two]})).encode()
         self.assertEqual(module.decode_objects(raw), [one, two])
+
+    def test_apiserver_timeout_query_preserves_admission_request_uid(self):
+        server = HTTPServer(('127.0.0.1', 0), admission.Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = {'uid': 'protocol-regression', 'object': workload('new', '100m'),
+                       'kind': {'kind': 'Deployment'}, 'resource': {'resource': 'deployments'}, 'dryRun': True}
+            payload = json.dumps({'request': request}).encode()
+            with patch.object(admission.READER, 'read', return_value=baseline()):
+                with urllib.request.urlopen(urllib.request.Request(
+                    f'http://127.0.0.1:{server.server_port}/validate?timeout=15s',
+                    data=payload, headers={'Content-Type': 'application/json'},
+                )) as response:
+                    decision = json.load(response)['response']
+            self.assertEqual(decision['uid'], request['uid'])
+            self.assertTrue(decision['allowed'])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()

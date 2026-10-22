@@ -75,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
         uid = ''
         kind = 'unknown'
         try:
-            if self.path != '/validate':
+            if self.path.split('?', 1)[0] != '/validate':
                 raise ValueError('Unknown admission endpoint')
             length = int(self.headers.get('Content-Length', 0))
             if not 0 < length <= 1024 * 1024:
