@@ -158,8 +158,9 @@ changes triggered updates on the five-minute group interval, independently of
 the four-hour repeat interval. Object grouping and per-alert rendering fix that
 loss of context without disabling failure alerts.
 
-Recovery verification: all 219 inspected Flux objects, including all 58
-HelmReleases, returned Ready=True. Primary-node CPU reservations fell to 4939m
+Recovery verification: 217 of 219 inspected Flux objects expose a Ready condition;
+all 217, including all 58 HelmReleases, returned Ready=True. The two OCI
+HelmRepository objects do not expose readiness conditions. Primary-node CPU reservations fell to 4939m
 of 5950m (83%), leaving 1011m free with the blog running. Immich deployed v3.3.3,
 Bazarr deployed v1.6.2-ls369, and monitoring deployed chart 92.11.0. The seven
 checked application/health endpoints returned HTTPS 200. Alertmanager loaded the
