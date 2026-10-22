@@ -643,7 +643,8 @@ def pod_effective_requests(pod: dict) -> tuple[float, float]:
         cpu_m = 0.0
         mem_mi = 0.0
         for c in containers or []:
-            req = (c.get("resources", {}) or {}).get("requests", {}) or {}
+            resources = c.get("resources") or {}
+            req = {**(resources.get("limits") or {}), **(resources.get("requests") or {})}
             cpu_m += parse_cpu_to_m(req.get("cpu"))
             mem_mi += parse_mem_to_mi(req.get("memory"))
         return cpu_m, mem_mi
@@ -651,7 +652,8 @@ def pod_effective_requests(pod: dict) -> tuple[float, float]:
     cont_cpu_m, cont_mem_mi = sum_requests(spec.get("containers"))
     side_cpu = side_mem = init_cpu_m = init_mem_mi = 0.0
     for container in spec.get("initContainers") or []:
-        req = (container.get("resources") or {}).get("requests") or {}
+        resources = container.get("resources") or {}
+        req = {**(resources.get("limits") or {}), **(resources.get("requests") or {})}
         cpu = parse_cpu_to_m(req.get("cpu"))
         memory = parse_mem_to_mi(req.get("memory"))
         if container.get("restartPolicy") == "Always":

@@ -29,6 +29,8 @@ reductions remain available when the reserve is short.
   primary-node placement.
 - Deployment surge replicas increase replacement space. Standard and restartable
   init containers, sidecars, pod-level requests, and pod overhead count.
+  Limits-only containers are charged the CPU request Kubernetes defaults from
+  their limit; new services should set requests explicitly.
 - Controlled children must match a real controller UID, stay within its template
   CPU/placement and replica/rollout budget, and fit allocatable CPU. Approved
   replacements can consume the space reserved for them. Job creation can use the

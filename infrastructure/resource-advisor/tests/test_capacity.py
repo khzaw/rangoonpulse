@@ -167,6 +167,12 @@ class AdmissionCapacityTests(unittest.TestCase):
                 'overhead': {'cpu': '10m'}}
         self.assertEqual(advisor.pod_effective_requests({'spec': spec})[0], 610)
 
+    def test_limits_only_template_cannot_hide_defaulted_cpu_requests(self):
+        obj = workload('limits-only', '0m')
+        obj['spec']['template']['spec']['containers'][0]['resources'] = {'limits': {'cpu': '500m'}}
+        self.assertFalse(self.guard.evaluate(obj, None, baseline())['allowed'])
+        self.assertEqual(capacity.cpu(obj), 500)
+
     def test_expired_unobserved_write_can_be_retried(self):
         now = [0]
         self.guard = capacity.Guard(clock=lambda: now[0])
