@@ -18,6 +18,15 @@ Notes:
 
 ## In-Use Secrets (Referenced By GitOps Manifests)
 
+### CPU admission TLS
+- **resource-advisor-exporter** (`infrastructure/resource-advisor/deployment-exporter.yaml`)
+  - `monitoring/resource-advisor-admission-tls`: serving key/certificate and CA,
+    generated and rotated by cert-manager; mounted read-only for admission HTTPS.
+  - `monitoring/resource-advisor-admission-ca`: cert-manager-owned signing CA,
+    referenced by its Issuer, not mounted into the exporter.
+  - These generated TLS credentials are not SOPS-managed or editable through the
+    Secrets page. See [CPU admission operations](./cpu-headroom-admission.md).
+
 ### Dashboards
 - **dynacat** (`apps/dynacat/helmrelease.yaml`)
   - `default/homepage-widget-secrets`

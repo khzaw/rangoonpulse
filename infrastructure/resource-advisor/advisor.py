@@ -459,7 +459,8 @@ def patch_app_template_resources(
 
 
 class KubeClient:
-    def __init__(self) -> None:
+    def __init__(self, *, timeout: float = 30) -> None:
+        self.timeout = timeout
         self.host = os.getenv("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
         self.port = os.getenv("KUBERNETES_SERVICE_PORT", "443")
         self.base = f"https://{self.host}:{self.port}"
@@ -487,7 +488,7 @@ class KubeClient:
 
         req = urllib.request.Request(url=url, method=method, headers=headers, data=data)
         try:
-            with urllib.request.urlopen(req, context=self.ssl_context, timeout=30) as resp:
+            with urllib.request.urlopen(req, context=self.ssl_context, timeout=self.timeout) as resp:
                 raw = resp.read().decode("utf-8")
                 return resp.getcode(), json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
@@ -633,7 +634,7 @@ def recommend(current: float, target: float, max_step_percent: float) -> float:
 def pod_effective_requests(pod: dict) -> tuple[float, float]:
     """Return the pod's effective CPU(m) and memory(Mi) requests.
 
-    Scheduler semantics: sum(containers) vs max(initContainers), per resource.
+    Include restartable init sidecars, pod-level requests, and pod overhead.
     """
 
     spec = pod.get("spec", {}) or {}
@@ -647,21 +648,25 @@ def pod_effective_requests(pod: dict) -> tuple[float, float]:
             mem_mi += parse_mem_to_mi(req.get("memory"))
         return cpu_m, mem_mi
 
-    def max_requests(containers: list[dict] | None) -> tuple[float, float]:
-        cpu_m = 0.0
-        mem_mi = 0.0
-        for c in containers or []:
-            req = (c.get("resources", {}) or {}).get("requests", {}) or {}
-            cpu_m = max(cpu_m, parse_cpu_to_m(req.get("cpu")))
-            mem_mi = max(mem_mi, parse_mem_to_mi(req.get("memory")))
-        return cpu_m, mem_mi
-
     cont_cpu_m, cont_mem_mi = sum_requests(spec.get("containers"))
-    init_cpu_m, init_mem_mi = max_requests(spec.get("initContainers"))
+    side_cpu = side_mem = init_cpu_m = init_mem_mi = 0.0
+    for container in spec.get("initContainers") or []:
+        req = (container.get("resources") or {}).get("requests") or {}
+        cpu = parse_cpu_to_m(req.get("cpu"))
+        memory = parse_mem_to_mi(req.get("memory"))
+        if container.get("restartPolicy") == "Always":
+            side_cpu += cpu
+            side_mem += memory
+            init_cpu_m = max(init_cpu_m, side_cpu)
+            init_mem_mi = max(init_mem_mi, side_mem)
+        else:
+            init_cpu_m = max(init_cpu_m, side_cpu + cpu)
+            init_mem_mi = max(init_mem_mi, side_mem + memory)
+    pod_requests = (spec.get("resources") or {}).get("requests") or {}
     overhead = spec.get("overhead", {}) or {}
     return (
-        max(cont_cpu_m, init_cpu_m) + parse_cpu_to_m(overhead.get("cpu")),
-        max(cont_mem_mi, init_mem_mi) + parse_mem_to_mi(overhead.get("memory")),
+        max(cont_cpu_m + side_cpu, init_cpu_m, parse_cpu_to_m(pod_requests.get("cpu"))) + parse_cpu_to_m(overhead.get("cpu")),
+        max(cont_mem_mi + side_mem, init_mem_mi, parse_mem_to_mi(pod_requests.get("memory"))) + parse_mem_to_mi(overhead.get("memory")),
     )
 
 
@@ -713,6 +718,11 @@ def cpu_headroom_snapshot(
         row["cpu_after_upsizes_m"] += current_cpu + growth
         row["largest_replacement_cpu_m"] = max(row["largest_replacement_cpu_m"], current_cpu + growth)
 
+    return summarize_cpu_headroom(node_alloc, rows, min_free_cpu_m, job_cpu_m, unknown_placement)
+
+
+def summarize_cpu_headroom(node_alloc, rows, min_free_cpu_m, job_cpu_m, unknown_placement=False):
+    rows = {name: dict(row) for name, row in rows.items()}
     for name, row in rows.items():
         row["required_cpu_headroom_m"] = max(min_free_cpu_m, row["largest_replacement_cpu_m"] + job_cpu_m)
         row["free_cpu_after_upsizes_m"] = node_alloc[name]["cpu_m"] - row["cpu_after_upsizes_m"]

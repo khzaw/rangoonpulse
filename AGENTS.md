@@ -57,5 +57,6 @@ Incident reference: [`docs/flux-reconciliation-alerts.md`](docs/flux-reconciliat
 
 ## Validation
 - Validate manifests before push using the smallest meaningful check for the change (`kubectl apply --dry-run=client`, `kubectl kustomize`, `flux build`, and task-specific checks).
+- For resource, replica, placement, or new-workload changes, preflight rendered workloads with `make check-capacity FILE=<rendered.yaml>` and server-side dry run; see [`docs/cpu-headroom-admission.md`](docs/cpu-headroom-admission.md).
 - Before commit/push, inspect `git status` and stage only your task's hunks.
 - For debugging, incident, or service-change work, include a concise learning summary in the final response: what failed, what evidence was gathered, which hypotheses were tested, what decision was made, and how it was verified. The detailed expectation lives in `.agents/skills/rangoonpulse-shared-worktree/`.

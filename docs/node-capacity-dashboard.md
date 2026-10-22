@@ -42,8 +42,9 @@ increases unless each affected node retains the larger of 1000m or its largest
 replacement pod plus 150m for a job. Separate PRs cannot spend unmerged downsize
 savings. Its live preflight exposes the reserve and shortfall per node; see
 [Resource Advisor's policy](./resource-advisor-phase1-phase2.md#node-constraint-awareness).
-This protects Advisor-generated proposals. Manual resource changes and new
-deployments still need the same placement-specific capacity check.
+The [live admission guard](./cpu-headroom-admission.md) applies the same reserve to
+manual resource changes, scaling, and new workloads. Preflight rendered workload
+manifests with `make check-capacity FILE=<rendered.yaml>` before pushing.
 
 ## Workload drilldowns
 

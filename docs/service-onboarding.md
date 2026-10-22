@@ -108,6 +108,11 @@ Set explicit requests and limits, and define a bounded HPA when requested or app
 capacity at the maximum replica count, including rollout overlap. Integrate the workload into the advisor's
 report scope and make an intentional choice for automated resource changes.
 
+Run the [CPU capacity preflight](./cpu-headroom-admission.md) against rendered
+workload manifests before pushing. Live admission also enforces this for new
+Deployments, resource changes, and replica scaling. Check the maximum intended
+replicas and surge settings, and preserve the per-node rollout/job reserve.
+
 Inspect `TARGET_NAMESPACES`, `APP_TEMPLATE_RELEASE_FILE_MAP`, any `APPLY_ALLOWLIST` override, service profiles,
 floors, and downscale exclusions. For a supported app-template release, register its file mapping and appropriate
 policy. A non-app-template release can remain report-only when the writer cannot safely edit its resources;

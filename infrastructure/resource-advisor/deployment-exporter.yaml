@@ -27,6 +27,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
+        fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -49,9 +50,13 @@ spec:
               value: "150"
             - name: PORT
               value: "8081"
+            - name: ADMISSION_ENABLED
+              value: "true"
           ports:
             - name: http
               containerPort: 8081
+            - name: admission
+              containerPort: 8443
           livenessProbe:
             httpGet:
               path: /healthz
@@ -82,8 +87,15 @@ spec:
             - name: advisor-script
               mountPath: /opt/resource-advisor
               readOnly: true
+            - name: admission-tls
+              mountPath: /var/run/admission-tls
+              readOnly: true
       volumes:
         - name: advisor-script
           configMap:
             name: resource-advisor-script
             defaultMode: 0555
+        - name: admission-tls
+          secret:
+            secretName: resource-advisor-admission-tls
+            defaultMode: 0440

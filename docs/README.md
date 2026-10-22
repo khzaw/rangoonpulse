@@ -81,6 +81,8 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Monitoring, dashboards, and resource tuning
 
+- [`docs/cpu-headroom-admission.md`](./cpu-headroom-admission.md) for live CPU reservation enforcement on manual changes, new deployments, scaling, and rollout/job recovery.
+
 - [`docs/controlpanel-pulse.md`](./controlpanel-pulse.md) for the cockpit Pulse page, bounded metrics access, and visualization verification.
 
 - [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for tuning, hard per-node rollout/job CPU reserves, the apply-PR model, and cockpit/exporter evidence.
