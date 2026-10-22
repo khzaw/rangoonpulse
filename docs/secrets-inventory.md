@@ -115,6 +115,14 @@ Notes:
     - keys: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DATABASE_URL`
 
 ### Ops / Notifications
+- **Grafana** (`infrastructure/monitoring/helmrelease.yaml`)
+  - `monitoring/grafana-admin`
+    - keys: `admin-user`, `admin-password`
+    - SOPS-managed in `infrastructure/secrets/monitoring/grafana-admin.yaml`
+    - consumed through the Grafana chart's `admin.existingSecret`
+    - available in Control Panel Secrets; see [Grafana admin credentials](./grafana-admin-credentials.md)
+    - changing this Secret does not rotate the password in an existing Grafana database
+
 - **resource-advisor (apply PR and capacity snapshot)** (`infrastructure/resource-advisor/cronjob-apply-pr.yaml`, `cronjob-capacity-snapshot.yaml`)
   - `monitoring/resource-advisor-github`
     - key: `token` (GitHub token for PR creation and capacity-state branch contents updates)
@@ -137,7 +145,7 @@ Notes:
 These exist in-cluster but are not currently referenced by this repo's GitOps manifests (or are chart-owned/generated state):
 - cert-manager account keys (e.g. `cert-manager/letsencrypt-prod-account-key`)
 - helm release state secrets (`sh.helm.release.v1.*`)
-- kube-prometheus-stack generated secrets (Grafana admin, Prometheus web config, etc.)
+- kube-prometheus-stack generated secrets (Prometheus web config, etc.)
 - legacy/orphaned app secrets (example: `default/ghost-*`) if the app is no longer managed via GitOps
 
 ## Local Repo Files To Treat As Sensitive

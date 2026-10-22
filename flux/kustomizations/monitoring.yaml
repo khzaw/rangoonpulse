@@ -17,6 +17,7 @@ spec:
         name: cluster-settings
   timeout: 15m
   dependsOn:
+  - name: secrets
   - name: local-path-provisioner
   - name: ingress-nginx
   - name: cert-manager

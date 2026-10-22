@@ -4,6 +4,12 @@
 .PHONY: talos-dashboard logs
 .PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell test-python
 
+# Use this cluster's credentials when available; preserve explicit overrides and
+# kubectl's normal fallback on machines without the ignored local kubeconfig.
+ifneq ($(wildcard $(CURDIR)/kubeconfig),)
+export KUBECONFIG ?= $(CURDIR)/kubeconfig
+endif
+
 CLUSTER_SETTINGS_FILE ?= flux/cluster-settings.yaml
 PRIMARY_NODE := $(shell awk '/^  PRIMARY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))
 PI_NODE := $(shell awk '/^  UTILITY_NODE_IP:/ { print $$2 }' $(CLUSTER_SETTINGS_FILE))

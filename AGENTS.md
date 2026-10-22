@@ -49,6 +49,7 @@ Service reference: [`docs/bentopdf.md`](docs/bentopdf.md) covers BentoPDF's priv
 Dashboard reference: [`docs/dashboards-dynacat.md`](docs/dashboards-dynacat.md) covers Dynacat at `rangoonpulse.khzaw.dev`.
 Service reference: [`docs/romm.md`](docs/romm.md) covers RomM's shared PostgreSQL hook and expandable NAS library.
 Incident reference: [`docs/flux-reconciliation-alerts.md`](docs/flux-reconciliation-alerts.md) covers stuck rollbacks and Jackett's image-publication race.
+Auth reference: [`docs/grafana-admin-credentials.md`](docs/grafana-admin-credentials.md) covers Grafana's encrypted admin Secret and persisted-password rotation.
 
 ## Docs Hygiene
 - If you change a stable operating convention, update `docs/README.md` and the focused doc that owns it.

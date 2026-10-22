@@ -12,6 +12,12 @@ cd /Users/khz/Code/rangoonpulse
 export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
 ```
 
+Make targets automatically use the repo's ignored `kubeconfig` when it exists.
+An explicit environment or command-line `KUBECONFIG` takes precedence. Without
+that file, Make leaves the normal client configuration alone. Direct `kubectl`
+and `flux` commands still need the export above. If they return `Unauthorized`
+while Make works, check which kubeconfig the shell is using before rotating credentials.
+
 ## 1) Flux Health and Reconcile
 
 ```bash

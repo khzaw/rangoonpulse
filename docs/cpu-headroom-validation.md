@@ -31,9 +31,12 @@ alone are not an acceptable substitute for rendering.
 CI compares a PR to its base, or a master push to its previous commit. Changed
 workloads are checked together, so two services cannot independently spend the
 same snapshot headroom. Unmerged or unfinished downsizes cannot pay for growth.
-Unsupported Helm post-renderers, chartRef, Secret-backed values, and operator CRs
-with resource fields fail validation rather than being silently accepted; add
-explicit rendering support before changing those inputs.
+Unsupported Helm post-renderers, chartRef, and Secret-backed values fail validation.
+Operator CRs with resource fields may pass only when their entire rendered objects
+are identical in both revisions. New or changed operator objects, including
+replica, placement, or resource-field removal, fail validation; add explicit
+rendering support before changing those inputs. This allows a Grafana credential
+change without bypassing checks on Prometheus or Alertmanager resource changes.
 
 ## Snapshot publication
 

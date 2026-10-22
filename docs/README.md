@@ -81,7 +81,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Monitoring, dashboards, and resource tuning
 
-- [`docs/cpu-headroom-validation.md`](./cpu-headroom-validation.md) for Git/CI CPU reservation validation for manual resource edits, new deployments, and scaling.
+- [`docs/cpu-headroom-validation.md`](./cpu-headroom-validation.md) for Git/CI CPU reservation validation, unchanged operator resources, new deployments, and scaling.
 
 - [`docs/controlpanel-pulse.md`](./controlpanel-pulse.md) for the cockpit Pulse page, bounded metrics access, and visualization verification.
 
@@ -100,6 +100,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Secrets and auth
 
+- [`docs/grafana-admin-credentials.md`](./grafana-admin-credentials.md) for Grafana's SOPS-managed admin account, password retrieval, and rotation of the persisted database credential.
 - [`docs/github-credentials.md`](./github-credentials.md) for existing GitHub Secret keys, verified permissions, credential selection, and rotation dependencies; consult it before requesting a new token.
 - [`docs/secrets-inventory.md`](./secrets-inventory.md) for service-to-secret mapping.
 - [`docs/secrets-management-current-state-options-and-plan.md`](./secrets-management-current-state-options-and-plan.md) for the SOPS and age operating model.
@@ -107,7 +108,7 @@ Use the smallest matching repo-local skill when the task clearly fits:
 
 ### Operations and commands
 
-- [`docs/ops-command-cheatsheet.md`](./ops-command-cheatsheet.md) for day-2 command snippets and common triage flows.
+- [`docs/ops-command-cheatsheet.md`](./ops-command-cheatsheet.md) for day-2 command snippets, repo kubeconfig selection, and common triage flows.
 
 ### Service-specific guides
 

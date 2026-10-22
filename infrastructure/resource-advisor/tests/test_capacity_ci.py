@@ -79,3 +79,46 @@ class CapacityCITests(unittest.TestCase):
         with patch.object(ci, 'render_release') as render:
             self.assertEqual(ci.changed_workloads(objects, objects), [])
         render.assert_not_called()
+
+    def operator_release_changes(self, old_operator, new_operator):
+        old_release = {'kind': 'HelmRelease', 'metadata': {'name': 'monitoring'},
+                       'spec': {'values': {'grafana': {'adminPassword': 'old'}}}}
+        new_release = copy.deepcopy(old_release)
+        new_release['spec']['values']['grafana'] = {'admin': {'existingSecret': 'grafana-admin'}}
+        chart = ({'chart': 'monitoring', 'version': '1.0.0'}, {'url': 'https://charts.invalid'}, {})
+        # Exercise real rendering/filtering; replace Helm and YAML decoding only.
+        with patch.object(ci, 'chart_inputs', return_value=chart), \
+                patch.object(ci, 'run', return_value='rendered'), \
+                patch.object(ci, 'load_yaml', side_effect=[
+                    [workload('grafana'), new_operator], [workload('grafana'), old_operator],
+                ]):
+            return ci.changed_workloads(
+                {capacity.key(old_release): old_release},
+                {capacity.key(new_release): new_release},
+            )
+
+    def test_unchanged_operator_resources_allow_unrelated_chart_changes(self):
+        operator = {'kind': 'Prometheus', 'metadata': {'name': 'metrics'},
+                    'spec': {'replicas': 1, 'resources': {'requests': {'cpu': '100m'}}}}
+        self.assertEqual(self.operator_release_changes(operator, copy.deepcopy(operator)), [])
+
+    def test_operator_resource_replica_and_placement_changes_fail_closed(self):
+        operator = {'kind': 'Prometheus', 'metadata': {'name': 'metrics'},
+                    'spec': {'replicas': 1, 'resources': {'requests': {'cpu': '100m'}}}}
+        for change in [
+            {'resources': {'requests': {'cpu': '200m'}}},
+            {'replicas': 2},
+            {'nodeSelector': {'kubernetes.io/hostname': 'utility'}},
+            {'resources': {}},
+        ]:
+            changed = copy.deepcopy(operator)
+            changed['spec'].update(change)
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, 'operator-managed'):
+                self.operator_release_changes(copy.deepcopy(operator), changed)
+
+    def test_new_operator_resource_is_not_silently_skipped(self):
+        operator = {'kind': 'Alertmanager', 'metadata': {'name': 'alerts'},
+                    'spec': {'resources': {'requests': {'cpu': '100m'}}}}
+        unrelated = {'kind': 'ConfigMap', 'metadata': {'name': 'old-config'}}
+        with self.assertRaisesRegex(ValueError, 'operator-managed'):
+            self.operator_release_changes(unrelated, operator)

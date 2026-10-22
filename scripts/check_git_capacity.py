@@ -94,12 +94,13 @@ def render_release(release, objects):
         config.write_text('repositories: []\n')
         args.extend(['--repository-config', str(config), '--repository-cache', folder])
         objects = load_yaml(run(*args, input=json.dumps(values).encode()))
-    for obj in objects:
-        if obj['kind'] in WORKLOADS:
-            obj.setdefault('metadata', {}).setdefault('namespace', namespace)
-        elif obj['kind'] not in {'PersistentVolumeClaim', 'HorizontalPodAutoscaler', 'VerticalPodAutoscaler'} and obj.get('spec', {}).get('resources'):
-            raise ValueError(f'{obj["kind"]} defines operator-managed resources; render its generated workload explicitly before changing CPU')
-    return [obj for obj in objects if obj['kind'] in WORKLOADS]
+    candidates = [obj for obj in objects if obj['kind'] in WORKLOADS or (
+        obj['kind'] not in {'PersistentVolumeClaim', 'HorizontalPodAutoscaler', 'VerticalPodAutoscaler'}
+        and obj.get('spec', {}).get('resources')
+    )]
+    for obj in candidates:
+        obj.setdefault('metadata', {}).setdefault('namespace', namespace)
+    return candidates
 
 
 def release_intent(release, objects):
@@ -121,11 +122,19 @@ def changed_workloads(before, after):
         # Resolved values include ConfigMap inputs and chart repository changes.
         if old and release_intent(old, before) == release_intent(obj, after) and old['metadata'] == obj['metadata']:
             continue
-        for rendered in render_release(obj, after):
-            new_workloads[capacity.key(rendered)] = rendered
-        if old:
-            for rendered in render_release(old, before):
-                old_workloads[capacity.key(rendered)] = rendered
+        new_rendered = {capacity.key(o): o for o in render_release(obj, after)}
+        old_rendered = {capacity.key(o): o for o in render_release(old, before)} if old else {}
+        for rendered_key in old_rendered.keys() | new_rendered.keys():
+            if rendered_key[0] not in WORKLOADS:
+                # An unrelated edit must not require modelling an unchanged
+                # operator workload. Any change to that object still fails closed.
+                if old_rendered.get(rendered_key) != new_rendered.get(rendered_key):
+                    raise ValueError(f'{rendered_key[0]} changed operator-managed resources; render its generated workload explicitly before changing CPU')
+                continue
+            if rendered_key in new_rendered:
+                new_workloads[rendered_key] = new_rendered[rendered_key]
+            if rendered_key in old_rendered:
+                old_workloads[rendered_key] = old_rendered[rendered_key]
     return [obj for key, obj in sorted(new_workloads.items())
             if key not in old_workloads or capacity.signature(obj) != capacity.signature(old_workloads[key])]
 
