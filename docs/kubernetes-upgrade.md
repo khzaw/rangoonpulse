@@ -156,3 +156,14 @@ last warning timestamp and the five-minute rate before changing monitoring
 settings. Control-plane restart alerts intentionally look back 15 minutes;
 allow the maintenance events to age out while checking that restart counts
 remain stable.
+
+The 15:30 UTC capacity-snapshot Job published its records, but the API outage
+prevented timely completion reporting and the Job controller subsequently
+marked it `DeadlineExceeded`. Its logs and status were retained in the private
+upgrade backup. A capacity-checked manual run of the same CronJob completed and
+published a fresh snapshot; the failed Job and temporary verification Job were
+then removed. Check Job conditions as well as `status.succeeded`: a published
+snapshot or succeeded pod alone does not prove the Job reached `Complete`.
+The next scheduled run at 15:45 UTC completed normally. At the final check,
+all warning and critical alerts had cleared, all 127 Flux resources were Ready,
+and all 36 Prometheus targets were healthy.
