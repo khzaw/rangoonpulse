@@ -3,7 +3,7 @@ title: Flux Reconciliation Alerts
 summary: PrometheusRule alerts on Flux objects that are not ready, stuck reconciling, or suspended for too long, sourced from Flux Operator metrics and routed to Discord/Telegram through the existing AlertmanagerConfig.
 status: active
 owner: homelab
-last_reviewed: 2026-09-18
+last_reviewed: 2026-10-22
 ---
 
 # Flux Reconciliation Alerts
@@ -157,6 +157,16 @@ existed, producing generic `FluxResourceNotReady` messages. Group membership
 changes triggered updates on the five-minute group interval, independently of
 the four-hour repeat interval. Object grouping and per-alert rendering fix that
 loss of context without disabling failure alerts.
+
+Recovery verification: all 219 inspected Flux objects, including all 58
+HelmReleases, returned Ready=True. Primary-node CPU reservations fell to 4939m
+of 5950m (83%), leaving 1011m free with the blog running. Immich deployed v3.3.3,
+Bazarr deployed v1.6.2-ls369, and monitoring deployed chart 92.11.0. The seven
+checked application/health endpoints returned HTTPS 200. Alertmanager loaded the
+per-object route and templates; Discord and Telegram recorded notification
+deliveries with zero failures during recovery. Template rendering also verified
+mixed firing/resolved alerts and escaped Telegram annotation text.
+Both Prometheus and Alertmanager subsequently reported zero active Flux alerts.
 
 ## Verification Performed
 
