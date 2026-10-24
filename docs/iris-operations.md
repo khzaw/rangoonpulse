@@ -18,11 +18,11 @@ The [dedicated SSH/HTTPS VIP](./iris-dedicated-vip.md) remains unchanged.
 - Dynacat: Home → Ops → Iris / Iris Overview; Health → Iris Gateway / Iris API Readiness.
 - Uptime Kuma desired monitors, on the existing published `rangoonpulse` page:
 
-  | Name | Type / URL | Success |
-  | --- | --- | --- |
-  | Iris Gateway | HTTP keyword `http://10.0.0.66:18789/healthz` | HTTP 200 and `"ok":true` |
-  | Iris API Readiness | HTTP `http://10.0.0.66:9101/healthz/openclaw` | HTTP 200 |
-  | Iris HTTPS Edge | HTTP `https://iris.khzaw.dev/healthz` | HTTP 200 |
+  | ID | Name | Type / URL | Success |
+  | --- | --- | --- | --- |
+  | 22 | Iris Gateway | HTTP keyword `http://10.0.0.66:18789/healthz` | HTTP 200 and `"ok":true` |
+  | 23 | Iris API Readiness | HTTP `http://10.0.0.66:9101/healthz/openclaw` | HTTP 200 |
+  | 24 | Iris HTTPS Edge | HTTP `https://iris.khzaw.dev/healthz` | HTTP 200 |
 
   All use 60-second intervals, 10-second timeout, 2 retries, 60-second retry interval.
   Kuma monitors/status-page membership are runtime-owned; configure through the authenticated UI,
@@ -40,6 +40,9 @@ loopback and exposes only a cached `{ "ok": true/false }` on LAN port 9101. Miss
 (90s) return HTTP 503. `/healthz` checks liveness, not agent/provider end-to-end success.
 Hermes is checked for running launchd processes; it has no verified health API in this integration.
 Its dashboard port 9119 `/metrics` is a login HTML page, **not** a Prometheus exporter.
+Hermes's gateway is in `user/501`, while other jobs use `gui/501`: inspect the caller's
+`launchctl list`, not GUI-only service paths. The metric label is `launchd_service` to avoid
+Prometheus's discovery-owned `service` label (which otherwise renames the metric label to `exported_service`).
 
 ## Native installation and supervision
 
@@ -144,3 +147,32 @@ Kubernetes chart/image update rows, HPA, resource-advisor/Tuning apply policy, p
 and disabled share plumbing are **N/A** for native host jobs: there is no pod, chart, HPA or share
 service to register. Do not invent Kubernetes inventory rows or publicly expose exporter/readiness
 ports. Prometheus/Grafana/blackbox reuse existing workloads with unchanged resource reservations.
+
+## Validation and initial live evidence
+
+`node --test native/iris/watchdog.test.mjs` covers debounce/recovery, independent notification
+retries, stale readiness, endpoint response validation, and cross-domain launchd listings.
+For alert regression tests, extract `PrometheusRule.spec` from
+`infrastructure/monitoring/prometheusrule-iris.yaml` into `iris-rules.yaml` beside a temporary
+copy of `native/iris/alerts.test.yaml`, then run `promtool test rules alerts.test.yaml` there.
+The fixtures include real discovery's `service="iris-node"` label, healthy telemetry,
+missing host/watchdog data, stopped agents, and low/critical APFS space.
+
+Initial live checks on 2026-10-25:
+
+- Both native jobs started under launchd; terminating only these new jobs produced new PIDs
+  automatically through `KeepAlive`. Existing OpenClaw/Hermes processes were left running.
+- All three agent process samples and local OpenClaw readiness are healthy; both direct cluster
+  probes succeed. Exporter plus gateway/readiness/SSH blackbox samples are successful.
+- All ten dashboard panels' expressions return data through Grafana's Prometheus proxy;
+  Darwin memory and the APFS Data volume are present rather than assumed Linux metrics.
+- Kuma IDs 22/23/24 are UP; the published page preserves all 17 original members plus these three.
+  Dynacat's actual Home links and successful Health checks were verified in the browser.
+- Real Telegram and Discord requests accepted both synthetic TEST FIRING and TEST RESOLVED
+  notifications from Iris using public DNS. No production cluster outage was induced.
+- The restricted identity gets HTTP 200 on `/readyz` and HTTP 403 on node and Secret list requests;
+  local credential/state files are mode 0600.
+
+Redeployment also exposed launchd's asynchronous `bootout`: immediate `bootstrap` can briefly
+return code 5 after a successful unload. The installer retries that specific reload race for up to
+ten seconds, rather than suggesting unnecessary sudo or modifying existing application jobs.

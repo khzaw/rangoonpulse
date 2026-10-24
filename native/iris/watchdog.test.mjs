@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { advance, deliver, notificationDue, readinessHealthy, checkEndpoint } from './watchdog.mjs';
+import { advance, deliver, notificationDue, readinessHealthy, checkEndpoint, launchdServiceRunning } from './watchdog.mjs';
 
 const config = { failureThreshold: 3, recoveryThreshold: 2 };
+test('launchd list recognizes running jobs across user and GUI domains, regardless of previous exit', () => {
+  const listing = 'PID\tStatus\tLabel\n59798\t75\tai.hermes.gateway\n57118\t0\tai.openclaw.gateway\n-\t1\tstopped.job\n';
+  assert.equal(launchdServiceRunning(listing, 'ai.hermes.gateway'), true);
+  assert.equal(launchdServiceRunning(listing, 'ai.openclaw.gateway'), true);
+  assert.equal(launchdServiceRunning(listing, 'stopped.job'), false);
+  assert.equal(launchdServiceRunning(listing, 'missing.job'), false);
+});
 test('debounces failures, requires two recoveries, preserves state across restarts', () => {
   let state = advance({}, false, 1, config);
   assert.equal(state.firing, false);

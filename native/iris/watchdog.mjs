@@ -34,6 +34,13 @@ export function readinessHealthy(sample, now) {
   return sample?.ok === true && now - sample.timestamp < 90;
 }
 
+export function launchdServiceRunning(listing, service) {
+  return listing.split('\n').some(line => {
+    const match = line.match(/^\s*([1-9][0-9]*)\s+-?[0-9]+\s+(\S+)\s*$/);
+    return match?.[2] === service;
+  });
+}
+
 export async function atomicWrite(path, contents) {
   await writeFile(`${path}.tmp`, contents, { mode: 0o600 });
   await rename(`${path}.tmp`, path);
@@ -153,13 +160,13 @@ export async function main() {
     } catch { /* an unavailable local gateway is an unhealthy sample */ }
     readiness = { ok: ready, timestamp: now };
     metric('iris_openclaw_ready', {}, ready);
+    let listing = '';
+    try {
+      // The caller's launchd list includes both user and GUI jobs. Hermes uses user/501.
+      ({ stdout: listing } = await exec('/bin/launchctl', ['list'], { timeout: 5000 }));
+    } catch { /* unavailable launchd status fails closed */ }
     for (const service of config.services) {
-      let running = false;
-      try {
-        const { stdout } = await exec('/bin/launchctl', ['print', `gui/${process.getuid()}/${service}`], { timeout: 5000 });
-        running = /state = running/.test(stdout) && /pid = [1-9][0-9]*/.test(stdout);
-      } catch { /* a missing launchd job is down */ }
-      metric('iris_launchd_service_up', { service }, running);
+      metric('iris_launchd_service_up', { launchd_service: service }, launchdServiceRunning(listing, service));
     }
     await Promise.all(config.clusterChecks.map(async check => {
       const ok = await checkEndpoint(check, api);

@@ -1,0 +1,66 @@
+# Extract PrometheusRule.spec to iris-rules.yaml beside this file before running promtool test rules.
+rule_files:
+  - iris-rules.yaml
+evaluation_interval: 1m
+tests:
+  - name: Healthy native telemetry with Prometheus discovery labels never alerts
+    interval: 1m
+    input_series:
+      - series: 'up{job="iris-node",service="iris-node"}'
+        values: '1+0x20'
+      - series: 'iris_openclaw_ready{job="iris-node",service="iris-node"}'
+        values: '1+0x20'
+      - series: 'iris_watchdog_last_cycle_timestamp_seconds{job="iris-node",service="iris-node"}'
+        values: '0+60x20'
+      - series: 'iris_launchd_service_up{job="iris-node",service="iris-node",launchd_service="ai.openclaw.gateway"}'
+        values: '1+0x20'
+      - series: 'iris_launchd_service_up{job="iris-node",service="iris-node",launchd_service="ai.hermes.gateway"}'
+        values: '1+0x20'
+      - series: 'iris_launchd_service_up{job="iris-node",service="iris-node",launchd_service="dev.khzaw.hermes.dashboard"}'
+        values: '1+0x20'
+      - series: 'node_filesystem_avail_bytes{job="iris-node",mountpoint="/System/Volumes/Data"}'
+        values: '20+0x20'
+      - series: 'node_filesystem_size_bytes{job="iris-node",mountpoint="/System/Volumes/Data"}'
+        values: '100+0x20'
+    promql_expr_test:
+      - expr: 'ALERTS{alertname=~"Iris.*",alertstate="firing"}'
+        eval_time: 15m
+        exp_samples: []
+  - name: Missing host and native telemetry are not silently healthy
+    interval: 1m
+    promql_expr_test:
+      - expr: 'count(ALERTS{alertname="IrisHostUnavailable",alertstate="firing"})'
+        eval_time: 5m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: 'count(ALERTS{alertname="IrisWatchdogStale",alertstate="firing"}) > bool 0'
+        eval_time: 5m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+  - name: Agent down and nearly full APFS data volume alert
+    interval: 1m
+    input_series:
+      - series: 'iris_launchd_service_up{job="iris-node",service="iris-node",launchd_service="ai.hermes.gateway"}'
+        values: '0+0x20'
+      - series: 'node_filesystem_avail_bytes{job="iris-node",mountpoint="/System/Volumes/Data"}'
+        values: '4+0x20'
+      - series: 'node_filesystem_size_bytes{job="iris-node",mountpoint="/System/Volumes/Data"}'
+        values: '100+0x20'
+    promql_expr_test:
+      - expr: 'count(ALERTS{alertname="IrisAgentDown",alertstate="firing",launchd_service="ai.hermes.gateway"})'
+        eval_time: 5m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: 'count(ALERTS{alertname="IrisDiskSpaceLow",alertstate="firing"})'
+        eval_time: 15m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: 'count(ALERTS{alertname="IrisDiskSpaceCritical",alertstate="firing"})'
+        eval_time: 15m
+        exp_samples:
+          - labels: '{}'
+            value: 1

@@ -70,7 +70,7 @@ data:
         {
           "id": 7, "type": "timeseries", "title": "Native launchd processes (not end-to-end agent success)", "datasource": {"uid": "$datasource"},
           "gridPos": {"h": 7, "w": 12, "x": 0, "y": 12},
-          "targets": [{"refId": "A", "expr": "iris_launchd_service_up{job=\"iris-node\"}", "legendFormat": "{{service}}"}],
+          "targets": [{"refId": "A", "expr": "iris_launchd_service_up{job=\"iris-node\"}", "legendFormat": "{{launchd_service}}"}],
           "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
         },
         {

@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 
 process.umask(0o077);
 const home = homedir();
@@ -32,8 +33,21 @@ for (const [label, args] of Object.entries(jobs)) {
 <key>StandardErrorPath</key><string>${home}/Library/Logs/rangoonpulse/${label}.log</string>
 </dict></plist>\n`, { mode: 0o600 });
   execFileSync('/usr/bin/plutil', ['-lint', path], { stdio: 'inherit' });
-  try { execFileSync('/bin/launchctl', ['bootout', `gui/${process.getuid()}/${label}`], { stdio: 'ignore' }); }
+  let unloaded = false;
+  try {
+    execFileSync('/bin/launchctl', ['bootout', `gui/${process.getuid()}/${label}`], { stdio: 'ignore' });
+    unloaded = true;
+  }
   catch { /* first installation has no existing job */ }
-  execFileSync('/bin/launchctl', ['bootstrap', `gui/${process.getuid()}`, path]);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      execFileSync('/bin/launchctl', ['bootstrap', `gui/${process.getuid()}`, path], { stdio: 'pipe' });
+      break;
+    } catch (error) {
+      // bootout returns before launchd finishes removing the old job. Retry only this race.
+      if (!unloaded || error.status !== 5 || attempt >= 39) throw error;
+      await delay(250);
+    }
+  }
   console.log(`Installed ${label} (login LaunchAgent, KeepAlive)`);
 }

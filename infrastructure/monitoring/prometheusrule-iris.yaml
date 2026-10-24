@@ -42,7 +42,7 @@ spec:
             summary: An Iris agent process or OpenClaw readiness check is down
             description: Check ai.openclaw.gateway, ai.hermes.gateway and dev.khzaw.hermes.dashboard on Iris. Remote readiness is a sanitized loopback check, not a relaxed OpenClaw proxy policy.
         - alert: IrisWatchdogStale
-          expr: (time() - iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"} > 180) or absent(iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"}) or absent(iris_openclaw_ready{job="iris-node"}) or absent(iris_launchd_service_up{job="iris-node",service="ai.openclaw.gateway"}) or absent(iris_launchd_service_up{job="iris-node",service="ai.hermes.gateway"}) or absent(iris_launchd_service_up{job="iris-node",service="dev.khzaw.hermes.dashboard"}) or node_textfile_scrape_error{job="iris-node"} != 0
+          expr: (time() - iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"} > 180) or absent(iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"}) or absent(iris_openclaw_ready{job="iris-node"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.openclaw.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.hermes.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="dev.khzaw.hermes.dashboard"}) or node_textfile_scrape_error{job="iris-node"} != 0
           for: 3m
           labels:
             severity: critical
