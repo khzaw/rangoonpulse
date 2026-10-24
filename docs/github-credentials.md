@@ -42,6 +42,7 @@ Related authentication sources:
 | Location | Key / name | Purpose and availability |
 |---|---|---|
 | `flux-system/flux-system` | `identity`, `identity.pub`, `known_hosts` | SSH credential referenced by the [Flux GitRepository](../flux/flux-system/gotk-sync.yaml). It is not an HTTP API Bearer token. Source reconciliation proves read access; write access was not tested in this audit. |
+| GitHub Actions repository secret | `TARIFF_UPDATE_TOKEN` | Copy of the existing Resource Advisor contents/PR-write credential for daily power-tariff PRs. Rotate with Resource Advisor and Dynacat; see [power estimation](./power-estimation-dashboard.md). |
 | GitHub Actions repository secret | `RENOVATE_TOKEN` | Used by the [Renovate workflow](../.github/workflows/renovate.yaml). This is a GitHub-hosted secret, not a Kubernetes Secret; its stored value cannot be retrieved through the Actions secrets API. Its grants were not audited here. |
 | Local GitHub CLI saved login | `gh` credential store; no Kubernetes key | Existing `khzaw` login supplied the Control Panel repair on 2026-09-15. Treat it as a fallback after checking cluster credentials. `GH_TOKEN` or `GITHUB_TOKEN` environment variables can override the saved login. Recheck its identity and required access before any reuse. |
 
@@ -112,7 +113,7 @@ env -u GH_TOKEN -u GITHUB_TOKEN gh api user --jq '{login: .login}'
 
 - Change the appropriate SOPS-encrypted source, commit/push, and reconcile
   `flux-system/secrets`. Permanent live-only Secret patches are not the repair.
-- Account for copies: Resource Advisor/Dynacat share one credential; both GHCR
+- Account for copies: Resource Advisor/Dynacat and Actions `TARIFF_UPDATE_TOKEN` share one credential; both GHCR
   Secrets share another. The Control Panel credential was sourced from the local
   saved CLI login, so revoking that same OAuth credential also affects its copy.
 - Kubernetes environment variables are captured at pod startup. Verify the

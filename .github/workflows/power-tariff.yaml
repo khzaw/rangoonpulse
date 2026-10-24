@@ -1,0 +1,77 @@
+name: Power tariff update
+
+on:
+  schedule:
+    # 08:17 Singapore time; future tariffs can be merged before quarter rollover.
+    - cron: "17 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: power-tariff-update
+  cancel-in-progress: false
+
+jobs:
+  tariff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Run tariff regression tests
+        run: python -m unittest discover -s scripts/tests -p 'test_power_tariff*.py'
+      - name: Fetch and validate official tariff
+        id: tariff
+        run: python scripts/update_power_tariff.py
+      - name: Verify generated rules
+        run: python scripts/update_power_tariff.py --check
+      - name: Publish tariff PR
+        id: publish
+        env:
+          # Reuses the Resource Advisor repository/PR credential so PR CI runs.
+          GH_TOKEN: ${{ secrets.TARIFF_UPDATE_TOKEN }}
+        run: python scripts/publish_power_tariff.py
+      - name: Enable optional guarded auto-merge
+        if: vars.POWER_TARIFF_AUTO_MERGE == 'true' && steps.tariff.outputs.safe_to_merge == 'true' && steps.publish.outputs.pr_url != ''
+        env:
+          GH_TOKEN: ${{ secrets.TARIFF_UPDATE_TOKEN }}
+          PR_URL: ${{ steps.publish.outputs.pr_url }}
+        run: |
+          # Fail closed if auto-merge would instead immediately bypass absent CI gates.
+          gh api "repos/$GITHUB_REPOSITORY/branches/master/protection" \
+            --jq '.required_status_checks | (.contexts + [.checks[]?.context]) | index("validate") != null' \
+            | grep -qx true
+          gh pr merge "$PR_URL" --auto --squash
+      - name: Report check failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='Power tariff automation needs attention'
+          number=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          body="The daily official-source tariff check failed. The deployed last-known tariff has not been replaced. Inspect $RUN_URL and any pending tariff PR; an expired deployed tariff also fires SingaporePowerTariffStale."
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+      - name: Resolve previous check failure
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          number=$(gh issue list --state open --search 'Power tariff automation needs attention in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue close "$number" --comment 'The official-source check is passing again. Check pending tariff PRs separately; successful parsing does not imply deployment.'
+          fi

@@ -1,0 +1,14 @@
+[
+  {
+    "start": "2026-07-01",
+    "end": "2026-09-30",
+    "sgd_per_kwh": "0.3478",
+    "source": "https://www.spgroup.com.sg/our-services/utilities/tariff-information"
+  },
+  {
+    "start": "2026-10-01",
+    "end": "2026-12-31",
+    "sgd_per_kwh": "0.3116",
+    "source": "https://www.spgroup.com.sg/our-services/utilities/tariff-information"
+  }
+]

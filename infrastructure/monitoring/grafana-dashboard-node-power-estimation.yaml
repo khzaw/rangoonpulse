@@ -85,7 +85,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost uses the Singapore regulated household tariff pinned in Prometheus for `1 July 2026` through `30 September 2026` (`34.78` cents/kWh, GST inclusive). The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
+            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost integrates recorded cost/hour samples using the GST-inclusive Singapore tariff effective at each evaluation. Tariffs are checked daily through GitOps and switch at Singapore midnight. Cost history begins when cost recording was deployed; older data is not backfilled, and missing samples are not extrapolated. A stale tariff remains in use and fires SingaporePowerTariffStale; the tariff-status panel turns red after expiry. The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
           }
         },
         {
@@ -179,7 +179,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "(sum(avg_over_time(homelab:node_estimated_power_watts{node=~\"$node\"}[$__range])) * $__range_s / 3600000) * max(homelab:singapore_household_tariff_sgd_per_kwh)",
+              "expr": "sum(sum_over_time(homelab:node_estimated_cost_sgd_per_hour{node=~\"$node\"}[$__range])) * 120 / 3600",
               "instant": true
             }
           ],
@@ -287,7 +287,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "(sum(avg_over_time(homelab:node_estimated_power_watts[$__range])) * $__range_s / 3600000) * max(homelab:singapore_household_tariff_sgd_per_kwh)",
+              "expr": "sum(sum_over_time(homelab:node_estimated_cost_sgd_per_hour[$__range])) * 120 / 3600",
               "instant": true
             }
           ],
@@ -307,7 +307,7 @@ data:
         {
           "id": 8,
           "type": "stat",
-          "title": "Singapore Tariff (Q3 2026)",
+          "title": "Singapore Tariff (SGD/kWh, GST inclusive)",
           "datasource": {
             "uid": "$datasource"
           },
@@ -604,6 +604,33 @@ data:
                 ]
               }
             }
+          }
+        },
+        {
+          "id": 15,
+          "type": "stat",
+          "title": "Tariff Status",
+          "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 29},
+          "targets": [{
+            "refId": "A",
+            "expr": "max(vector(time()) >= bool on() homelab:singapore_household_tariff_valid_until_seconds)",
+            "instant": true
+          }],
+          "fieldConfig": {"defaults": {
+            "mappings": [{"type": "value", "options": {
+              "0": {"text": "Current", "color": "green"},
+              "1": {"text": "Expired — last known rate", "color": "red"}
+            }}],
+            "noValue": "Tariff missing",
+            "thresholds": {"mode": "absolute", "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]}
+          }},
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {"calcs": ["lastNotNull"], "values": false}
           }
         }
       ]

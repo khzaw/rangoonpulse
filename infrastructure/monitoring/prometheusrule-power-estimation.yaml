@@ -87,7 +87,36 @@ spec:
         - record: homelab:cluster_estimated_power_watts
           expr: sum(homelab:node_estimated_power_watts)
 
-        # Q3 2026 Singapore regulated household tariff (with 9% GST):
-        # 34.78 cents/kWh for 1 Jul 2026 to 30 Sep 2026.
+        # BEGIN GENERATED TARIFFS
+        # SGD/kWh, GST inclusive; Singapore midnight boundaries. See power-tariffs.json.
         - record: homelab:singapore_household_tariff_sgd_per_kwh
-          expr: vector(0.3478)
+          expr: >
+            ((vector(0.3478) and on() (vector(time()) >= 1782835200)) and on() (vector(time()) < 1790784000))
+            or (vector(0.3116) and on() (vector(time()) >= 1790784000))
+        - record: homelab:singapore_household_tariff_valid_until_seconds
+          expr: >
+            ((vector(1790784000) and on() (vector(time()) >= 1782835200)) and on() (vector(time()) < 1790784000))
+            or (vector(1798732800) and on() (vector(time()) >= 1790784000))
+        # END GENERATED TARIFFS
+
+        # Same-group ordering records the tariff applicable at each evaluation.
+        - record: homelab:node_estimated_cost_sgd_per_hour
+          expr: homelab:node_estimated_power_watts / 1000 * scalar(homelab:singapore_household_tariff_sgd_per_kwh)
+
+        - alert: SingaporePowerTariffStale
+          expr: time() >= homelab:singapore_household_tariff_valid_until_seconds
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: Singapore electricity tariff has expired
+            description: The last known rate is still being used. Check the Power tariff update GitHub Action and approve its PR or repair the official-source parser.
+
+        - alert: SingaporePowerTariffMissing
+          expr: absent(homelab:singapore_household_tariff_sgd_per_kwh) or absent(homelab:singapore_household_tariff_valid_until_seconds)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Singapore electricity tariff metrics are missing
+            description: Check the node-power-estimation Prometheus rules before trusting cost estimates.
