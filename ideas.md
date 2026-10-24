@@ -107,6 +107,20 @@ This file tracks ideas explicitly rated `good` or better that are still active, 
   - a fetch/reload component updates only the changed site content and hot-reloads the static server.
 - Result: lower baseline resource usage and faster onboarding of new static sites, without sacrificing independent site rollback/deploy control.
 
+9. `good` - TODO: Convenience-First Autonomous Cluster Operators (Iris + Athena)
+- Owner preference: prioritize hands-off operation and convenience over elaborate least-privilege isolation. OpenClaw (Iris) and Hermes (Athena) on the Apple Silicon Mac mini are trusted operators, primarily controlled through Slack (also Telegram for Iris), with existing access to this repo. Do not redesign or disrupt their native setups just to add cluster access.
+- Intended autonomy: diagnose cluster-wide, read logs and necessary Secrets, exec into pods, restart/scale workloads, run maintenance, reconcile Flux, and maintain applications/infrastructure. Routine changes and supported upgrades with a clear recovery path should not require approval; send concise Slack summaries after meaningful actions.
+- Use GitOps for durable changes, including autonomous commits/pushes. Permit direct Kubernetes recovery actions when needed, then bring Git back into alignment. Verify rollout and user-facing health after changes, and coordinate the agents so they do not operate on the same service concurrently.
+- Privilege decision: dedicated cluster-admin credentials per agent are acceptable for this trusted, convenience-first homelab model; do not default back to read-only access or restrictive app-only RBAC. Separate identities support attribution/revocation, not isolation while both agents share macOS user `iris`. Approval rules are behavioral guardrails, not enforced containment; unrestricted writes to the Flux source are already an administrative path.
+- Ask first only for exceptional actions: intentional persistent-data destruction, cluster rebuilds/storage wipes, new public exposure or substantially broader access, and risky irreversible migrations without a verified recovery path.
+- Implementation TODOs:
+  - Recheck current credentials before provisioning: SSH inspection found `~/.kube/config` using an expired `system:masters` admin certificate (expired 2026-09-29); API requests returned Unauthorized. Do not treat the existing kubeconfig as working access.
+  - Provision separate operator identities with dependable unattended credential renewal/rotation, revocation instructions, and expiry monitoring. Keep credentials out of Git and preserve independent human break-glass access.
+  - Keep operator credentials separate from the existing narrowly scoped watchdog identity; preserve the monitoring setup in [`docs/iris-operations.md`](docs/iris-operations.md).
+  - Verify backups and restoration for persistent data: reverting Git restores desired configuration, not deleted data, destructive migrations, or leaked credentials. Tailnet-only access reduces exposure but does not prevent operator mistakes or prompt injection.
+  - Preserve existing agent configs/processes and uncommitted repo work. Identify the active checkout before implementation; the inspected checkout had substantial local changes and lagged its locally recorded upstream.
+- Status: planning only; this entry does not provision access or authorize destructive work.
+
 ## Deferred / Not Included
 
 - Items marked as not needed or not for now are intentionally excluded from this list.
