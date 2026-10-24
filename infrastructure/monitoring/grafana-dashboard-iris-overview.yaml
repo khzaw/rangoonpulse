@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-iris-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: iris-overview
+data:
+  iris-overview.json: |
+    {
+      "uid": "iris-overview",
+      "title": "Iris — Native macOS Operations",
+      "timezone": "browser",
+      "schemaVersion": 41,
+      "version": 1,
+      "refresh": "30s",
+      "tags": ["iris", "macos", "homelab"],
+      "time": {"from": "now-24h", "to": "now"},
+      "templating": {"list": [{"name": "datasource", "type": "datasource", "query": "prometheus", "current": {"text": "Prometheus", "value": "prometheus"}, "refresh": 1}]},
+      "links": [{"title": "Iris Gateway", "url": "https://iris.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Uptime Kuma", "url": "https://uptime.${BASE_DOMAIN}", "targetBlank": true}],
+      "panels": [
+        {
+          "id": 1, "type": "stat", "title": "Host exporter", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [{"refId": "A", "expr": "max(up{job=\"iris-node\"})", "legendFormat": "Exporter"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"},
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+        },
+        {
+          "id": 2, "type": "stat", "title": "OpenClaw readiness (loopback)", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [{"refId": "A", "expr": "iris_openclaw_ready{job=\"iris-node\"}", "legendFormat": "Ready"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"},
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+        },
+        {
+          "id": 3, "type": "stat", "title": "APFS data free", "description": "Shared APFS container; use Data rather than adding all macOS volume sizes.", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [{"refId": "A", "expr": "100 * node_filesystem_avail_bytes{job=\"iris-node\",mountpoint=\"/System/Volumes/Data\"} / node_filesystem_size_bytes{job=\"iris-node\",mountpoint=\"/System/Volumes/Data\"}"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background"},
+          "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 5}, {"color": "green", "value": 10}]}}}
+        },
+        {
+          "id": 4, "type": "stat", "title": "External sentinel sample age", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [{"refId": "A", "expr": "time() - iris_watchdog_last_cycle_timestamp_seconds{job=\"iris-node\"}"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background"},
+          "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 180}]}}}
+        },
+        {
+          "id": 5, "type": "timeseries", "title": "CPU busy", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [{"refId": "A", "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"iris-node\",mode=\"idle\"}[5m])))", "legendFormat": "CPU busy"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
+        },
+        {
+          "id": 6, "type": "timeseries", "title": "Darwin memory components", "description": "Darwin-specific metrics; free memory alone is not memory pressure. Components are not all mutually exclusive and are not stacked.", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "targets": [
+            {"refId": "A", "expr": "node_memory_active_bytes{job=\"iris-node\"}", "legendFormat": "Active"},
+            {"refId": "B", "expr": "node_memory_wired_bytes{job=\"iris-node\"}", "legendFormat": "Wired"},
+            {"refId": "C", "expr": "node_memory_compressed_bytes{job=\"iris-node\"}", "legendFormat": "Compressed"},
+            {"refId": "D", "expr": "node_memory_free_bytes{job=\"iris-node\"}", "legendFormat": "Free"},
+            {"refId": "E", "expr": "node_memory_total_bytes{job=\"iris-node\"}", "legendFormat": "Physical total"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes", "min": 0}}
+        },
+        {
+          "id": 7, "type": "timeseries", "title": "Native launchd processes (not end-to-end agent success)", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 12},
+          "targets": [{"refId": "A", "expr": "iris_launchd_service_up{job=\"iris-node\"}", "legendFormat": "{{service}}"}],
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
+        },
+        {
+          "id": 8, "type": "timeseries", "title": "Cluster checks from Iris (direct LAN, no cluster DNS)", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 12},
+          "targets": [{"refId": "A", "expr": "iris_cluster_probe_success{job=\"iris-node\"}", "legendFormat": "{{check}}"}],
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
+        },
+        {
+          "id": 9, "type": "timeseries", "title": "Blackbox: gateway, readiness and direct SSH", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 19},
+          "targets": [{"refId": "A", "expr": "probe_success{target=~\"iris-.*\"}", "legendFormat": "{{target}}"}],
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
+        },
+        {
+          "id": 10, "type": "timeseries", "title": "Pending external notifications (0 = no undelivered message)", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 19},
+          "targets": [{"refId": "A", "expr": "iris_notification_pending{job=\"iris-node\"}", "legendFormat": "{{check}} / {{destination}}"}],
+          "fieldConfig": {"defaults": {"min": 0, "max": 1}}
+        }
+      ]
+    }

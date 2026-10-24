@@ -48,6 +48,7 @@ If no skill applies, route through `docs/README.md` and read the smallest focuse
 Service reference: [`docs/bentopdf.md`](docs/bentopdf.md) covers BentoPDF's private access and autoscaling.
 Dashboard reference: [`docs/dashboards-dynacat.md`](docs/dashboards-dynacat.md) covers Dynacat at `rangoonpulse.khzaw.dev`.
 Service reference: [`docs/romm.md`](docs/romm.md) covers RomM's shared PostgreSQL hook and expandable NAS library.
+Host reference: [`docs/iris-operations.md`](docs/iris-operations.md) covers Iris's native launchd telemetry and independent cluster sentinel.
 Incident reference: [`docs/flux-reconciliation-alerts.md`](docs/flux-reconciliation-alerts.md) covers stuck rollbacks and Jackett's image-publication race.
 Upgrade reference: [`docs/kubernetes-upgrade.md`](docs/kubernetes-upgrade.md) covers Kubernetes upgrades on Talos, backup handling, bootstrap manifests, and live verification.
 Auth reference: [`docs/grafana-admin-credentials.md`](docs/grafana-admin-credentials.md) covers Grafana's encrypted admin Secret and persisted-password rotation.

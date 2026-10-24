@@ -31,6 +31,14 @@ spec:
 
     config:
       modules:
+        iris_health_http:
+          prober: http
+          timeout: 5s
+          http:
+            preferred_ip_protocol: ip4
+            valid_status_codes: [200]
+            fail_if_body_not_matches_regexp:
+              - '"ok"\s*:\s*true'
         truenas_ui_http:
           prober: http
           timeout: 5s
@@ -65,6 +73,15 @@ spec:
         interval: 60s
         scrapeTimeout: 10s
       targets:
+        - name: iris-gateway
+          url: http://${IRIS_MAC_MINI_IP}:18789/healthz
+          module: iris_health_http
+        - name: iris-readiness
+          url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
+          module: iris_health_http
+        - name: iris-ssh
+          url: ${IRIS_MAC_MINI_IP}:22
+          module: tcp_connect
         - name: truenas-ui
           url: http://${NAS_IP}/ui/
           module: truenas_ui_http

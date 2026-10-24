@@ -1,0 +1,59 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: iris-operations
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: iris-operations
+      rules:
+        - alert: IrisHostUnavailable
+          expr: up{job="iris-node"} == 0 or absent(up{job="iris-node"})
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: Iris host metrics are unavailable
+            description: Check the Mac mini's power, LAN connectivity and dev.khzaw.iris.node-exporter launchd job. This cannot distinguish host loss from exporter loss.
+        - alert: IrisDiskSpaceLow
+          expr: node_filesystem_avail_bytes{job="iris-node",mountpoint="/System/Volumes/Data"} / node_filesystem_size_bytes{job="iris-node",mountpoint="/System/Volumes/Data"} < 0.10
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Iris APFS data volume has less than 10% free
+            description: Free space on /System/Volumes/Data before agent logs and caches exhaust the shared APFS container.
+        - alert: IrisDiskSpaceCritical
+          expr: node_filesystem_avail_bytes{job="iris-node",mountpoint="/System/Volumes/Data"} / node_filesystem_size_bytes{job="iris-node",mountpoint="/System/Volumes/Data"} < 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Iris APFS data volume has less than 5% free
+        - alert: IrisAgentDown
+          expr: iris_launchd_service_up{job="iris-node"} == 0 or iris_openclaw_ready{job="iris-node"} == 0 or probe_success{target=~"iris-gateway|iris-readiness"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: An Iris agent process or OpenClaw readiness check is down
+            description: Check ai.openclaw.gateway, ai.hermes.gateway and dev.khzaw.hermes.dashboard on Iris. Remote readiness is a sanitized loopback check, not a relaxed OpenClaw proxy policy.
+        - alert: IrisWatchdogStale
+          expr: (time() - iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"} > 180) or absent(iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"}) or absent(iris_openclaw_ready{job="iris-node"}) or absent(iris_launchd_service_up{job="iris-node",service="ai.openclaw.gateway"}) or absent(iris_launchd_service_up{job="iris-node",service="ai.hermes.gateway"}) or absent(iris_launchd_service_up{job="iris-node",service="dev.khzaw.hermes.dashboard"}) or node_textfile_scrape_error{job="iris-node"} != 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: Iris native watchdog metrics are stale or missing
+            description: Check dev.khzaw.iris.watchdog and its private configuration/state files; the outside-cluster sentinel may no longer be protecting cluster outages.
+        - alert: IrisExternalNotificationPending
+          expr: iris_notification_pending{job="iris-node"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Iris cannot deliver an external sentinel notification
+            description: Check Iris internet/public-DNS reachability and refresh the local Telegram/Discord credentials after receiver rotation.

@@ -358,6 +358,12 @@ spec:
                               - title: Uptime Kuma
                                 url: https://uptime.${BASE_DOMAIN}
                                 icon: di:uptime-kuma
+                              - title: Iris
+                                url: https://iris.${BASE_DOMAIN}
+                                icon: mdi:robot-outline
+                              - title: Iris Overview
+                                url: https://grafana.${BASE_DOMAIN}/d/iris-overview
+                                icon: mdi:apple
                               - title: Operator Cockpit
                                 url: https://controlpanel.${BASE_DOMAIN}
                                 icon: mdi:cloud-lock-outline
@@ -652,6 +658,9 @@ spec:
                           - louislam/uptime-kuma
                           - Panonim/dynacat
                           - controlplaneio-fluxcd/flux-operator
+                          # Iris stays native macOS; these are release notices, not container updates.
+                          - openclaw/openclaw
+                          - prometheus/node_exporter
                           # Arr and download stack
                           - Sonarr/Sonarr
                           - Radarr/Radarr
@@ -740,6 +749,14 @@ spec:
                             url: https://rangoonpulse.${BASE_DOMAIN}
                             check-url: http://dynacat.default.svc.cluster.local:8080/api/healthz
                             icon: mdi:cat
+                          - title: Iris Gateway
+                            url: https://iris.${BASE_DOMAIN}
+                            check-url: http://${IRIS_MAC_MINI_IP}:18789/healthz
+                            icon: mdi:robot-outline
+                          - title: Iris API Readiness
+                            url: https://grafana.${BASE_DOMAIN}/d/iris-overview
+                            check-url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
+                            icon: mdi:apple
                           - title: Operator Cockpit
                             url: https://controlpanel.${BASE_DOMAIN}
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz

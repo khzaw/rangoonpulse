@@ -9,6 +9,8 @@ resources:
   - monitoring-cname.yaml
   - servicemonitor-kubelet-resource.yaml
   - servicemonitor-truenas-netdata.yaml
+  - servicemonitor-iris-node.yaml
+  - iris-watchdog-identity.yaml
   - servicemonitor-retirement-litestream.yaml
   - servicemonitor-seventyfivesoft-litestream.yaml
   - grafana-dashboard-gitops-change-timeline.yaml
@@ -16,6 +18,7 @@ resources:
   - grafana-dashboard-node-power-estimation.yaml
   - grafana-dashboard-node-capacity-overview.yaml
   - grafana-dashboard-truenas-host-overview.yaml
+  - grafana-dashboard-iris-overview.yaml
   - grafana-dashboard-homelab-control-room.yaml
   - grafana-dashboard-storage-risk-overview.yaml
   - grafana-dashboard-public-edge-overview.yaml
@@ -32,6 +35,7 @@ resources:
   - prometheusrule-exposure-control.yaml
   - prometheusrule-truenas-storage-alerts.yaml
   - prometheusrule-truenas-host-alerts.yaml
+  - prometheusrule-iris.yaml
   - prometheusrule-retirement-litestream.yaml
   - prometheusrule-seventyfivesoft-litestream.yaml
   - prometheusrule-cronjob-deadman.yaml

@@ -18,6 +18,17 @@ Notes:
 
 ## In-Use Secrets (Referenced By GitOps Manifests)
 
+### Iris native monitoring
+
+- **Iris watchdog** (`native/iris/`, [operations and rotation](./iris-operations.md))
+  - Reuses `monitoring/alertmanager-receivers` Telegram/Discord keys, SOPS-owned under
+    `infrastructure/secrets/monitoring/alertmanager-receivers.yaml`. Its private macOS copies must
+    be refreshed with `node native/iris/deploy.mjs` after rotation.
+  - `monitoring/iris-watchdog-api-token`: service-account-token controller owns generated data;
+    Git manages metadata/RBAC only in `infrastructure/monitoring/iris-watchdog-identity.yaml`.
+    Non-expiring external identity limited to API health checks, not an editable SOPS secret.
+    The Mac holds a mode-0600 copy and API CA; never install admin kubeconfig there.
+
 ### Dashboards
 - **dynacat** (`apps/dynacat/helmrelease.yaml`)
   - `default/homepage-widget-secrets`
