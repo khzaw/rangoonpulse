@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import re
 import sys
 from urllib.parse import unquote, urlsplit
+from zoneinfo import ZoneInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -94,9 +95,14 @@ def heading_anchors(text: str) -> set[str]:
     return anchors
 
 
+def review_date(now: datetime | None = None) -> date:
+    """Review metadata follows the cluster timezone, including on UTC CI runners."""
+    return (now or datetime.now(timezone.utc)).astimezone(ZoneInfo("Asia/Singapore")).date()
+
+
 def validate_repository(root: Path = ROOT, today: date | None = None) -> list[str]:
     root = root.resolve()
-    today = today or date.today()
+    today = today or review_date()
     errors = []
     for name in REQUIRED_FILES:
         if not (root / name).is_file():

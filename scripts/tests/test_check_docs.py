@@ -1,6 +1,6 @@
 """Exercise the docs gate against small repositories, including failed renames."""
 
-from datetime import date
+from datetime import date, datetime, timezone
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -21,6 +21,12 @@ def document(body="# Guide\n", **metadata):
 
 
 class DocsGateTests(unittest.TestCase):
+    def test_review_day_uses_singapore_midnight_on_utc_runners(self):
+        self.assertEqual(check_docs.review_date(datetime(2026, 10, 24, 15, 59, tzinfo=timezone.utc)),
+                         date(2026, 10, 24))
+        self.assertEqual(check_docs.review_date(datetime(2026, 10, 24, 16, 0, tzinfo=timezone.utc)),
+                         date(2026, 10, 25))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

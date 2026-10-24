@@ -84,4 +84,6 @@ make check-docs
 
 `scripts/check_docs.py` verifies the entrypoints, focused-doc metadata, active-only status, review dates, linked index coverage, local links/headings, literal repository paths, project-local skill metadata/UI portability, and obvious historical/completed section headings. Fenced examples and template paths are excluded from reference checks. `make check-docs` also runs the checker's fixture-based regression tests.
 
+Review dates use `Asia/Singapore`, matching the cluster's operating timezone even when CI runs in UTC. Future dates and reviews older than 180 days fail the gate.
+
 The checker is a floor. A document can pass structure checks and still be wrong; compare its claims with the implementation whenever its domain changes.
