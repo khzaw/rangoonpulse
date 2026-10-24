@@ -26,8 +26,13 @@ services and no new secrets.
 | `resource-advisor-apply-pr` | `monitoring` | `30 3 * * 1` (weekly Mon) | 8d (691200s) |
 | `truenas-management-plane-refresh` | `democratic-csi` | `0 4 * * 1` (weekly Mon) | 8d (691200s) |
 
-All three use `concurrencyPolicy: Forbid`, `ttlSecondsAfterFinished: 21600` (6h), and job
-history limits of 2-3.
+| `power-cost-ledger` | `default` | `15 0 1 * 1` (Mondays + month-start) | 8d (691200s) |
+
+All four use `concurrencyPolicy: Forbid`, `ttlSecondsAfterFinished: 21600` (6h), and
+small job history limits. The ledger falls back to its creation time before its
+first scheduled success, so an uninitialized job cannot silently avoid staleness.
+Its eight-day alert leaves time to collect before Prometheus's 14-day/8GB retention
+expires. See [monthly cost collection](./power-estimation-dashboard.md#durable-monthly-cluster-totals).
 
 ## Alert Families
 
@@ -68,8 +73,8 @@ Single rule. Fires when any tracked Job has `kube_job_status_failed > 0`, `for: 
 ```
 max by (namespace, job_name) (
   kube_job_status_failed{
-    namespace=~"monitoring|democratic-csi",
-    job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh)-[0-9]+"
+    namespace=~"monitoring|democratic-csi|default",
+    job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger)-[0-9]+"
   }
 ) > 0
 ```
@@ -97,8 +102,8 @@ Single rule. Fires when `kube_cronjob_spec_suspend == 1` for any tracked CronJob
 
 ```
 kube_cronjob_spec_suspend{
-  namespace=~"monitoring|democratic-csi",
-  cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh"
+  namespace=~"monitoring|democratic-csi|default",
+  cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger"
 } == 1
 ```
 
@@ -107,7 +112,7 @@ suspended in controlpanel and forgotten will not go stale, but will trip this af
 
 ## Alertmanager Routing
 
-The route tree in `alertmanagerconfig-homelab.yaml` explicitly delivers the `TrueNAS.*`, `Iris.*`, `HomelabCronJob.*`, and `Flux.*` warning families. Unmatched warning alerts reach the final null receiver. Keep this family's explicit matcher or its warnings will be silently dropped.
+The route tree in `alertmanagerconfig-homelab.yaml` explicitly delivers the `TrueNAS.*`, `Iris.*`, `SingaporePower.*`, `HomelabCronJob.*`, and `Flux.*` warning families. Unmatched warning alerts reach the final null receiver. Keep this family's explicit matcher or its warnings will be silently dropped.
 
 A route placed before the final `receiver: "null"` entry sends the family to
 `critical-multi` (Discord + Telegram):
@@ -155,7 +160,7 @@ curl -s 'http://localhost:19090/api/v1/rules' | \
   grep -o 'HomelabCronJob[A-Za-z]*' | sort -u
 kill "$forward_pid"
 
-# Confirm kube-state-metrics is exposing the source series for all three CronJobs.
+# Confirm kube-state-metrics is exposing the source series for all four CronJobs.
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
   promtool query instant http://localhost:9090 'kube_cronjob_status_last_successful_time'
 

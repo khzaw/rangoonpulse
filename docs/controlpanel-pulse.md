@@ -40,6 +40,30 @@ integration; cost uses the configured tariff, and the 30-day projection uses
 the seven-day mean. Missing tariffs or insufficient history leave cost blank.
 Midnight ticks always use Asia/Singapore, independent of the browser's timezone.
 
+## Monthly electricity cost
+
+The power section also shows the durable cluster-wide monthly cost ledger, using
+Pulse's existing monochrome IBM Plex typography, hairlines, and halftone bars.
+Solid bars are finalized with complete coverage; dotted bars indicate an open or
+partial month. Values, keyboard-focusable readings, last collection time, and an
+eight-day overdue state prevent old or incomplete totals from appearing live.
+The latest 24 months fit a horizontally scrollable chart on mobile; no chart
+library, motion loop, or new runtime dependency is added. Empty and unavailable
+states remain distinct from a genuine zero.
+
+`GET /api/power-cost-ledger` reads a tiny runtime ConfigMap snapshot, cached for
+five minutes with shared in-flight reads. Browser query parameters are rejected.
+The weekly collector publishes it after committing to PostgreSQL through the
+fixed authenticated POST route; its shared token is never returned or stored in
+the snapshot. The API validates months, finite nonnegative totals, coverage, and
+Singapore collection boundaries. No SQL or database credential reaches the browser,
+and Pulse does not poll PostgreSQL. The metric ticker still shows its independent
+short-range estimates/projection; monthly bars show saved samples only.
+
+See [power estimation](./power-estimation-dashboard.md#durable-monthly-cluster-totals)
+for weekly/month-start collection, transactional checkpoints, restart durability,
+explicit no-NAS-backup policy, and recovery limits.
+
 ## Storage
 
 PVC inventory (`pvc_class`) controls membership. Usage joins by namespace and

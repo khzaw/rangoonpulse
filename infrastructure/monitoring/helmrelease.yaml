@@ -117,6 +117,27 @@ spec:
         existingSecret: grafana-admin
         userKey: admin-user
         passwordKey: admin-password
+      envFromSecrets:
+        - name: power-ledger-db
+      additionalDataSources:
+        - name: Power Cost Ledger
+          uid: power-cost-ledger
+          type: postgres
+          access: proxy
+          url: media-postgres.default.svc.cluster.local:5432
+          user: power_ledger_reader
+          editable: false
+          jsonData:
+            database: postgres
+            sslmode: disable
+            postgresVersion: 1600
+            timescaledb: false
+            maxOpenConns: 1
+            maxIdleConns: 1
+            connMaxLifetime: 14400
+          secureJsonData:
+            # Grafana expands this environment variable, not Flux.
+            password: $POWER_LEDGER_PASSWORD
       initChownData:
         enabled: false
 

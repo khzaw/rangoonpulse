@@ -27,7 +27,7 @@ spec:
             value: warning
           - name: alertname
             matchType: "=~"
-            value: TrueNAS.*|Iris.*
+            value: TrueNAS.*|Iris.*|SingaporePower.*
       - receiver: critical-multi
         matchers:
           - name: severity

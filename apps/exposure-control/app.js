@@ -2016,7 +2016,7 @@
           '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
           '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated cluster power over seven days' }) + '</div>' +
           '<div class="ticker-days">' + ticks.filter((tick) => tick.x > .015 && tick.x < .985).map((tick) => '<span style="left:' + tick.x * 100 + '%">' + escapeHtml(tick.label) + '</span>').join('') + '</div>' +
-          '<div class="ticker-note">Estimated from CPU load · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>';
+          '<div class="ticker-note">Estimated from CPU load · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
       }
 
       const expandedStorageGroups = new Set();
@@ -2151,14 +2151,20 @@
         if (pulseRequest) return pulseRequest;
         const status = document.getElementById('pulseStatus');
         pulseRequest = (async () => {
-          await Promise.all(pulseBatches.map(async ({ names, range }) => {
+          await Promise.all([...pulseBatches.map(async ({ names, range }) => {
             try {
               const snapshot = await window.Pulse.fetch(names, range);
               for (const [name, metric] of Object.entries(snapshot.metrics)) dashboardState.metrics[name + '|' + range] = metric;
             } catch (error) {
               for (const name of names) dashboardState.metrics[name + '|' + range] = { state: 'degraded', series: [] };
             }
-          }));
+          }), (async () => {
+            try {
+              dashboardState.monthlyPower = await request('/api/power-cost-ledger', 'GET');
+            } catch {
+              dashboardState.monthlyPower = { state: 'unavailable', months: [] };
+            }
+          })()]);
           const degraded = Object.values(dashboardState.metrics).filter((metric) => metric.state !== 'live').length;
           status.dataset.state = degraded ? 'degraded' : 'live';
           status.textContent = (degraded ? degraded + ' signals unavailable' : 'Live') + ' · ' + new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });

@@ -26,6 +26,7 @@ spec:
 
     controllers:
       main:
+        forceRename: media-postgres
         strategy: Recreate
         containers:
           main:
@@ -82,6 +83,65 @@ spec:
               limits:
                 cpu: "2000m"
                 memory: "8Gi"
+
+      # Provision only the isolated ledger table/roles in the existing postgres DB.
+      # No database server or new database is created; the collector never gets superuser access.
+      power-ledger-database:
+        type: job
+        serviceAccount:
+          name: default
+        annotations:
+          helm.sh/hook: post-install,post-upgrade
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        job:
+          backoffLimit: 2
+          activeDeadlineSeconds: 180
+        pod:
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+        containers:
+          main:
+            image:
+              repository: timescale/timescaledb
+              tag: 2.31.0-pg16
+            command: [psql, -X, -w, -q, -f, /scripts/bootstrap.sql]
+            env:
+              PGHOST: media-postgres.default.svc.cluster.local
+              PGDATABASE: postgres
+              PGUSER: postgres
+              PGCONNECT_TIMEOUT: "10"
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: media-postgres-secret
+                    key: POSTGRES_PASSWORD
+              POWER_LEDGER_WRITER_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: power-ledger-db
+                    key: writer-password
+              POWER_LEDGER_READER_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: power-ledger-db
+                    key: reader-password
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                cpu: 100m
+                memory: 48Mi
 
     service:
       main:
@@ -151,13 +211,25 @@ spec:
         storageClass: local-path
         size: 20Gi
         accessMode: ReadWriteOnce
-        globalMounts:
-          - path: /var/lib/postgresql/data
+        advancedMounts:
+          main:
+            main:
+              - path: /var/lib/postgresql/data
       init:
         enabled: true
         type: configMap
         identifier: init
-        globalMounts:
-          - path: /docker-entrypoint-initdb.d/10-init-app-dbs.sh
-            subPath: 10-init-app-dbs.sh
-            readOnly: true
+        advancedMounts:
+          main:
+            main:
+              - path: /docker-entrypoint-initdb.d/10-init-app-dbs.sh
+                subPath: 10-init-app-dbs.sh
+                readOnly: true
+      power-ledger-code:
+        type: configMap
+        name: power-ledger-code
+        advancedMounts:
+          power-ledger-database:
+            main:
+              - path: /scripts
+                readOnly: true

@@ -51,6 +51,11 @@ spec:
               - node
               - /app-files/server.js
             env:
+              POWER_LEDGER_SNAPSHOT_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: power-ledger-db
+                    key: snapshot-token
               APP_DIR: /app-files
               TZ: "${TIMEZONE}"
               PORT: "8080"

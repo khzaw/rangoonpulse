@@ -16,6 +16,12 @@ last_reviewed: 2026-10-25
 - BookOrbit: `bookorbit`
 - RomM: `romm`, provisioned by its own pre-install/pre-upgrade hook; see [RomM](./romm.md)
 
+Monthly cluster power costs reuse the existing maintenance database `postgres`,
+adding only `power_estimation.monthly_cost`. A post-install/post-upgrade hook
+provisions limited writer/reader roles without changing the server Deployment.
+The weekly collector, read-only Grafana datasource, and explicit no-NAS-copy
+policy are covered in [power estimation](./power-estimation-dashboard.md#durable-monthly-cluster-totals).
+
 Immich uses its own PostgreSQL and is not part of this service.
 
 ## Runtime
@@ -37,6 +43,7 @@ The elevated lock table is required by Tracearr hypertables with many chunks. Th
 All database credentials are SOPS-managed:
 
 - `media-postgres-secret`
+- `power-ledger-db`, limited ledger writer/reader passwords and snapshot push token; the monitoring copy contains only the Grafana reader password
 - `tracerr-db-secret`
 - `reactive-resume-db-secret`
 - `speedtest-tracker-secret`

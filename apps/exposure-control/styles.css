@@ -3229,6 +3229,22 @@ button.filter-btn.active {
 .ticker-days { height: 28px; position: relative; color: var(--text-2); font: 9px var(--font-mono); }
 .ticker-days span { position: absolute; top: 10px; transform: translateX(-50%); }
 .ticker-note { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--text-2); font: 9px/1.5 var(--font-mono); margin-top: 12px; }
+.monthly-ledger { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); }
+.monthly-heading { display: flex; justify-content: space-between; gap: 10px 20px; align-items: baseline; flex-wrap: wrap; }
+.monthly-ledger h3 { font: 500 12px var(--font-mono); color: var(--text-1); margin: 0; }
+.monthly-heading > span { font: 9px/1.6 var(--font-mono); color: var(--text-2); }
+.monthly-ledger.is-overdue .monthly-heading > span { color: var(--yellow); }
+.monthly-scroll { overflow-x: auto; padding: 14px 2px 8px; }
+.monthly-bars { display: flex; align-items: flex-end; gap: 14px; width: max-content; min-width: 100%; list-style: none; margin: 0; padding: 10px 0 0; }
+.monthly-bars li { display: grid; grid-template-rows: 124px auto auto auto; width: 110px; flex: 0 0 110px; padding: 0 4px 5px; font: 10px/1.5 var(--font-mono); color: var(--text-1); font-variant-numeric: tabular-nums; }
+.monthly-bars li:focus-visible { outline: 1px solid var(--text-1); outline-offset: -1px; }
+.monthly-track { display: flex; align-items: flex-end; height: 124px; border-bottom: 1px solid var(--border); }
+.monthly-bar { display: block; width: 100%; background: var(--text-1); }
+.monthly-bar.is-partial { background: radial-gradient(circle, var(--text-1) .8px, transparent 1.2px) 0 / 3px 3px; border: 1px solid var(--border); border-bottom: 0; }
+.monthly-value { padding-top: 10px; font-size: 13px; }
+.monthly-month { color: var(--text-2); margin-top: 3px; }
+.monthly-state { color: var(--text-2); font-size: 8px; min-height: 24px; margin-top: 4px; overflow-wrap: anywhere; }
+@media (max-width: 720px) { .monthly-heading { align-items: flex-start; flex-direction: column; gap: 5px; } .monthly-bars { gap: 10px; } .monthly-bars li { width: 96px; flex-basis: 96px; } }
 @keyframes pulse-alarm { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .twin-alarm::before { animation: none; } }
 @media (max-width: 1100px) { .twin-body { grid-template-columns: 65px minmax(0, 1fr); gap: 16px; } .twin-machine svg { width: 64px; } .node-twins-grid { gap: 22px; } .node-twin + .node-twin { padding-left: 22px; } }

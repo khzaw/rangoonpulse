@@ -54,7 +54,7 @@ Docs describe present desired state, active constraints, and reusable recovery p
 - [`gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md): Flux change timeline
 - [`dns-access-path-dashboard.md`](./dns-access-path-dashboard.md): DNS and ingress observability
 - [`node-capacity-dashboard.md`](./node-capacity-dashboard.md): node fit and capacity
-- [`power-estimation-dashboard.md`](./power-estimation-dashboard.md): estimated power and tariff inputs
+- [`power-estimation-dashboard.md`](./power-estimation-dashboard.md): estimated power, tariff automation, and lightweight weekly PostgreSQL collection of durable monthly cluster costs in Grafana/Pulse
 - [`metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md): live Kubernetes Metrics API
 - [`flux-web-ui.md`](./flux-web-ui.md): Flux Operator UI and controller-manifest caveat
 - [`cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md): scheduled-job staleness and failure alerts

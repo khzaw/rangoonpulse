@@ -13,9 +13,9 @@ data:
     {
       "uid": "node-power-estimation",
       "title": "Node Power Estimation",
-      "timezone": "browser",
+      "timezone": "Asia/Singapore",
       "schemaVersion": 41,
-      "version": 2,
+      "version": 3,
       "refresh": "1m",
       "tags": ["power", "homelab", "estimated", "hardware"],
       "time": {
@@ -632,6 +632,51 @@ data:
             "colorMode": "background",
             "reduceOptions": {"calcs": ["lastNotNull"], "values": false}
           }
+        },
+        {
+          "id": 16,
+          "type": "stat",
+          "title": "Current Month — Recorded Cluster Cost",
+          "description": "Durable monthly total, updated on Mondays and the first of each month. Not a live projection. Partial coverage is shown in the monthly table; this panel ignores the dashboard time picker.",
+          "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
+          "gridPos": {"h": 5, "w": 8, "x": 0, "y": 33},
+          "targets": [{
+            "refId": "A", "format": "table", "rawQuery": true,
+            "rawSql": "SELECT cost_sgd::double precision AS \"Recorded SGD\" FROM power_estimation.monthly_cost WHERE month = date_trunc('month', now() AT TIME ZONE 'Asia/Singapore')::date"
+          }],
+          "fieldConfig": {"defaults": {"unit": "prefix:S$", "decimals": 4, "noValue": "Awaiting collection"}},
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "values": false}}
+        },
+        {
+          "id": 17,
+          "type": "barchart",
+          "title": "Monthly Cluster Electricity Cost",
+          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods.",
+          "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
+          "gridPos": {"h": 8, "w": 16, "x": 8, "y": 29},
+          "targets": [{
+            "refId": "A", "format": "table", "rawQuery": true,
+            "rawSql": "SELECT to_char(month, 'YYYY-MM') AS \"Month\", cost_sgd::double precision AS \"Estimated cost\" FROM power_estimation.monthly_cost ORDER BY month"
+          }],
+          "fieldConfig": {"defaults": {"unit": "prefix:S$", "decimals": 4, "min": 0}},
+          "options": {"orientation": "vertical", "xField": "Month", "showValue": "auto", "legend": {"showLegend": false}, "tooltip": {"mode": "single"}}
+        },
+        {
+          "id": 18,
+          "type": "table",
+          "title": "Saved Monthly Totals & Coverage",
+          "description": "One cluster-total row per Singapore month. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained.",
+          "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
+          "gridPos": {"h": 7, "w": 24, "x": 0, "y": 38},
+          "targets": [{
+            "refId": "A", "format": "table", "rawQuery": true,
+            "rawSql": "SELECT to_char(month, 'YYYY-MM') AS \"Month\", cost_sgd::double precision AS \"Cost (SGD)\", round(100.0 * observed_samples / nullif(expected_samples, 0), 2)::double precision AS \"Coverage (%)\", CASE WHEN collected_until >= (month::timestamp + interval '1 month') AT TIME ZONE 'Asia/Singapore' THEN 'Final' ELSE 'In progress' END || CASE WHEN observed_samples < expected_samples THEN ' · partial coverage' ELSE '' END AS \"Status\", collected_until AS \"Collected through\" FROM power_estimation.monthly_cost ORDER BY month DESC"
+          }],
+          "fieldConfig": {"defaults": {"decimals": 4}, "overrides": [
+            {"matcher": {"id": "byName", "options": "Collected through"}, "properties": [{"id": "unit", "value": "dateTimeAsIso"}]},
+            {"matcher": {"id": "byName", "options": "Coverage (%)"}, "properties": [{"id": "decimals", "value": 2}]}
+          ]},
+          "options": {"showHeader": true}
         }
       ]
     }

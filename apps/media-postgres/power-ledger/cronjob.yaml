@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: power-cost-ledger
+  namespace: default
+spec:
+  # Standard cron OR semantics: Mondays AND an extra run on each month's first day.
+  schedule: "15 0 1 * 1"
+  timeZone: "${TIMEZONE}"
+  suspend: false
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 86400
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 21600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: power-cost-ledger
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          nodeSelector:
+            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: collector
+              # Reuse the shared DB image and its already-cached wget/psql binaries.
+              image: timescale/timescaledb:2.31.0-pg16
+              command: [sh, /scripts/collect.sh]
+              env:
+                - name: PROMETHEUS_URL
+                  value: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+                - name: POWER_LEDGER_COCKPIT_HOST
+                  value: controlpanel.${BASE_DOMAIN}
+                - name: POWER_LEDGER_NODES
+                  value: "${PRIMARY_NODE_NAME}|${UTILITY_NODE_NAME}"
+                - name: POWER_LEDGER_EXPECTED_NODES
+                  value: "2"
+                - name: POWER_LEDGER_SNAPSHOT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: power-ledger-db
+                      key: snapshot-token
+                - name: PGHOST
+                  value: media-postgres.default.svc.cluster.local
+                - name: PGDATABASE
+                  value: postgres
+                - name: PGUSER
+                  value: power_ledger_writer
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: power-ledger-db
+                      key: writer-password
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  cpu: 100m
+                  memory: 48Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: code
+                  mountPath: /scripts
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: code
+              configMap:
+                name: power-ledger-code
+            - name: tmp
+              emptyDir:
+                sizeLimit: 8Mi

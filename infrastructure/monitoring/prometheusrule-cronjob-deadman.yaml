@@ -15,6 +15,36 @@ spec:
         - alert: HomelabCronJobStale
           expr: >
             (
+              time() - (
+                max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{namespace="default",cronjob="power-cost-ledger"})
+                or max by (namespace, cronjob) (kube_cronjob_created{namespace="default",cronjob="power-cost-ledger"})
+              )
+            ) > 691200
+            unless on (namespace, cronjob)
+              (kube_cronjob_spec_suspend{namespace="default",cronjob="power-cost-ledger"} == 1)
+          for: 15m
+          labels:
+            severity: warning
+            namespace: default
+            cronjob: power-cost-ledger
+          annotations:
+            summary: Monthly power cost collector has missed its weekly window
+            description: The ledger has not had a scheduled success for 8 days. Re-run it before uncollected samples expire from Prometheus (14-day time retention, potentially sooner at the size cap). Missing periods will be marked partial, not invented.
+
+        - alert: HomelabCronJobMissing
+          expr: absent(kube_cronjob_created{namespace="default",cronjob="power-cost-ledger"})
+          for: 1h
+          labels:
+            severity: warning
+            namespace: default
+            cronjob: power-cost-ledger
+          annotations:
+            summary: Monthly power cost CronJob is missing
+            description: Restore power-cost-ledger through the media-postgres Flux Kustomization before uncollected Prometheus history expires.
+
+        - alert: HomelabCronJobStale
+          expr: >
+            (
               time()
               - max by (namespace, cronjob) (
                   kube_cronjob_status_last_successful_time{
@@ -97,8 +127,8 @@ spec:
           expr: >
             max by (namespace, job_name) (
               kube_job_status_failed{
-                namespace=~"monitoring|democratic-csi",
-                job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh)-[0-9]+"
+                namespace=~"monitoring|democratic-csi|default",
+                job_name=~"(resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger)-[0-9]+"
               }
             ) > 0
           for: 5m
@@ -162,8 +192,8 @@ spec:
         - alert: HomelabCronJobSuspendedTooLong
           expr: >
             kube_cronjob_spec_suspend{
-              namespace=~"monitoring|democratic-csi",
-              cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh"
+              namespace=~"monitoring|democratic-csi|default",
+              cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger"
             } == 1
           for: 7d
           labels:

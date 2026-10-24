@@ -1,6 +1,7 @@
 const http = require("node:http");
 const https = require("node:https");
 const crypto = require("node:crypto");
+const powerLedger = require("./power-ledger.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
@@ -234,6 +235,15 @@ const SECRET_EDITOR_FLUX_NAMESPACE = String(
   process.env.SECRET_EDITOR_FLUX_NAMESPACE || "flux-system",
 ).trim();
 const MANAGED_JOBS = [
+  {
+    id: "power-cost-ledger",
+    title: "Monthly power cost ledger",
+    namespace: "default",
+    cronJob: "power-cost-ledger",
+    description: "Saves one cluster-total row per month in existing PostgreSQL on Mondays and month-start. No per-node history or NAS backup.",
+    repoPath: "apps/media-postgres/power-ledger/cronjob.yaml",
+    fluxKustomization: "media-postgres",
+  },
   {
     id: "resource-advisor-capacity-snapshot",
     title: "Resource advisor capacity snapshot",
@@ -2701,6 +2711,22 @@ async function kubeUpsertConfigMap(namespace, name, data, labels) {
   return JSON.parse(updated.body || "{}");
 }
 
+const POWER_LEDGER_CONFIGMAP = "power-cost-ledger-snapshot";
+let powerLedgerCache = null;
+let powerLedgerRequest = null;
+async function getPowerLedgerSnapshot() {
+  if (powerLedgerCache && powerLedgerCache.expires > Date.now()) return powerLedgerCache.value;
+  if (powerLedgerRequest) return powerLedgerRequest;
+  powerLedgerRequest = (async () => {
+    const cm = await kubeGetJson("/api/v1/namespaces/default/configmaps/" + POWER_LEDGER_CONFIGMAP);
+    const raw = cm?.data?.["ledger.json"];
+    const value = raw ? { state: "recorded", ...powerLedger.validateSnapshot(JSON.parse(raw)) } : { state: "empty", months: [], recordedAt: null };
+    powerLedgerCache = { value, expires: Date.now() + 300000 };
+    return value;
+  })().finally(() => { powerLedgerRequest = null; });
+  return powerLedgerRequest;
+}
+
 function managedJobPath(job, suffix) {
   return "/apis/batch/v1/namespaces/" +
     encodeURIComponent(job.namespace) +
@@ -4646,6 +4672,34 @@ async function handleApi(req, res, parsedUrl) {
       });
     } catch (err) {
       return sendJson(res, 400, { error: err.message });
+    }
+  }
+
+  if (pathname === "/api/power-cost-ledger" && req.method === "POST") {
+    try {
+      const body = await parseBody(req);
+      if (!powerLedger.authorized(body.token, process.env.POWER_LEDGER_SNAPSHOT_TOKEN)) {
+        return sendJson(res, 403, { error: "Forbidden" });
+      }
+      const snapshot = powerLedger.validateSnapshot(body);
+      const previous = await getPowerLedgerSnapshot();
+      if (previous.recordedAt && Date.parse(previous.recordedAt) > Date.parse(snapshot.recordedAt)) {
+        return sendJson(res, 409, { error: "Older snapshot rejected" });
+      }
+      await kubeUpsertConfigMap("default", POWER_LEDGER_CONFIGMAP, { "ledger.json": JSON.stringify(snapshot) }, { "app.kubernetes.io/managed-by": "power-cost-ledger" });
+      powerLedgerCache = null;
+      return sendJson(res, 200, { saved: true });
+    } catch {
+      return sendJson(res, 400, { error: "Monthly ledger snapshot could not be saved" });
+    }
+  }
+
+  if (pathname === "/api/power-cost-ledger" && req.method === "GET") {
+    if ([...parsedUrl.searchParams].length) return sendJson(res, 400, { error: "No query parameters supported" });
+    try {
+      return sendJson(res, 200, await getPowerLedgerSnapshot());
+    } catch {
+      return sendJson(res, 503, { state: "unavailable", months: [], recordedAt: null, error: "Saved monthly totals unavailable" });
     }
   }
 

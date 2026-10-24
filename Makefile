@@ -157,6 +157,7 @@ check-node: ## Syntax-check exposure-control JavaScript
 
 check-shell: ## Syntax-check shell scripts
 	bash -n scripts/storage-sunset-cleanup.sh
+	sh -n apps/media-postgres/power-ledger/collect.sh
 	bash -n apps/exposure-control/secret-commit-job.sh
 
 test-python: ## Run Python unit tests

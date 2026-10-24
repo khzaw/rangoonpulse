@@ -139,6 +139,99 @@ recorded samples only, not already recorded historical costs. Keep consecutive
 quarters in the history. Flux deploys merged rules through the existing monitoring
 Kustomization; review the tariff/expiry metrics, alerts, and dashboard after rollout.
 
+## Durable Monthly Cluster Totals
+
+Monthly history is **one row per month for the whole cluster**, not per-node or daily
+rows. It lives in `postgres.power_estimation.monthly_cost` on the **existing**
+`media-postgres` server. No new database, server, exporter, or NAS copy is created.
+The local-path PostgreSQL PVC survives pod and Talos reboots. Loss of its disk is
+**not** covered by a separate backup, per the operator's explicit choice.
+
+`default/power-cost-ledger` runs at **00:15 Singapore on Mondays and the first day
+of each month** (`15 0 1 * 1`, standard cron day-of-month/day-of-week OR semantics).
+A manual bootstrap run seeds the first partial month. The extra month-start run
+finalizes the previous month without waiting for Monday. Grafana and Pulse show
+recorded totals, not a continuously updating month-to-date projection.
+
+The job reuses the already-cached TimescaleDB image's shell, BusyBox `wget`, and
+`psql`: no dependency installs or additional steady-state service. Requests are
+**10m CPU / 16Mi**, limits **100m CPU / 48Mi**, deadline five minutes, concurrency
+Forbid, finished-job TTL six hours. No HPA applies to a bounded run-to-completion
+job. This extends existing monitoring/DB services, so a new application hostname,
+Dynacat bookmark, exposure/share route, and independent service monitor are N/A.
+The existing Grafana and Pulse links remain the entry points. The raw CronJob is
+intentional so the Control Panel's managed-job schedule/suspend editor supports it;
+its Jobs view includes the collector. Renovate tracks the pinned image. Advisor
+workload tuning targets persistent controllers, not this ephemeral collector;
+its small explicit resources remain operator-owned.
+
+### Exactly-once accumulation and coverage
+
+- Fetch up to 13 days of **raw** `homelab:node_estimated_cost_sgd_per_hour` samples,
+  not `query_range` resamples which can repeat a stale value. Two-minute sample
+  values integrate as `SGD/hour * 120 / 3600`, matching Grafana's cost calculation.
+- A five-minute settlement delay avoids advancing past unsettled evaluations.
+- One transaction takes an advisory lock, splits samples by Singapore month,
+  adds only timestamps at/after the previous checkpoint and before the new cutoff,
+  and commits totals, sample counts, and checkpoint together. Repeated or concurrent
+  runs cannot double-count. Earlier finalized rows are never repriced.
+- The first month is partial; its unrecorded prefix is included in missing coverage.
+  Counts track the expected two nodes without retaining per-node ledger records.
+  Update `POWER_LEDGER_NODES` and `POWER_LEDGER_EXPECTED_NODES` if cluster membership
+  changes. Changing the recording interval also requires updating this collector.
+- Missing measurements, NaN observations, and outages beyond available retention
+  remain missing, not fabricated zero consumption. Checkpoints can progress past a
+  lost interval while retaining its partial-coverage status. API errors/warnings,
+  malformed data, duplicate points, and constraint failures roll back without
+  advancing. Prometheus retains **at most** 14 days/8GB; the size cap can shorten it.
+  The weekly dead-man alert fires after eight days, leaving recovery time.
+
+### Consumers and credentials
+
+Grafana uses its built-in PostgreSQL datasource `power-cost-ledger`, a read-only
+role and a one-connection pool. The existing Node Power Estimation dashboard adds
+current-month recorded cost, monthly bars, and a totals/coverage table. These panels
+ignore the short dashboard time picker and read the durable ledger.
+
+After committing, the job exports a tiny JSON snapshot and POSTs it to the existing
+Control Panel using a dedicated shared token. The backend validates/authenticates
+it and stores **only token-free data** in runtime ConfigMap
+`default/power-cost-ledger-snapshot`. This cache is not Flux desired state and is
+reconstructible from PostgreSQL. Pulse's `GET /api/power-cost-ledger` reads that
+snapshot (five-minute backend cache); **it never polls PostgreSQL**. A failed push
+fails the job; retrying leaves totals unchanged and republishes the snapshot.
+
+`default/power-ledger-db` holds `writer-password`, `reader-password`, and
+`snapshot-token`. Only the post-install/post-upgrade DB hook consumes the existing
+superuser credential; the normal collector has SELECT/INSERT/UPDATE on the one
+ledger table, and Grafana has SELECT only. `monitoring/power-ledger-db` holds the
+reader copy as `POWER_LEDGER_PASSWORD`. All are SOPS-managed. Rotate the reader in
+both namespace copies, reconcile secrets, run the media-postgres provisioning hook
+through a Helm reconcile/upgrade, and restart Grafana. Rotate the snapshot token
+with a Control Panel restart and the next fresh job. Do not reset the ledger when
+rotating credentials. Shared DB Deployment rendering is unchanged by the hook.
+
+### Verification and recovery
+
+```bash
+python3 scripts/test_power_ledger_sql.py --psql-command 'kubectl exec -i -n default deploy/media-postgres -- psql -X -U postgres -d postgres'
+kubectl create job -n default --from=cronjob/power-cost-ledger power-cost-ledger-manual-$(date +%s)
+curl -fsS https://controlpanel.khzaw.dev/api/power-cost-ledger
+```
+
+The SQL regression test uses an isolated schema and rolls everything back. It
+checks month splitting, retries, cutoff boundaries, coverage gaps, finalization,
+and rejection of malformed/partial source responses. CI runs it in a disposable
+PostgreSQL container, never against application data.
+
+If collection is overdue, run it before Prometheus samples expire. If only the
+Pulse cache is missing, rerunning republishes the entire ledger even when the
+checkpoint has not advanced. Never reset the checkpoint alone or manually add
+previously collected samples: that would double-count. Restarts require no data
+repair; disk loss requires accepting loss of monthly history under the no-backup
+policy. The table and its roles are reprovisioned idempotently by the DB hook,
+but reprovisioning cannot recover lost historical values.
+
 ## Verification
 
 ```bash
