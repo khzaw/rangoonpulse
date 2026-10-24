@@ -3,7 +3,7 @@ title: BentoPDF
 summary: Private browser-based PDF toolbox deployment, resource bounds, and access path.
 status: active
 owner: homelab
-last_reviewed: 2026-09-15
+last_reviewed: 2026-10-25
 ---
 
 # BentoPDF
@@ -28,8 +28,7 @@ the application and its static assets.
 - Manifests: `apps/bentopdf/`
 - Flux Kustomization: `flux/kustomizations/bentopdf.yaml`
 - HelmRelease, Deployment, and Service: `bentopdf` in namespace `default`
-- Chart: `app-template` `5.1.0`
-- Image: `ghcr.io/alam00000/bentopdf-simple:2.8.8`
+- Chart/image: `app-template` and `ghcr.io/alam00000/bentopdf-simple`, pinned in the HelmRelease
 - Runtime: NGINX on port `8080`, with HTTP probes against `/`
 - Placement: `${PRIMARY_NODE_NAME}` (`talos-7nf-osf`)
 - Persistence: none; there is no database or PVC to back up

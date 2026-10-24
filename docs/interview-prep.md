@@ -1,70 +1,59 @@
 ---
 title: Interview Prep
-summary: Deployment, persistence, image updates, and recovery notes for the interview practice journal.
+summary: Current private access, image promotion, SQLite persistence, and recovery contract for ITVP.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
 ---
 
 # Interview Prep
 
-Interview Prep is a single-user coding and system-design practice journal deployed at `https://itvp.khzaw.dev`.
+Interview Prep is the single-user practice journal at `itvp.khzaw.dev`.
 
 ## Access
 
-- The canonical `itvp.khzaw.dev` hostname follows the normal private service path and resolves to the shared ingress VIP for LAN and Tailscale access.
-- Temporary public access uses `share-itvp.khzaw.dev` and is disabled by default.
-- Enable or disable the public share from the Exposure Control page at `https://controlpanel.khzaw.dev`.
+The canonical hostname uses the private shared-ingress path for LAN and Tailscale clients. `share-itvp.khzaw.dev` is a fully wired temporary public share and is disabled by default.
 
 ## Runtime
 
-- Source and image: `github.com/khzaw/interview-prep` / `ghcr.io/khzaw/interview-prep`
-- Workload: one `app-template` replica pinned to `${PRIMARY_NODE_NAME}`
-- Port and health: `3000` / `/api/health`
-- The shared ingress-nginx controller compresses the large workspace JSON
-  response with gzip when the client advertises support.
-- CPU: `100m` request and `1` core limit. The app server-renders the complete
-  workspace bootstrap, so it needs burst headroom even though steady-state use
-  is low. The previous `312m` limit caused sustained CFS throttling and probe
-  timeouts during page rendering.
+- source/image: `khzaw/interview-prep` and `ghcr.io/khzaw/interview-prep`
 - GitOps: `apps/interview-prep/` and `flux/kustomizations/interview-prep.yaml`
-- Image promotion: timestamped commit tags selected by `ImagePolicy/interview-prep`
+- placement: primary node
+- port/health: `3000` and `/api/health`
+- rollout: one replica with `Recreate`
 
-## Image promotion cadence
+The server renders the workspace bootstrap and needs burst CPU headroom. Exact resources remain authoritative in the HelmRelease.
 
-Interview Prep is currently on a temporary active-development cadence:
+## Image Promotion
 
-- `ImageRepository/interview-prep` scans GHCR every `3h`.
-- `ImageUpdateAutomation/interview-prep` checks for policy changes every `3h` and writes only `apps/interview-prep`.
-- Other image repositories retain their existing `6h` registry scans.
-- `Kustomization/image-automation` remains at `6h`; it reconciles the automation definitions and is not the steady-state image scan/write timer.
+The ImageRepository and per-app ImageUpdateAutomation currently run every three hours. Other self-built flows normally run every six hours.
 
-When the app settles down, change the Interview Prep repository and writer intervals back to `6h` in `infrastructure/image-automation/`.
-
-## Deploy latest image now
-
-Use the control panel fast path while iterating instead of waiting for the hourly loop:
-
-1. Open `https://controlpanel.khzaw.dev/#deploy`.
-2. Press **Deploy** for `ITVP` after the GHCR image has been published.
-
-The terminal equivalent remains:
+Deploy immediately after the GHCR image is published:
 
 ```bash
 make deploy-itvp
 ```
 
-The target reconciles `ImageRepository/interview-prep`, resolves `ImagePolicy/interview-prep`, runs `ImageUpdateAutomation/interview-prep`, refreshes the Flux Git source, and reconciles `Kustomization/interview-prep`.
+Or use the ITVP card at `controlpanel.khzaw.dev/#deploy`.
 
 ## Persistence
 
-The application stores its entire versioned workspace in SQLite at `/data/interview-prep.sqlite`. The `/data` mount is a `1Gi` `local-path` PVC and the controller uses `Recreate`, so only one process can write the database.
+The versioned workspace lives in `/data/interview-prep.sqlite` on a 1Gi `local-path` PVC. SQLite is intentionally not on NFS because WAL and lock traffic need local latency and filesystem semantics.
 
-SQLite is intentionally not placed on NFS. The Uptime Kuma SQLite-on-NFS incident demonstrated that WAL and locking traffic can cause routine operations to stall on the NAS-backed storage class.
+The PVC is node-affined. Moving the workload requires an explicit data move or logical restore; changing only the node selector is unsafe.
 
-The PVC is node-affined to the primary node. Moving the workload requires an explicit data migration or restoring an exported workspace.
+## Backup And Recovery
 
-## Backup and recovery
+- logical backup: application JSON export
+- physical recovery: stop the workload and preserve a WAL-consistent SQLite set
+- repository-defined automated backup: none
 
-- Logical backup: Settings -> Export JSON from the application.
-- Volume backup: include the Interview Prep PVC in the local-path backup workflow.
-- Restore: start from an empty database and import the JSON export, or restore the SQLite database while the workload is stopped.
+Do not copy only the main database while the app is running.
 
-Do not copy only the main SQLite file while the app is writing. Stop the workload or include its `-wal` and `-shm` files in a consistent snapshot.
+## Verification
+
+```bash
+flux get kustomization interview-prep -n flux-system
+kubectl get pod,pvc,ingress -n default | grep interview-prep
+curl -I https://itvp.khzaw.dev/api/health
+```

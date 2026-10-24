@@ -1,63 +1,55 @@
 ---
 name: rangoonpulse-resource-advisor
-description: "Use when touching /Users/khz/Code/rangoonpulse/infrastructure/resource-advisor, the tuning UI in controlpanel, auto-apply policy, or service integration with the resource-advisor automation."
+description: "Use for rangoonpulse Resource Advisor reports, apply-PR policy, exporter, cockpit tuning UI, and service eligibility."
 ---
 
 # Rangoonpulse Resource Advisor
 
-Use this skill only when the active workspace is `/Users/khz/Code/rangoonpulse`.
-
-## Read First
-
-Open the smallest relevant subset:
-- `/Users/khz/Code/rangoonpulse/docs/resource-advisor-phase1-phase2.md`
-- `/Users/khz/Code/rangoonpulse/docs/homelab-operations-dashboards.md` when dashboard surfaces change
-- `/Users/khz/Code/rangoonpulse/docs/node-capacity-dashboard.md` when node-fit or capacity assumptions change
-- `/Users/khz/Code/rangoonpulse/docs/metrics-server-operational-metrics.md` when Metrics API assumptions change
+Read `docs/resource-advisor.md` plus the affected dashboard/service doc.
 
 ## Current Contract
 
-- GitOps path: `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/`
-- Flux kustomization: `resource-advisor`
-- Runtime model: CronJobs in namespace `monitoring`
-  - `resource-advisor-report`: daily at `02:30` (`Asia/Singapore`)
-  - `resource-advisor-apply-pr`: Monday at `03:30` (`Asia/Singapore`)
-- Runtime state lives in `ConfigMap/monitoring/resource-advisor-latest`
-  - do not reconcile that ConfigMap with Flux
-- The combined operator UI entry is `https://controlpanel.khzaw.dev` in the `Tuning` section
+- source: `infrastructure/resource-advisor/`
+- Flux: `resource-advisor`
+- namespace: `monitoring`
+- report: daily 02:30 Asia/Singapore
+- apply PR: Monday 03:30 Asia/Singapore
+- metrics window: 14 days
+- runtime report: `ConfigMap/monitoring/resource-advisor-latest`
+- operator UI: `controlpanel.khzaw.dev/#tuning`
 
-## Important Rules
+The runtime report ConfigMap is not Flux-owned.
 
-- Apply PR generation is intentionally narrow: commit only HelmRelease resource changes.
-- The default auto-apply allowlist comes from `APP_TEMPLATE_RELEASE_FILE_MAP` in `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/advisor.py`.
-- If a service should enter or leave auto-apply scope, update the advisor mapping and the relevant docs in the same change.
-- Prometheus durability matters because the advisor depends on a 14-day metrics window.
-- Exporter code is mounted from a ConfigMap. A reconcile updates the mounted file, but a running exporter process may still need:
+## Policy
 
-```bash
-kubectl rollout restart deployment/resource-advisor-exporter -n monitoring
-```
+Apply-PR generation may modify only mapped HelmRelease resource fields. Current eligibility is authoritative in `APP_TEMPLATE_RELEASE_FILE_MAP` inside `infrastructure/resource-advisor/advisor.py`; do not copy the allowlist into docs.
 
-## Service Touch Points
+Check every mapping path before claiming support. A stale path means the service is not safely auto-applicable even if a display name remains in policy.
 
-When a service change should affect tuning behavior, inspect:
-- `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/advisor.py`
-- `/Users/khz/Code/rangoonpulse/infrastructure/resource-advisor/cronjob-apply-pr.yaml`
-- the focused docs that describe auto-apply scope or tuning policy
+Credentials are SOPS-managed. Do not create imperative replacement Secrets.
+
+## Change Surface
+
+Depending on scope, inspect:
+
+- `infrastructure/resource-advisor/advisor.py`
+- `infrastructure/resource-advisor/cronjob-apply-pr.yaml`
+- `infrastructure/resource-advisor/capacity.py` and `capacity_snapshot.py` for shared CPU headroom and Git/CI snapshots; read `docs/cpu-headroom-validation.md`
+- exporter Deployment/ServiceMonitor
+- control-panel tuning API/UI
+- the target HelmRelease's resource shape
 
 ## Verification
 
 ```bash
-flux get kustomizations -n flux-system | rg resource-advisor
-kubectl get cronjobs -n monitoring | rg resource-advisor
-kubectl get jobs -n monitoring | rg resource-advisor
+flux get kustomization resource-advisor -n flux-system
+kubectl get cronjob,job -n monitoring | grep resource-advisor
 kubectl get configmap resource-advisor-latest -n monitoring -o yaml
-kubectl auth can-i get cronjobs.batch -n monitoring --as=system:serviceaccount:monitoring:resource-advisor
 curl -s https://controlpanel.khzaw.dev/api/tuning | jq '.fetch,.applyPreflight.selectedCount,.lastApply.status,.schedule.nextRunAt'
 ```
 
-If a report or apply run looks wrong, inspect the recent Job logs before changing policy:
+Inspect the latest Job logs and live preflight before changing recommendation or apply policy.
 
-```bash
-kubectl logs -n monitoring job/<job-name>
-```
+Preserve the 14-day maturity gates, service floors, per-node rollout/job reserve, and conservative budget across separate PRs. Unknown placement or changed live requests must not silently pass. Keep every container visible, including missing-metrics rows. The Tuning preview must not imply resources were applied or treat unknown capacity as passing.
+
+Script ConfigMaps use content hashes to roll the exporter automatically. The runtime report ConfigMap and `capacity-state` branch remain outside master desired state; never merge the snapshot branch into `master`.

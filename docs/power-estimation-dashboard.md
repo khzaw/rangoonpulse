@@ -1,6 +1,14 @@
+---
+title: Node Power Estimation Dashboard
+summary: Current operating guidance for Node Power Estimation Dashboard.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Node Power Estimation Dashboard
 
-This cluster now exposes an estimated node power model in Grafana plus a live
+This cluster exposes an estimated node power model in Grafana plus a live
 Raspberry Pi low-voltage signal for the utility node.
 
 ## Why Estimate-Only
@@ -43,7 +51,7 @@ Current defaults:
 
 ## Live Utility-Node Power Health
 
-- `prometheus-node-exporter` now scrapes the Raspberry Pi utility node hardware sensors.
+- `prometheus-node-exporter` scrapes the Raspberry Pi utility node hardware sensors.
 - The dashboard adds a live low-voltage alarm sourced from the Pi `rpi_volt` hwmon device.
 - A current alarm means the node is presently below its low-voltage threshold.
 - The dashboard also shows whether a low-voltage condition appeared anywhere inside the
@@ -134,8 +142,6 @@ Kustomization; review the tariff/expiry metrics, alerts, and dashboard after rol
 ## Verification
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 

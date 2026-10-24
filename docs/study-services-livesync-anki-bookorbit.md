@@ -1,116 +1,64 @@
-# Study Services: Obsidian LiveSync, Anki Sync, and BookOrbit
+---
+title: Study and Book Services
+summary: Current Obsidian LiveSync, Anki sync, BookOrbit, and shared-library operating contracts.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
 
-This document records the GitOps deployment and operational decisions for study-related services.
+# Study and Book Services
 
-## What Is Deployed
+## Obsidian LiveSync
 
-### 1) Obsidian LiveSync backend (`obsidian-livesync`)
-- Path: `apps/obsidian-livesync/helmrelease.yaml`
-- Hostname: `https://livesync.khzaw.dev`
-- Backend: CouchDB (`couchdb:3.5.1`)
-- Purpose: self-hosted sync target for Obsidian LiveSync plugin.
+- source: `apps/obsidian-livesync/`
+- backend: CouchDB
+- placement: primary node
+- persistence: local-path
+- credentials: SOPS-managed
 
-### 2) Anki sync server (`anki-server`)
-- Path: `apps/anki-server/helmrelease.yaml`
-- Hostname: `https://anki.khzaw.dev`
-- Image: `jeankhawand/anki-sync-server:25.07`
-- Purpose: private Anki sync endpoint.
+The hostname serves CouchDB for Obsidian LiveSync clients. Treat the database as node-local state; no repository-defined automated backup exists.
 
-### 3) BookOrbit (`bookorbit`)
-- Path: `apps/bookorbit/helmrelease.yaml`
-- Canonical hostname: `https://bookorbit.khzaw.dev`
-- Alias: `https://books.khzaw.dev` redirects to the canonical hostname.
-- Public share hostname: `https://share-bookorbit.khzaw.dev` when enabled from Exposure Control.
-- Image: `ghcr.io/bookorbit/bookorbit:2.3.0`
-- Backend: a dedicated `bookorbit` database and role on the shared `media-postgres` PostgreSQL instance.
-- Purpose: digital book library and web reader over the shared ebook library.
+## Anki Sync Server
 
-The public share hostname proxies the complete BookOrbit application, including its API. Devices without Tailscale can
-use `https://share-bookorbit.khzaw.dev` as the BookOrbit KOReader plugin server,
-`https://share-bookorbit.khzaw.dev/api/v1/koreader` as the sync-server base for KOSync-compatible clients such as
-CrossPoint, and `https://share-bookorbit.khzaw.dev/api/v1/opds` as the OPDS catalog while that exposure is enabled.
-Keep Exposure Control authentication set to `none` for these non-browser clients; BookOrbit still enforces its separate
-KOReader and OPDS credentials at the application layer.
+- source: `apps/anki-server/`
+- placement: utility node
+- persistence: `truenas-nfs`
+- credentials: SOPS-managed
 
-Stump and its private SQLite/config PVC were retired after BookOrbit was populated and verified. No Stump database
-state was migrated. The book files remained on the existing `calibre-books-nfs` claim throughout the replacement;
-the same underlying volume is now named `books`. See [book library storage](./book-library-storage.md).
+This is an Anki sync endpoint, not a web application. A browser request to `/` returning `404` is expected and is not a health failure. Validate with the Anki sync protocol or client login path.
 
-## Mochi Cards Status
+## BookOrbit
 
-`Mochi` (`app.mochi.cards`) is not currently published as a self-hostable server stack. Keep it out of cluster GitOps
-unless Mochi publishes a supported self-hosted server deployment.
+- source: `apps/bookorbit/`
+- placement: primary node
+- application data: `truenas-nfs`
+- shared library: `books` mounted read-write at `/books`
+- downloads: shared `downloads` claim mounted read-write at `/downloads`
+- database: shared `media-postgres`
+- canonical hostname: `bookorbit.khzaw.dev`
+- alias: `books.khzaw.dev`
 
-## Storage Design
+BookOrbit can write embedded metadata back to the shared library. Shelfmark also writes into that library. Avoid concurrent bulk mutation from both applications, and verify file-level effects before enabling new automation.
 
-Writable app state is separate from the shared library:
+BookOrbit scan cadence, users, and metadata-provider settings are runtime application state, not declared in this repository. Do not copy those values into Git docs unless they become managed configuration.
 
-- `obsidian-livesync`: `/opt/couchdb/data` on a dedicated `5Gi` `local-path` PVC.
-- `anki-server`: `/anki_data` on a dedicated expandable `5Gi` PVC.
-- `bookorbit` database: shared `media-postgres` `20Gi` `local-path` PVC; isolated from the other apps by role and database.
-- `bookorbit`: `/data` on the dedicated expandable `5Gi` NFS claim `bookorbit`, for covers, author images, user assets,
-  import staging, and retained migration backups.
-- `bookorbit`: `/books` from the generic `20Gi` RWX content claim `books`, mounted read-write so enabled metadata write-back can
-  update the embedded metadata and cover in the existing book file.
-- `bookorbit`: `/downloads` from existing claim `downloads`, mounted read-write at the same path as Transmission,
-  Radarr, and Sonarr.
+A temporary BookOrbit share is fully wired through exposure-control and public-edge.
 
-For Transmission integration, use `http://transmission-main.default.svc.cluster.local:9091` and explicitly configure
-`/downloads` to `/downloads` as the client-to-BookOrbit path mapping. With category `bookorbit`, new torrents use
-`/downloads/bookorbit`; the category subdirectory is covered by that mapping. Client configuration remains runtime
-application state, not Git-managed configuration.
+For Transmission integration, use `http://transmission-main.default.svc.cluster.local:9091` with an explicit `/downloads` to `/downloads` path mapping. The category `bookorbit` uses `/downloads/bookorbit`. Client configuration is runtime application state. BookOrbit stages completed imports in `/data/book-dock`; direct-file plugins use `/data/request-downloads`. These app-data paths are separate filesystems from `/downloads`, so cross-mount hardlinks fall back to copies.
 
-BookOrbit stages completed imports in `/data/book-dock` before library ingestion. Direct-file sources/plugins use
-`/data/request-downloads`, independently of Transmission. Both remain on BookOrbit's app-data PVC. These are separate
-filesystems from `/downloads`, so the importer falls back to copying when a hardlink fails across mounts.
+Non-browser sync and reading clients cannot generally complete Cloudflare Access email/browser challenges. Keep exposure authentication `none` for deliberately shared Anki, LiveSync, or BookOrbit client endpoints, and require their application credentials. Validate sync/OPDS/download operations from the actual client before reporting access complete.
 
-BookOrbit library `Books` points at `/books`, uses `book_per_folder` organization, enables EPUB metadata and cover
-write-back and file renames, excludes `bookdrop`, and uses a runtime-configured scan schedule. These are runtime library
-settings; inspect them before a migration instead of assuming older documentation is current. BookOrbit and Shelfmark can
-write the shared claim. Avoid editing the same book concurrently in both applications.
+## Shared Library Ownership
 
-Content claim names describe their contents (`books`, `audiobooks`); app-specific state retains an app prefix
-(`bookorbit`, `audiobookshelf-data`). Renaming a claim must preserve BookOrbit's `/books` path and existing PostgreSQL
-catalogue references. The claim/PV mapping and migration checks are in [book library storage](./book-library-storage.md).
+`books` is shared by BookOrbit and Shelfmark. `audiobooks` contains Audiobookshelf and Shelfmark content; application state uses separate claims. See [book library storage](./book-library-storage.md) for ownership and retained-volume safety.
 
-## Node Placement and Resources
+Do not rename, recreate, or delete the claim as cleanup without proving every current consumer and the underlying dataset mapping.
 
-These services are pinned to the primary node (`talos-7nf-osf`). Requests and limits are bounded so library scans and
-metadata work cannot starve the media workloads.
-
-## Secrets
-
-Managed with SOPS under `infrastructure/secrets/default/`:
-
-- `obsidian-livesync-secret.yaml`
-- `anki-server-secret.yaml`
-- `bookorbit-secret.yaml`
-
-The BookOrbit secret holds PostgreSQL credentials, JWT/bootstrap material, and the initial administrator credentials.
-
-## Flux Wiring
-
-Flux Kustomizations:
-
-- `flux/kustomizations/obsidian-livesync.yaml`
-- `flux/kustomizations/anki-server.yaml`
-- `flux/kustomizations/bookorbit.yaml`
-
-## Library Safety Verification
-
-Before a storage migration, record the shared claim/PV identity, library and registered-file counts, byte count, and
-content checksums with writers stopped. After cutover, confirm the intended files and catalogue references are
-unchanged. Account separately for explicitly moved legacy Calibre artifacts. For the current metadata write-back
-mode, verify that the rendered and live BookOrbit pod specs mount `books` at `/books` with `readOnly: false`, that the
-live mount options show `rw`, and that the runtime library settings are preserved. A metadata save must complete
-without leaving a sibling `.tmp` file behind.
-
-## Quick Checks
+## Verification
 
 ```bash
-flux get kustomizations | rg 'obsidian-livesync|anki-server|bookorbit'
-kubectl get hr -n default | rg 'obsidian-livesync|anki-server|bookorbit'
-kubectl get pods,pvc -n default | rg 'obsidian-livesync|anki-server|bookorbit|books'
+flux get kustomizations -n flux-system | grep -E 'obsidian|anki|bookorbit'
+kubectl get pod,pvc,ingress -n default | grep -E 'obsidian|anki|bookorbit|books'
 curl --fail --max-time 20 https://bookorbit.khzaw.dev/api/v1/health
 curl -I --max-time 20 https://books.khzaw.dev/
 ```

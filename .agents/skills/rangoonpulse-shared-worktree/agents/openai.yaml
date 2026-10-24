@@ -1,6 +1,6 @@
 interface:
   display_name: "Rangoonpulse Shared Worktree"
   short_description: "Mandatory shared-tree discipline for rangoonpulse"
-  default_prompt: "Always use $rangoonpulse-shared-worktree in /Users/khz/Code/rangoonpulse after bootstrap reading. Expect concurrent edits, do not touch unrelated changes, stage only your hunks, commit on the current branch, push, and verify."
+  default_prompt: "Use $rangoonpulse-shared-worktree to preserve concurrent edits and complete the requested rangoonpulse work with validation and scope-appropriate publication."
 policy:
   allow_implicit_invocation: true

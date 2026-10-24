@@ -3,7 +3,7 @@ title: Service Onboarding
 summary: Required GitOps, dashboard, Control Panel, tuning, secrets, and live verification surfaces for every new application.
 status: active
 owner: homelab
-last_reviewed: 2026-09-15
+last_reviewed: 2026-10-25
 ---
 
 # Service Onboarding
@@ -25,7 +25,7 @@ private unless the user explicitly requests public access. Provisioning a disabl
 | Image and chart updates | [Control Panel server](../apps/exposure-control/server.js), [update policy](../apps/exposure-control/update-policy.js), [Renovate config](../renovate.json), [update guide](./dependency-updates-renovate-and-flux-image-automation.md) | Fresh image and Helm rows identify the correct workload/release and installed versions; Updates UI shows the rows and the intended maintenance path |
 | Exposure control | [service catalog](../apps/exposure-control/services.json), [public-edge HelmRelease](../infrastructure/public-edge/helmrelease.yaml), [share DNS aliases](../infrastructure/public-edge/share-hosts-cname.yaml) | Exposure row exists; canonical access remains private; share DNS/tunnel routing resolves to the intended backend and the new share is disabled |
 | Resource tuning | [advisor](../infrastructure/resource-advisor/advisor.py), [report CronJob](../infrastructure/resource-advisor/cronjob-report.yaml), [apply CronJob](../infrastructure/resource-advisor/cronjob-apply-pr.yaml), [exporter](../infrastructure/resource-advisor/exporter.py) | A fresh report contains the actual workload/container, the Tuning UI displays it, and live policy agrees with the intended HPA and apply behavior |
-| Credentials | [encrypted secret tree](../infrastructure/secrets/), [inventory](./secrets-inventory.md), [Secrets UI contract](./secrets-management-current-state-options-and-plan.md) | Every introduced credential is encrypted in Git, referenced by its consumer, documented, live, and visible with the correct ownership and reveal/edit behavior on the Secrets page |
+| Credentials | [encrypted secret tree](../infrastructure/secrets/), [inventory](./secrets-inventory.md), [Secrets UI contract](./secrets-management.md) | Every introduced credential is encrypted in Git, referenced by its consumer, documented, live, and visible with the correct ownership and reveal/edit behavior on the Secrets page |
 | Operating docs | [docs index](./README.md), [root overview](../README.md), [agent routing](../AGENTS.md), focused app guide | The app's access, resources/HPA, maintenance, credentials, and any concrete limitations are recorded |
 
 Use `N/A` only for an actual unsupported or inapplicable integration, with the technical reason and evidence in
@@ -41,7 +41,7 @@ monitor where supported. Add an upstream release watcher when an appropriate rel
 
 Render the embedded configuration and inspect the live configured pages after rollout. A successful
 `/api/healthz` response alone is insufficient: Dynacat can expose it during initial setup as well. Open the new
-bookmark, confirm the monitor result, and check the app itself. Do not use the retired Glance hostname or workload.
+bookmark, confirm the monitor result, and check the app itself.
 
 ## Image and Helm update management
 
@@ -76,8 +76,8 @@ still completing its image maintenance path.
 ## Private access and disabled share setup
 
 The normal canonical route uses the private ingress VIP on LAN and Tailscale. Keep ingress, DNS annotations,
-TLS hosts, and the intended access boundary aligned. See the [access model](./networking-current-state-and-simplification.md)
-and [exposure-control guide](./exposure-control-phase2-phase3-mvp.md).
+TLS hosts, and the intended access boundary aligned. See the [access model](./networking.md)
+and [exposure-control guide](./public-edge-and-exposure-control.md).
 
 For each new app, add the exposure catalog row and the corresponding disabled-by-default share plumbing:
 
@@ -116,7 +116,7 @@ replicas and surge settings, and preserve the per-node rollout/job reserve.
 Inspect `TARGET_NAMESPACES`, `APP_TEMPLATE_RELEASE_FILE_MAP`, any `APPLY_ALLOWLIST` override, service profiles,
 floors, and downscale exclusions. For a supported app-template release, register its file mapping and appropriate
 policy. A non-app-template release can remain report-only when the writer cannot safely edit its resources;
-document that technical limitation. See the [resource-advisor contract](./resource-advisor-phase1-phase2.md).
+document that technical limitation. See the [resource-advisor contract](./resource-advisor.md).
 
 An HPA must not accidentally fight resource tuning. For utilization targets, changing the request changes the
 scaling threshold. Use a compatible policy that preserves the HPA's controlled requests or deliberately separates

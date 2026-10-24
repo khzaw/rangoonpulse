@@ -3,7 +3,7 @@ title: Talos Kubelet Image Garbage Collection
 summary: Cluster policy and verification runbook for bounding container-image growth on Talos EPHEMERAL filesystems.
 status: active
 owner: homelab
-last_reviewed: 2026-08-29
+last_reviewed: 2026-10-25
 ---
 
 # Talos Kubelet Image Garbage Collection
@@ -30,26 +30,9 @@ This means:
 
 Do not add a privileged cleanup CronJob. Kubelet owns CRI image lifecycle and should enforce the policy directly.
 
-## Why The Defaults Are Wrong Here
+## Capacity Tradeoff
 
-The Kubernetes defaults observed on both nodes were:
-
-- high threshold: 85%
-- low threshold: 80%
-- maximum image age: disabled (`0s`)
-
-On the primary node's approximately 511 GB EPHEMERAL partition, those defaults allowed old image versions to accumulate until less than 15% remained free.
-
-The 2026-08-29 investigation found:
-
-- `/var` at 83.26% with about 85.5 GB available
-- about 175 GB under `/var/lib/containerd`
-- about 4,600 overlay snapshot directories
-- 756 unique CRI image digests, of which only 70 were referenced by current pods
-- 686 unused digests with 131.8 GB of logical image size
-- no image removals during a 14-day window in which `/var` grew by 19.7 GB
-
-Image-list size is a logical estimate, not exact reclaimable storage, because image layers are shared.
+Large node filesystems can retain substantial unused image history before percentage thresholds trigger. The seven-day age cap bounds that accumulation while the lower high/low thresholds preserve free space. Image-list sizes are logical estimates because layers are shared; they do not equal physical reclaimable bytes.
 
 ## Applying The Policy
 

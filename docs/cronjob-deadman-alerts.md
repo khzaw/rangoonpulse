@@ -3,7 +3,7 @@ title: CronJob Dead-Man's-Switch Alerts
 summary: PrometheusRule alerts that page on silent CronJob failure (staleness, failed runs, deletion, forgotten suspend) and the Alertmanager route that lets the warning-severity family reach Discord/Telegram.
 status: active
 owner: homelab
-last_reviewed: 2026-07-03
+last_reviewed: 2026-10-25
 ---
 
 # CronJob Dead-Man's-Switch Alerts
@@ -107,9 +107,7 @@ suspended in controlpanel and forgotten will not go stale, but will trip this af
 
 ## Alertmanager Routing
 
-The existing route tree in `alertmanagerconfig-homelab.yaml` null-routes `severity=warning`
-unless `alertname=~TrueNAS.*`. Without an explicit matcher, every alert in this family
-(`severity: warning`) would be silently dropped.
+The route tree in `alertmanagerconfig-homelab.yaml` explicitly delivers the `TrueNAS.*`, `Iris.*`, `HomelabCronJob.*`, and `Flux.*` warning families. Unmatched warning alerts reach the final null receiver. Keep this family's explicit matcher or its warnings will be silently dropped.
 
 A route placed before the final `receiver: "null"` entry sends the family to
 `critical-multi` (Discord + Telegram):
@@ -133,8 +131,7 @@ warning-severity alerts continue to be null-routed as before.
 - Manual runs: jobs triggered from `controlpanel.khzaw.dev` (Managed CronJobs view) are
   named `<cronjob>-manual-<suffix>` with label `cronjob-name: <cronjob>`. HomelabCronJobRunFailed
   intentionally excludes them and only pages on numeric-suffixed scheduled Jobs. HomelabCronJobStale
-  keys on the CronJob object's `last_successful_time`, so a successful manual run can still clear
-  pending staleness.
+  keys on the CronJob object's `last_successful_time`. The Control Panel creates standalone Jobs without a CronJob owner reference, so a successful manual run does not establish a successful scheduled run or clear this timestamp-based alert. Verify the next scheduled completion.
 - Suspend: toggling suspend in controlpanel sets `kube_cronjob_spec_suspend=1`, which the
   Stale rule explicitly excludes via `unless`. A suspended job will never page as stale;
   HomelabCronJobSuspendedTooLong is the only signal that catches a forgotten suspend.
@@ -144,8 +141,6 @@ warning-severity alerts continue to be null-routed as before.
 ## Verification
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 
@@ -155,9 +150,10 @@ kubectl get alertmanagerconfig -n monitoring homelab-alerting -o yaml
 # Confirm the rule group and alert names loaded into Prometheus.
 # (/api/v1/rules is not a PromQL query; use a short-lived port-forward + curl.)
 kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 19090:9090 &
+forward_pid=$!
 curl -s 'http://localhost:19090/api/v1/rules' | \
   grep -o 'HomelabCronJob[A-Za-z]*' | sort -u
-kill %1
+kill "$forward_pid"
 
 # Confirm kube-state-metrics is exposing the source series for all three CronJobs.
 kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \

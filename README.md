@@ -1,364 +1,184 @@
 # rangoonpulse
 
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.30+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
-[![Talos](https://img.shields.io/badge/Talos%20Linux-6952f2?logo=linux&logoColor=white)](https://talos.dev/)
-[![Flux](https://img.shields.io/badge/Flux%20CD-v2-5468ff?logo=flux&logoColor=white)](https://fluxcd.io/)
-[![GitOps](https://img.shields.io/badge/GitOps-Enabled-brightgreen?logo=git&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
+Infrastructure-as-code for a two-node Talos Kubernetes homelab managed with Flux.
 
-> Infrastructure-as-code for my homelab Kubernetes cluster, managed with **Flux CD GitOps**.
+## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         🏠 Rangoon Pulse Homelab                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐       │
-│   │   🌐 LAN     │◄───────►│   ☁️ Cloud   │◄───────►│ 📱 Tailscale │       │
-│   └──────────────┘         └──────────────┘         └──────────────┘       │
-│          │                        │                        │               │
-│          └────────────────────────┼────────────────────────┘               │
-│                                   ▼                                        │
-│                    ┌──────────────────────────┐                           │
-│                    │   🔀 Ingress-Nginx       │                           │
-│                    │   10.0.0.231 (MetalLB)   │                           │
-│                    └───────────┬──────────────┘                           │
-│                                │                                          │
-│              ┌─────────────────┴─────────────────┐                        │
-│              ▼                                   ▼                        │
-│   ┌──────────────────────┐        ┌──────────────────────┐               │
-│   │ 🖥️ Primary Node       │        │  🥧 Raspberry Pi      │               │
-│   │ talos-7nf-osf        │        │  talos-uua-g6r        │               │
-│   │ i5-8400T · 32GB ·    │        │  ARM64 · 8GB          │               │
-│   │ NVMe · Intel iGPU    │        │  (Raspberry Pi)       │               │
-│   └──────────────────────┘        └──────────────────────┘               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+### Nodes
+
+| Node | Role | Architecture | Address |
+|---|---|---|---|
+| `talos-7nf-osf` | Control plane and primary workloads | `amd64` | `10.0.0.197` |
+| `talos-uua-g6r` | Utility workloads | `arm64` | `10.0.0.38` |
+
+The canonical values live in `flux/cluster-settings.yaml`. Query Kubernetes for live health and versions; this README does not duplicate volatile status.
+
+### Access Paths
+
+Private services:
+
+```text
+LAN or Tailscale -> MetalLB ingress VIP -> ingress-nginx -> Service -> workload
 ```
 
----
+Permanently public sites:
 
-## Highlights
-
-| Feature | Description |
-|---------|-------------|
-| **GitOps-First** | Everything reconciles via Flux — `Kustomization` + `HelmRelease` |
-| **Unified Access** | Single ingress VIP (`10.0.0.231`) for LAN + Tailscale clients, plus optional home-exit-node egress for travel devices |
-| **Smart Storage** | NAS-backed PVCs by default; `local-path` for DBs & hot caches |
-| **Auto Tuning** | Resource Advisor CronJobs generate safe, budgeted resource PRs |
-| **Node Pinning** | Userland apps pinned to primary node; ARM allowlist for Pi |
-| **SOPS Secrets** | Age-encrypted secrets, decrypted by Flux at runtime |
-
----
-
-## Hardware
-
-| Node | Role | Arch | Specs | IP |
-|------|------|------|-------|-----|
-| `talos-7nf-osf` | Control Plane + Workloads | `amd64` | i5-8400T (6c/6t) · 32GB · NVMe · Intel iGPU | `10.0.0.197` |
-| `talos-uua-g6r` | Utility Workloads | `arm64` | 4 cores · 8GB (Raspberry Pi) | `10.0.0.38` |
-
-Current cluster status: both nodes are functional and schedulable.
-
----
-
-## Stack
-
-### Core Infrastructure
-
-[![Talos](https://img.shields.io/badge/Talos%20Linux-6952f2?logo=linux&logoColor=white&style=flat-square)](https://talos.dev/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white&style=flat-square)](https://kubernetes.io/)
-[![Flux](https://img.shields.io/badge/Flux%20CD-5468ff?logo=flux&logoColor=white&style=flat-square)](https://fluxcd.io/)
-[![Helm](https://img.shields.io/badge/Helm-0F1689?logo=helm&logoColor=white&style=flat-square)](https://helm.sh/)
-
-### Networking & Ingress
-
-[![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white&style=flat-square)](https://nginx.org/)
-[![MetalLB](https://img.shields.io/badge/MetalLB-394d5f?logo=linux&logoColor=white&style=flat-square)](https://metallb.org/)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?logo=cloudflare&logoColor=white&style=flat-square)](https://cloudflare.com/)
-[![Tailscale](https://img.shields.io/badge/Tailscale-242424?logo=tailscale&logoColor=white&style=flat-square)](https://tailscale.com/)
-
-### Storage & Secrets
-
-[![TrueNAS](https://img.shields.io/badge/TrueNAS-0095D5?logo=truenas&logoColor=white&style=flat-square)](https://truenas.com/)
-[![democratic-csi](https://img.shields.io/badge/democratic--csi-326CE5?logo=kubernetes&logoColor=white&style=flat-square)](https://github.com/democratic-csi/democratic-csi)
-[![SOPS](https://img.shields.io/badge/SOPS-1e1e1e?logo=gnu-privacy-guard&logoColor=white&style=flat-square)](https://github.com/getsops/sops)
-[![Age](https://img.shields.io/badge/Age-ffd54f?logo=gnu-privacy-guard&logoColor=black&style=flat-square)](https://age-encryption.org/)
-
-### Observability
-
-[![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white&style=flat-square)](https://prometheus.io/)
-[![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white&style=flat-square)](https://grafana.com/)
-[![Uptime Kuma](https://img.shields.io/badge/Uptime%20Kuma-5cdd8b?logo=uptime-kuma&logoColor=white&style=flat-square)](https://uptime.kuma.pet/)
-
----
-
-## Services
-
-### Core Infrastructure
-
-| Service | Description |
-|---------|-------------|
-| **AdGuard Home** | Dual LAN DNS filtering & ad blocking |
-| **[Dynacat](docs/dashboards-dynacat.md)** | Dashboard & service hub at `rangoonpulse.khzaw.dev` |
-| **Uptime Kuma** | Uptime monitoring |
-| **Grafana** | Metrics & dashboards |
-| **Flux Web UI** | Browser view for GitOps sources, Kustomizations, HelmReleases, and controller status |
-| **Speedtest Tracker** | Network speed testing and historical results |
-| **Resource Advisor** | Automated resource tuning |
-
-### Media & Library
-
-| Service | Description |
-|---------|-------------|
-| **Jellyfin** | Media server with Intel iGPU transcoding |
-| **Immich** | Photo & video backup |
-| **Seerr** | Media request manager |
-| **Audiobookshelf** | Audiobook & podcast server |
-| **Shelfmark** | Book and audiobook downloader |
-| **[RomM](docs/romm.md)** | ROM library, metadata, and browser emulation at `roms.khzaw.dev` |
-
-### Media Automation
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   autobrr   │───►│  profilarr  │───►│  prowlarr   │
-└─────────────┘    └─────────────┘    └──────┬──────┘
-                                             │
-         ┌──────────┬──────────┬─────────────┬──────────┐
-         ▼          ▼          ▼             ▼          ▼
-    ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────────┐
-    │  sonarr │ │  radarr │ │  bazarr │ │ subarr  │ │ transmission │
-    └─────────┘ └─────────┘ └─────────┘ └─────────┘ └──────────────┘
-                              └─────────► sabnzbd
+```text
+Cloudflare -> Cloudflare Tunnel -> in-cluster Service
 ```
 
-*Plus: tracerr for tracking automation metrics*
+Temporary public shares:
 
-*Subarr is available at `subarr.khzaw.dev` for subtitle search/sync workflows alongside Bazarr.*
-
-*Jackett is available at `jackett.khzaw.dev` as an alternate tracker proxy for workflows that still expect a Jackett/Torznab endpoint.*
-
-*Transmission can run direct or through a Gluetun sidecar, with the control toggle on `controlpanel.khzaw.dev` and the Gluetun WebUI at `torrent-vpn.khzaw.dev`.*
-
-*`controlpanel.khzaw.dev` is the combined operator cockpit for travel readiness, static-site deploy triggers, exposure control, Transmission routing, image updates, managed CronJobs, and the resource-advisor tuning view. The resource-advisor backend remains separate, but its public tuning hostname has been retired.*
-
-*`fluxui.khzaw.dev` exposes the Flux Operator web UI for GitOps status and reconciliation visibility.*
-
-*Flaresolverr currently tracks `alexfozor/flaresolverr:pr-1300` on the Raspberry Pi utility node.*
-
-### Live TV & Tools
-
-| Service | Description |
-|---------|-------------|
-| **nodecast-tv** | Live TV streaming |
-| **iSponsorBlockTV** | SponsorBlock for TV clients |
-| **Tunarr** | Channel scheduling |
-| **ErsatzTV** | Custom TV channels (not live right now) |
-
-### Productivity
-
-| Service | Description |
-|---------|-------------|
-| **Actual Budget** | Personal finance tracking |
-| **Reactive Resume** | Resume builder and PDF export |
-| **[BentoPDF](docs/bentopdf.md)** | Private browser-based PDF tools at `bento.khzaw.dev` |
-| **Vaultwarden** | Password manager |
-| **ChartDB** | Database schema diagrams |
-| **Obsidian LiveSync** | Note sync via CouchDB |
-| **Anki Server** | Flashcard sync |
-| **Interview Prep** | Spaced-repetition coding and system-design journal |
-| **Retirement** | Private retirement calculator and portfolio projections |
-| **75 Soft** | Private offline-first wellness journal and habit tracker |
-| **BookOrbit** | E-book library and web reader |
-
----
-
-## Repository Structure
-
-```
-.
-├── .agents/                   # Project-local agent skills
-├── apps/                      # User-facing applications
-│   ├── jellyfin/
-│   ├── immich/
-│   ├── dynacat/
-│   └── ...
-├── core/                      # Core cluster components
-│   └── ingress-nginx/
-├── infrastructure/            # Infrastructure services
-│   ├── cert-manager/
-│   ├── external-dns/
-│   ├── metallb/
-│   ├── monitoring/
-│   ├── public-edge/
-│   ├── resource-advisor/
-│   ├── secrets/
-│   ├── storage/
-│   ├── tailscale-operator/
-│   └── ...
-├── flux/                      # Flux GitOps configuration
-│   ├── repositories/          # Helm repositories
-│   ├── kustomizations/        # App kustomizations
-│   └── cluster-settings.yaml  # Shared non-secret cluster constants
-├── docs/                      # Documentation & runbooks
-├── scripts/                   # Operational scripts
-├── AGENTS.md                  # Agent session entrypoint
-└── ...
+```text
+Cloudflare -> Tunnel -> exposure-control -> enabled target Service
 ```
 
-Talos Linux is the cluster OS, but machine configuration is not kept in this repo.
-Node names, VIP, and related non-secret facts live in [`flux/cluster-settings.yaml`](./flux/cluster-settings.yaml).
+The public paths normally bypass MetalLB and ingress-nginx. See `docs/networking.md`.
 
----
+### Storage
 
-## Shared Settings
+- `truenas-nfs`: default relocatable persistent data
+- `truenas-hdd-media`: large media datasets
+- `truenas-nvme-downloads`: download workload data
+- `local-path`: latency-sensitive databases, SQLite, Prometheus/Grafana state, and caches
 
-Cluster-wide non-secret constants now live in:
-- [`flux/cluster-settings.yaml`](./flux/cluster-settings.yaml)
+`local-path` is node-affined. It is chosen deliberately where NFS latency or locking semantics are unsafe, not because it is easier.
 
-Flux child `Kustomization` objects consume those values with post-build substitution, so changing items like the base
-domain, share-host prefix, timezone, node names, ingress VIP, or LAN service IPs can now be done in one place for the GitOps-managed
-manifests.
+## Active Platform
 
-Operational note:
-- some configs intentionally need literal `${...}` at runtime; in repo source those are written as `$${...}` so Flux
-  renders them back to literal `${...}`. See [`docs/shared-cluster-settings.md`](./docs/shared-cluster-settings.md).
+### Core And Operations
 
----
+- Flux CD and Flux Operator UI
+- ingress-nginx and MetalLB
+- cert-manager and ExternalDNS
+- Tailscale Operator and subnet/exit Connector
+- dual AdGuard Home DNS
+- Cloudflare Tunnel public edge
+- exposure-control/operator cockpit
+- Prometheus, Alertmanager, Grafana, node exporter, and Metrics Server
+- Resource Advisor reporting and apply-PR automation
+- TrueNAS storage through democratic-csi
 
-## Quick Start
+### Applications
 
-### Prerequisites
+Media and automation:
 
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- [flux](https://fluxcd.io/docs/installation/)
-- [talosctl](https://www.talos.dev/v1.8/talos-guides/install/talosctl/)
+- Jellyfin, Immich, Seerr, Audiobookshelf
+- Sonarr, Radarr, Bazarr, Subarr, Prowlarr, Profilarr, Jackett
+- Transmission, SABnzbd, autobrr, Flaresolverr, Tracerr
+- Shelfmark, BookOrbit, and RomM
 
-### Useful Commands
+TV and device services:
+
+- Nodecast TV, Tunarr, and iSponsorBlockTV
+
+Productivity and personal services:
+
+- Actual Budget, Reactive Resume, Vaultwarden, ChartDB, and BentoPDF
+- Obsidian LiveSync and Anki sync
+- Interview Prep, Retirement, and 75 Soft
+- Blog, MMCal, Rangoon Mapper, and Erica Knight
+
+Dashboards and tools:
+
+- Dynacat, Uptime Kuma, Speedtest Tracker, Kroki, and Flux UI
+
+The active desired-state inventory is `flux/kustomization.yaml`. Directories not included there are not live merely because source files remain in the tree.
+
+## Operator Surfaces
+
+- `controlpanel.khzaw.dev`: exposure control, Pulse telemetry, travel readiness, self-built deploy actions, Transmission routing, image/chart updates, managed CronJobs, secrets, and tuning
+- `rangoonpulse.khzaw.dev`: Dynacat dashboard
+- `grafana.khzaw.dev`: monitoring dashboards
+- `fluxui.khzaw.dev`: Flux Operator UI
+
+Most canonical `*.khzaw.dev` services are private to LAN/Tailscale. Public availability must be explicit in `infrastructure/public-edge/`.
+
+## Repository Layout
+
+```text
+apps/                         user-facing workloads
+core/                         cluster-wide foundations
+infrastructure/               storage, monitoring, DNS, access, secrets, automation
+flux/                         sources, reconciliation units, shared settings
+  cluster-settings.yaml       shared non-secret constants
+  kustomizations/             component reconciliation boundaries
+talos/                        Talos templates and node patches
+docs/                         current operating guidance
+.agents/skills/               repository procedures and safety gates
+scripts/                      validation and operator tooling
+native/iris/                  macOS host telemetry and independent cluster sentinel
+```
+
+Start with `AGENTS.md`, then `docs/README.md`.
+
+## GitOps Rules
+
+- Git is the source of permanent desired state.
+- Use SOPS-encrypted Secret manifests under `infrastructure/secrets/`.
+- Put shared non-secret constants in `flux/cluster-settings.yaml`.
+- Use explicit ExternalDNS ownership; this deployment ignores Ingress rule/TLS host fields.
+- Keep redundant critical services, such as the two AdGuard instances, in separate rollout units.
+- Preserve runtime-owned state ConfigMaps outside Flux ownership where the operator cockpit needs reversible controls.
+- New services include the operator integrations in `docs/service-onboarding.md`.
+- Resource and replica changes must pass `docs/cpu-headroom-validation.md`; capacity snapshots live only on the runtime `capacity-state` branch, which must never be merged into `master`.
+
+## Common Commands
 
 ```bash
-# Check Flux health
-flux get kustomizations
-flux get hr -A
+# Validate the repository
+make validate-all
 
-# Reconcile a component
-flux reconcile kustomization <name> --with-source
+# Flux status
+flux get sources all -A
+flux get kustomizations -A
+flux get helmreleases -A
 
-# Cluster triage
+# Reconcile one component
+flux reconcile kustomization <name> -n flux-system --with-source
+
+# Cluster status
+kubectl get nodes -o wide
 kubectl get pods -A
-kubectl get events -A --sort-by=.lastTimestamp | tail -n 50
+kubectl get events -A --sort-by=.lastTimestamp
 kubectl top nodes
-kubectl top pods -A
-
-# Talos node dashboard
-talosctl -n 10.0.0.197 dashboard
 ```
 
-### Self-built Images (`blog`, `mmcal`, `ericaknight`, `interview-prep`, `retirement`)
+See `docs/ops-command-cheatsheet.md` for day-two commands.
+
+## Self-Built Image Promotion
+
+Flux image automation manages independent flows for:
+
+- Blog
+- MMCal
+- Erica Knight
+- Interview Prep
+- Retirement
+- Rangoon Mapper
+
+Normal promotion is asynchronous after the source repository publishes an image. Request immediate promotion with:
 
 ```bash
-# Normal mode:
-# 1) push in the source repo
-# 2) image gets published
-# 3) Flux image automation updates this repo on its configured interval
-
-# Fast path (deploy now)
 make deploy-blog
 make deploy-mmcal
 make deploy-ericaknight
 make deploy-itvp
 make deploy-retirement
+make deploy-rangoon-mapper
 ```
 
-- `make deploy-*` forces image repository scan, image policy resolution, image update automation, source reconcile, and app kustomization reconcile.
-- Cloudflare cache policy should bypass HTML/update-critical routes (`/`, `index.html`, service worker/manifest/feed paths) and cache static assets aggressively.
-- `ericaknight.me` is a separate Cloudflare zone routed through the existing public-edge tunnel to the `ericaknight` service.
+Image automation may commit to remote `master`; fetch and fast-forward after running a deploy target.
 
-> [Full ops cheatsheet →](docs/ops-command-cheatsheet.md)
->
-> [Docs index →](docs/README.md)
+## Current Non-Obvious Constraints
 
----
-
-## Operational Notes
-
-> [!WARNING]
-> **NFS PVCs failing?** Check that the TrueNAS Tailscale app has **"Accept Routes" disabled** to avoid asymmetric routing issues.
->
-> See: [`docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`](docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md)
-
-> [!NOTE]
-> The control panel image-updates view is best-effort. It compares stable semver tags directly, compares matching non-semver numeric tag families when the pattern is clear, and falls back to remote digest checks for floating tags like `latest` or `next`.
-
----
-
-## Screenshots
-
-### Dashboard
-
-<img src=".github/screenshots/homepage.webp" />
-
-<img src=".github/screenshots/homepage-2.webp" />
-
----
-
-### Jellyfin
-
-<img src=".github/screenshots/jellyfin.webp" />
-
-<img src=".github/screenshots/jellyfin-2.webp" />
-
----
-
-### Sonarr & Radarr
-
-<img src=".github/screenshots/sonarr.webp" />
-
-<img src=".github/screenshots/radarr.webp" />
-
----
-
-### Monitoring Stack
-
-**Grafana**
-
-<img src=".github/screenshots/grafana.webp" />
-
-**Uptime Kuma**
-
-<img src=".github/screenshots/uptime.webp" />
-
----
-
-### TrueNAS Storage
-
-<img src=".github/screenshots/truenas.webp" />
-
----
+- Keep TrueNAS Tailscale **Accept Routes** disabled to avoid asymmetric NFS/API routing.
+- ExternalDNS currently uses the legacy annotation prefix explicitly; migrate all annotations atomically before removing the compatibility flag.
+- `iris.khzaw.dev` and `athena.khzaw.dev` share a dedicated edge VIP for Mac mini services; Iris SSH is exposed on the same VIP through a separate LoadBalancer Service.
+- Transmission's VPN sidecar is scaffolded but still contains placeholder network material; direct mode is the safe default.
+- The generated Flux controller manifest is not part of the ordinary root reconciliation path and requires an explicit controlled apply during controller upgrades.
+- Iris runs OpenClaw and Hermes as native macOS processes. `docs/iris-operations.md` covers launchd supervision, host metrics, readiness, and the independent cluster sentinel.
 
 ## Documentation
 
-| Doc | Description |
-|-----|-------------|
-| [`ops-command-cheatsheet.md`](docs/ops-command-cheatsheet.md) | Full command reference |
-| [`adguard-dns-stack-overview.md`](docs/adguard-dns-stack-overview.md) | Dual AdGuard DNS architecture |
-| [`gitops-change-timeline-dashboard.md`](docs/gitops-change-timeline-dashboard.md) | Flux activity and reconcile timeline |
-| [`flux-web-ui.md`](docs/flux-web-ui.md) | Flux Operator web UI deployment and checks |
-| [`dns-access-path-dashboard.md`](docs/dns-access-path-dashboard.md) | DNS health and access surface |
-| [`resource-advisor-phase1-phase2.md`](docs/resource-advisor-phase1-phase2.md) | Resource advisor automation and apply-PR model |
-| [`cpu-headroom-validation.md`](docs/cpu-headroom-validation.md) | Git/CI rollout and job CPU reserve checks |
-| [`node-capacity-dashboard.md`](docs/node-capacity-dashboard.md) | Whole-host node CPU/RAM dashboard |
-| [`networking-current-state-and-simplification.md`](docs/networking-current-state-and-simplification.md) | Network design |
-| [`pangolin-fit-analysis.md`](docs/pangolin-fit-analysis.md) | Historical analysis of where Pangolin could fit in the access model |
-| [`secrets-inventory.md`](docs/secrets-inventory.md) | Secrets reference |
-| [`backup-plan.md`](docs/backup-plan.md) | Backup strategy |
-
----
-
-## Domains
-
-| Domain | Purpose |
-|--------|---------|
-| `khzaw.dev` | Primary domain for all services |
-| `*.khzaw.dev` | Service subdomains via external-dns |
+`docs/README.md` indexes active operating guidance only. Completed plans, migrations, incident timelines, and rejected alternatives belong in Git history, not the current docs corpus.

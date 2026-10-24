@@ -3,7 +3,7 @@ title: Grafana Admin Credentials
 summary: SOPS-managed Grafana credentials, operator retrieval, and rotation of the password stored in the persistent database.
 status: active
 owner: homelab
-last_reviewed: 2026-10-22
+last_reviewed: 2026-10-25
 ---
 
 # Grafana Admin Credentials
@@ -46,10 +46,4 @@ that already exists on the PVC.
 Changing only the Secret in Control Panel performs step 1; it does not perform
 the Grafana database update. Do not delete the PVC or database to reset a password.
 
-## October 2026 finding
-
-The audit confirmed that `admin/admin` authenticated to `/api/user` with
-`isGrafanaAdmin: true`. The HelmRelease also stored that default in plaintext.
-The remediation replaces the bootstrap value with an encrypted Secret and rotates
-the existing database account separately. Both sides must be verified; a healthy
-Helm rollout alone does not establish that the default login has been removed.
+The encrypted bootstrap value and persisted database password must agree after rotation. A healthy Helm rollout alone does not prove the old login was removed.

@@ -1,113 +1,53 @@
 # Homelab Ideas Backlog
 
-This file tracks ideas explicitly rated `good` or better that are still active, plus a short record of ideas that have already landed so the backlog stays current.
+Only unresolved ideas belong here. Delivered work is documented by the current manifests and Git history.
 
-## Recently Implemented / Largely Delivered
+## Jellyfin-Aware Load Shedding
 
-1. `implemented (was really good)` - Public Exposure Control Plane (Blog + Temporary Shares)
-- Delivered as `apps/exposure-control` + `infrastructure/public-edge`.
-- `controlpanel.khzaw.dev` now handles temporary public shares, expiry, Access-by-default, audit history, disable-all, and the permanent-public blog path.
+Detect active Jellyfin playback or transcoding plus primary-node pressure, then temporarily shed selected background workloads through reversible runtime overlays.
 
-2. `implemented (was really good)` - Capacity-Aware Resource Advisor v2
-- Delivered and surpassed as the current phased resource-advisor flow.
-- Node-fit simulation, advisory posture, live preflight, weekly apply PRs, and cockpit integration are already in place.
+Current constraints:
 
-3. `implemented in lean form (was good)` - Self-Service Ops Portal / Lean Ops Command Center
-- `controlpanel.khzaw.dev` is now the combined operator cockpit for exposure control, Transmission routing, travel readiness, image/chart updates, and tuning.
-- Remaining gap: generic restart/reconcile/runbook actions are still backlog rather than done.
+- exposure-control should own the operator UI, audit log, and runtime write boundary
+- Flux-managed desired state must remain stable while runtime-owned overlays carry temporary state
+- actions must never restart Jellyfin or mutate persistent data
+- automation should begin advisory-only and require hysteresis, cooldowns, manual override, and observable restore behavior
 
-4. `implemented (was good)` - Prometheus Persistent Storage
-- Prometheus now persists TSDB on `local-path` with `retention: 14d`, `retentionSize: 8GB`, and `walCompression: true`.
+## Away Mode And Quiet Hours
 
-## Active Backlog
+Add an expiring posture that can disable temporary public shares, select the safer Transmission route, and pause approved background workloads with automatic restoration.
 
-1. `really good` - Jellyfin-Aware Load Shedding
-- This replaces the older, vaguer `Media-Aware Dynamic Throttling` idea with one concrete plan.
-- Goal: detect real Jellyfin playback/transcode pressure, temporarily shed lower-priority primary-node work, and restore automatically once playback is back to idle.
-- Reuse what already exists:
-  - `apps/exposure-control` already owns runtime write actions, audit logging, and the operator UI.
-  - `apps/transmission/transmission-vpn-control.yaml` already shows the right GitOps-safe pattern for runtime-owned overlays.
-  - Dynacat already uses Jellyfin's `Sessions` API, so session-based detection fits the current repo.
-  - Prometheus already has primary-node pressure signals through `homelab:node_host_cpu_utilization:ratio` and `homelab:node_host_memory_utilization:ratio`.
-- Implementation plan:
-  1. Define the policy surface first.
-  - Add a dedicated config file under `apps/exposure-control/` for thresholds, cooldowns, priorities, and per-service actions.
-  - Start with only workloads that materially affect the primary node: `transmission`, `sabnzbd`, and `bazarr`.
-  - Keep Pi-hosted apps out of phase 1 unless they are shown to create meaningful downstream churn on the primary node.
-  - Treat `sonarr` and `radarr` as hard-tier optional targets, not first-pass ones.
-  2. Add runtime-safe control surfaces for the target services.
-  - Mirror the existing Transmission control model: Git-managed control ConfigMap plus runtime-owned state ConfigMap, consumed by optional `valuesFrom` overlays in each target HelmRelease.
-  - Keep the control loop out of direct `kubectl scale` patches on Flux-managed workloads so GitOps does not fight the runtime controller.
-  - Use the overlays only for reversible actions such as `replicas: 0` or other chart-native pause/downscale toggles.
-  3. Detect real media pressure instead of guessing.
-  - Poll Jellyfin's cluster-local `Sessions` endpoint with a dedicated API key and classify:
-    - active streams,
-    - active transcodes,
-    - paused vs playing sessions.
-  - Query Prometheus for primary-node host CPU and memory utilization so one light session does not trigger unnecessary shedding.
-  - Compute four states with hysteresis: `idle`, `observe`, `soft-shed`, and `hard-shed`.
-  - Enter shed only after sustained pressure; restore only after sustained idle/low-pressure cooldown.
-  4. Actuate in small, policy-driven steps.
-  - `soft-shed`: pause or scale down `transmission` and `sabnzbd`.
-  - `hard-shed`: additionally pause or scale down `bazarr`, then optionally `sonarr` and `radarr` if the soft tier is insufficient.
-  - Avoid actions that restart Jellyfin itself or churn stateful infrastructure.
-  - Add manual override states in the cockpit such as `auto`, `forced-off`, and `hold-current` to avoid surprise behavior during debugging.
-  5. Make the control loop observable.
-  - Extend the cockpit with a load-shedding panel that shows current mode, why it entered that mode, which workloads are currently shed, and when restore is expected.
-  - Append every transition to the existing audit log.
-  - Export Prometheus metrics for active streams, active transcodes, current shed level, action counts, and last transition time.
-  - Add focused alerts only after the loop is stable, for example "stuck in hard-shed too long" or "detection failing while Jellyfin is active".
-  6. Roll it out in phases instead of flipping straight to automation.
-  - Phase 0: advisory-only mode in the cockpit with no write actions.
-  - Phase 1: enable only the `soft-shed` tier for `transmission` and `sabnzbd`.
-  - Phase 2: add `bazarr` if the first tier materially improves Jellyfin headroom.
-  - Phase 3: decide whether `sonarr`/`radarr` are worth touching based on real operating data rather than intuition.
-- Expected implementation touch points:
-  - `apps/exposure-control/server.js`
-  - `apps/exposure-control/app.js`
-  - `apps/exposure-control/index.html`
-  - `apps/exposure-control/helmrelease.yaml`
-  - `apps/exposure-control/rbac.yaml`
-  - new service control ConfigMaps plus `valuesFrom` runtime overlays in the target app HelmReleases
-  - monitoring objects for metrics and alerts once the loop is real
+Build on existing exposure-control actions. Do not create a second control plane.
 
-2. `really good` - Away Mode / Quiet Hours Control Plane
-- Travel Center already exists, but there is still no expiring "away" or "quiet hours" posture change.
-- Build on the current control panel actions: disable all temporary public shares, switch Transmission to a safer default mode, and optionally pause selected background workloads with auto-restore.
+## Operator Cockpit Safe Actions
 
-3. `good` - Operator Cockpit Safe Actions Expansion
-- The operator cockpit foundation already exists.
-- Remaining scope: safe restart, Flux reconcile, and guided diagnostics actions with audit trail and tight RBAC.
+Extend the control panel with a small, RBAC-constrained set of audited restart, Flux reconcile, and diagnostic actions.
 
-4. `good` - BookOrbit Library Import Hardening
-- After the BookOrbit replacement settles, audit scan behavior, metadata extraction, OPDS use, and first-user setup.
-- Keep BookOrbit pointed read-only at the shared Calibre library without duplicating book files or adding avoidable database overhead.
+Only expose actions with clear scope, idempotent behavior, and live completion evidence. Avoid turning the cockpit into an unrestricted Kubernetes shell.
 
-5. `good` - ARM Node Utilization (Remaining Headroom Work)
-- This is no longer a greenfield idea: `autobrr`, `prowlarr`, `jackett`, `flaresolverr`, `profilarr`, `dynacat`, and `uptime-kuma` are already on the utility node.
-- Remaining candidates worth auditing for the Pi are `bazarr`, `sabnzbd`, and possibly `transmission` once image, storage, and throughput tradeoffs are verified.
+## BookOrbit Import Hardening
 
-6. `good` - Monitoring Completion: Remaining Rules + Notification Delivery
-- Some alerting has landed already, especially around DNS reliability and exposure-control.
-- Remaining work is to finish the missing PrometheusRules for homelab-specific failure modes and wire a real delivery path.
-- Current blocker: `alertmanager` is still disabled, so existing alerts are mostly dashboard-visible rather than operator-delivered.
+Audit BookOrbit scanning, metadata extraction, OPDS behavior, first-user setup, and write-back cost against the shared `books` library.
 
-7. `good` - Public Edge IaC / Smoke-Check Polish
-- Exposure control, blog public routing, metrics, and basic monitoring are in place.
-- Remaining gaps:
-  - move more of the Cloudflare Access/WAF/cache policy into reproducible IaC,
-  - add scheduled smoke checks for the share-toggle flow and the permanent-public blog path.
+The library is currently mounted read-write because BookOrbit can update embedded metadata. Any hardening must preserve that intended behavior or explicitly change it after data-safety validation.
 
-8. `really good` - Unified Static Sites Origin (Multi-Host, One Runtime)
-- Consolidate `blog` + `mmcal` (and future static sites) onto a single lightweight `static-sites` app behind the existing Cloudflare Tunnel route model.
-- Serve multiple hostnames from one runtime using host-based vhosts/docroots (`/srv/sites/<hostname>`), while keeping existing `public-edge` CNAME + tunnel patterns.
-- Avoid "all sites roll together" risk by adding per-site release tooling:
-  - each site builds/publishes its own static artifact (OCI/image),
-  - GitOps stores one pinned version per site,
-  - a fetch/reload component updates only the changed site content and hot-reloads the static server.
-- Result: lower baseline resource usage and faster onboarding of new static sites, without sacrificing independent site rollback/deploy control.
+## Utility-Node Placement Review
 
-9. `good` - TODO: Convenience-First Autonomous Cluster Operators (Iris + Athena)
+Use current node capacity, image architecture support, storage locality, and I/O demand to identify additional workloads that can safely move to the ARM utility node.
+
+Do not maintain a candidate list here. Derive it from current manifests and measurements when the work starts.
+
+## Public Edge Reproducibility And Smoke Checks
+
+Move the remaining Cloudflare Access, WAF, and cache behavior into reproducible configuration where the provider supports it, and add scheduled end-to-end checks for permanent sites and temporary share toggling.
+
+## Unified Static-Site Origin
+
+Evaluate whether the public static sites can share one lightweight multi-host runtime without coupling independent release and rollback boundaries.
+
+A viable design must keep one pinned artifact version per site and update one site without rolling every site together. If that cannot be achieved cleanly, the current separate deployments are the better tradeoff.
+
+## Convenience-First Autonomous Cluster Operators (Iris + Athena)
 - Owner preference: prioritize hands-off operation and convenience over elaborate least-privilege isolation. OpenClaw (Iris) and Hermes (Athena) on the Apple Silicon Mac mini are trusted operators, primarily controlled through Slack (also Telegram for Iris), with existing access to this repo. Do not redesign or disrupt their native setups just to add cluster access.
 - Intended autonomy: diagnose cluster-wide, read logs and necessary Secrets, exec into pods, restart/scale workloads, run maintenance, reconcile Flux, and maintain applications/infrastructure. Routine changes and supported upgrades with a clear recovery path should not require approval; send concise Slack summaries after meaningful actions.
 - Use GitOps for durable changes, including autonomous commits/pushes. Permit direct Kubernetes recovery actions when needed, then bring Git back into alignment. Verify rollout and user-facing health after changes, and coordinate the agents so they do not operate on the same service concurrently.
@@ -120,7 +60,3 @@ This file tracks ideas explicitly rated `good` or better that are still active, 
   - Verify backups and restoration for persistent data: reverting Git restores desired configuration, not deleted data, destructive migrations, or leaked credentials. Tailnet-only access reduces exposure but does not prevent operator mistakes or prompt injection.
   - Preserve existing agent configs/processes and uncommitted repo work. Identify the active checkout before implementation; the inspected checkout had substantial local changes and lagged its locally recorded upstream.
 - Status: planning only; this entry does not provision access or authorize destructive work.
-
-## Deferred / Not Included
-
-- Items marked as not needed or not for now are intentionally excluded from this list.

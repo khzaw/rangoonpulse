@@ -3,7 +3,7 @@ title: RomM
 summary: Private ROM library with shared PostgreSQL, expandable NAS storage, and app-owned database provisioning.
 status: active
 owner: homelab
-last_reviewed: 2026-09-15
+last_reviewed: 2026-10-25
 ---
 
 # RomM
@@ -30,7 +30,7 @@ emulation at `https://roms.khzaw.dev`.
 
 - GitOps path: `apps/romm/`; Flux definition: `flux/kustomizations/romm.yaml`.
 - HelmRelease, Deployment, and Service: `default/romm`.
-- Chart: `app-template` `5.1.0`; image: `rommapp/romm:5.2.0`.
+- Chart/image: `app-template` and `rommapp/romm`, pinned in the HelmRelease.
 - One replica on `${PRIMARY_NODE_NAME}` with `Recreate` upgrades.
 - UID/GID `1000`, no privilege escalation, all capabilities dropped.
 - API and scan concurrency both start at one worker.
@@ -44,8 +44,7 @@ emulation at `https://roms.khzaw.dev`.
 
 ## Database
 
-RomM 5.2.0 [supports PostgreSQL](https://docs.romm.app/latest/install/databases/).
-It uses database/role `romm` on `media-postgres.default.svc.cluster.local:5432`.
+RomM uses PostgreSQL database/role `romm` on `media-postgres.default.svc.cluster.local:5432`.
 `ROMM_DB_DRIVER=postgresql` and `DB_PORT=5432` are explicit because the default
 driver and port target MariaDB.
 

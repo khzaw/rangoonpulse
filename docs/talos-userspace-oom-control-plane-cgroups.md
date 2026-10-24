@@ -1,8 +1,16 @@
+---
+title: Talos Userspace OOM and Control Plane Cgroups
+summary: Current operating guidance for Talos Userspace OOM and Control Plane Cgroups.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Talos Userspace OOM and Control Plane Cgroups
 
 Use this when `kubectl` cannot reach the API server but Talos is reachable, or when `talosctl get oomaction` shows the Talos OOM controller killing Kubernetes pod cgroups.
 
-## What Happened
+## Failure Boundary
 
 Talos has a userspace OOM controller. It watches Linux pressure stall information, or PSI, and can kill a Kubernetes pod cgroup when memory pressure is high enough. This is separate from the kernel OOM killer.
 
@@ -94,13 +102,7 @@ Do not rely only on `kubectl get pods --field-selector=status.phase!=Running`. A
 
 etcd is a Talos system service in the cgroup `/podruntime/etcd`. It is not a static pod, and Talos v1.13.5 has no field that sets its `memory.max`.
 
-Checked on 2026-10-03 on `talos-7nf-osf` (Talos v1.13.5):
-
-- `memory.current` was 277 MiB, and `memory.peak` was 679 MiB.
-- `memory.low` is 256 MiB. That is the compiled soft protection `CgroupEtcdReservedMemory`.
-- `memory.max` is `max`.
-
-Talos v1.13.5 `pkg/machinery/constants` defines `CgroupEtcd` as `/podruntime/etcd`, `CgroupEtcdReservedMemory` as 256 MiB, and `CgroupEtcdMillicores` as 2000. There is no `CgroupEtcdMaxMemory`. The etcd service puts the process in that cgroup, sets OOM score adj `-998`, and does not set an OCI memory limit. Talos v1.14.2 still has those same etcd constants and still has no hard max. Do not upgrade the cluster to chase this cap.
+`memory.current` and `memory.peak` are usage measurements, not limits. The Talos etcd cgroup uses soft protection (`memory.low`) and an OOM score adjustment; those do not establish a finite `memory.max`. Inspect the installed Talos schema and service definition before assuming a hard cap is supported.
 
 `cluster.apiServer.resources`, `cluster.controllerManager.resources`, and `cluster.scheduler.resources` are already applied (4 GiB, 1 GiB, and 512 MiB). `cluster.etcd` only accepts the image, CA, extra args, and advertised or listen subnets. It has no `resources` field.
 
@@ -114,7 +116,7 @@ Do not invent a cap with one of these:
 talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 2 'podruntime/etcd'
 ```
 
-Expect `memory.max` to stay `max` and usage to stay near the figures above. If a later Talos release adds a real etcd memory limit, patch only `10.0.0.197` with `talosctl patch machineconfig --mode no-reboot`, confirm etcd stays healthy and `memory.max` is finite, and copy the non-secret setting into the secure source machine config.
+For the current Talos configuration, expect `memory.max` to remain `max`; inspect live usage rather than comparing it to an old incident sample. If a later Talos release adds a real etcd memory limit, patch only `10.0.0.197` with `talosctl patch machineconfig --mode no-reboot`, confirm etcd stays healthy and `memory.max` is finite, and copy the non-secret setting into the secure source machine config.
 
 ## Caveats
 

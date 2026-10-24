@@ -1,6 +1,9 @@
 ---
 title: 75 Soft
 summary: Private 75 Soft wellness journal deployment, SQLite persistence, backup, and tailnet access boundary.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
 ---
 
 # 75 Soft
@@ -29,7 +32,7 @@ The Node process serves the React PWA, synchronization API, and static assets. B
 
 - Live database: `/data/seventyfivesoft.sqlite` on a `1Gi` `local-path` PVC.
 - SQLite mode: WAL, with one application replica and a `Recreate` rollout strategy.
-- Backup replica: Litestream `0.5.16` writes to `/backup/seventyfivesoft` on a separate `1Gi` `truenas-nfs` PVC.
+- Backup replica: Litestream (version pinned in the HelmRelease) writes to `/backup/seventyfivesoft` on a separate `1Gi` `truenas-nfs` PVC.
 - Recovery point: changed pages are normally replicated within five seconds.
 - History: daily snapshots with 90-day retention and six-hour replica validation.
 - Startup recovery: an init container restores the latest backup, with a quick integrity check, only when the live database does not exist.

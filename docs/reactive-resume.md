@@ -1,46 +1,45 @@
+---
+title: Reactive Resume
+summary: Current utility-node deployment, printer sidecar, NFS data, shared database, and authentication constraints.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Reactive Resume
 
-## URL
-- `https://build-resume.khzaw.dev`
+## Contract
 
-## Deployment
-- GitOps: `apps/reactive-resume/`
-- HelmRelease: `apps/reactive-resume/helmrelease.yaml`
-- Flux Kustomization: `flux/kustomizations/reactive-resume.yaml`
+- hostname: `build-resume.khzaw.dev`
+- source: `apps/reactive-resume/`
+- Flux: `flux/kustomizations/reactive-resume.yaml`
+- placement: utility node
+- data: `truenas-nfs` mounted at `/app/data`
+- database: `reactive_resume` on shared `media-postgres`
 
-Reactive Resume runs as a single `app-template` release with:
-- `main`: the web app (`ghcr.io/amruthpillai/reactive-resume:v5.0.11`)
-- `printer`: a sidecar Chromium worker (`ghcr.io/browserless/chromium:v2.43.0`)
+The release contains the web application and a Browserless Chromium printer sidecar. Image versions are authoritative in the HelmRelease.
 
-Current placement target is the Raspberry Pi utility node (`talos-uua-g6r`). Both images publish `arm64` manifests and the utility node
-has materially more schedulable CPU headroom than the primary node right now, so this is the safer placement for the current cluster
-state. Because the app data PVC is on NFS, moving the release to `talos-7nf-osf` later is still a manifest-only change if capacity shifts.
+The app data is NFS-backed, so placement is not coupled to a local PVC. A node move still requires architecture support and capacity validation for both containers.
 
-## Storage
-- App uploads/runtime files: `truenas-nfs` PVC mounted at `/app/data`
+## Secrets
 
-Reactive Resume can use S3-compatible object storage, but this deployment intentionally uses the built-in filesystem mode so the
-service stays small and portable.
+SOPS-managed Secrets:
 
-## Database
-- Postgres: shared `media-postgres` service
-- DB name: `reactive_resume`
-- Role: `reactive_resume`
+- `reactive-resume-db-secret`: database password and URL
+- `reactive-resume-app-secret`: authentication secret and printer token
 
-The `media-postgres` init script creates the role and database on first boot only. If the shared Postgres PVC is ever rebuilt,
-keep the secret and init script in sync before reconciling.
+`media-postgres` creates the role/database on first initialization. The database bootstrap and Secret must remain aligned.
 
-## Required Secrets
-Reactive Resume expects two SOPS-managed Secrets in `default`:
+SMTP is not configured. Email flows fall back to application logs, so signup or verification may require log inspection.
 
-1. `reactive-resume-db-secret`
-- `POSTGRES_PASSWORD`
-- `DATABASE_URL`
+## Integration And Verification
 
-2. `reactive-resume-app-secret`
-- `AUTH_SECRET`
-- `PRINTER_TOKEN`
+Reactive Resume is linked from Dynacat and included in Resource Advisor policy.
 
-## Auth Note
-SMTP is intentionally not configured. Email flows fall back to app logging, so first-run signup or email verification may require
-checking the Reactive Resume container logs.
+```bash
+flux get kustomization reactive-resume -n flux-system
+kubectl get hr,pod,pvc,ingress -n default | grep reactive-resume
+kubectl logs -n default deploy/reactive-resume -c main --since=30m
+kubectl logs -n default deploy/reactive-resume -c printer --since=30m
+curl -Ik https://build-resume.khzaw.dev/
+```

@@ -1,164 +1,86 @@
-# Secrets Inventory (Services -> Secrets)
+---
+title: Secrets Inventory
+summary: Current SOPS-managed Kubernetes Secret manifests and their primary consumers.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
 
-This doc is a living map of **which services consume which Kubernetes Secrets**, and where those secrets are managed.
+# Secrets Inventory
 
-For GitHub authentication, read [GitHub credentials and permissions](./github-credentials.md)
-before requesting a new token. It records existing keys, verified capabilities,
-which credential to use, and copies that must rotate together.
+This inventory lists names and consumers only. Never add values, decoded payloads, token fingerprints, or private keys.
 
-## Management Model (Current)
-- **GitOps encrypted secrets** live under `infrastructure/secrets/**` and are encrypted with **SOPS+age**.
-- Flux decrypts them during reconciliation via:
-  - Flux Kustomization: `flux-system/secrets` (file: `flux/kustomizations/secrets.yaml`)
-  - age key Secret: `flux-system/sops-age` (key file: `age.agekey`)
+All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and included by that tree's Kustomizations.
 
-Notes:
-- At runtime, workloads still consume **normal Kubernetes `Secret` objects** (SOPS only protects secrets at rest in Git).
-- TLS secrets like `*-tls` are **managed by cert-manager** and are not tracked here unless a workload explicitly references them.
+## `cert-manager`
 
-## In-Use Secrets (Referenced By GitOps Manifests)
+- `cloudflare-api-token`: ACME DNS-01 issuer
 
-### Iris native monitoring
+## `default`
 
-- **Iris watchdog** (`native/iris/`, [operations and rotation](./iris-operations.md))
-  - Reuses `monitoring/alertmanager-receivers` Telegram/Discord keys, SOPS-owned under
-    `infrastructure/secrets/monitoring/alertmanager-receivers.yaml`. Its private macOS copies must
-    be refreshed with `node native/iris/deploy.mjs` after rotation.
-  - `monitoring/iris-watchdog-api-token`: service-account-token controller owns generated data;
-    Git manages metadata/RBAC only in `infrastructure/monitoring/iris-watchdog-identity.yaml`.
-    Non-expiring external identity limited to API health checks, not an editable SOPS secret.
-    The Mac holds a mode-0600 copy and API CA; never install admin kubeconfig there.
+- `anki-server-secret`: Anki sync server credentials
+- `bookorbit-secret`: BookOrbit application and `media-postgres` database bootstrap
+- `dynacat-github`: authenticated GitHub release-widget reads
+- `exposure-control-github`: control-panel GitHub reads and actions
+- `ghcr-pull-secret`: Erica Knight, Rangoon Mapper, and Retirement private image pulls
+- `homepage-widget-secrets`: Dynacat widgets
+- `immich-db-secret`: Immich PostgreSQL
+- `media-postgres-secret`: shared media TimescaleDB administration
+- `obsidian-livesync-secret`: CouchDB/LiveSync credentials
+- `reactive-resume-app-secret`: Reactive Resume application secrets
+- `reactive-resume-db-secret`: Reactive Resume and `media-postgres` database bootstrap
+- `romm-secret`: RomM database role and app signing key; its provisioning hook also consumes `media-postgres-secret`
+- `speedtest-tracker-secret`: Speedtest Tracker and `media-postgres` database bootstrap
+- `tracerr-app-secret`: Tracerr application secrets
+- `tracerr-db-secret`: Tracerr and `media-postgres` database bootstrap
+- `transmission-gluetun-control-secret`: control-panel Gluetun action authentication
+- `transmission-vpn-secret`: Transmission/Gluetun VPN material
+- `vaultwarden-db-secret`: Vaultwarden and dedicated PostgreSQL credentials
 
-### Dashboards
-- **dynacat** (`apps/dynacat/helmrelease.yaml`)
-  - `default/homepage-widget-secrets`
-    - consumed via `envFrom.secretRef`
-    - keys: various `*_API_KEY` values used by Dynacat widgets
-  - `default/dynacat-github`
-    - key: `token`, consumed as `GITHUB_RELEASES_TOKEN` by the Releases widget
-    - SOPS-managed and visible in the Control Panel Secrets inventory
-    - reuses the existing fine-grained Resource Advisor GitHub credential; the widget only reads public releases
-    - rotate this copy together with `monitoring/resource-advisor-github` when rotating that shared credential
+## `democratic-csi`
 
-- **exposure-control** (`apps/exposure-control/helmrelease.yaml`)
-  - `default/exposure-control-github`
-    - key: `GITHUB_TOKEN` (GitHub API credential for Secrets inventory/commits, managed Jobs configuration, and Renovate status/dispatch)
+- `truenas-credentials`: democratic-csi API access and TrueNAS dataset exporter
+- `truenas-ssh-credentials`: TrueNAS management-plane refresh CronJob
 
-### Study Services
-- **bentopdf** (`apps/bentopdf/helmrelease.yaml`)
-  - No application credentials are required.
-  - `default/bentopdf-tls` belongs to cert-manager and is renewed automatically;
-    it is not an editable SOPS Secret in Control Panel.
+## `flux-system`
 
-- **obsidian-livesync** (`apps/obsidian-livesync/helmrelease.yaml`)
-  - `default/obsidian-livesync-secret`
-    - keys: `COUCHDB_USER`, `COUCHDB_PASSWORD`
+- `cloudflare-api-token`: ExternalDNS Cloudflare access
+- `ghcr-pull-secret`: Flux image repositories for private GHCR images
 
-- **anki-server** (`apps/anki-server/helmrelease.yaml`)
-  - `default/anki-server-secret`
-    - key: `SYNC_USER1` (format `username:password`)
+The same logical credential may have separate namespace-scoped Secret objects. Keep each encrypted manifest because Kubernetes Secrets are namespace-bound.
 
-### DNS / TLS
-- **external-dns** (`infrastructure/external-dns/helmrelease.yaml`)
-  - `flux-system/cloudflare-api-token`
-    - key: `token` (Cloudflare API token)
+## `monitoring`
 
-- **cert-manager ClusterIssuers** (`infrastructure/cert-manager/config/le-clusterissuer.yaml`)
-  - `cert-manager/cloudflare-api-token`
-    - key: `token` (Cloudflare API token for DNS-01)
+- `alertmanager-receivers`: Discord and Telegram delivery
+- `grafana-admin`: Grafana administrator bootstrap; persisted-password rotation is in `docs/grafana-admin-credentials.md`
+- `resource-advisor-github`: Resource Advisor apply-PR automation and CPU capacity snapshot publication
 
-### Registry Auth
-- **Flux image automation for private GHCR repos** (`infrastructure/image-automation/*.yaml`)
-  - `flux-system/ghcr-pull-secret`
-    - key: `.dockerconfigjson` (registry auth for ImageRepository scans)
+The native Iris watchdog holds a private installed copy of `alertmanager-receivers`; rerun its deployer after receiver rotation. Its `monitoring/iris-watchdog-api-token` is generated by Kubernetes, with metadata in `infrastructure/monitoring/iris-watchdog-identity.yaml`; it is not SOPS-managed or an editable Secrets page row. Rotation and restricted access are described in `docs/iris-operations.md`.
 
-- **rangoon-mapper** (`apps/rangoon-mapper/helmrelease.yaml`)
-  - `default/ghcr-pull-secret`
-    - key: `.dockerconfigjson` (registry auth for kubelet image pulls)
+## `public-edge`
 
-### Storage
-- **democratic-csi** (`infrastructure/storage/democratic-csi/hr-hdd.yaml`, `infrastructure/storage/democratic-csi/hr-nvme.yaml`)
-  - `democratic-csi/truenas-credentials`
-    - keys: `username`, `password`
+- `cloudflared-tunnel-token`: Cloudflare Tunnel authentication
 
-### Media DBs
-- **romm** (`apps/romm/helmrelease.yaml`)
-  - `default/romm-secret`
-    - keys: `DB_PASSWD`, `ROMM_AUTH_SECRET_KEY`
-  - `default/media-postgres-secret`
-    - key: `POSTGRES_PASSWORD` (database provisioning hook only; never passed to the app)
+## `tailscale`
 
-- **media-postgres** (`apps/media-postgres/helmrelease.yaml`)
-  - `default/media-postgres-secret`
-    - key: `POSTGRES_PASSWORD` (postgres superuser password)
-  - `default/tracerr-db-secret`
-    - key: `POSTGRES_PASSWORD` (used by init script to create role/db)
-  - `default/speedtest-tracker-secret`
-    - key: `POSTGRES_PASSWORD` (used by init script to create role/db)
+- `operator-oauth`: Tailscale Operator OAuth credentials
 
-- **tracerr** (`apps/tracerr/helmrelease.yaml`)
-  - `default/tracerr-db-secret`
-    - key: `DATABASE_URL`
-    - key: `POSTGRES_PASSWORD` (also used by `media-postgres` init)
-  - `default/tracerr-app-secret`
-    - key: `JWT_SECRET`
-    - key: `COOKIE_SECRET`
+## Maintenance
 
-- **reactive-resume** (`apps/reactive-resume/helmrelease.yaml`)
-  - `default/reactive-resume-db-secret`
-    - key: `DATABASE_URL`
-    - key: `POSTGRES_PASSWORD` (also used by `media-postgres` init)
-  - `default/reactive-resume-app-secret`
-    - key: `AUTH_SECRET`
-    - key: `PRINTER_TOKEN`
+BentoPDF has no application credentials; its TLS Secret is cert-manager-owned. The same ownership distinction applies to other generated certificates. GitHub Actions credentials such as `RENOVATE_TOKEN` and `TARIFF_UPDATE_TOKEN` are outside this Kubernetes inventory; see `docs/github-credentials.md` for purpose, permission checks, and rotation dependencies.
 
-- **speedtest-tracker** (`apps/speedtest/helmrelease.yaml`)
-  - `default/speedtest-tracker-secret`
-    - keys: `APP_KEY`, `POSTGRES_PASSWORD`
+When adding, renaming, or removing a Secret:
 
-- **immich** (`apps/immich/helmrelease.yaml`)
-  - `default/immich-db-secret`
-    - key: `POSTGRES_PASSWORD`
+1. update the encrypted manifest and the relevant `infrastructure/secrets/<namespace>/kustomization.yaml`
+2. update every consuming HelmRelease, controller, Job, or app configuration
+3. update this inventory in the same change
+4. reconcile `secrets` before dependent workloads
+5. verify only metadata and key names in logs or chat
 
-### Password Manager
-- **vaultwarden + vaultwarden-postgres** (`apps/vaultwarden/helmrelease.yaml`, `apps/vaultwarden-postgres/helmrelease.yaml`)
-  - `default/vaultwarden-db-secret`
-    - keys: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DATABASE_URL`
+Find current references with:
 
-### Ops / Notifications
-- **Grafana** (`infrastructure/monitoring/helmrelease.yaml`)
-  - `monitoring/grafana-admin`
-    - keys: `admin-user`, `admin-password`
-    - SOPS-managed in `infrastructure/secrets/monitoring/grafana-admin.yaml`
-    - consumed through the Grafana chart's `admin.existingSecret`
-    - available in Control Panel Secrets; see [Grafana admin credentials](./grafana-admin-credentials.md)
-    - changing this Secret does not rotate the password in an existing Grafana database
+```bash
+grep -R "<secret-name>" apps infrastructure flux
+```
 
-- **resource-advisor (apply PR and capacity snapshot)** (`infrastructure/resource-advisor/cronjob-apply-pr.yaml`, `cronjob-capacity-snapshot.yaml`)
-  - `monitoring/resource-advisor-github`
-    - key: `token` (GitHub token for PR creation and capacity-state branch contents updates)
-
-### Networking
-- **tailscale-operator** (workload managed by chart; secret created out-of-band today)
-  - `tailscale/operator-oauth`
-    - keys: `client_id`, `client_secret`
-
-### Downloaders / VPN
-- **transmission optional VPN sidecar** (`apps/transmission/helmrelease.yaml`)
-  - `default/transmission-vpn-secret`
-    - keys: `WIREGUARD_PRIVATE_KEY`, `WIREGUARD_PRESHARED_KEY`
-    - consumed by `gluetun` via `envFrom.secretRef`
-  - `default/transmission-gluetun-control-secret`
-    - keys: `GLUETUN_API_KEY`, `HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE`
-    - consumed by both `gluetun` and `gluetun-webui` via `envFrom.secretRef`
-
-## Not Managed By GitOps (But Present In Cluster)
-These exist in-cluster but are not currently referenced by this repo's GitOps manifests (or are chart-owned/generated state):
-- cert-manager account keys (e.g. `cert-manager/letsencrypt-prod-account-key`)
-- helm release state secrets (`sh.helm.release.v1.*`)
-- kube-prometheus-stack generated secrets (Prometheus web config, etc.)
-- legacy/orphaned app secrets (example: `default/ghost-*`) if the app is no longer managed via GitOps
-
-## Local Repo Files To Treat As Sensitive
-These files contain credentials and should not be committed to Git (even if they are convenient locally):
-- `kubeconfig` (client cert/key material)
+See `docs/secrets-management.md` for the operating model and key lifecycle.

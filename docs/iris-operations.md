@@ -10,7 +10,7 @@ last_reviewed: 2026-10-25
 
 Iris is the existing Apple Silicon Mac mini at `10.0.0.66`, login user `iris`.
 OpenClaw and Hermes remain **native macOS processes**, not Kubernetes workloads.
-The [dedicated SSH/HTTPS VIP](./iris-dedicated-vip.md) remains unchanged.
+The [dedicated SSH/HTTPS VIP](./mac-mini-edge.md) remains unchanged.
 
 ## Operating surfaces
 
@@ -74,7 +74,7 @@ Prometheus's discovery-owned `service` label (which otherwise renames the metric
 ## Native installation and supervision
 
 Versioned implementation: [`native/iris/`](../native/iris/). Homebrew supplies `node_exporter`
-(initially 1.12.1) and the existing Node installation; no npm packages or containers are needed.
+and the existing Node installation; no npm packages or containers are needed.
 
 | launchd label | Function |
 | --- | --- |
@@ -84,10 +84,9 @@ Versioned implementation: [`native/iris/`](../native/iris/). Homebrew supplies `
 | `dev.khzaw.iris.node-exporter` | Darwin exporter, LAN `10.0.0.66:9100`, textfile collector |
 | `dev.khzaw.iris.watchdog` | OpenClaw/Hermes API readiness relays, launchd/component metrics, independent cluster checks/notifications |
 
-Both new jobs have `RunAtLoad`, `KeepAlive`, and a 10-second restart throttle. They are login
+Both managed jobs have `RunAtLoad`, `KeepAlive`, and a 10-second restart throttle. They are login
 **LaunchAgents**, consistent with the existing agents. They survive crashes but require the `iris`
-GUI login session after reboot. Passwordless sudo was unavailable, so this task does not claim
-pre-login LaunchDaemon supervision. An administrator must explicitly migrate/test startup if
+GUI login session after reboot. These jobs do not provide pre-login LaunchDaemon supervision. An administrator must explicitly migrate/test startup if
 unattended pre-login service is required. Existing AC sleep is disabled and autorestart enabled;
 FileVault/login behavior is still an operator dependency.
 
@@ -104,7 +103,7 @@ ssh iris@iris.khzaw.dev '/opt/homebrew/bin/node ~/.local/share/rangoonpulse/iris
 ```
 
 The deployer reads live cluster settings and existing receiver credentials, copies source/config
-over SSH, validates plists, and replaces **only the two new jobs**. No credentials appear in argv,
+over SSH, validates plists, and replaces **only the two managed jobs**. No credentials appear in argv,
 Git, or console output. Existing OpenClaw/Hermes configs and processes are never rewritten.
 
 Paths on Iris:
@@ -113,8 +112,8 @@ Paths on Iris:
 - `~/.config/rangoonpulse/iris/{config,notifications,kubernetes}.json`: private config, mode 0600.
 - `~/.local/state/rangoonpulse/iris/alerts.json`: persisted debounce/delivery state, mode 0600.
 - `~/.local/state/rangoonpulse/iris/textfile/iris.prom`: atomically replaced native metrics.
-- `~/Library/LaunchAgents/dev.khzaw.iris.*.plist`: new supervision definitions.
-- `~/Library/Logs/rangoonpulse/`: new job stdout/stderr. Successful cycles are quiet;
+- `~/Library/LaunchAgents/dev.khzaw.iris.*.plist`: telemetry supervision definitions.
+- `~/Library/Logs/rangoonpulse/`: telemetry job stdout/stderr. Successful cycles are quiet;
   inspect/rotate logs during prolonged notification failures (no system log-rotation rule installed).
 
 ```sh
@@ -177,7 +176,7 @@ and disabled share plumbing are **N/A** for native host jobs: there is no pod, c
 service to register. Do not invent Kubernetes inventory rows or publicly expose exporter/readiness
 ports. Prometheus/Grafana/blackbox reuse existing workloads with unchanged resource reservations.
 
-## Validation and initial live evidence
+## Validation
 
 `node --test native/iris/watchdog.test.mjs` covers debounce/recovery, independent notification
 retries, stale readiness, endpoint response validation, cross-domain launchd listings and Hermes
@@ -190,21 +189,6 @@ The fixtures include real discovery's `service="iris-node"` label, healthy telem
 missing host/watchdog data, stopped agents, low/critical APFS space, Hermes component failures
 despite healthy processes/HTTP APIs, and independent Athena HTTPS-path failure.
 
-Initial live checks on 2026-10-25:
+Verify launchd restart behavior for the two managed telemetry jobs, process/readiness samples, both cluster probes, private scrape targets, Darwin/APFS dashboard metrics, and actual Dynacat/Kuma entries. Confirm the restricted identity can read readiness but cannot list nodes or Secrets. Check native credential/state files are mode 0600.
 
-- Both native jobs started under launchd; terminating only these new jobs produced new PIDs
-  automatically through `KeepAlive`. Existing OpenClaw/Hermes processes were left running.
-- All three agent process samples and local OpenClaw readiness are healthy; both direct cluster
-  probes succeed. Exporter plus gateway/readiness/SSH blackbox samples are successful.
-- All ten dashboard panels' expressions return data through Grafana's Prometheus proxy;
-  Darwin memory and the APFS Data volume are present rather than assumed Linux metrics.
-- Kuma IDs 22/23/24 are UP; the published page preserves all 17 original members plus these three.
-  Dynacat's actual Home links and successful Health checks were verified in the browser.
-- Real Telegram and Discord requests accepted both synthetic TEST FIRING and TEST RESOLVED
-  notifications from Iris using public DNS. No production cluster outage was induced.
-- The restricted identity gets HTTP 200 on `/readyz` and HTTP 403 on node and Secret list requests;
-  local credential/state files are mode 0600.
-
-Redeployment also exposed launchd's asynchronous `bootout`: immediate `bootstrap` can briefly
-return code 5 after a successful unload. The installer retries that specific reload race for up to
-ten seconds, rather than suggesting unnecessary sudo or modifying existing application jobs.
+The installer retries launchd's asynchronous `bootout`/`bootstrap` race for up to ten seconds. A transient code 5 after successful unload is not by itself a reason to add sudo or alter existing agent jobs.

@@ -1,3 +1,11 @@
+---
+title: DNS And Access Paths Dashboard
+summary: Current operating guidance for DNS And Access Paths Dashboard.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # DNS And Access Paths Dashboard
 
 This dashboard combines CoreDNS health with ingress and service inventory so you
@@ -28,8 +36,6 @@ can answer:
 ## Verification
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 

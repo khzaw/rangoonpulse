@@ -1,11 +1,11 @@
 ---
 name: rangoonpulse-service-deploy
-description: "Use when adding, deploying, moving, renaming, exposing, or materially changing a service in /Users/khz/Code/rangoonpulse. Complete app GitOps wiring and its dashboard, Control Panel, update management, exposure, tuning, and secrets surfaces through commit, push, reconciliation, and live verification."
+description: "Use when adding, deploying, moving, renaming, exposing, or materially changing a service in the rangoonpulse GitOps repository. Complete app GitOps wiring and its dashboard, Control Panel, update management, exposure, tuning, and secrets surfaces through commit, push, reconciliation, and live verification."
 ---
 
 # Rangoonpulse Service Deploy
 
-Use this skill only in `/Users/khz/Code/rangoonpulse`.
+Use this skill in the rangoonpulse GitOps repository.
 
 ## Read First
 

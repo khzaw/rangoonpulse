@@ -1,145 +1,100 @@
-# Docs Index - rangoonpulse
+# Rangoonpulse Documentation
 
-Use this file as the docs entrypoint for new agent sessions and for any task that changes cluster behavior. Read it after `AGENTS.md` and the root `README.md`, then open the focused docs for the area you are touching.
+This index routes to current operating guidance. Read `AGENTS.md` and `README.md` first, then open only the docs and project-local skill that own the task.
 
-## Required Session-Start Reading
+Docs describe present desired state, active constraints, and reusable recovery procedures. Completed plans, superseded designs, and incident chronology belong in Git history.
 
-On every new session in this repo, read:
+## Repository And Configuration
 
-1. [`AGENTS.md`](../AGENTS.md)
-2. [`README.md`](../README.md)
-3. [`docs/README.md`](./README.md)
+- [`architecture.md`](./architecture.md): source-of-truth map and cross-cutting touch points
+- [`knowledge-base-conventions.md`](./knowledge-base-conventions.md): current-only documentation policy and checks
+- [`shared-cluster-settings.md`](./shared-cluster-settings.md): Flux substitutions and shared constants
+- [`dependency-updates-renovate-and-flux-image-automation.md`](./dependency-updates-renovate-and-flux-image-automation.md): Renovate and image-promotion ownership
+- [`service-onboarding.md`](./service-onboarding.md): required app/operator integrations and live completion evidence
+- [`cpu-headroom-validation.md`](./cpu-headroom-validation.md): Git/CI and live preflight, rollout/job reserves, and runtime snapshots
+- [`kubernetes-upgrade.md`](./kubernetes-upgrade.md): Talos Kubernetes upgrades, recovery data, bootstrap manifests, and verification
 
-Then pick the smallest focused set of docs below before planning or editing.
+## Networking, DNS, And Access
 
-## Knowledge Base
+- [`networking.md`](./networking.md): three access paths, DNS ownership, and topology
+- [`lan-access.md`](./lan-access.md): private LAN/Tailscale path and LAN-device proxies
+- [`mac-mini-edge.md`](./mac-mini-edge.md): Mac mini OpenClaw/Hermes edge and SSH VIP
+- [`iris-operations.md`](./iris-operations.md): native launchd telemetry, readiness, and independent cluster sentinel
+- [`adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md): dual AdGuard architecture and rollout safety
+- [`dns-reliability.md`](./dns-reliability.md): cluster DNS separation and Flux timeout diagnosis
+- [`public-edge-and-exposure-control.md`](./public-edge-and-exposure-control.md): permanent-public and temporary-share routing
+- [`share-host-authentication.md`](./share-host-authentication.md): share-host authentication trust boundary
+- [`travel-center.md`](./travel-center.md): remote-readiness probes and limitations
+- [`router-dns-rebind-private-a-records.md`](./router-dns-rebind-private-a-records.md): private DNS and rebind protection
+- [`transmission-optional-vpn.md`](./transmission-optional-vpn.md): direct/VPN runtime routing contract
 
-- [`docs/architecture.md`](./architecture.md) for the top-level repo and knowledge map
-- [`docs/knowledge-base-conventions.md`](./knowledge-base-conventions.md) for doc-vs-skill boundaries, front matter conventions, and local checks
+## Storage, Stateful Services, And Recovery
+
+- [`talos-kubelet-image-garbage-collection.md`](./talos-kubelet-image-garbage-collection.md): current CRI image-retention policy and `/var` accounting
+- [`talos-userspace-oom-control-plane-cgroups.md`](./talos-userspace-oom-control-plane-cgroups.md): Talos userspace OOM and API recovery
+- [`media-postgres.md`](./media-postgres.md): shared TimescaleDB consumers and local-storage tradeoff
+- [`book-library-storage.md`](./book-library-storage.md): shared ebook/audiobook claims, app-state separation, and data-preserving changes
+- [`uptime-kuma.md`](./uptime-kuma.md): Uptime Kuma local SQLite and recovery
+- [`interview-prep.md`](./interview-prep.md): ITVP persistence and image promotion
+- [`retirement.md`](./retirement.md): Retirement SQLite and Litestream protection
+- [`seventyfivesoft.md`](./seventyfivesoft.md): 75 Soft SQLite and Litestream protection
+- [`vaultwarden.md`](./vaultwarden.md): Vaultwarden app/PostgreSQL storage and recovery
+- [`prometheus-storage.md`](./prometheus-storage.md): Prometheus TSDB storage and recovery
+- [`storage-cleanup.md`](./storage-cleanup.md): destructive storage cleanup safety
+- [`data-protection.md`](./data-protection.md): repository-defined data-protection coverage and gaps
+- [`truenas-networking-and-csi.md`](./truenas-networking-and-csi.md): TrueNAS routing and CSI recovery
+
+## Monitoring And Operations Surfaces
+
+- [`resource-advisor.md`](./resource-advisor.md): current Resource Advisor contract
+- [`controlpanel-pulse.md`](./controlpanel-pulse.md): cockpit node, power, PVC, and pod-placement telemetry
+- [`flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md): Flux readiness alerts and source, image-publication, rollback, and capacity triage
+- [`homelab-operations-dashboards.md`](./homelab-operations-dashboards.md): Grafana operations dashboard inventory
+- [`dashboards-dynacat.md`](./dashboards-dynacat.md): Dynacat configuration and widget constraints
+- [`gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md): Flux change timeline
+- [`dns-access-path-dashboard.md`](./dns-access-path-dashboard.md): DNS and ingress observability
+- [`node-capacity-dashboard.md`](./node-capacity-dashboard.md): node fit and capacity
+- [`power-estimation-dashboard.md`](./power-estimation-dashboard.md): estimated power and tariff inputs
+- [`metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md): live Kubernetes Metrics API
+- [`flux-web-ui.md`](./flux-web-ui.md): Flux Operator UI and controller-manifest caveat
+- [`cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md): scheduled-job staleness and failure alerts
+
+## Secrets
+
+- [`secrets-inventory.md`](./secrets-inventory.md): SOPS-managed Secret names and consumers
+- [`secrets-management.md`](./secrets-management.md): SOPS, Flux, control-panel editing, and key lifecycle
+- [`github-credentials.md`](./github-credentials.md): credential locations, operation-specific permissions, reuse, and rotation
+- [`grafana-admin-credentials.md`](./grafana-admin-credentials.md): encrypted bootstrap and persisted admin-password rotation
+
+## Service Contracts
+
+- [`study-services-livesync-anki-bookorbit.md`](./study-services-livesync-anki-bookorbit.md): Obsidian LiveSync, Anki, BookOrbit, and shared book storage
+- [`reactive-resume.md`](./reactive-resume.md): Reactive Resume and printer sidecar
+- [`bentopdf.md`](./bentopdf.md): private browser PDF tools, HPA, and operator integrations
+- [`romm.md`](./romm.md): ROM library, shared PostgreSQL provisioning, and expandable NAS storage
+- [`shelfmark.md`](./shelfmark.md): Shelfmark storage and share wiring
+- [`subarr.md`](./subarr.md): Subarr SQLite/media state and incomplete share wiring
+- [`tracerr.md`](./tracerr.md): Tracerr/Tracearr naming, database, Redis, and secrets
+- [`isponsorblocktv.md`](./isponsorblocktv.md): headless device setup and networking
+- [`live-tv-services.md`](./live-tv-services.md): active live-TV services and dormant ErsatzTV source
+- [`static-site-deployment.md`](./static-site-deployment.md): self-built static-site promotion and public-edge ownership
+
+## Commands
+
+- [`ops-command-cheatsheet.md`](./ops-command-cheatsheet.md): durable day-two commands
 
 ## Project-Local Skills
 
-Use the smallest matching repo-local skill when the task clearly fits:
+Use the smallest matching skill under `.agents/skills/`:
 
-- `rangoonpulse-service-deploy` for adding, exposing, renaming, or materially changing a service, including the complete operator setup in [`docs/service-onboarding.md`](./service-onboarding.md)
-- `rangoonpulse-upgrade` for image or chart bumps
-- `rangoonpulse-cluster-conventions` for shared cluster settings, placement, storage, ingress/TLS, secrets, and default manifest conventions
-- `rangoonpulse-access-and-edge` for Tailscale, public-edge, share hosts, exposure-control, Transmission VPN routing, and access-path exceptions
-- `rangoonpulse-adguard-dns` for dual AdGuard and LAN DNS changes
-- `rangoonpulse-resource-advisor` for tuning automation and service auto-tuning integration
-
-## Task Routing
-
-### Service onboarding
-
-- [`docs/service-onboarding.md`](./service-onboarding.md) is required reading for new apps. It defines the mandatory dashboard/monitor, Control Panel image and Helm updates, disabled share setup, tuning/HPA policy, secrets inventory, and live evidence needed before completion.
-- Read the linked domain docs for each touched surface. A working app URL does not replace verification that those operator surfaces contain the new app.
-
-### Repository-wide configuration
-
-- [`docs/architecture.md`](./architecture.md) for a top-level map of domains and cross-cutting touch points.
-- [`docs/knowledge-base-conventions.md`](./knowledge-base-conventions.md) for the repository knowledge structure and maintenance rules.
-- [`docs/shared-cluster-settings.md`](./shared-cluster-settings.md) when touching base domain, timezone, node names, node IPs,
-  ingress VIPs, LAN-service IPs, or Flux post-build substitutions.
-- [`docs/dependency-updates-renovate-and-flux-image-automation.md`](./dependency-updates-renovate-and-flux-image-automation.md)
-  for service update PR automation, published-image release sources, rollout-safety package rules, and self-built image promotion cadence.
-
-### Networking, ingress, DNS, and access
-
-- [`docs/networking-current-state-and-simplification.md`](./networking-current-state-and-simplification.md) for the current cluster access model.
-- [`docs/lan-access-current-state-and-lean-plan.md`](./lan-access-current-state-and-lean-plan.md) for LAN and Tailscale ingress access.
-- [`docs/iris-dedicated-vip.md`](./iris-dedicated-vip.md) for the dedicated `iris.khzaw.dev` SSH+HTTPS exception and OpenClaw-specific pairing/origin behavior.
-- [`docs/adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md) for LAN DNS architecture and router integration.
-- [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for CoreDNS, Flux, and Talos node DNS hardening.
-- [`docs/public-exposure-control-panel-plan.md`](./public-exposure-control-panel-plan.md) for the current Cloudflare Tunnel and permanent-public/share-host design.
-- [`docs/exposure-control-phase2-phase3-mvp.md`](./exposure-control-phase2-phase3-mvp.md) for the implemented exposure-control backend/UI behavior, responsive cockpit and activity states, bounded and until-disabled exposure modes, and security hardening path.
-- [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) when public share-host auth changes.
-- [`docs/travel-center.md`](./travel-center.md) when changing the control panel's travel readiness and remote-life workflow.
-- [`docs/router-dns-rebind-private-a-records.md`](./router-dns-rebind-private-a-records.md) when private `A` records or router DNS behavior are involved.
-- [`docs/transmission-optional-vpn.md`](./transmission-optional-vpn.md) when touching Transmission routing or Gluetun control.
-
-### Cluster incidents and recovery
-
-- [`docs/talos-kubelet-image-garbage-collection.md`](./talos-kubelet-image-garbage-collection.md) for the cluster-wide seven-day CRI image-retention policy, threshold tuning, and mount-aware `/var` verification.
-- [`docs/arm64-node-canal-flexvol-exec-format-error.md`](./arm64-node-canal-flexvol-exec-format-error.md) for the historical ARM64 Canal crashloop incident and recovery steps.
-- [`docs/talos-userspace-oom-control-plane-cgroups.md`](./talos-userspace-oom-control-plane-cgroups.md) when Talos userspace OOM kills control-plane or other pod cgroups and `kubectl` cannot reach the API server. etcd `memory.max` stays unset on Talos v1.13.5.
-- [`docs/kubernetes-upgrade.md`](./kubernetes-upgrade.md) for supported Kubernetes targets on Talos, sequential upgrades, secure backups, bootstrap manifest reconciliation, and live verification.
-
-### Storage, stateful services, and recovery
-
-- [`docs/media-postgres.md`](./media-postgres.md) for shared TimescaleDB placement and constraints.
-- [`docs/book-library-storage.md`](./book-library-storage.md) for the generic `books` and `audiobooks` content claims, separate app data, and claim-renaming recovery.
-- [`docs/calibre-storage-migration-to-truenas-nfs.md`](./calibre-storage-migration-to-truenas-nfs.md) for the historical Calibre NFS migration and retained retirement artifacts.
-- [`docs/uptime-kuma-sqlite-on-nfs-timeouts.md`](./uptime-kuma-sqlite-on-nfs-timeouts.md) for the node-local Uptime Kuma decision.
-- [`docs/interview-prep.md`](./interview-prep.md) for the Interview Prep runtime, SQLite persistence, image automation, and recovery path.
-- [`docs/retirement.md`](./retirement.md) for the private retirement dashboard, image automation, and tailnet-only access boundary.
-- [`docs/seventyfivesoft.md`](./seventyfivesoft.md) for the private 75 Soft journal, SQLite persistence, Litestream backup, and tailnet-only access boundary.
-- [`docs/vaultwarden-db-timeouts-and-postgres-reset.md`](./vaultwarden-db-timeouts-and-postgres-reset.md) for Vaultwarden state and recovery gotchas.
-- [`docs/prometheus-tsdb-local-path-migration.md`](./prometheus-tsdb-local-path-migration.md) for Prometheus persistence expectations.
-- [`docs/storage-sunset-cleanup.md`](./storage-sunset-cleanup.md) for retired storage paths and cleanup.
-- [`docs/backup-plan.md`](./backup-plan.md) for backup scope and recovery priorities.
-- [`docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`](./truenas-tailscale-accept-routes-caused-democratic-csi-outage.md) when NFS or democratic-csi behaves unexpectedly.
-
-### Monitoring, dashboards, and resource tuning
-
-- [`docs/iris-operations.md`](./iris-operations.md) for native macOS launchd supervision, Darwin metrics, Iris gateway checks, and out-of-cluster Telegram/Discord sentinel delivery.
-
-- [`docs/cpu-headroom-validation.md`](./cpu-headroom-validation.md) for Git/CI CPU reservation validation, unchanged operator resources, new deployments, scaling, and the single-commit `capacity-state` snapshot branch.
-
-- [`docs/controlpanel-pulse.md`](./controlpanel-pulse.md) for the cockpit Pulse page, bounded metrics access, and visualization verification.
-
-- [`docs/resource-advisor-phase1-phase2.md`](./resource-advisor-phase1-phase2.md) for tuning, hard per-node rollout/job CPU reserves, the apply-PR model, and cockpit/exporter evidence.
-- [`docs/homelab-operations-dashboards.md`](./homelab-operations-dashboards.md) for the Grafana operations dashboards.
-- [`docs/dashboards-dynacat.md`](./dashboards-dynacat.md) for the Dynacat dashboard, monitors, and widget-specific gotchas.
-- [`docs/gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md) for rollout/change timeline interpretation.
-- [`docs/dns-access-path-dashboard.md`](./dns-access-path-dashboard.md) for DNS and ingress path troubleshooting.
-- [`docs/node-capacity-dashboard.md`](./node-capacity-dashboard.md) for node fit, CPU reservation and rollout headroom, and capacity views.
-- [`docs/power-estimation-dashboard.md`](./power-estimation-dashboard.md) for estimated node power, historical cost recording, and daily GitOps automation of Singapore's quarterly electricity tariff.
-- [`docs/metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md) when working with the Metrics API or `kubectl top`.
-- [`docs/flux-web-ui.md`](./flux-web-ui.md) for the Flux Operator web UI at `fluxui.khzaw.dev`.
-- [`docs/kube-state-metrics-oomkills.md`](./kube-state-metrics-oomkills.md) for the known kube-state-metrics sizing issue.
-- [`docs/cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md) for CronJob dead-man's-switch alerts and staleness/failure routing.
-- [`docs/flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md) for per-object Flux failure notifications, CPU reservation exhaustion, and Jackett's missing-image rollback recovery.
-
-### Secrets and auth
-
-- [`docs/grafana-admin-credentials.md`](./grafana-admin-credentials.md) for Grafana's SOPS-managed admin account, password retrieval, and rotation of the persisted database credential.
-- [`docs/github-credentials.md`](./github-credentials.md) for existing GitHub Secret keys, verified permissions, credential selection, and rotation dependencies; consult it before requesting a new token.
-- [`docs/secrets-inventory.md`](./secrets-inventory.md) for service-to-secret mapping.
-- [`docs/secrets-management-current-state-options-and-plan.md`](./secrets-management-current-state-options-and-plan.md) for the SOPS and age operating model.
-- [`docs/cloudflare-access-share-hosts-email-otp-plan.md`](./cloudflare-access-share-hosts-email-otp-plan.md) for share-host auth behavior.
-
-### Operations and commands
-
-- [`docs/ops-command-cheatsheet.md`](./ops-command-cheatsheet.md) for day-2 command snippets, repo kubeconfig selection, and common triage flows.
-
-### Service-specific guides
-
-- [`docs/romm.md`](./romm.md) for the private ROM library, shared PostgreSQL provisioning, and expandable NAS storage.
-- [`docs/study-services-livesync-anki-bookorbit.md`](./study-services-livesync-anki-bookorbit.md)
-- [`docs/reactive-resume.md`](./reactive-resume.md)
-- [`docs/bentopdf.md`](./bentopdf.md) for private browser-based PDF tools, resource limits, and bounded autoscaling.
-- [`docs/shelfmark.md`](./shelfmark.md)
-- [`docs/subarr.md`](./subarr.md)
-- [`docs/tracerr.md`](./tracerr.md)
-- [`docs/isponsorblocktv.md`](./isponsorblocktv.md)
-- [`docs/tv-channels-tunarr-ersatztv.md`](./tv-channels-tunarr-ersatztv.md)
-- [`docs/blog-static-site-gitops-deployment-plan.md`](./blog-static-site-gitops-deployment-plan.md)
-
-### Historical analysis and migration context
-
-- [`docs/public-edge-phase1-bootstrap.md`](./public-edge-phase1-bootstrap.md) for the initial public-edge bootstrap record before the current exposure-control design.
-- [`docs/networking-simplified-migration-todo.md`](./networking-simplified-migration-todo.md) for the completed Tailscale ingress-proxy migration checklist and rollback notes.
-- [`docs/pangolin-fit-analysis.md`](./pangolin-fit-analysis.md) for historical Pangolin fit analysis against the access stack at the time.
-
-## Minimum Reading Standard
-
-- Single-service change: read the startup trio plus at least one focused doc for that service or domain.
-- Cross-cutting change: read at least one focused doc for each affected domain.
-- Incident/debugging work: start with the most relevant incident or gotcha doc before proposing fixes.
-- Review work: read the focused docs that define the expected behavior before evaluating correctness.
+- `rangoonpulse-shared-worktree`
+- `rangoonpulse-service-deploy`
+- `rangoonpulse-upgrade`
+- `rangoonpulse-cluster-conventions`
+- `rangoonpulse-access-and-edge`
+- `rangoonpulse-adguard-dns`
+- `rangoonpulse-resource-advisor`
 
 ## Maintenance Rule
 
-- If you change a stable operating convention, update this index and the focused doc that owns that convention in the same change.
-- If you discover a recurring incident pattern or operational gotcha, add a focused doc and link it here and from `AGENTS.md`.
+When implementation changes, update or delete the owning docs in the same change. Do not add a historical record. Preserve only the minimum rationale required to explain a current constraint, and use Git history for everything else.

@@ -1,89 +1,40 @@
+---
+title: Travel Center
+summary: Current control-panel travel readiness probes, source files, limitations, and verification.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Travel Center
 
-## Purpose
+The Travel tab at `controlpanel.khzaw.dev/#travel` summarizes remote-readiness signals. The API is `GET /api/travel`.
 
-The control panel now includes a `Travel` tab at `https://controlpanel.khzaw.dev#travel`.
+## Source Of Truth
 
-This page is the operator-facing remote-life surface for the homelab. It does not manage the client-side Tailscale app,
-but it does answer the practical cluster-side questions that matter when you are away:
+- target configuration: `apps/exposure-control/travel.json`
+- backend: `apps/exposure-control/server.js`
+- frontend: `apps/exposure-control/index.html`, `app.js`, and `styles.css`
+- RBAC/runtime: `apps/exposure-control/rbac.yaml` and `helmrelease.yaml`
 
-- is the Tailscale connector healthy enough for private remote access
-- is the connector still configured as an exit node
-- are the key remote hostnames responding
-- what is the current Transmission route
-- are any temporary public shares still active
+## What It Checks
 
-## Current Model
+The backend probes configured private/public endpoints, reads Tailscale Connector status, reports Transmission routing state, and summarizes temporary shares.
 
-Travel Center lives inside the existing `apps/exposure-control/` app. It reuses:
+The configured target list is authoritative in `travel.json`; do not duplicate it into this doc.
 
-- the exposure-control backend and static UI shell
-- the existing Transmission VPN status and control API
-- the existing temporary share state and audit log
-- the cluster's current unified access model documented in `docs/networking-current-state-and-simplification.md`
+Current limitation: the Connector itself advertises `${IRIS_VIP}/32`, but the Travel expected-route list does not include that route. Travel readiness can therefore be green without proving the Iris/Athena dedicated edge route. Check the Connector directly when those hosts matter.
 
-It does **not** replace:
+## Verification
 
-- the Tailscale client app on your phone/laptop
-- manual client-side exit-node selection
-- the exposure-control tab for detailed share edits
-
-## Config Source
-
-Travel targets and bundle groupings are defined in:
-
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/travel.json`
-
-That file declares:
-
-- the expected Connector name
-- the expected advertised `/32` routes
-- curated remote bundles such as `Essentials`, `Media`, and `Life`
-- the URLs and HTTP probe expectations for each target
-
-## API
-
-The control panel backend now exposes:
-
-- `GET /api/travel`
-
-This returns:
-
-- summary travel state
-- Connector readiness and route expectations
-- Transmission routing posture
-- active temporary share posture
-- grouped link bundles and per-target probe results
-- operator notes for remote use
-
-## Files
-
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/server.js`
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/index.html`
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/app.js`
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/styles.css`
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/travel.json`
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/rbac.yaml`
-- `/Users/khz/Code/rangoonpulse/apps/exposure-control/helmrelease.yaml`
-
-## Validation
+URL fragments are browser-side and are not sent in HTTP requests. `curl ...#travel` only tests the root page. Probe the API instead:
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
-
-kubectl apply --dry-run=client -f apps/exposure-control/rbac.yaml
-kubectl apply --dry-run=client -f apps/exposure-control/helmrelease.yaml
-kubectl kustomize apps/exposure-control | kubectl apply --dry-run=client -f -
-
-curl -s https://controlpanel.khzaw.dev/api/travel | jq '.summary,.connector,.transmission,.exposures.activeCount'
-curl -I --max-time 20 https://controlpanel.khzaw.dev#travel
+curl -s https://controlpanel.khzaw.dev/api/travel | jq
+kubectl get connector homelab-subnet-router -o yaml
+kubectl get pods -n tailscale -o wide
 ```
 
-## Operator Notes
+For remote acceptance, test from an actual tailnet client rather than only from inside the cluster.
 
-- A healthy Travel tab means the cluster-side prerequisites for remote use look good.
-- It does **not** guarantee the client device is connected to Tailscale.
-- Exit-node use is still selected on the client device.
-- If private access breaks after network changes, re-check the Tailscale Connector and the TrueNAS
-  `Accept Routes` gotcha documented in `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`.
+If private access and NFS fail after Tailscale changes, verify the Connector routes and keep TrueNAS Tailscale Accept Routes disabled.

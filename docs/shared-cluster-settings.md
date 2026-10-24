@@ -1,156 +1,56 @@
+---
+title: Shared Cluster Settings
+summary: Current Flux post-build substitution contract and cluster-wide non-secret keys.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Shared Cluster Settings
 
-## Purpose
+`flux/cluster-settings.yaml` is the source of cluster-wide non-secret constants consumed by child Flux Kustomizations through post-build substitution.
 
-This repository now keeps cluster-wide non-secret constants in one GitOps-managed place:
+Current keys cover:
 
-- `/Users/khz/Code/rangoonpulse/flux/cluster-settings.yaml`
-
-The goal is to avoid redeclaring the same base domain, node names, node IPs, ingress VIP, and similar values across
-many manifests.
-
-## Source Of Truth
-
-- Git file: `flux/cluster-settings.yaml`
-- In-cluster object: `ConfigMap/flux-system/cluster-settings`
-
-Current keys:
-- `BASE_DOMAIN`
-- `ERICAKNIGHT_DOMAIN`
-- `SHARE_HOST_PREFIX`
-- `TIMEZONE`
-- `PRIMARY_NODE_NAME`
-- `UTILITY_NODE_NAME`
-- `PRIMARY_NODE_IP`
-- `UTILITY_NODE_IP`
-- `INGRESS_VIP`
-- `IRIS_VIP`
-- `NAS_IP`
-- `ROUTER_IP`
-- `IRIS_MAC_MINI_IP`
-- `ADGUARD_PRIMARY_IP`
-- `ADGUARD_SECONDARY_IP`
-- `LAN_CIDR`
-- `POD_CIDR`
-- `SERVICE_CIDR`
-
-## How Manifests Consume It
-
-Flux child `Kustomization` objects now use:
-
-```yaml
-postBuild:
-  substituteFrom:
-    - kind: ConfigMap
-      name: cluster-settings
-```
-
-This means Flux substitutes `${VAR}` placeholders in rendered manifests using the values from
-`ConfigMap/flux-system/cluster-settings`.
-
-Examples:
-- `${BASE_DOMAIN}`
-- `${TIMEZONE}`
-- `${PRIMARY_NODE_NAME}`
-- `${INGRESS_VIP}`
-
-## Reconciliation Cadence
-
-The root `GitRepository/flux-system` stays on a short poll interval so pushed Git changes are detected promptly.
-Ordinary child `Kustomization` objects and `HelmRelease` objects use a `24h` periodic interval by default.
-Flux image repositories use a `6h` interval by default so unattended image tag discovery still happens within the same day.
-Interview Prep is a temporary active-development exception: its image repository and per-site image-update writer run hourly.
-The other image repositories and per-site image-update writers retain their `6h` interval.
-
-The longer default reduces background controller churn on a small cluster while still allowing explicit reconciles:
-
-```bash
-flux reconcile kustomization <name> -n flux-system --with-source
-flux reconcile helmrelease <name> -n <namespace>
-```
-
-## Important Escaping Rule
-
-Some app configs intentionally need literal `${...}` at runtime:
-- Dynacat secret placeholders such as `${JELLYFIN_API_KEY}`
-- shell/runtime placeholders such as `${TRACERR_DB_PASSWORD}`
-- JavaScript template literals inside `apps/exposure-control/server.js`
-
-Because Flux post-build substitution would otherwise consume those, keep them escaped in repo source as:
-
-```text
-$${VAR}
-```
-
-Flux renders `$${VAR}` back to literal `${VAR}` in the applied manifest.
-
-Files that already rely on this pattern:
-- `apps/exposure-control/server.js`
-- `apps/dynacat/helmrelease.yaml`
-- `apps/media-postgres/helmrelease.yaml`
-
-## Scope Rules
-
-Good candidates for `cluster-settings`:
-- base domain and shared hostname suffixes
-- shared public-host prefixes such as `share-`
+- base and secondary domains
+- share-host prefix
 - timezone
-- node names used in selectors and dashboards
-- stable LAN IPs and shared CIDRs
-- ingress VIP and LAN-service IPs
-- dedicated VIPs for special edge exceptions
+- primary and utility node names/IPs
+- shared ingress VIP
+- Transmission peer-to-peer VIP
+- Mac mini edge VIP and LAN IP
+- NAS and router IPs
+- AdGuard primary and secondary IPs
+- LAN, Pod, and Service CIDRs
 
-Do not put these in `cluster-settings`:
-- secrets or credentials
-- controller-owned runtime state
-- app-local feature flags or chart-only settings
-- internal identifier strings that only happen to contain the current domain
+Add a key only when multiple reconciled components need one shared value. App-local values belong with the app.
 
-Intentional example that stays literal today:
-- `khzaw.dev/transmission-egress-mode` in `apps/transmission/transmission-vpn-control.yaml`
+## Substitution Rules
 
-That key is acting as an internal annotation namespace, not a public hostname.
+Use `${VAR}` for values Flux should substitute.
 
-## Non-Flux Files
+Use `$${VAR}` when the rendered resource must retain a literal `${VAR}` for the application runtime. Flux consumes one dollar sign and leaves the placeholder intact.
 
-Some repo files are not rendered by Flux:
-- `Makefile`
-- `talos/*.yaml`
-- tests and local helper scripts
+Every child Kustomization that uses shared settings must reference the `cluster-settings` ConfigMap in `postBuild.substituteFrom`.
 
-Current handling:
-- `Makefile` reads node IPs directly from `flux/cluster-settings.yaml`.
-- Talos machine configs remain explicit today and must still be updated manually if node IPs or control-plane endpoint
-  values change.
+## Change Procedure
 
-Talos was intentionally left out of the first centralization pass to avoid changing how machine configs are consumed.
-
-## Validation
-
-When changing shared settings:
+1. find every current consumer
+2. update the shared value or add the key
+3. render the full Flux tree
+4. inspect substitutions and runtime-literal escapes
+5. reconcile the smallest affected Kustomizations
+6. verify the resulting objects and workload behavior
 
 ```bash
-kubectl apply --dry-run=client -f flux/cluster-settings.yaml
-kubectl kustomize flux | kubectl apply --dry-run=client -f -
-flux reconcile kustomization flux-system -n flux-system --with-source
-flux get kustomizations -n flux-system
+kubectl kustomize flux >/tmp/rangoonpulse-flux-rendered.yaml
+rg '\${[A-Z_][A-Z0-9_]*}' /tmp/rangoonpulse-flux-rendered.yaml
 ```
 
-For a specific child path, verify the rendered output before pushing:
+`kubectl kustomize` builds objects but does not perform Flux post-build substitution; placeholders in this output are expected. Verify each owning Flux Kustomization's substitution source and inspect its applied objects to confirm the final values. Runtime placeholders should originate from `$${...}` in source. Dynacat, exposure-control JavaScript, and media-postgres shell configuration rely on this escape.
 
-```bash
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
+## Cadence Notes
 
-flux build kustomization <name> \
-  --path <local-path> \
-  --kustomization-file flux/kustomizations/<name>.yaml \
-  --local-sources GitRepository/flux-system/flux-system=.
-```
+Image automation timing is not a cluster setting. The six per-app flows own their intervals under `infrastructure/image-automation/`; Interview Prep currently uses three hours and the other five use six.
 
-## Operational Notes
-
-- A shared-settings refactor should be rendered-equivalent before you change actual values. Prefer:
-  1. add the variable reference,
-  2. verify rendered output is unchanged,
-  3. only later change the value in `flux/cluster-settings.yaml`.
-- If a change is expected to be no-op but Helm still rolls a pod, verify readiness and logs before proceeding.
+Talos machine configuration is outside Flux substitution. A shared IP change may require a separate secure Talos update; do not assume changing this ConfigMap updates nodes.

@@ -1,65 +1,68 @@
 # AGENTS.md - rangoonpulse
 
-This file is the repo entrypoint for new agent sessions. Keep it lean.
-Detailed operating context belongs in the root `README.md`, `docs/README.md`,
-focused docs under `docs/`, and project-local skills under `.agents/skills/`.
+This is the repository entrypoint for agent sessions. Keep it short and current.
 
 ## Start Here
-- On every new session in this repo, read in order:
-  1. `AGENTS.md`
-  2. `README.md`
-  3. `docs/README.md`
-- Then open the smallest relevant focused doc set before planning, reviewing, debugging, or editing.
-- After bootstrap, treat `.agents/skills/rangoonpulse-shared-worktree/` as baseline behavior for the rest of the session.
 
-## Minimal Cluster Snapshot
-- Platform: Talos Linux Kubernetes cluster managed with Flux CD GitOps
-- Primary workload node: `talos-7nf-osf` (`amd64`, `10.0.0.197`)
-- Utility node: `talos-uua-g6r` (`arm64`, `10.0.0.38`)
-- Shared ingress VIP: `10.0.0.231`
-- Timezone standard: `Asia/Singapore`
+1. Refresh Git state and inspect the shared worktree.
+2. Read `README.md` and `docs/README.md`.
+3. Load `.agents/skills/rangoonpulse-shared-worktree/SKILL.md` as baseline behavior.
+4. Open only the focused docs and project-local skill that match the task.
+
+Use repository-relative paths. The checkout location differs between operators and agents.
+
+## Sources Of Truth
+
+- Desired cluster state: `apps/`, `core/`, `infrastructure/`, and `flux/`
+- Shared non-secret constants: `flux/cluster-settings.yaml`
+- Current operating guidance: `docs/`
+- Repeated procedures and safety gates: `.agents/skills/`
+- Historical decisions and superseded designs: Git history, not current docs
+
+If prose conflicts with manifests or code, treat the implementation as authoritative and fix the prose in the same change.
 
 ## Repo Invariants
-- Commit Message Format: For monorepos, use the "xxx: commit msg" pattern, where "xxx" is the subsystem or component being changed (e.g., `iris:`, `feat:`).
-- Use GitOps. Do not rely on direct `kubectl apply` for permanent state.
-- `kubectl apply --dry-run=client` is fine for validation.
-- Prefer `HelmRelease` changes over raw manifests.
-- Keep app config inline in `helmrelease.yaml` unless a separate file is clearly warranted.
-- Use `flux/cluster-settings.yaml` for cluster-wide non-secret constants.
-- Escape runtime-literal placeholders as `$${VAR}` when Flux post-build substitution is in play.
-- Do not commit plaintext credentials; Git-managed secrets stay SOPS-encrypted under `infrastructure/secrets/**`.
-- Before requesting a new GitHub token, consult [`docs/github-credentials.md`](docs/github-credentials.md) for existing Secret keys, verified permissions, and reuse guidance.
-- Keep ingress, DNS annotation, and TLS settings aligned for externally reachable apps.
-- For critical redundant services, do not couple both instances into one risky rollout unit.
-- This repo is a shared worktree. Do not revert unrelated edits; stage only your task's hunks.
-- New app deployments include the complete operator setup in [`docs/service-onboarding.md`](docs/service-onboarding.md): dashboard/monitor, update management, disabled share setup, tuning, secrets inventory, and live verification of every surface.
+
+- Use Flux GitOps for permanent cluster state. Direct `kubectl apply` is for validation or an explicitly controlled operator action only.
+- Prefer `HelmRelease` changes over raw manifests when the existing deployment pattern supports it.
+- Keep app configuration inline in `helmrelease.yaml` unless separation has a concrete maintenance benefit.
+- Put cluster-wide non-secret constants in `flux/cluster-settings.yaml`.
+- Escape runtime-literal placeholders as `$${VAR}` when Flux post-build substitution is active.
+- Never commit plaintext credentials. Git-managed secrets stay SOPS-encrypted under `infrastructure/secrets/`.
+- Before requesting a GitHub token, consult `docs/github-credentials.md` for existing credentials, required permissions, and reuse guidance.
+- Keep ingress, DNS ownership, and TLS configuration aligned for reachable services.
+- Do not couple redundant critical services into one rollout unit.
+- This is a shared worktree. Preserve unrelated edits and stage only the task's files or hunks.
+- Commit directly to the current branch. On `master`, use `<subsystem>: <present-tense action>` and push `master` unless the user says otherwise.
 
 ## Task Routing
-Use the matching project-local skill when the task fits:
-- `rangoonpulse-service-deploy`: add, move, rename, expose, or materially change a service; read [`docs/service-onboarding.md`](docs/service-onboarding.md) for the required completion contract
-- `rangoonpulse-upgrade`: bump a chart, image, or service version
-- `rangoonpulse-cluster-conventions`: cluster-wide settings, placement, storage, ingress/TLS, secrets, and ordinary manifest conventions
-- `rangoonpulse-access-and-edge`: Tailscale, ingress VIP access model, public-edge, exposure-control, share hosts, Transmission VPN routing, and hostname exceptions
-- `rangoonpulse-adguard-dns`: dual AdGuard rollout and LAN DNS behavior
-- `rangoonpulse-resource-advisor`: tuning automation, exporter/UI, apply scope, and service auto-tuning integration
 
-If no skill applies, route through `docs/README.md` and read the smallest focused doc set for the touched domain.
+Use the smallest matching project-local skill:
 
-Service reference: [`docs/bentopdf.md`](docs/bentopdf.md) covers BentoPDF's private access and autoscaling.
-Dashboard reference: [`docs/dashboards-dynacat.md`](docs/dashboards-dynacat.md) covers Dynacat at `rangoonpulse.khzaw.dev`.
-Service reference: [`docs/romm.md`](docs/romm.md) covers RomM's shared PostgreSQL hook and expandable NAS library.
-Host reference: [`docs/iris-operations.md`](docs/iris-operations.md) covers Iris's native launchd telemetry and independent cluster sentinel.
-Incident reference: [`docs/flux-reconciliation-alerts.md`](docs/flux-reconciliation-alerts.md) covers stuck rollbacks and Jackett's image-publication race.
-Upgrade reference: [`docs/kubernetes-upgrade.md`](docs/kubernetes-upgrade.md) covers Kubernetes upgrades on Talos, backup handling, bootstrap manifests, and live verification.
-Auth reference: [`docs/grafana-admin-credentials.md`](docs/grafana-admin-credentials.md) covers Grafana's encrypted admin Secret and persisted-password rotation.
+- `rangoonpulse-service-deploy`: add, move, rename, expose, or materially change a service
+- `rangoonpulse-upgrade`: bump a chart, image, controller, or service version
+- `rangoonpulse-cluster-conventions`: placement, storage, shared settings, ingress/TLS, secrets, and ordinary manifests
+- `rangoonpulse-access-and-edge`: Tailscale, ingress, public edge, exposure-control, share hosts, Transmission VPN routing, and hostname exceptions
+- `rangoonpulse-adguard-dns`: dual AdGuard and LAN DNS
+- `rangoonpulse-resource-advisor`: tuning automation and cockpit integration
 
-## Docs Hygiene
-- If you change a stable operating convention, update `docs/README.md` and the focused doc that owns it.
-- If you add a recurring workflow or dense operator procedure, prefer a project-local skill or focused doc instead of growing this file.
-- If you discover a new operational gotcha or incident pattern, add a focused doc and link it from `docs/README.md`.
+If no skill applies, use `docs/README.md` to find the owning current-state doc.
+
+New apps must meet `docs/service-onboarding.md`: dashboard/monitor, update management, disabled share wiring, tuning/HPA policy, secrets inventory, and live verification. For existing services, keep the affected integrations consistent without expanding a narrow fix into unrelated onboarding work.
+
+## Documentation Standard
+
+- Docs describe the current implementation, operating contract, and non-obvious constraints that still apply.
+- Do not keep completed plans, migration checklists, incident timelines, superseded options, or retired-service notes in the current corpus.
+- Retain past rationale only when it is necessary to explain a present-day tradeoff. State the active constraint first and keep the history to the minimum needed.
+- When a plan lands, replace it with current operating guidance or delete it.
+- When an incident is resolved, absorb any reusable guardrail into the owning current-state doc or skill, then delete the incident record.
+- Update or remove stale docs in the same change as the implementation that invalidates them.
 
 ## Validation
-- Validate manifests before push using the smallest meaningful check for the change (`kubectl apply --dry-run=client`, `kubectl kustomize`, `flux build`, and task-specific checks).
-- For resource, replica, placement, or new-workload changes, preflight rendered workloads with `make check-capacity FILE=<rendered.yaml>` and server-side dry run; see [`docs/cpu-headroom-validation.md`](docs/cpu-headroom-validation.md).
-- Before commit/push, inspect `git status` and stage only your task's hunks.
-- For debugging, incident, or service-change work, include a concise learning summary in the final response: what failed, what evidence was gathered, which hypotheses were tested, what decision was made, and how it was verified. The detailed expectation lives in `.agents/skills/rangoonpulse-shared-worktree/`.
+
+- Use the smallest meaningful task-specific checks before the canonical repository gate.
+- Run `make validate-all` before push unless the change is explicitly eligible for a narrower documented fast path.
+- For resource, replica, placement, or new-workload changes, render the workloads and run the Git/CI and live CPU headroom preflights in `docs/cpu-headroom-validation.md`. Check HPA maximum replicas separately; there is no live admission webhook.
+- Inspect the exact staged diff, commit only intended work, push, and verify local and remote refs agree.
+- For debugging or service changes, report the current failure boundary, evidence, decision, and verification. Do not preserve the investigation diary in repo docs.

@@ -1,3 +1,11 @@
+---
+title: GitOps Change Timeline Dashboard
+summary: Current operating guidance for GitOps Change Timeline Dashboard.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # GitOps Change Timeline Dashboard
 
 This dashboard focuses on Flux activity over time so you can answer:
@@ -21,8 +29,6 @@ This dashboard focuses on Flux activity over time so you can answer:
 ## Verification
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 

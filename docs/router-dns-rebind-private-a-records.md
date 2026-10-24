@@ -1,47 +1,38 @@
-# Router DNS Rebind Gotcha (Private A Records)
+---
+title: Private DNS And Rebind Protection
+summary: Current diagnosis and safe exception model for private khzaw.dev records.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
 
-If you publish DNS records (via Cloudflare + external-dns) that point to private RFC1918 IPs (for example `10.0.0.231`),
-some home routers will refuse to answer these queries from LAN clients.
+# Private DNS And Rebind Protection
 
-## Symptom
-- `https://someapp.khzaw.dev` works for some clients but not others.
-- Browsers show DNS errors like "could not resolve host".
-- Public resolvers return an answer:
+Private service hostnames may intentionally resolve to RFC1918 ingress or dedicated-edge VIPs. DNS resolvers and routers can reject those answers as DNS rebinding.
+
+## Diagnosis
+
+Compare each boundary:
 
 ```bash
-dig @1.1.1.1 +short someapp.khzaw.dev
+dig @1.1.1.1 +short <private-host>
+dig @10.0.0.233 +short <private-host>
+dig @10.0.0.234 +short <private-host>
+scutil --dns
 ```
 
-- Your router DNS returns `NOERROR` with an empty answer (or `NXDOMAIN`):
+Then query the resolver actually configured on the client. Query `10.0.0.1` only if the router is acting as that client's DNS proxy.
 
-```bash
-dig @10.0.0.1 someapp.khzaw.dev A +noall +comments +cmd
-```
+First rule out cached empty answers for new hostnames. ExternalDNS syncs every five minutes, and AdGuard, router, OS, and browser caches may recover at different times after publication. Compare authoritative/public resolution with each AdGuard, the router, and the actual client resolver. Clear only the affected cache through its authenticated administration surface; do not restart both DNS instances.
 
-## Root Cause
-Router-side DNS rebind protection or filtering of "public hostname -> private IP" responses.
+If the failure persists after publication and cache recovery, investigate rebind filtering. A private address resolving correctly at a public resolver does not alone distinguish filtering from a stale negative cache.
 
-For a newly deployed hostname, first rule out cached empty answers. ExternalDNS
-runs every five minutes, and queries before it publishes the record can remain
-cached after authoritative DNS is correct. During BentoPDF deployment, public
-DNS and the secondary AdGuard returned the new address while the primary
-AdGuard, router, and Mac still held empty answers. Clearing the primary's DNS
-cache resolved that layer; the router recovered without configuration changes.
+## Safe Fix
 
-Compare the authoritative/public resolver, each AdGuard, the router, and the
-client separately before changing rebind settings. Use AdGuard's existing
-authenticated admin session to clear its cache when needed; avoid restarting
-both DNS instances. A browser can recover before another client using the OS
-resolver does. Recheck the actual HTTPS URL after resolution recovers.
+Prefer a scoped exception for `khzaw.dev` or the exact required hostnames. Do not disable DNS-rebind protection globally.
 
-Even if the router uses `1.1.1.1` for upstream DNS, it may still drop the response before returning it to clients.
+Permanent-public Tunnel hostnames are different. They should resolve to Cloudflare edge addresses. An RFC1918 answer for a permanently public hostname usually means DNS ownership is wrong.
 
-## Fix
-On the router DNS:
-- Disable DNS rebind protection, or
-- Add an allowlist/exception for `khzaw.dev` (or the specific hostname), or
-- Ensure internal hostnames are served from an internal DNS view that allows private answers.
+## Verification
 
-Client-side workarounds:
-- Temporarily set DNS to `1.1.1.1`/`8.8.8.8`, or
-- Add a `hosts` entry mapping the hostname to the ingress IP.
+After changing resolver policy, flush the client cache and confirm DNS plus the actual HTTPS path. Use `curl --resolve` to separate resolver behavior from ingress behavior.

@@ -1,3 +1,11 @@
+---
+title: AdGuard DNS Stack: Router Setup and Architecture
+summary: Current operating guidance for AdGuard DNS Stack: Router Setup and Architecture.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # AdGuard DNS Stack: Router Setup and Architecture
 
 ## Purpose
@@ -6,7 +14,7 @@ This document explains:
 - what DNS IP to configure on the router, and
 - how AdGuard changes the overall DNS stack without changing GitOps DNS ownership.
 
-## Current Deployment (As Of 2026-03-08)
+## Current Deployment
 - Namespace: `default`
 - Primary HelmRelease: `apps/adguard/primary/helmrelease.yaml`
   - Flux Kustomization: `flux/kustomizations/adguard-primary.yaml`
@@ -92,7 +100,7 @@ Expected GitOps state:
 AdGuard writes runtime config into `/adguard-data/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
 drift away from intended GitOps behavior.
 
-To keep behavior stable, startup now enforces DNS keys in
+Startup enforces DNS keys in
 `apps/adguard/primary/helmrelease.yaml` and `apps/adguard/secondary/helmrelease.yaml` before launching AdGuard:
 - `dns.fastest_timeout: 1s`
 - `dns.cache_size: 16777216`
@@ -126,11 +134,11 @@ Why this matters:
 
 Safe pattern in this cluster:
 - one PVC per AdGuard instance,
-- same GitOps-enforced baseline runtime tuning on both instances,
-- if you want matching behavior, copy `AdGuardHome.yaml` from the primary instance to the secondary instance as a one-way sync.
+- the same GitOps-enforced baseline runtime tuning on both instances,
+- independent runtime state unless a separately validated synchronization procedure is introduced.
 
 ### 4a) Keep Critical PVCs Outside The HelmRelease
-AdGuard no longer relies on Helm-generated PVCs.
+AdGuard PVCs are GitOps-managed outside the HelmRelease.
 
 Why this matters:
 - uninstalling or renaming a HelmRelease can delete Helm-owned `local-path` PVCs,
@@ -144,7 +152,7 @@ Expected GitOps state:
 - both claims are annotated `kustomize.toolkit.fluxcd.io/prune: disabled`
 
 ### 4b) Bootstrap Missing Config Instead Of Falling Back To The Wizard
-If a PVC is genuinely empty, container startup now writes a minimal working `AdGuardHome.yaml` to the PVC before launching
+If a PVC is genuinely empty, container startup writes a minimal working `AdGuardHome.yaml` to the PVC before launching
 AdGuard.
 
 Current seeded baseline:
@@ -174,7 +182,7 @@ Important:
 - For per-device visibility, clients must query AdGuard directly (`10.0.0.233`) via DHCP or local DNS settings, not via router DNS forwarding.
 
 ### 7) Upgrade One AdGuard At A Time
-Primary and secondary AdGuard now reconcile through separate Flux `Kustomization` objects:
+Primary and secondary AdGuard reconcile through separate Flux `Kustomization` objects:
 - `adguard-primary` -> `./apps/adguard/primary`
 - `adguard-secondary` -> `./apps/adguard/secondary`
 
@@ -192,7 +200,7 @@ Use that split to avoid restarting both DNS services in the same rollout window.
 4. verify `dig @10.0.0.233 ...` and pod health
 
 ### 8) Probes Must Catch Wizard Mode
-AdGuard now uses startup, readiness, and liveness probes that require:
+AdGuard uses startup, readiness, and liveness probes that require:
 - `/adguard-data/conf/AdGuardHome.yaml` to exist,
 - TCP `80` to accept connections,
 - TCP `53` to accept connections.

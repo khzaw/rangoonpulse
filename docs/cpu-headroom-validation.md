@@ -3,7 +3,7 @@ title: CPU Headroom Validation
 summary: Git and CI capacity checks for resource edits, new workloads, and replica scaling without live admission enforcement.
 status: active
 owner: homelab
-last_reviewed: 2026-10-22
+last_reviewed: 2026-10-25
 ---
 
 # CPU Headroom Validation
@@ -54,8 +54,7 @@ reads the public branch without cluster or GitHub write credentials. The branch
 is runtime state, is outside Flux's master source, and does not trigger master CI.
 It must never be merged into master. Each publication creates a parentless commit
 with only the snapshot file and force-updates `capacity-state`, keeping its reachable
-history to one commit rather than accumulating 96 commits per day. This also replaces
-the old accumulating history on the first successful publication. GitHub may retain
+history to one commit rather than accumulating 96 commits per day. GitHub may retain
 unreachable objects temporarily; immediate physical storage reclamation is not
 guaranteed. Force updates must remain permitted on this runtime-state branch (not
 on `master`). A rejected update fails the job and leaves the previous snapshot intact.
@@ -89,7 +88,4 @@ replicas explicitly. CI failure is a repository check, not a Kubernetes admissio
 policy or a substitute for branch protection. A direct master push can reach Flux
 before CI finishes. Check live placement, rollout, and alerts after reconciliation.
 
-The prior API webhook has been removed through GitOps, along with its registration,
-TLS resources, network policy and listener. Deletes and manual recovery require no
-admission break-glass procedure. Script ConfigMaps retain content hashes so policy
-changes automatically roll the running exporter and update subsequent Jobs.
+There is no live admission break-glass procedure. Script ConfigMaps retain content hashes so policy changes automatically roll the exporter and update subsequent Jobs.

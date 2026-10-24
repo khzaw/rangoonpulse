@@ -1,8 +1,15 @@
+---
+title: Dynacat Dashboard
+summary: Private dashboard, streaming updates, widget credentials, cache behavior, and verification.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Dashboard: Dynacat
 
 Dynacat is the dashboard and service hub at **https://rangoonpulse.khzaw.dev**.
 It uses the normal private ingress VIP access path on LAN and through Tailscale.
-The former `glance.khzaw.dev` alias and its workload, Flux objects, ingress, and certificate have been retired.
 
 ## GitOps sources
 
@@ -13,8 +20,7 @@ The former `glance.khzaw.dev` alias and its workload, Flux objects, ingress, and
 - `default/dynacat-github`: SOPS-managed GitHub token for authenticated release lookups;
   its `token` key is injected as `GITHUB_RELEASES_TOKEN`.
 
-The dashboard runs on the ARM64 utility node, `talos-uua-g6r`, with the pinned multiarch
-`ghcr.io/panonim/dynacat:3.0.0` image. The Home, Health, and Media pages retain the existing
+The dashboard runs on the ARM64 utility node, `talos-uua-g6r`, with the multiarch image pinned in its HelmRelease. The Home, Health, and Media pages retain the existing
 service links, feeds, markets, media information, and custom API integrations.
 
 ## Live updates and additions
@@ -57,12 +63,7 @@ runtime environment reference. Keep the credential in `default/dynacat-github`, 
 the ConfigMap. Its purpose is to read public repository releases; the widget does not
 need repository write access.
 
-On 2026-09-15, the whole Releases widget displayed `failed to retrieve any content`.
-Pod logs showed GitHub HTTP `403` responses for all tracked repositories, including
-BentoPDF, with `API rate limit exceeded`. The widget had no token configured and shared
-the cluster's unauthenticated request quota. Authenticate these requests before treating
-that symptom as a missing release or an invalid repository name. After a credential
-change, roll the deployment and check both the pod logs and rendered release entries.
+If every release lookup fails, inspect GitHub authentication and rate-limit errors before diagnosing individual repository names. After credential changes, roll the deployment and verify rendered entries as well as logs.
 
 The custom API templates use Go template braces. Preserve the Helm wrapper when embedding them:
 
@@ -77,18 +78,11 @@ Dynacat to expand from the shared Secret. Do not substitute real API keys into G
 Existing integrations include Uptime Kuma's `/api/status-page/heartbeat/<slug>` endpoint and Jellyfin's `/Sessions`
 endpoint for Now Playing. These remain custom API widgets.
 
-Migration check on 2026-09-15 found the existing Jellyfin widget credential returns HTTP 401 for `/Items/Counts`,
-`/Users`, and `/Sessions`; the old dashboard showed the same empty results. Renew the shared `JELLYFIN_API_KEY`
-through the encrypted-secret workflow to restore these widgets. This migration preserves the existing credential.
+A widget credential can fail independently of dashboard health. Verify the shared Jellyfin key against the actual `/Sessions`, `/Items/Counts`, and `/Users` operations; renew it through the encrypted-secret workflow when needed.
 
-## Retirement cleanup
+## Retirement Safety
 
-Removing the old GitOps resources does not guarantee every generated object disappears. During this migration,
-cert-manager left an unreferenced TLS Secret without an owner reference. external-dns removed the CNAME and its
-current prefixed ownership TXT on the next five-minute sync, but a legacy ownership TXT at the bare hostname survived.
-Both orphan objects were removed after checking their exact ownership and confirming no current consumer remained.
-For future retirements, inspect the generated Secrets and authoritative DNS as well as Flux/Helm readiness; DNS API
-changes can take a short time to reach all authoritative servers.
+Generated objects can survive removal of GitOps resources. Before deleting orphan TLS Secrets or DNS ownership TXT records, verify exact ownership and lack of current consumers. Check authoritative DNS after the ExternalDNS sync and allow for propagation.
 
 ## Verification
 

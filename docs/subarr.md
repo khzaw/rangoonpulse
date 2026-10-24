@@ -1,40 +1,38 @@
 ---
 title: Subarr
-summary: Deployment notes and breadcrumb surfaces for the Subarr subtitle-management service.
+summary: Current Subarr runtime, SQLite/media storage, dashboard integration, and incomplete public-share wiring.
 status: active
 owner: homelab
-last_reviewed: 2026-07-02
+last_reviewed: 2026-10-25
 ---
 
 # Subarr
 
-Subarr is a subtitle-management service for the media automation stack.
+Subarr is the subtitle-management service at `subarr.khzaw.dev`.
 
-## Source Of Truth
+## Source And Runtime
 
-- App manifests: `apps/subarr/`
-- Flux registration: `flux/kustomizations/subarr.yaml`
-- Dynacat dashboard links and monitors: `apps/dynacat/helmrelease.yaml`
-- Exposure-control service catalog: `apps/exposure-control/services.json`
+- app: `apps/subarr/`
+- Flux: `flux/kustomizations/subarr.yaml`
+- service: `subarr.default.svc.cluster.local:9922`
+- health: `/api/health`
+- state: 2Gi `local-path` PVC at `/data`, including SQLite
+- media: shared `media` PVC at `/media`
 
-## Runtime
+The local SQLite state makes Subarr node-affined and has no repository-defined automated backup.
 
-- Image: `ghcr.io/coaxk/subarr:2.3.1`
-- Namespace: `default`
-- Service: `subarr.default.svc.cluster.local:9922`
-- Health endpoint: `/api/health`
-- Public hostname: `https://subarr.khzaw.dev`
+## Integration
 
-## Storage
+Dynacat owns the Arr Stack link, health monitor, and upstream release widget.
 
-- `/data`: dedicated `local-path` PVC, `2Gi`; contains `subarr.db` and persisted settings
-- `/media`: existing shared `media` PVC
+Subarr appears in `apps/exposure-control/services.json`, but it currently has no matching cloudflared route or public-edge CNAME. It is catalog-visible, not a working public share. Add all three wiring surfaces together before claiming temporary public access.
 
-## Breadcrumbs To Keep Updated
+Subarr is not in Resource Advisor's auto-apply map.
 
-- Root `README.md` media automation overview
-- `docs/README.md` service-specific guide index
-- Dynacat `Arr Stack` bookmark group
-- Dynacat `Arr and Download Health` monitor group
-- Dynacat GitHub releases widget entry: `coaxk/subarr`
-- Exposure-control service catalog entry: `subarr`
+## Verification
+
+```bash
+flux get kustomization subarr -n flux-system
+kubectl get hr,pod,pvc,svc,ingress -n default | grep subarr
+curl -I https://subarr.khzaw.dev/api/health
+```

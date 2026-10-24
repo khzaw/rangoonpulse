@@ -1,68 +1,41 @@
 ---
 name: rangoonpulse-adguard-dns
-description: "Use when touching the dual AdGuard Home deployments or LAN DNS behavior in /Users/khz/Code/rangoonpulse. Covers rollout safety, service IPs, PVC handling, router integration, and common failure modes."
+description: "Use for rangoonpulse dual AdGuard Home rollout, persistence, service IPs, router integration, and LAN DNS behavior."
 ---
 
 # Rangoonpulse AdGuard DNS
 
-Use this skill only when the active workspace is `/Users/khz/Code/rangoonpulse`.
+Read `docs/adguard-dns-stack-overview.md`. Also read `docs/truenas-networking-and-csi.md` when storage or Tailscale routing is involved.
 
-## Read First
+## Current Layout
 
-Open:
-- `/Users/khz/Code/rangoonpulse/docs/adguard-dns-stack-overview.md`
-- `/Users/khz/Code/rangoonpulse/docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md` when DNS or storage failures line up with Tailscale changes
+- primary: `apps/adguard/primary/helmrelease.yaml`
+- secondary: `apps/adguard/secondary/helmrelease.yaml`
+- Flux units: `adguard-primary` and `adguard-secondary`
+- client DNS services: `${ADGUARD_PRIMARY_IP}` and `${ADGUARD_SECONDARY_IP}`
+- separate local-path PVCs: `adguard-data` and `adguard-secondary-data`
 
-## Layout
+Primary and secondary have independent writable state. Router DHCP remains authoritative; AdGuard DHCP stays disabled.
 
-- Primary deployment: `/Users/khz/Code/rangoonpulse/apps/adguard/primary/helmrelease.yaml`
-- Secondary deployment: `/Users/khz/Code/rangoonpulse/apps/adguard/secondary/helmrelease.yaml`
-- Separate Flux rollout units:
-  - `flux/kustomizations/adguard-primary.yaml`
-  - `flux/kustomizations/adguard-secondary.yaml`
-- Router/client DNS endpoints:
-  - `Service/adguard-dns` -> `10.0.0.233`
-  - `Service/adguard-secondary-dns` -> `10.0.0.234`
+## Safety
 
-## Safety Rules
+- Reconcile one AdGuard instance at a time.
+- Require the first instance to be healthy before touching the second.
+- Keep `externalTrafficPolicy: Local` so query logs preserve client IPs.
+- Do not point LAN clients at ClusterIP addresses.
+- Keep each PVC outside the HelmRelease with prune protection.
+- Mount one neutral data root; do not split writable config/work paths with fragile subPath layouts.
+- If DNS and NFS fail together after Tailscale changes, investigate asymmetric routing before changing storage.
 
-- Do not reconcile both AdGuard Flux kustomizations at the same time unless there is an explicit maintenance window.
-- Keep primary and secondary as separate rollout units with gating and health checks.
-- Both DNS Services should keep `externalTrafficPolicy: Local` so query logs preserve source IP.
-- Router DHCP remains the active DHCP authority. AdGuard built-in DHCP stays disabled.
-- Do not point LAN clients at Kubernetes `ClusterIP` addresses for DNS.
-
-## State And Mount Rules
-
-- Keep separate writable PVCs:
-  - `PersistentVolumeClaim/adguard-data`
-  - `PersistentVolumeClaim/adguard-secondary-data`
-- Those PVCs are GitOps-managed outside the HelmRelease and should keep prune disabled.
-- Mount the PVC at a neutral path (`/adguard-data`), not split `conf/` and `work/` via `subPath`.
-- Do not let two live AdGuard instances share one writable data directory.
-- Startup should fail fast if the PVC is not a real mount.
-- If `AdGuardHome.yaml` is missing, startup seeds a minimal working config instead of dropping into the first-run wizard.
-
-## Runtime Expectations
-
-- Web UIs:
-  - `https://adguard.khzaw.dev`
-  - `https://adguard2.khzaw.dev`
-- Runtime tuning is enforced at startup:
-  - web UI on `:80`
-  - DNS listeners on `:53`
-  - DHCP disabled
-- If the UI or probes stop matching, check whether runtime config drifted from Helm values.
-
-## Verification
+## Validation
 
 ```bash
-flux get kustomizations -n flux-system | rg 'adguard'
-kubectl get svc -n default | rg 'adguard'
-kubectl get pvc -n default | rg 'adguard'
-kubectl get pods -n default -o wide | rg 'adguard'
-kubectl logs -n default deploy/adguard
-kubectl logs -n default deploy/adguard-secondary
+flux get kustomizations -n flux-system | grep adguard
+kubectl get svc,pvc,pod -n default | grep adguard
+kubectl logs -n default deploy/adguard --since=30m
+kubectl logs -n default deploy/adguard-secondary --since=30m
+dig @10.0.0.233 example.com
+dig @10.0.0.234 example.com
 ```
 
-If DNS failures and PVC mount failures happen together, investigate asymmetric routing before changing storage manifests.
+For changes, roll out and verify one instance before reconciling the other.

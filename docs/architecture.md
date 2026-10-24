@@ -1,132 +1,101 @@
 ---
 title: Repository Architecture Map
-summary: Top-level map of the repo's operating domains, source-of-truth locations, and how agents should navigate them.
+summary: Current source-of-truth map for cluster configuration, workloads, platform services, and operator guidance.
 status: active
 owner: homelab
-last_reviewed: 2026-03-21
+last_reviewed: 2026-10-25
 ---
 
 # Repository Architecture Map
 
-## Purpose
-
-This document is the top-level navigation map for repository knowledge.
-It answers two questions:
-
-- where the source of truth for a given operating domain lives
-- which files an agent should read before editing that domain
-
-## Knowledge Layout
-
-- `AGENTS.md`: short bootstrap map and repo invariants
-- `README.md`: human-friendly cluster overview
-- `docs/README.md`: routing index for focused docs
-- `docs/*.md`: source of truth for operating facts, runbooks, incidents, and stable conventions
-- `.agents/skills/*/SKILL.md`: procedural workflows, safety checks, and repeated operator playbooks
-
-Rule of thumb:
-- facts belong in docs
-- workflows belong in skills
-- bootstrap routing belongs in `AGENTS.md`
-
-## Repo Domains
+## Source Layout
 
 ### `apps/`
 
-User-facing workloads, usually one app per directory.
+User-facing workloads. Most services use:
 
-Typical files:
 - `apps/<name>/helmrelease.yaml`
 - `apps/<name>/kustomization.yaml`
-- ingress, PVC, or secret references when the app needs them
-
-When working here, also inspect:
 - `flux/kustomizations/<name>.yaml`
-- `flux/kustomization.yaml`
-- any focused doc for the service domain in `docs/README.md`
+
+A service change may also affect Dynacat, exposure-control, public-edge routing, image automation, resource-advisor policy, and a focused current-state doc.
 
 ### `core/`
 
-Cluster foundation pieces that support many apps.
-
-Current examples:
-- ingress controllers
-- shared controller patches
-
-Changes here usually have wider blast radius than app-local edits.
+Cluster-wide primitives whose behavior affects many workloads. `core/ingress-nginx/` currently owns the shared ingress controller patches and VIP wiring.
 
 ### `infrastructure/`
 
-Shared platform services and operator components.
+Shared platform services, including storage, monitoring, DNS, ingress-adjacent routing, secrets, Tailscale, public edge, image automation, Flux Operator, and resource advisor.
 
-Current examples:
-- storage
-- monitoring
-- secrets
-- DNS helpers
-- public edge
-- resource advisor
-
-Treat these directories as the source of truth for the running platform behavior, and pair edits with the owning focused doc.
+Treat the implementation here as authoritative. Focused docs explain only the operating contract and non-obvious constraints that cannot be read safely from one manifest.
 
 ### `flux/`
 
-Flux sources, kustomizations, and shared substitutions.
+Flux sources, reconciliation units, and post-build substitutions:
 
-Important files:
-- `flux/kustomization.yaml`
-- `flux/kustomizations/*.yaml`
-- `flux/cluster-settings.yaml`
+- `flux/kustomization.yaml`: repository reconciliation tree
+- `flux/kustomizations/*.yaml`: component reconciliation boundaries and dependencies
+- `flux/repositories/`: Helm and OCI sources
+- `flux/cluster-settings.yaml`: shared non-secret constants
+- `flux/flux-system/gotk-components.yaml`: generated Flux controller manifest
 
-Use this domain when wiring new workloads into GitOps or changing shared non-secret cluster constants.
+The generated controller manifest is not part of the ordinary workload reconciliation path. Controller upgrades are controlled operator actions; application and infrastructure desired state remains GitOps-managed.
 
 ### `talos/`
 
-Talos machine configuration and node-level settings.
+Talos configuration templates and node-level patches. Talos lifecycle operations are separate from Flux reconciliation. Sensitive generated machine configurations are not committed.
 
-Talos remains explicit and is not part of the Flux substitution path. If node IPs or control-plane details change, verify whether Talos config also needs a manual update.
+### `native/iris/`
+
+macOS launchd supervision, Darwin metrics/readiness, and independent cluster sentinel implementation. Native host jobs have separate lifecycle and credential-copy handling; see `docs/iris-operations.md`.
 
 ### `docs/`
 
-Versioned knowledge base for stable facts, focused runbooks, and incident history.
-
-Use `docs/README.md` as the router rather than scanning every file.
+Current operating guidance only. `docs/README.md` is the router. Superseded designs and completed work remain available through Git history rather than active docs.
 
 ### `.agents/skills/`
 
-Project-local procedural guidance for repeated workflows.
+Repeatable repository procedures and safety gates. Skills should inspect current manifests and route to focused docs rather than duplicate inventories that drift.
 
-Current examples:
-- bootstrap and shared-worktree behavior
-- service deployment
-- upgrades
-- cluster conventions
-- access and edge changes
-- AdGuard DNS
-- resource advisor
+## Current Access Topology
 
-## Common Cross-Cutting Touch Points
+Three paths are intentional:
 
-Service changes often span more than one domain. Before declaring a change complete, check whether it should also touch:
+1. Private services: LAN or Tailscale client to the shared ingress VIP, then ingress-nginx to the service.
+2. Permanently public sites: Cloudflare edge and Tunnel directly to in-cluster services.
+3. Temporary public shares: Cloudflare edge and Tunnel to exposure-control, which enforces share state and proxies to the selected service.
 
-- `apps/dynacat/helmrelease.yaml` for dashboard links or monitors
-- `apps/exposure-control/services.json` if the service should be share-managed
-- `infrastructure/resource-advisor/advisor.py` and related policy if the service should be auto-tuned
-- ingress, DNS, and TLS wiring if external reachability changed
-- the owning focused doc under `docs/`
+`iris.khzaw.dev` and `athena.khzaw.dev` proxy from Kubernetes to services on the Mac mini. SSH for the Iris host uses a dedicated MetalLB VIP. The concrete values live in `flux/cluster-settings.yaml`; the current topology and exceptions live in the focused networking and access docs.
 
-## Navigation Rules
+## Current Storage Model
 
-1. Start with `AGENTS.md`.
-2. Read `README.md`.
-3. Read `docs/README.md`.
-4. Open the smallest focused doc set for the touched domain.
-5. Use the matching project-local skill when the task is procedural or safety-sensitive.
+- `truenas-nfs` is the default relocatable storage class for file-oriented and ordinary persistent data.
+- `truenas-hdd-media` and `truenas-nvme-downloads` serve large media and download datasets.
+- `local-path` is intentionally used for latency-sensitive databases, SQLite workloads, Prometheus/Grafana state, and caches that cannot safely use NFS semantics.
 
-Prefer progressive disclosure over bulk loading. The goal is to read the minimum set that makes the next edit correct.
+`local-path` is node-affined. Moving or recovering those workloads requires an explicit data path; changing only a node selector is not a migration.
 
-## Maintenance
+## Cross-Cutting Change Checklist
 
-- If a stable operating convention changes, update the owning focused doc and `docs/README.md` in the same change.
-- If a repeated workflow is showing up in many tasks, add or refine a project-local skill instead of expanding `AGENTS.md`.
-- If a doc becomes purely historical, mark it as such in its front matter when you next touch it and keep it linked only where the historical context is still useful.
+Before completing a service or platform change, inspect the applicable surfaces:
+
+- `flux/kustomizations/` and `flux/kustomization.yaml`
+- `apps/dynacat/helmrelease.yaml`
+- `apps/exposure-control/services.json`
+- `infrastructure/public-edge/`
+- `infrastructure/image-automation/`
+- `infrastructure/resource-advisor/`
+- ingress, DNS ownership, and TLS objects
+- the focused current-state doc and repo-local skill
+
+Not every change touches every surface. The requirement is to check, not to create ceremonial edits.
+
+## Navigation
+
+1. Read `AGENTS.md`, `README.md`, and `docs/README.md`.
+2. Load the shared-worktree skill.
+3. Read the smallest focused doc set for the affected domain.
+4. Inspect the current implementation before trusting copied values or inventories.
+
+See `docs/knowledge-base-conventions.md` for the maintenance rule.

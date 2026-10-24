@@ -1,53 +1,60 @@
-# media-postgres (Shared TimescaleDB)
+---
+title: Media PostgreSQL
+summary: Current shared TimescaleDB consumers, local storage, tuning rationale, secrets, and backup gap.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
 
-## Purpose
-`media-postgres` is a shared in-cluster Postgres 16 + TimescaleDB instance used by:
-- Tracerr (`tracearr` DB)
-- Reactive Resume (`reactive_resume` DB)
-- Speedtest Tracker (`speedtest_tracker` DB)
-- BookOrbit (`bookorbit` DB)
-- RomM (`romm` DB; provisioned by its own Helm hook, see [`romm.md`](./romm.md))
+# Media PostgreSQL
 
-Immich uses its own Postgres and is intentionally not consolidated here.
+`media-postgres` is a shared PostgreSQL 16 plus TimescaleDB service for:
 
-## Deployment
-- GitOps: `apps/media-postgres/`
-- HelmRelease: `apps/media-postgres/helmrelease.yaml`
+- Tracerr: `tracearr`
+- Reactive Resume: `reactive_resume`
+- Speedtest Tracker: `speedtest_tracker`
+- BookOrbit: `bookorbit`
+- RomM: `romm`, provisioned by its own pre-install/pre-upgrade hook; see [RomM](./romm.md)
 
-## Runtime tuning
-- `timescaledb.telemetry_level=off`
+Immich uses its own PostgreSQL and is not part of this service.
+
+## Runtime
+
+- source: `apps/media-postgres/`
+- storage: 20Gi `local-path`
+- memory request: 1536Mi
+- memory limit: 8Gi
 - `max_connections=100`
 - `max_locks_per_transaction=2048`
-- resources: `requests.memory=2Gi`, `limits.memory=8Gi`
+- Timescale telemetry disabled
 
-The connection limit is explicit because the image-generated persistent configuration selected `25`, which is too low
-for the combined connection pools of the shared applications. A budget of `100` restores normal PostgreSQL headroom
-while retaining the default three superuser-reserved slots.
+Local storage is intentional for PostgreSQL durability, latency, WAL, and Timescale chunk workloads. The cost is primary-node affinity and a shared failure domain.
 
-The higher lock budget is intentional. `tracearr.library_snapshots` is a Timescale hypertable with thousands of chunks, and overview/retention queries can exhaust the default lock table and fail with `out of shared memory` unless Postgres is sized for that fan-out.
+The elevated lock table is required by Tracearr hypertables with many chunks. The memory ceiling supports large backfills and continuous-aggregate refreshes.
 
-The higher memory ceiling is also intentional. Large Tracearr backfills and continuous aggregate refreshes can spike memory usage high enough to OOM even a 4Gi Timescale pod during multi-year refreshes.
+## Secrets
 
-## Storage
-Data is stored on `local-path` (node-local).
+All database credentials are SOPS-managed:
 
-Rationale:
-- Postgres durability/fsync semantics and latency are typically more reliable on local disks than NFS.
-- TimescaleDB write patterns (hypertables, background jobs, WAL churn) are especially sensitive to storage latency.
+- `media-postgres-secret`
+- `tracerr-db-secret`
+- `reactive-resume-db-secret`
+- `speedtest-tracker-secret`
+- `bookorbit-secret`
+- `romm-secret`, consumed by RomM and its database-provisioning hook
 
-## Secrets (Not In Git)
-Required Secret:
-- `default/media-postgres-secret` with key `POSTGRES_PASSWORD` (superuser password)
+Initialization creates roles and databases on first boot only. Keep init configuration and Secret values aligned when rebuilding storage.
 
-This release also reads per-app DB passwords from existing Secrets:
-- `default/tracerr-db-secret` (`POSTGRES_PASSWORD`)
-- `default/reactive-resume-db-secret` (`POSTGRES_PASSWORD`)
-- `default/speedtest-tracker-secret` (`POSTGRES_PASSWORD`)
+RomM's hook creates or updates its role/database against both existing and newly initialized servers. Its credentials are not injected into the shared database release, so installing RomM does not roll media-postgres. One API worker, one scan worker, and a 30-connection role limit bound its share of the 100-connection budget.
 
-The init script creates roles/DBs on first boot only.
+## Backup Status
 
-RomM's `pre-install,pre-upgrade` Helm hook provisions its own database and role
-against both existing and newly initialized servers. Its credentials are not
-added to this release, so installing RomM does not roll the shared database.
-The app uses one API worker and one scan worker with a 30-connection role limit
-to bound its use of the shared 100-connection budget.
+The repository defines no automated dump, physical backup, snapshot, or offsite copy for media-postgres. A shared database increases the blast radius of storage loss; do not treat local-path persistence as backup.
+
+## Verification
+
+```bash
+flux get kustomization media-postgres -n flux-system
+kubectl get hr,pod,pvc -n default | grep media-postgres
+kubectl logs -n default deploy/media-postgres --since=30m
+```

@@ -1,8 +1,20 @@
+---
+title: Homelab Operations Dashboards
+summary: Current operating guidance for Homelab Operations Dashboards.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Homelab Operations Dashboards
 
 Additional GitOps-managed Grafana dashboards live under `infrastructure/monitoring/`.
 
 ## Dashboards
+
+- `Iris Overview`
+  - file: `infrastructure/monitoring/grafana-dashboard-iris-overview.yaml`
+  - purpose: native macOS host metrics, launchd supervision, readiness, and APFS capacity; see `docs/iris-operations.md`.
 
 - `Homelab Control Room`
   - file: `infrastructure/monitoring/grafana-dashboard-homelab-control-room.yaml`
@@ -34,7 +46,19 @@ Additional GitOps-managed Grafana dashboards live under `infrastructure/monitori
 
 - `TrueNAS Host Overview`
   - file: `infrastructure/monitoring/grafana-dashboard-truenas-host-overview.yaml`
-  - purpose: NAS management-plane probes, NFS reachability, Netdata memory headroom, ARC size, and per-service memory for `nginx` and `middlewared`.
+  - purpose: NAS management-plane probes, NFS reachability, Netdata memory headroom, ARC size, and per-service memory.
+
+- `Node Capacity Overview`
+  - file: `infrastructure/monitoring/grafana-dashboard-node-capacity-overview.yaml`
+  - purpose: node fit, schedulable headroom, and workload capacity.
+
+- `Node Power Estimation`
+  - file: `infrastructure/monitoring/grafana-dashboard-node-power-estimation.yaml`
+  - purpose: estimated node power, cost, and Raspberry Pi low-voltage telemetry.
+
+- `TLS Certificate Audit`
+  - file: `infrastructure/monitoring/grafana-dashboard-tls-certificate-audit.yaml`
+  - purpose: certificate readiness, expiry, issuer, and hostname coverage.
 
 ## Shared Recording Rules
 
@@ -62,14 +86,13 @@ Current shared metrics:
 - `Storage Risk Overview` uses `truenas-pvc-dataset-exporter` for TrueNAS-backed PVC dataset usage, so NAS media datasets remain visible even when kubelet/CSI volume stats are missing.
 - `local-path` claims are hostPath directories, so the kubelet never emits `kubelet_volume_stats_*` for them. `infrastructure/storage/local-path-provisioner/usage-exporter.yaml` runs a busybox DaemonSet that walks `/var/mnt/local-path-provisioner` (primary) and `/var/lib/local-path-provisioner` (utility node) with `du` every five minutes, writes `local_path_pvc_used_bytes{namespace,persistentvolumeclaim,volumename,node}` into an emptyDir, and serves it on port 9101 with busybox `httpd` for a PodMonitor. It deliberately avoids node-exporter's textfile collector: Talos keeps `/var/lib` at 0700 and `/var/mnt` read-only, so no host path works for both a root writer and the UID 65534 node-exporter. The `homelab:local_path_pvc_*` rules join on `volumename` so orphaned directories from deleted PVs are ignored, and capacity is the claim's requested size because local-path enforces no quota. `local_path_pvc_exporter_last_run_timestamp_seconds` per node is the staleness signal.
 - `nodeExporter` is enabled primarily to surface host hardware signals such as the utility node Raspberry Pi low-voltage alarm on the power dashboard.
-- The `monitoring` namespace now carries privileged PodSecurity labels because node-exporter requires host mounts and host networking.
+- The `monitoring` namespace carries privileged PodSecurity labels because node-exporter requires host mounts and host networking.
 - Host-disk latency and broader hardware tuning are still mostly out of scope for these dashboards unless a panel explicitly uses those series.
 - `Public Edge Overview` reflects the current exposure-control exporter surface. It does not infer per-share identity beyond the totals exported today.
 
 ## Verification
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
 
 kubectl apply --dry-run=client -f infrastructure/monitoring/prometheusrule-homelab-ops-dashboards.yaml
 kubectl apply --dry-run=client -f infrastructure/monitoring/grafana-dashboard-homelab-control-room.yaml

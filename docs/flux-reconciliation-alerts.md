@@ -3,16 +3,12 @@ title: Flux Reconciliation Alerts
 summary: PrometheusRule alerts on Flux objects that are not ready, stuck reconciling, or suspended for too long, sourced from Flux Operator metrics and routed to Discord/Telegram through the existing AlertmanagerConfig.
 status: active
 owner: homelab
-last_reviewed: 2026-10-22
+last_reviewed: 2026-10-25
 ---
 
 # Flux Reconciliation Alerts
 
-A HelmRelease whose upgrade fails and rolls back keeps serving the previous release, so
-the app looks healthy while GitOps is silently stuck. Before this existed, `jackett`
-sat in `Stalled=True` / `RollbackSucceeded` with no notification. These alerts close
-that gap using the Flux Operator's metrics and the Alertmanager path that already
-reaches Discord and Telegram. No new controller, no new secret.
+A failed Helm upgrade can roll back and keep the old app healthy while desired state remains stalled. These alerts track sustained Flux object state through Flux Operator metrics and the existing Discord/Telegram Alertmanager route.
 
 ## Why Not `Provider`/`Alert` From notification-controller
 
@@ -94,92 +90,28 @@ kubectl get --raw /api/v1/namespaces/flux-system/services/flux-operator:8080/pro
 
 and confirm `monitoring/flux-operator` appears as `up` under Prometheus → Status → Targets.
 
-## Jackett Missing-Image Rollback (2026-09-18)
+## Missing Images And Exhausted Retries
 
-Jackett's desired image `lscr.io/linuxserver/jackett:0.24.2605` reached Git before LinuxServer
-published it. All four Helm upgrade attempts on September 17 timed out, ending at
-12:42 UTC, and rollback kept `0.24.2595` serving. Helm's final error mentioned a client
-rate-limiter deadline; the node's kubelet logs exposed the actual failure:
-`lscr.io/linuxserver/jackett:0.24.2605: not found` / `ImagePullBackOff`.
-NFS mounts succeeded, and the chart version had not changed.
+Check kubelet events and the exact desired image when Helm reports a deadline or rate-limiter timeout. An upstream application release does not prove that its container image exists. Jackett's Renovate hint tracks LinuxServer packaging releases, which follow multiarch image publication; see [dependency update policy](./dependency-updates-renovate-and-flux-image-automation.md).
 
-The upstream application release appeared at 05:55 UTC, but the
-[LinuxServer build release](https://github.com/linuxserver/docker-jackett/releases/tag/v0.24.2605-ls31)
-did not appear until 13:52 UTC. Publishing the missing image later does not reset
-Flux's exhausted remediation attempts; the resource stays stalled until reset or changed.
-
-Recovery was to verify the desired tag and `linux/arm64` manifest exist, then reset
-the release's failure counter through Flux:
+After fixing the cause and verifying the tag and required architecture, reset exhausted remediation:
 
 ```bash
-crane manifest lscr.io/linuxserver/jackett:0.24.2605
+crane manifest lscr.io/linuxserver/jackett:<desired-tag>
 flux reconcile hr jackett -n default --reset --timeout=7m
 kubectl rollout status deployment/jackett -n default
 ```
 
-The image pulled in 22 seconds and Helm revision 80 succeeded with `Ready=True`.
-The HTTPS login page returned 200 with valid TLS; both Prometheus and Alertmanager
-cleared the alert after the operator scrape and rule evaluation. The alert rule remains enabled.
+Publishing a missing image later does not itself reset exhausted Helm retries. Verify the desired image, current Helm readiness, HTTPS behavior, and alert recovery.
 
-Prevention: the existing Renovate custom manager now tracks `linuxserver/docker-jackett`
-GitHub releases and extracts `0.24.2605` from `v0.24.2605-ls31`. LinuxServer's
-[packaging pipeline](https://github.com/linuxserver/docker-jackett/blob/145d952bcbf9ad1139b9276f73a9b692dee45673/Jenkinsfile#L965)
-pushes the multi-architecture images and semver aliases before creating the GitHub
-release. This avoids both the upstream-publication race and the excessive Docker tag
-enumeration that originally required the custom manager. See the
-[dependency-update policy](./dependency-updates-renovate-and-flux-image-automation.md).
+## CPU Reservation And Rollout Failures
 
-## CPU Reservation Exhaustion (2026-10-22)
+Check scheduler `Insufficient cpu` events and reservations before tuning API rate limits. Low measured CPU usage does not imply free scheduler capacity. Placement can prevent spare utility-node capacity from helping the primary node.
 
-Immich and Grafana upgrades had been failing since October 16. Blog, Subarr,
-Bazarr, and blackbox-exporter subsequently hit the same unschedulable-pod pattern.
-The primary node reserved 5943m of its 5950m allocatable CPU, despite using about
-18% CPU. Scheduler events confirmed `Insufficient cpu`; the utility node was
-excluded by workload placement. Helm's deadline/rate-limiter errors were a symptom
-of waiting for pods, not evidence that the Kubernetes API needed higher rate limits.
+Use current retained history for sizing, preserve interactive limits, and include replacement overlap in the capacity preflight. Reset exhausted Helm retries only after the underlying sizing or scheduling change reconciles. [Resource Advisor headroom](./resource-advisor.md#node-capacity-and-headroom) and [Git/CI validation](./cpu-headroom-validation.md) reserve per-node rollout/job space; independent PRs cannot spend unmerged downsizes.
 
-Manual request-only sizing used the retained 14-day CPU history. Jellyfin now
-reserves 400m (observed p95 247m), Immich ML/server/Postgres 100m/100m/75m,
-media-postgres 125m (p99 94m), Bazarr 50m (p95 23m), Audiobookshelf 25m, and
-BookOrbit 50m. This releases 1016m of steady-state reservations. Memory and CPU
-limits remain unchanged so interactive work can still burst. Existing Recreate
-rollouts release old reservations first; Immich's rolling replacement needs
-additional headroom while old and new pods overlap.
+## Verification
 
-Recover exhausted Helm retries with `flux reconcile hr <name> -n <namespace>
---reset` after the request changes reconcile. Verify deployment readiness and
-application endpoints, then wait for both Prometheus and Alertmanager to clear.
-Healthy old pods alone do not prove the desired release has deployed.
+Render monitoring, evaluate the loaded expressions, inspect scrape targets and per-object Alertmanager routing, and check that recovered objects clear in both Prometheus and Alertmanager. A healthy old pod is not proof that the desired release deployed.
 
-The old receiver grouped every Flux failure together and used only
-`CommonAnnotations`. With multiple services, no common summary or description
-existed, producing generic `FluxResourceNotReady` messages. Group membership
-changes triggered updates on the five-minute group interval, independently of
-the four-hour repeat interval. Object grouping and per-alert rendering fix that
-loss of context without disabling failure alerts.
-
-Recovery verification: 217 of 219 inspected Flux objects expose a Ready condition;
-all 217, including all 58 HelmReleases, returned Ready=True. The two OCI
-HelmRepository objects do not expose readiness conditions. Primary-node CPU reservations fell to 4939m
-of 5950m (83%), leaving 1011m free with the blog running. Immich deployed v3.3.3,
-Bazarr deployed v1.6.2-ls369, and monitoring deployed chart 92.11.0. The seven
-checked application/health endpoints returned HTTPS 200. Alertmanager loaded the
-per-object route and templates; Discord and Telegram recorded notification
-deliveries with zero failures during recovery. Template rendering also verified
-mixed firing/resolved alerts and escaped Telegram annotation text.
-Both Prometheus and Alertmanager subsequently reported zero active Flux alerts.
-Resource Advisor now enforces a [per-node rollout/job CPU reserve](./resource-advisor-phase1-phase2.md#node-constraint-awareness)
-for request increases, including independent-PR ordering and stale-report guards.
-
-## Verification Performed
-
-- `kubectl kustomize infrastructure/monitoring` builds.
-- `kubectl apply --dry-run=client` passes for all three objects.
-- All four expressions were evaluated against the live Prometheus query API and parsed.
-- The live Alertmanager route tree was inspected to confirm warning alerts need an explicit `alertname` route (they fall to `null` otherwise), matching the existing `TrueNAS.*` and `HomelabCronJob.*` routes.
-
-## Related
-
-- [`docs/cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md) for the CronJob alert family that uses the same routing pattern.
-- [`docs/dns-reliability-flux-gitrepository-timeouts.md`](./dns-reliability-flux-gitrepository-timeouts.md) for the earlier source-controller DNS alerts (`FluxSourceGitRepositoryReconcileErrors`), which remain and are complementary: they catch transient fetch errors, this doc catches sustained not-ready state.
-- [`docs/flux-web-ui.md`](./flux-web-ui.md) for the operator UI.
+See [CronJob alerts](./cronjob-deadman-alerts.md), [DNS reliability](./dns-reliability.md), and [Flux UI](./flux-web-ui.md) for the other failure boundaries.

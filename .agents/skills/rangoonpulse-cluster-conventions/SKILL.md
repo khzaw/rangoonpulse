@@ -1,108 +1,80 @@
 ---
 name: rangoonpulse-cluster-conventions
-description: "Use when editing ordinary GitOps manifests or answering repo architecture questions in /Users/khz/Code/rangoonpulse. Covers shared cluster settings, node placement, storage defaults, ingress/DNS/TLS patterns, secrets handling, PodSecurity baseline, and validation."
+description: "Use for ordinary rangoonpulse manifests, placement, storage, shared settings, ingress/DNS/TLS, secrets, and platform security defaults."
 ---
 
 # Rangoonpulse Cluster Conventions
 
-Use this skill only when the active workspace is `/Users/khz/Code/rangoonpulse`.
-
-## When To Use
-
-Use this skill when the task involves:
-- ordinary app or infrastructure manifest edits
-- shared constants in `flux/cluster-settings.yaml`
-- node placement or storage choices
-- ingress, DNS, TLS, or secrets wiring
-- repo questions about default deployment conventions
-
 ## Read First
 
-Open the smallest relevant subset:
-- `/Users/khz/Code/rangoonpulse/docs/shared-cluster-settings.md`
-- `/Users/khz/Code/rangoonpulse/docs/secrets-management-current-state-options-and-plan.md`
-- `/Users/khz/Code/rangoonpulse/docs/networking-current-state-and-simplification.md` when hostnames, ingress VIP, or access path matter
-- `/Users/khz/Code/rangoonpulse/docs/talos-kubelet-image-garbage-collection.md` when node `/var`, CRI image retention, or kubelet image GC matters
-- `/Users/khz/Code/rangoonpulse/docs/README.md` for any deeper domain doc routing
+Use the smallest relevant docs:
 
-## Core Rules
+- `docs/architecture.md`
+- `docs/shared-cluster-settings.md`
+- `docs/networking.md`
+- `docs/secrets-management.md`
+- `docs/data-protection.md` for persistent-data risk
 
-- Flux GitOps is the source of truth. Validation-only `kubectl apply --dry-run=client` is fine; permanent state must come from Git.
-- Prefer `HelmRelease` edits over raw manifests.
-- Keep app values inline in `helmrelease.yaml` unless a separate file is clearly justified.
-- Put cluster-wide non-secret constants in `/Users/khz/Code/rangoonpulse/flux/cluster-settings.yaml`.
-- When Flux post-build substitution is active, escape runtime-literal placeholders as `$${VAR}`.
-- Keep credentials out of plaintext manifests. Git-managed secrets stay SOPS-encrypted under `/Users/khz/Code/rangoonpulse/infrastructure/secrets/`.
+## GitOps
+
+- Permanent desired state comes from Git and Flux.
+- Prefer the existing HelmRelease/app-template pattern over raw objects when it fits.
+- Keep app values inline unless separation solves a concrete maintenance problem.
+- Put shared non-secret constants in `flux/cluster-settings.yaml`.
+- Escape runtime-literal placeholders as `$${VAR}`.
+- Keep credentials SOPS-encrypted under `infrastructure/secrets/`.
+
+Read the target HelmRelease's pinned chart version and inspect a current sibling and that version's schema. Do not assume all releases use one chart version.
 
 ## Placement
 
-- Default policy: pin userland workloads to `talos-7nf-osf`.
-- For `bjw-s-charts/app-template` v4, use:
-  - `values.defaultPodOptionsStrategy: merge`
-  - `values.defaultPodOptions.nodeSelector.kubernetes.io/hostname: talos-7nf-osf`
-- Utility-node allowlist today:
-  - `infrastructure/public-edge`
-  - `apps/exposure-control`
-  - `apps/dynacat`
-  - `apps/profilarr`
-  - `apps/adguard`
-  - `apps/chartsdb`
-  - `apps/uptime-kuma`
-  - `apps/speedtest`
-  - `apps/actualbudget`
-  - `apps/reactive-resume`
-  - `apps/anki-server`
-  - `apps/autobrr`
-  - `apps/prowlarr`
-  - `apps/jackett`
-  - `apps/flaresolverr`
-- `local-path` volumes are node-affined. Moving those apps between nodes usually means PVC recreation or storage migration.
+Do not maintain a copied node allowlist in docs or skills. Inspect current node selectors in the nearest sibling workloads and measure capacity.
+
+Default decision factors:
+
+- image architecture support
+- local-path PVC affinity
+- device access such as `/dev/dri`
+- network and storage throughput
+- critical-service redundancy
+- current node headroom
+
+A local-path PVC makes a node move a data migration, not a selector edit.
 
 ## Storage
 
-- Default storage intent for app/config PVCs: `truenas-nfs`.
-- Use `local-path` intentionally for low-latency or node-local state such as databases, Prometheus TSDB, and hot caches.
-- Before changing storage for stateful services, read the focused doc for that service or storage pattern from `/Users/khz/Code/rangoonpulse/docs/README.md`.
+- `truenas-nfs`: relocatable file/config state
+- `truenas-hdd-media`: large media
+- `truenas-nvme-downloads`: downloads
+- `local-path`: databases, SQLite, TSDB, and latency-sensitive caches
+
+Check `docs/data-protection.md` before describing persistence as protected. Most PVCs do not have repository-defined automated backups.
 
 ## Ingress, DNS, And TLS
 
-- Normal externally reachable or tailnet-only hostname pattern:
-  - ingress class `nginx`
-  - annotation `external-dns.alpha.kubernetes.io/hostname`
-  - annotation `cert-manager.io/cluster-issuer: letsencrypt-prod`
-  - annotation `nginx.ingress.kubernetes.io/ssl-redirect: "true"`
-  - matching `tls.hosts`
-- external-dns ignores `spec.rules[].host` and `spec.tls[].hosts` on Ingress resources in this repo. Declare hostnames through the annotation or DNS will not be published.
-- external-dns also watches Services, so `ExternalName` CNAME alias patterns are valid where already used.
+For the normal private hostname pattern, align:
 
-## Security Baseline
+- ingress class `nginx`
+- explicit ExternalDNS hostname annotation
+- `letsencrypt-prod` issuer
+- TLS hosts and secret
+- SSL redirect
 
-- For ordinary userland workloads, prefer:
-  - pod `runAsNonRoot: true`
-  - pod `seccompProfile.type: RuntimeDefault`
-  - container `allowPrivilegeEscalation: false`
-  - container `capabilities.drop: ["ALL"]`
-- Add `fsGroup` only when writable PVC access actually needs it.
-- Do not force this baseline onto networking, storage, or node-level daemons without verifying capability requirements first.
+ExternalDNS intentionally ignores Ingress rules/TLS fields. Public-edge hostnames own DNS through `ExternalName` Services instead.
+
+## Security
+
+For ordinary workloads prefer non-root execution, RuntimeDefault seccomp, no privilege escalation, and all capabilities dropped. Apply exceptions only after inspecting the workload's real device, networking, or storage requirements.
+
+app-template v5 disables service-account token automounting by default. Set `defaultPodOptions.automountServiceAccountToken: true` only for workloads that call the Kubernetes API.
 
 ## Validation
-
-Use the smallest meaningful checks for the touched scope:
 
 ```bash
 kubectl apply --dry-run=client -f <file>
 kubectl kustomize <path> >/tmp/rendered.yaml
 kubectl apply --dry-run=client -f /tmp/rendered.yaml
+make validate-all
 ```
 
-When shared settings are involved, also use the focused validation flow in:
-- `/Users/khz/Code/rangoonpulse/docs/shared-cluster-settings.md`
-
-## Done Criteria
-
-The change should leave these repo defaults intact unless the task explicitly changes a convention:
-- shared constants stay centralized
-- node placement is intentional
-- storage choice matches workload behavior
-- ingress/DNS/TLS wiring is aligned
-- secrets remain encrypted in Git
+For resource, replica, placement, or new-workload changes, follow `docs/cpu-headroom-validation.md`: render the actual workloads, check Git/CI capacity, and run the live `make check-capacity FILE=<rendered.yaml>` preflight plus server-side dry run. Check an HPA's intended maximum separately. The cluster has no live admission webhook.

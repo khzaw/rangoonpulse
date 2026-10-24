@@ -1,6 +1,14 @@
+---
+title: Node Capacity Overview Dashboard
+summary: Current operating guidance for Node Capacity Overview Dashboard.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
+
 # Node Capacity Overview Dashboard
 
-This cluster now provisions a Grafana dashboard focused on first-principles node
+This cluster provisions a Grafana dashboard focused on first-principles node
 CPU and RAM visibility, with workload and pod drilldowns under the same filters.
 
 ## GitOps Objects
@@ -29,10 +37,7 @@ The top row therefore answers:
 ## Scheduling and rollout headroom
 
 CPU utilization and CPU requests answer different questions. Kubernetes schedules
-against requests even when a node is mostly idle. On October 22, 2026, primary-node
-requests reached 5943m of 5950m allocatable CPU and blocked even a 12m blog pod.
-See [Flux reconciliation alerts](./flux-reconciliation-alerts.md#cpu-reservation-exhaustion-2026-10-22)
-for the incident and request-only recovery.
+against requests even when a node is mostly idle. See [Flux reconciliation triage](./flux-reconciliation-alerts.md#cpu-reservation-and-rollout-failures) when low utilization coexists with unschedulable replacements.
 
 Keep at least 1000m of primary-node CPU unreserved for rollout overlap and jobs.
 Check placement-specific requests and the largest replacement pod before adding
@@ -41,7 +46,7 @@ that pinned primary-node apps cannot use. Resource Advisor now hard-blocks CPU
 increases unless each affected node retains the larger of 1000m or its largest
 replacement pod plus 150m for a job. Separate PRs cannot spend unmerged downsize
 savings. Its live preflight exposes the reserve and shortfall per node; see
-[Resource Advisor's policy](./resource-advisor-phase1-phase2.md#node-constraint-awareness).
+[Resource Advisor's policy](./resource-advisor.md#node-capacity-and-headroom).
 The [Git/CI capacity validator](./cpu-headroom-validation.md) applies the same reserve to
 manual Git resource changes, scaling, and new workloads. Preflight rendered workload
 manifests with `make check-capacity FILE=<rendered.yaml>` before pushing.
@@ -61,8 +66,6 @@ resource metrics attach naturally to pods and workload owners, not to Services.
 ## Verification
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
 
 flux reconcile kustomization monitoring -n flux-system --with-source
 

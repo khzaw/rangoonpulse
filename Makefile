@@ -149,6 +149,7 @@ validate-kustomize: ## Render the Flux entrypoint with Kustomize
 	kubectl kustomize flux >/tmp/rangoonpulse-flux-rendered.yaml
 
 check-docs: ## Validate docs and skill structure
+	python3 -m unittest discover -s scripts/tests -p 'test_check_docs.py'
 	python3 scripts/check_docs.py
 
 check-node: ## Syntax-check exposure-control JavaScript

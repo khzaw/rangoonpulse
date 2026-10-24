@@ -1,99 +1,87 @@
 ---
-title: Knowledge Base Conventions
-summary: Conventions for keeping repository docs and project-local skills structured, navigable, and mechanically checkable.
+title: Documentation Conventions
+summary: Rules that keep repository docs and project-local skills aligned with the current implementation.
 status: active
 owner: homelab
-last_reviewed: 2026-03-21
+last_reviewed: 2026-10-25
 ---
 
-# Knowledge Base Conventions
+# Documentation Conventions
 
-## Purpose
+## Contract
 
-This repo treats repository knowledge as part of the implementation, not as a side channel.
+Repository documentation is an operational projection of the current tree. It is not an archive.
 
-The goals are:
-- keep `AGENTS.md` small
-- make source-of-truth docs easy to find
-- keep procedural guidance separate from factual reference material
-- make the structure checkable with lightweight tooling
+- `README.md` gives the human-facing overview.
+- `docs/README.md` routes readers to focused current-state guidance.
+- `docs/*.md` records active architecture, operating contracts, non-obvious constraints, and reusable recovery procedures.
+- `.agents/skills/*/SKILL.md` owns repeatable workflows, safety gates, and verification steps.
+- Git history owns superseded decisions, completed migrations, and incident chronology.
 
-## Division Of Responsibility
+Implementation wins when prose and source disagree. Correct or remove the prose in the same change.
 
-- `AGENTS.md`: bootstrap map, invariants, and routing
-- `README.md`: human-facing overview
-- `docs/README.md`: docs router
-- focused docs in `docs/`: stable facts, architecture notes, incident write-ups, and runbooks
-- skills in `.agents/skills/`: repeated procedures, touch-point checklists, and safety guardrails
+## What Belongs In Current Docs
 
-Do not turn skills into encyclopedias, and do not turn `AGENTS.md` into a runbook dump.
+Keep content that answers at least one current operational question:
 
-## Focused Doc Conventions
+- What is deployed and where is its source of truth?
+- What access, storage, security, or scheduling constraint applies now?
+- Which files must change together?
+- How is the current behavior verified or recovered?
+- Why does a non-obvious current tradeoff exist?
 
-For new or materially reorganized focused docs, add front matter with:
+Past context may remain only when removing it would make the current design unsafe or misleading. State the active rule first, then keep the rationale to the minimum necessary.
 
-- `title`
-- `summary`
-- `status`
-- `owner`
-- `last_reviewed`
+## What Does Not Belong
 
-Current allowed `status` values:
-- `active`
-- `draft`
-- `historical`
+Delete or rewrite:
 
-Preferred doc characteristics:
-- concrete file paths instead of vague prose
-- Kubernetes object names where relevant
-- commands that operators can actually run
-- links from `docs/README.md`
+- completed plans, phases, and migration checklists
+- incident timelines and command transcripts
+- superseded options or rejected-product evaluations
+- retired services, PVCs, hostnames, and temporary compatibility notes that no longer apply
+- aspirational behavior presented as implemented
+- volatile live status copied into prose when the source can be queried directly
 
-Backfill policy:
-- existing docs do not need to be normalized all at once
-- add front matter when you create a new focused doc or substantially refactor an existing one
+When a plan lands, replace it with a current operating doc or delete it. When an incident closes, move only the durable guardrail into the owning current doc or skill, then delete the incident record.
 
-## Skill Conventions
+## Focused Doc Format
 
-Every `SKILL.md` should:
+Every focused file under `docs/`, except `docs/README.md`, carries:
+
+```yaml
+---
+title: <human title>
+summary: <one-sentence current scope>
+status: active
+owner: homelab
+last_reviewed: YYYY-MM-DD
+---
+```
+
+`active` is the only accepted status. Draft proposals belong in issues, plans, or `ideas.md`, not in the current docs index.
+
+Use repository-relative paths, concrete Kubernetes object names, and executable verification commands. Avoid duplicating version numbers or inventories already expressed in manifests unless the exact value is itself an operator constraint.
+
+## Skills
+
+Every project-local `SKILL.md` must:
 
 - include `name` and `description` front matter
-- state when the skill should be used
-- point to the focused docs that remain the source of truth
-- describe workflow, guardrails, validation, and touch points
-
-Skills should minimize duplication. If a detail is likely to drift, keep the fact in `docs/` and let the skill route to it.
+- say when it applies
+- route factual context to focused docs
+- describe workflow, guardrails, and verification
+- use repository-relative paths
+- inspect current source instead of carrying lists that drift, such as every service, node assignment, or image tag
 
 ## Mechanical Checks
 
-The local checker is:
+Run:
 
-- `scripts/check_docs.py`
+```bash
+make check-docs
+```
 
-The Make target is:
+`scripts/check_docs.py` verifies the entrypoints, focused-doc metadata, active-only status, review dates, linked index coverage, local links/headings, literal repository paths, project-local skill metadata/UI portability, and obvious historical/completed section headings. Fenced examples and template paths are excluded from reference checks. `make check-docs` also runs the checker's fixture-based regression tests.
 
-- `make check-docs`
-
-Current checks are intentionally lightweight:
-- required entrypoint docs exist
-- canonical knowledge-base docs carry front matter
-- every project-local skill carries front matter
-- every project-local skill references repo docs
-- every `docs/*.md` file is mentioned in `docs/README.md`
-
-Tighten these checks gradually instead of introducing a large docs framework in one pass.
-
-## When To Add A Doc vs A Skill
-
-Add or extend a focused doc when the content is primarily:
-- current architecture
-- operating facts
-- stable conventions
-- incident history
-- recovery steps
-
-Add or extend a skill when the content is primarily:
-- how to execute a recurring task safely
-- what to inspect before editing
-- what side surfaces must be updated together
-- what validations prove the task is actually done
+The checker is a floor. A document can pass structure checks and still be wrong; compare its claims with the implementation whenever its domain changes.

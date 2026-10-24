@@ -1,315 +1,117 @@
-# Ops Command Cheatsheet
+---
+title: Operations Command Reference
+summary: Durable day-two commands for GitOps status, reconciliation, workloads, storage, DNS, and operator APIs.
+status: active
+owner: homelab
+last_reviewed: 2026-10-25
+---
 
-Practical command snippets for common day-2 scenarios in this cluster.
+# Operations Command Reference
 
-## 0) Session Setup
+Run commands from the repository root with the intended kubeconfig and Talos context already selected.
+
+Make automatically uses the repository's ignored `kubeconfig` when present, while preserving an explicit `KUBECONFIG`. Without that file, it leaves normal client configuration alone. Direct `kubectl` and `flux` commands need the same context selected explicitly; when using that local file:
 
 ```bash
-# Repo root
-cd /Users/khz/Code/rangoonpulse
-
-# Use repo kubeconfig explicitly
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
+export KUBECONFIG="$PWD/kubeconfig"
 ```
 
-Make targets automatically use the repo's ignored `kubeconfig` when it exists.
-An explicit environment or command-line `KUBECONFIG` takes precedence. Without
-that file, Make leaves the normal client configuration alone. Direct `kubectl`
-and `flux` commands still need the export above. If they return `Unauthorized`
-while Make works, check which kubeconfig the shell is using before rotating credentials.
+If direct commands return `Unauthorized` while Make works, compare kubeconfig selection before rotating credentials.
 
-## 1) Flux Health and Reconcile
+## Git And Validation
 
 ```bash
-# Top-level health
-flux get kustomizations -n flux-system
-flux get hr -A
+git status --short --branch
+git fetch --prune
+git pull --ff-only
+make validate-all
+```
 
-# Reconcile source + one kustomization
-flux reconcile kustomization flux-system -n flux-system --with-source
+## Flux
+
+```bash
+flux get sources all -A
+flux get kustomizations -A
+flux get helmreleases -A
+flux get image repository -A
+flux get image policy -A
+flux get image update -A
+
+flux reconcile source git flux-system -n flux-system
 flux reconcile kustomization <name> -n flux-system --with-source
-
-# Suspend/resume one kustomization
-flux suspend kustomization <name> -n flux-system
-flux resume kustomization <name> -n flux-system
+flux reconcile helmrelease <name> -n <namespace>
 ```
 
-## 2) Fast Cluster Triage
+## Kubernetes Triage
 
 ```bash
-kubectl get pods -A
-kubectl get events -A --sort-by=.lastTimestamp | tail -n 80
-
-# One HelmRelease
-kubectl describe hr -n <ns> <name>
-kubectl get pods -n <ns> -o wide
-kubectl logs -n <ns> deploy/<name> --tail=120
+kubectl get nodes -o wide
+kubectl get pods -A -o wide
+kubectl get events -A --sort-by=.lastTimestamp
+kubectl top nodes
+kubectl top pods -A
+kubectl rollout status deployment/<name> -n <namespace> --timeout=180s
+kubectl logs -n <namespace> deploy/<name> --since=30m
 ```
 
-## 3) Ingress + DNS + TLS Checks
+## DNS, Ingress, And Services
 
 ```bash
-# Public DNS answer
-dig @1.1.1.1 +short <host>.khzaw.dev
-
-# Local resolver answer via AdGuard Pi (for split/rebind checks)
-dig @10.0.0.233 +short <host>.khzaw.dev
-
-# Local resolver answer via AdGuard secondary
-dig @10.0.0.234 +short <host>.khzaw.dev
-
-# HTTPS response headers
-curl -I --max-time 20 https://<host>.khzaw.dev
-
-# Ingress object + cert-manager events
-kubectl describe ingress -n <ns> <ingress-name>
-kubectl get certificate -A
-kubectl get certificaterequest -A
+kubectl get ingress,svc,endpointslices -A
+dig @1.1.1.1 +short <host>
+curl -Ik --resolve <host>:443:10.0.0.231 https://<host>/
+curl -I --max-time 20 https://<host>/
 ```
 
-## 3a) Tailscale Connector Checks
+Use the dedicated edge VIP instead of `10.0.0.231` for Iris/Athena host-path checks.
+
+## Storage
 
 ```bash
-# Connector health and roles
-kubectl get connector
-kubectl get connector homelab-subnet-router -o yaml
-kubectl describe connector homelab-subnet-router
+kubectl get sc
+kubectl get pvc -A -o wide
+kubectl get pv
+kubectl get pods -n democratic-csi -o wide
 ```
 
-Expected signals:
-- `ISEXITNODE=true`
-- `SUBNETROUTES` includes the expected `/32` host routes
-- `status.conditions[type=ConnectorReady].status=True`
+Before any cleanup, prove the candidate is absent from current Pods, controllers, Flux sources, manifests, and intended recovery paths. `scripts/storage-sunset-cleanup.sh` is destructive tooling, not an inventory command.
 
-## 4) SOPS (Repo-Local, No Home Directory Keys)
+## Self-Built Image Promotion
 
 ```bash
-cd /Users/khz/Code/rangoonpulse
-export KUBECONFIG=/Users/khz/Code/rangoonpulse/kubeconfig
-
-# Bootstrap repo-local age key from cluster secret once
-mkdir -p .local/sops-age
-chmod 700 .local/sops-age
-kubectl -n flux-system get secret sops-age -o jsonpath='{.data.age\.agekey}' \
-  | base64 -D > .local/sops-age/keys.txt
-chmod 600 .local/sops-age/keys.txt
-
-# Use repo-local key for all sops operations
-export SOPS_AGE_KEY_FILE="$PWD/.local/sops-age/keys.txt"
-```
-
-```bash
-# Edit one encrypted secret (auto decrypt/edit/re-encrypt)
-sops infrastructure/secrets/<group>/<secret>.yaml
-
-# Sanity check decrypt works
-sops -d infrastructure/secrets/<group>/<secret>.yaml >/dev/null && echo "SOPS OK"
-```
-
-## 5) Public Edge (Cloudflare Tunnel Pilot)
-
-```bash
-# Public edge status
-flux get kustomizations -n flux-system | rg 'public-edge|secrets|namespaces'
-kubectl get pods -n public-edge -o wide
-kubectl logs -n public-edge deploy/cloudflared --tail=120
-
-# Restart cloudflared after token rotation
-flux reconcile kustomization secrets -n flux-system --with-source
-kubectl rollout restart deployment/cloudflared -n public-edge
-kubectl rollout status deployment/cloudflared -n public-edge --timeout=120s
-kubectl logs -n public-edge deploy/cloudflared --tail=120
-```
-
-```bash
-# Pilot hostname validation
-dig @1.1.1.1 +short share-sponsorblocktv.khzaw.dev
-curl -I --max-time 20 https://share-sponsorblocktv.khzaw.dev
-```
-
-## 6) Exposure Control (Phase 2 + 3 MVP)
-
-`controlpanel.khzaw.dev` is the combined operator cockpit. The public `tuning.khzaw.dev` hostname has been retired.
-
-```bash
-# Backend/control panel health
-flux get kustomizations -n flux-system | rg 'exposure-control'
-kubectl get pods -n default | rg exposure-control
-kubectl logs -n default deploy/exposure-control --tail=120
-curl -I --max-time 20 https://controlpanel.khzaw.dev
-```
-
-```bash
-# API actions (default expiry is 1h)
-curl -s https://controlpanel.khzaw.dev/api/services | jq
-
-curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enable \
-  -H 'content-type: application/json' -d '{}' | jq
-
-curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/enable \
-  -H 'content-type: application/json' -d '{"hours":0.5}' | jq
-
-curl -s -X POST https://controlpanel.khzaw.dev/api/services/speedtest/disable \
-  -H 'content-type: application/json' -d '{}' | jq
-
-# Phase 4 controls
-curl -s -X POST https://controlpanel.khzaw.dev/api/services/sponsorblocktv/enable \
-  -H 'content-type: application/json' -d '{"hours":1,"authMode":"cloudflare-access"}' | jq
-
-curl -s -X POST https://controlpanel.khzaw.dev/api/admin/disable-all \
-  -H 'content-type: application/json' -d '{}' | jq
-
-curl -s https://controlpanel.khzaw.dev/api/transmission-vpn | jq
-
-curl -s -X POST https://controlpanel.khzaw.dev/api/transmission-vpn \
-  -H 'content-type: application/json' -d '{"mode":"vpn"}' | jq
-
-curl -s -X POST https://controlpanel.khzaw.dev/api/transmission-vpn \
-  -H 'content-type: application/json' -d '{"mode":"direct"}' | jq
-
-curl -I --max-time 20 https://torrent-vpn.khzaw.dev
-
-curl -s https://controlpanel.khzaw.dev/metrics | rg '^exposure_control_'
-```
-
-```bash
-# Exposure-control monitoring objects
-kubectl get servicemonitor -n monitoring exposure-control
-kubectl get prometheusrule -n monitoring exposure-control -o yaml
-```
-
-## 7) Blog Public DNS (Tunnel-Owned)
-
-```bash
-# Blog should resolve to Cloudflare edge IPs (not private 10.0.0.231)
-dig @1.1.1.1 +short blog.khzaw.dev
-
-# DNS ownership object
-kubectl get svc -n public-edge blog-cname -o yaml
-
-# Verify blog ingress does not publish external-dns hostname
-kubectl get ingress -n default blog -o yaml | rg 'external-dns.alpha.kubernetes.io/hostname' -n || true
-```
-
-## 8) Static Site Deploy (Blog + mmcal)
-
-```bash
-# Fast rollout now (bypasses 6h image automation wait)
 make deploy-blog
 make deploy-mmcal
-
-# Check selected policy tags
-flux get image policy -n flux-system blog mmcal
-
-# Check deployed images
-kubectl get deploy -n default blog mmcal \
-  -o jsonpath='{range .items[*]}{.metadata.name}{" image="}{.spec.template.spec.containers[0].image}{"\n"}{end}'
+make deploy-ericaknight
+make deploy-itvp
+make deploy-retirement
+make deploy-rangoon-mapper
 ```
+
+Each target requests the corresponding ImageRepository, ImagePolicy, ImageUpdateAutomation, Git source, and app reconciliation. Fetch/pull afterward because image automation can commit to remote `master`.
+
+## Exposure Control
 
 ```bash
-# Public cache/header checks
-curl -I https://blog.khzaw.dev/
-curl -I https://mmcal.khzaw.dev/
-curl -I https://mmcal.khzaw.dev/sw.js
-curl -I https://mmcal.khzaw.dev/manifest.webmanifest
+curl -s https://controlpanel.khzaw.dev/api/services | jq
+curl -s https://controlpanel.khzaw.dev/api/travel | jq
+curl -s https://controlpanel.khzaw.dev/api/tuning | jq
 ```
 
-## 9) Resource Advisor Operations
+Use the current catalog IDs returned by the API rather than copied examples.
 
-```bash
-# Runtime components
-kubectl get cronjobs -n monitoring | rg resource-advisor
-kubectl get jobs -n monitoring | rg resource-advisor
-kubectl get configmap resource-advisor-latest -n monitoring -o yaml
-curl -I --max-time 20 https://controlpanel.khzaw.dev#tuning
-curl -s https://controlpanel.khzaw.dev/api/tuning | jq '.fetch,.applyPreflight.selectedCount'
-curl -s https://controlpanel.khzaw.dev/api/tuning/latest.json | jq '.summary,.budget'
-curl -s https://controlpanel.khzaw.dev/api/tuning/metrics | rg '^resource_advisor_'
-
-# If exporter.py changed in Git, restart the pod after reconcile to pick up the new mounted script
-kubectl rollout restart deployment/resource-advisor-exporter -n monitoring
-kubectl rollout status deployment/resource-advisor-exporter -n monitoring --timeout=180s
-
-# Logs
-kubectl logs -n monitoring job/<job-name>
-```
-
-```bash
-# Manual one-off runs
-kubectl create job -n monitoring \
-  --from=cronjob/resource-advisor-report \
-  resource-advisor-report-manual-$(date +%s)
-
-kubectl create job -n monitoring \
-  --from=cronjob/resource-advisor-apply-pr \
-  resource-advisor-apply-pr-manual-$(date +%s)
-```
-
-## 10) NFS / democratic-csi Incident Path
-
-```bash
-# Immediate checks
-kubectl -n democratic-csi get pods -o wide
-kubectl -n democratic-csi logs <controller-pod> -c external-provisioner --tail=200
-kubectl get pods -A | rg 'ContainerCreating|CrashLoopBackOff'
-```
-
-```bash
-# Controller restart (after root cause fix, e.g. TrueNAS Tailscale Accept Routes off)
-kubectl -n democratic-csi delete pod \
-  -l app.kubernetes.io/component=controller-linux,app.kubernetes.io/instance=democratic-csi-hdd
-
-kubectl -n democratic-csi delete pod \
-  -l app.kubernetes.io/component=controller-linux,app.kubernetes.io/instance=democratic-csi-nvme
-```
-
-Reference: `docs/truenas-tailscale-accept-routes-caused-democratic-csi-outage.md`
-
-## 11) DNS Reliability Path (CoreDNS + Flux Source)
-
-```bash
-kubectl describe gitrepository -n flux-system flux-system
-flux reconcile kustomization flux-system -n flux-system --with-source
-flux reconcile kustomization dns-reliability -n flux-system --with-source
-
-kubectl get cm -n kube-system coredns -o yaml
-kubectl get podmonitor -n monitoring flux-controllers
-kubectl get prometheusrule -n monitoring dns-reliability
-```
-
-## 12) Talos Node Quick Check
+## Talos
 
 ```bash
 talosctl -n 10.0.0.197 dashboard
+talosctl -n 10.0.0.38 dashboard
 ```
 
-## 13) Storage Sunset Cleanup Script
+Use focused Talos recovery docs before upgrade, image-GC, or userspace-OOM operations.
+
+## Safe Secret Inspection
 
 ```bash
-# Dry run
-scripts/storage-sunset-cleanup.sh
-
-# Example apply mode
-scripts/storage-sunset-cleanup.sh --apply --namespace default --match 'default/booklore'
+kubectl get secret <name> -n <namespace> -o go-template='{{.metadata.namespace}}/{{.metadata.name}} keys={{range $k, $_ := .data}} {{$k}}{{end}}{{"\n"}}'
 ```
 
-## 14) Node Power Estimation Checks
-
-```bash
-# Reconcile monitoring stack
-flux reconcile kustomization monitoring -n flux-system --with-source
-
-# Ensure rule + dashboard objects are present
-kubectl get prometheusrule -n monitoring node-power-estimation
-kubectl get configmap -n monitoring grafana-dashboard-node-power-estimation
-```
-
-```bash
-# Validate estimated node watts series in Prometheus
-kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  promtool query instant http://localhost:9090 'homelab:node_estimated_power_watts'
-
-# Cluster aggregate estimate
-kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
-  promtool query instant http://localhost:9090 'homelab:cluster_estimated_power_watts'
-```
+Never print values during routine verification.
