@@ -29,12 +29,12 @@ The [dedicated SSH/HTTPS VIP](./mac-mini-edge.md) remains unchanged.
 
   Hermes monitors on that same page:
 
-  | Name | URL | Success |
-  | --- | --- | --- |
-  | Hermes Gateway | `http://10.0.0.66:9101/healthz/hermes-gateway` | HTTP 200 and `"ok":true` |
-  | Hermes Dashboard | `http://10.0.0.66:9119/api/health` | HTTP 200 |
-  | Hermes Readiness | `http://10.0.0.66:9101/healthz/hermes` | HTTP 200 and `"ok":true` |
-  | Hermes HTTPS Edge | `https://athena.khzaw.dev/api/health` | HTTP 200 |
+  | ID | Name | URL | Success |
+  | --- | --- | --- | --- |
+  | 26 | Hermes Gateway | `http://10.0.0.66:9101/healthz/hermes-gateway` | HTTP 200 and `"ok":true` |
+  | 28 | Hermes Dashboard | `http://10.0.0.66:9119/api/health` | HTTP 200 |
+  | 27 | Hermes Readiness | `http://10.0.0.66:9101/healthz/hermes` | HTTP 200 and `"ok":true` |
+  | 29 | Hermes HTTPS Edge | `https://athena.khzaw.dev/api/health` | HTTP 200 |
 
   All use 60-second intervals, 10-second timeout, 2 retries, 60-second retry interval.
   Kuma monitors/status-page membership are runtime-owned; configure through the authenticated UI,
