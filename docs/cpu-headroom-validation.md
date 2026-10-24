@@ -52,8 +52,15 @@ application configuration, and credentials are excluded.
 The publisher reuses `monitoring/resource-advisor-github` (contents write); CI
 reads the public branch without cluster or GitHub write credentials. The branch
 is runtime state, is outside Flux's master source, and does not trigger master CI.
-It must never be merged into master. The Control Panel Jobs view exposes the
-publisher's schedule, last result, and manual run action.
+It must never be merged into master. Each publication creates a parentless commit
+with only the snapshot file and force-updates `capacity-state`, keeping its reachable
+history to one commit rather than accumulating 96 commits per day. This also replaces
+the old accumulating history on the first successful publication. GitHub may retain
+unreachable objects temporarily; immediate physical storage reclamation is not
+guaranteed. Force updates must remain permitted on this runtime-state branch (not
+on `master`). A rejected update fails the job and leaves the previous snapshot intact.
+The Control Panel Jobs view exposes the publisher's schedule, last result, and manual
+run action.
 
 Snapshots older than 30 minutes fail capacity-changing CI checks. No-change
 builds do not require a snapshot. To refresh immediately:

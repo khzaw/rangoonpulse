@@ -16,6 +16,53 @@ spec.loader.exec_module(ci)
 
 
 class CapacityCITests(unittest.TestCase):
+    def test_publish_replaces_only_capacity_branch_with_parentless_snapshot(self):
+        snapshot = {'schemaVersion': 1, 'generatedAt': 123, 'items': []}
+        env = {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPOSITORY': 'owner/repo',
+               'GITHUB_COMMIT_AUTHOR_NAME': 'Operator',
+               'GITHUB_COMMIT_AUTHOR_EMAIL': 'operator@example.com'}
+        with patch.dict('os.environ', env, clear=True), \
+                patch.object(capacity_snapshot.advisor, 'github_request', side_effect=[
+                    (201, {'sha': 'tree'}), (201, {'sha': 'commit'}), (200, {}),
+                ]) as request, patch.object(capacity_snapshot.advisor, 'log'):
+            capacity_snapshot.publish(snapshot)
+        calls = request.call_args_list
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(calls[0].args[:2], ('POST', 'https://api.github.com/repos/owner/repo/git/trees'))
+        tree = calls[0].args[3]
+        self.assertEqual(set(tree), {'tree'})  # No base_tree inheriting application files.
+        self.assertEqual(len(tree['tree']), 1)
+        self.assertEqual(tree['tree'][0]['path'], 'capacity-snapshot.json')
+        self.assertEqual(json.loads(tree['tree'][0]['content']), snapshot)
+        self.assertEqual(calls[1].args[3]['parents'], [])
+        self.assertEqual(calls[1].args[3]['tree'], 'tree')
+        self.assertEqual(calls[1].args[3]['author'], {'name': 'Operator', 'email': 'operator@example.com'})
+        self.assertEqual(calls[2].args[:2], ('PATCH', 'https://api.github.com/repos/owner/repo/git/refs/heads/capacity-state'))
+        self.assertEqual(calls[2].args[3], {'sha': 'commit', 'force': True})
+
+    def test_publish_initializes_missing_branch_without_master(self):
+        with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token'}, clear=True), \
+                patch.object(capacity_snapshot.advisor, 'github_request', side_effect=[
+                    (201, {'sha': 'tree'}), (201, {'sha': 'commit'}), (404, {}), (201, {}),
+                ]) as request, patch.object(capacity_snapshot.advisor, 'log'):
+            capacity_snapshot.publish({'items': []})
+        self.assertEqual(request.call_args.args[3], {'ref': 'refs/heads/capacity-state', 'sha': 'commit'})
+        self.assertNotIn('author', request.call_args_list[1].args[3])
+
+    def test_publish_fails_closed_on_api_errors(self):
+        for responses, message in [
+            ([(403, {})], 'create capacity tree'),
+            ([(201, {'sha': 'tree'}), (403, {})], 'create capacity commit'),
+            ([(201, {'sha': 'tree'}), (201, {'sha': 'commit'}), (422, {})], 'replace capacity branch'),
+            ([(201, {'sha': 'tree'}), (201, {'sha': 'commit'}), (404, {}), (403, {})], 'initialize capacity branch'),
+        ]:
+            with self.subTest(message=message), \
+                    patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token'}, clear=True), \
+                    patch.object(capacity_snapshot.advisor, 'github_request', side_effect=responses) as request, \
+                    self.assertRaisesRegex(ValueError, message):
+                capacity_snapshot.publish({'items': []})
+            self.assertEqual(request.call_count, len(responses))
+
     def test_published_snapshot_omits_application_data_and_preserves_cpu(self):
         obj = workload('sample', '100m')
         pod = obj['spec']['template']['spec']
