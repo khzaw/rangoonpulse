@@ -34,6 +34,8 @@ def run(command: list[str]) -> None:
     ddl = bootstrap[bootstrap.index("CREATE SCHEMA IF NOT EXISTS"):bootstrap.index("REVOKE ALL ON power_estimation.monthly_cost")]
     ddl = ddl.replace("power_estimation", schema)
     collect = (CODE / "collect.sql").read_text().replace("power_estimation", schema)
+    if "DO $$" in collect:
+        raise AssertionError("Use named dollar quotes: Flux substitution collapses anonymous $$ delimiters")
 
     def collect_case(cutoff: str, body: dict) -> str:
         sql = collect.replace("\\getenv cutoff POWER_LEDGER_CUTOFF", f"\\set cutoff {stamp(cutoff)}")

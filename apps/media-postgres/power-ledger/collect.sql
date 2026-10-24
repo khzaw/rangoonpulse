@@ -10,7 +10,7 @@ SELECT pg_advisory_xact_lock(1886353266, 1);
 CREATE TEMP TABLE source (body jsonb) ON COMMIT DROP;
 -- Control characters cannot occur unescaped in JSON. CSV avoids COPY text unescaping JSON.
 \copy source FROM '/tmp/power-samples.json' WITH (FORMAT csv, DELIMITER E'\x01', QUOTE E'\x02')
-DO $$
+DO $ledger$
 BEGIN
   IF (SELECT count(*) FROM source) <> 1 OR EXISTS (
     SELECT 1 FROM source WHERE body->>'status' IS DISTINCT FROM 'success'
@@ -20,7 +20,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Prometheus did not return one complete successful matrix response';
   END IF;
-END $$;
+END $ledger$;
 CREATE TEMP TABLE samples ON COMMIT DROP AS
 SELECT series->'metric'->>'node' AS node,
        (sample->>0)::numeric AS ts,
@@ -38,7 +38,7 @@ SELECT to_timestamp(:'cutoff'::double precision) AS cutoff,
          to_timestamp(floor((SELECT min(ts) FROM samples) / 120)::double precision * 120)
        ) AS cursor,
        :'expected_nodes'::integer AS expected_nodes;
-DO $$
+DO $ledger$
 BEGIN
   IF EXISTS (SELECT 1 FROM context WHERE cursor IS NULL OR expected_nodes NOT BETWEEN 1 AND 100) THEN
     RAISE EXCEPTION 'Cannot initialize without recorded samples and a valid node count';
@@ -46,7 +46,7 @@ BEGIN
   IF EXISTS (SELECT 1 FROM samples WHERE cost_per_hour < 0) THEN
     RAISE EXCEPTION 'Negative cost samples';
   END IF;
-END $$;
+END $ledger$;
 WITH months AS (
   SELECT m::date AS month,
          greatest(c.cursor, m AT TIME ZONE 'Asia/Singapore') AS segment_start,

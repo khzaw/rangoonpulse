@@ -219,6 +219,12 @@ kubectl create job -n default --from=cronjob/power-cost-ledger power-cost-ledger
 curl -fsS https://controlpanel.khzaw.dev/api/power-cost-ledger
 ```
 
+SQL delivered inside Flux-substituted ConfigMaps must use named PL/pgSQL dollar
+quotes such as `$ledger$`: anonymous `$$` delimiters collapse to `$` during Flux
+substitution and cause `DO $` syntax errors. The initial manual run exposed this;
+its transaction rolled back without advancing the checkpoint. Validate the
+**Flux-rendered** script as well as the raw SQL.
+
 The SQL regression test uses an isolated schema and rolls everything back. It
 checks month splitting, retries, cutoff boundaries, coverage gaps, finalization,
 and rejection of malformed/partial source responses. CI runs it in a disposable
