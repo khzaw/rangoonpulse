@@ -79,6 +79,18 @@ spec:
         - name: iris-readiness
           url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
           module: iris_health_http
+        - name: iris-hermes-gateway
+          url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes-gateway
+          module: iris_health_http
+        - name: iris-hermes-dashboard
+          url: http://${IRIS_MAC_MINI_IP}:9119/api/health
+          module: iris_health_http
+        - name: iris-hermes-readiness
+          url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes
+          module: iris_health_http
+        - name: iris-hermes-https
+          url: https://athena.${BASE_DOMAIN}/api/health
+          module: iris_health_http
         - name: iris-ssh
           url: ${IRIS_MAC_MINI_IP}:22
           module: tcp_connect

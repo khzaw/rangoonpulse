@@ -41,8 +41,16 @@ spec:
           annotations:
             summary: An Iris agent process or OpenClaw readiness check is down
             description: Check ai.openclaw.gateway, ai.hermes.gateway and dev.khzaw.hermes.dashboard on Iris. Remote readiness is a sanitized loopback check, not a relaxed OpenClaw proxy policy.
+        - alert: IrisHermesUnhealthy
+          expr: iris_hermes_ready{job="iris-node"} == 0 or iris_hermes_gateway_up{job="iris-node"} == 0 or iris_hermes_dashboard_up{job="iris-node"} == 0 or iris_hermes_status_up{job="iris-node"} == 0 or probe_success{target=~"iris-hermes-.*"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: Hermes gateway, dashboard or component health is failing
+            description: Check Athena /api/health and /api/status, the loopback gateway /health on port 8642, and Hermes gateway/dashboard/storage/platform component metrics. A running launchd process alone is not readiness; no inference request is sent by these probes.
         - alert: IrisWatchdogStale
-          expr: (time() - iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"} > 180) or absent(iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"}) or absent(iris_openclaw_ready{job="iris-node"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.openclaw.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.hermes.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="dev.khzaw.hermes.dashboard"}) or node_textfile_scrape_error{job="iris-node"} != 0
+          expr: (time() - iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"} > 180) or absent(iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"}) or absent(iris_openclaw_ready{job="iris-node"}) or absent(iris_hermes_ready{job="iris-node"}) or absent(iris_hermes_gateway_up{job="iris-node"}) or absent(iris_hermes_dashboard_up{job="iris-node"}) or absent(iris_hermes_status_up{job="iris-node"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.openclaw.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.hermes.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="dev.khzaw.hermes.dashboard"}) or node_textfile_scrape_error{job="iris-node"} != 0
           for: 3m
           labels:
             severity: critical

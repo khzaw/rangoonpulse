@@ -41,6 +41,25 @@ export function launchdServiceRunning(listing, service) {
   });
 }
 
+export function hermesHealth(gateway, dashboard, status) {
+  const gatewayUp = gateway?.status === 'ok' && gateway?.platform === 'hermes-agent';
+  const dashboardUp = dashboard?.ok === true;
+  const statusUp = typeof status?.gateway_running === 'boolean' &&
+    ['ok', 'degraded'].includes(status?.overall) && Boolean(status?.components);
+  const components = Object.fromEntries(['gateway', 'dashboard', 'storage', 'platforms']
+    .map(name => [name, status?.components?.[name]?.status === 'ok']));
+  const count = value => Number.isFinite(value) && value >= 0 ? value : undefined;
+  return {
+    gatewayUp, dashboardUp, statusUp, components,
+    ready: gatewayUp && dashboardUp && statusUp && status.gateway_running &&
+      status.gateway_heartbeat_stale_s === null && status.overall === 'ok' &&
+      Object.values(components).every(Boolean),
+    activeAgents: count(status?.active_agents),
+    platformsConnected: count(status?.components?.platforms?.connected),
+    platformsConfigured: count(status?.components?.platforms?.configured),
+  };
+}
+
 export async function atomicWrite(path, contents) {
   await writeFile(`${path}.tmp`, contents, { mode: 0o600 });
   await rename(`${path}.tmp`, path);
@@ -136,10 +155,13 @@ export async function main() {
   let states;
   try { states = await readJson(`${stateDir}/alerts.json`); }
   catch (error) { if (error.code !== 'ENOENT') throw error; states = {}; }
-  let readiness;
+  const readiness = {};
+  const routes = { '/healthz/openclaw': 'openclaw', '/healthz/hermes': 'hermes',
+    '/healthz/hermes-gateway': 'hermesGateway' };
   const server = createServer((req, res) => {
-    const ok = req.url === '/healthz/openclaw' && readinessHealthy(readiness, Date.now() / 1000);
-    res.writeHead(req.url !== '/healthz/openclaw' ? 404 : ok ? 200 : 503,
+    const name = Object.hasOwn(routes, req.url) ? routes[req.url] : undefined;
+    const ok = Boolean(name) && readinessHealthy(readiness[name], Date.now() / 1000);
+    res.writeHead(!name ? 404 : ok ? 200 : 503,
       { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify({ ok }));
   });
@@ -158,8 +180,30 @@ export async function main() {
       const response = await request(config.openclawUrl);
       ready = response.status === 200 && JSON.parse(response.body).ready === true;
     } catch { /* an unavailable local gateway is an unhealthy sample */ }
-    readiness = { ok: ready, timestamp: now };
+    readiness.openclaw = { ok: ready, timestamp: now };
     metric('iris_openclaw_ready', {}, ready);
+    const [gateway, dashboard, status] = await Promise.all([
+      config.hermesGatewayUrl, config.hermesDashboardUrl, config.hermesStatusUrl,
+    ].map(async url => {
+      try {
+        const response = await request(url);
+        return response.status === 200 ? JSON.parse(response.body) : undefined;
+      } catch { return undefined; }
+    }));
+    const hermes = hermesHealth(gateway, dashboard, status);
+    readiness.hermes = { ok: hermes.ready, timestamp: now };
+    readiness.hermesGateway = { ok: hermes.gatewayUp, timestamp: now };
+    metric('iris_hermes_gateway_up', {}, hermes.gatewayUp);
+    metric('iris_hermes_dashboard_up', {}, hermes.dashboardUp);
+    metric('iris_hermes_status_up', {}, hermes.statusUp);
+    metric('iris_hermes_ready', {}, hermes.ready);
+    for (const [component, ok] of Object.entries(hermes.components)) {
+      metric('iris_hermes_component_up', { component }, ok);
+    }
+    for (const [name, value] of [['active_agents', hermes.activeAgents],
+      ['platforms_connected', hermes.platformsConnected], ['platforms_configured', hermes.platformsConfigured]]) {
+      if (value !== undefined) metric(`iris_hermes_${name}`, {}, value);
+    }
     let listing = '';
     try {
       // The caller's launchd list includes both user and GUI jobs. Hermes uses user/501.

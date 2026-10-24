@@ -361,6 +361,9 @@ spec:
                               - title: Iris
                                 url: https://iris.${BASE_DOMAIN}
                                 icon: mdi:robot-outline
+                              - title: Hermes (Athena)
+                                url: https://athena.${BASE_DOMAIN}
+                                icon: mdi:message-processing-outline
                               - title: Iris Overview
                                 url: https://grafana.${BASE_DOMAIN}/d/iris-overview
                                 icon: mdi:apple
@@ -660,6 +663,7 @@ spec:
                           - controlplaneio-fluxcd/flux-operator
                           # Iris stays native macOS; these are release notices, not container updates.
                           - openclaw/openclaw
+                          - NousResearch/hermes-agent
                           - prometheus/node_exporter
                           # Arr and download stack
                           - Sonarr/Sonarr
@@ -757,6 +761,18 @@ spec:
                             url: https://grafana.${BASE_DOMAIN}/d/iris-overview
                             check-url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
                             icon: mdi:apple
+                          - title: Hermes Gateway
+                            url: https://athena.${BASE_DOMAIN}
+                            check-url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes-gateway
+                            icon: mdi:message-processing-outline
+                          - title: Hermes Dashboard
+                            url: https://athena.${BASE_DOMAIN}
+                            check-url: http://${IRIS_MAC_MINI_IP}:9119/api/health
+                            icon: mdi:monitor-dashboard
+                          - title: Hermes Readiness
+                            url: https://athena.${BASE_DOMAIN}
+                            check-url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes
+                            icon: mdi:heart-pulse
                           - title: Operator Cockpit
                             url: https://controlpanel.${BASE_DOMAIN}
                             check-url: http://exposure-control.default.svc.cluster.local:8080/healthz

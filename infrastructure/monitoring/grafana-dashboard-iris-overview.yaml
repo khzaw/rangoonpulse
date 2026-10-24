@@ -19,7 +19,7 @@ data:
       "tags": ["iris", "macos", "homelab"],
       "time": {"from": "now-24h", "to": "now"},
       "templating": {"list": [{"name": "datasource", "type": "datasource", "query": "prometheus", "current": {"text": "Prometheus", "value": "prometheus"}, "refresh": 1}]},
-      "links": [{"title": "Iris Gateway", "url": "https://iris.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Uptime Kuma", "url": "https://uptime.${BASE_DOMAIN}", "targetBlank": true}],
+      "links": [{"title": "Iris Gateway", "url": "https://iris.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Hermes", "url": "https://athena.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Uptime Kuma", "url": "https://uptime.${BASE_DOMAIN}", "targetBlank": true}],
       "panels": [
         {
           "id": 1, "type": "stat", "title": "Host exporter", "datasource": {"uid": "$datasource"},
@@ -50,14 +50,42 @@ data:
           "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 180}]}}}
         },
         {
+          "id": 11, "type": "stat", "title": "Hermes gateway API", "description": "Real loopback /health on port 8642; not merely a running process.", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+          "targets": [{"refId": "A", "expr": "iris_hermes_gateway_up{job=\"iris-node\"}"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"},
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+        },
+        {
+          "id": 12, "type": "stat", "title": "Hermes dashboard API", "description": "Athena backend /api/health; authentication remains enabled.", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+          "targets": [{"refId": "A", "expr": "iris_hermes_dashboard_up{job=\"iris-node\"}"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"},
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+        },
+        {
+          "id": 13, "type": "stat", "title": "Hermes readiness", "description": "Gateway API + dashboard API + /api/status: running gateway, fresh heartbeat and healthy gateway/dashboard/storage/platform components. Does not exercise inference.", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+          "targets": [{"refId": "A", "expr": "iris_hermes_ready{job=\"iris-node\"}"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none"},
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+        },
+        {
+          "id": 14, "type": "stat", "title": "Hermes active agents", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+          "targets": [{"refId": "A", "expr": "iris_hermes_active_agents{job=\"iris-node\"}"}],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "graphMode": "none"},
+          "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
+        },
+        {
           "id": 5, "type": "timeseries", "title": "CPU busy", "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
           "targets": [{"refId": "A", "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{job=\"iris-node\",mode=\"idle\"}[5m])))", "legendFormat": "CPU busy"}],
           "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
         },
         {
           "id": 6, "type": "timeseries", "title": "Darwin memory components", "description": "Darwin-specific metrics; free memory alone is not memory pressure. Components are not all mutually exclusive and are not stacked.", "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
           "targets": [
             {"refId": "A", "expr": "node_memory_active_bytes{job=\"iris-node\"}", "legendFormat": "Active"},
             {"refId": "B", "expr": "node_memory_wired_bytes{job=\"iris-node\"}", "legendFormat": "Wired"},
@@ -69,27 +97,42 @@ data:
         },
         {
           "id": 7, "type": "timeseries", "title": "Native launchd processes (not end-to-end agent success)", "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 12},
-          "targets": [{"refId": "A", "expr": "iris_launchd_service_up{job=\"iris-node\"}", "legendFormat": "{{launchd_service}}"}],
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 16},
+          "targets": [{"refId": "A", "expr": "iris_launchd_service_up{job=\"iris-node\",launchd_service=~\".+\"}", "legendFormat": "{{launchd_service}}"}],
           "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
         },
         {
           "id": 8, "type": "timeseries", "title": "Cluster checks from Iris (direct LAN, no cluster DNS)", "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 12},
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 16},
           "targets": [{"refId": "A", "expr": "iris_cluster_probe_success{job=\"iris-node\"}", "legendFormat": "{{check}}"}],
           "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
         },
         {
-          "id": 9, "type": "timeseries", "title": "Blackbox: gateway, readiness and direct SSH", "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 19},
+          "id": 9, "type": "timeseries", "title": "Blackbox: OpenClaw, Hermes and SSH", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 23},
           "targets": [{"refId": "A", "expr": "probe_success{target=~\"iris-.*\"}", "legendFormat": "{{target}}"}],
           "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
         },
         {
           "id": 10, "type": "timeseries", "title": "Pending external notifications (0 = no undelivered message)", "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 19},
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 23},
           "targets": [{"refId": "A", "expr": "iris_notification_pending{job=\"iris-node\"}", "legendFormat": "{{check}} / {{destination}}"}],
           "fieldConfig": {"defaults": {"min": 0, "max": 1}}
+        },
+        {
+          "id": 15, "type": "timeseries", "title": "Hermes component health", "description": "Public /api/status gateway, dashboard, storage and platform rollup. False is degraded or unavailable.", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 30},
+          "targets": [{"refId": "A", "expr": "iris_hermes_component_up{job=\"iris-node\"}", "legendFormat": "{{component}}"}],
+          "fieldConfig": {"defaults": {"unit": "bool", "min": 0, "max": 1}}
+        },
+        {
+          "id": 16, "type": "timeseries", "title": "Hermes platform connections", "datasource": {"uid": "$datasource"},
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 30},
+          "targets": [
+            {"refId": "A", "expr": "iris_hermes_platforms_connected{job=\"iris-node\"}", "legendFormat": "Connected"},
+            {"refId": "B", "expr": "iris_hermes_platforms_configured{job=\"iris-node\"}", "legendFormat": "Configured"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short", "min": 0}}
         }
       ]
     }

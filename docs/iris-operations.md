@@ -14,8 +14,11 @@ The [dedicated SSH/HTTPS VIP](./iris-dedicated-vip.md) remains unchanged.
 
 ## Operating surfaces
 
-- Grafana: <https://grafana.khzaw.dev/d/iris-overview> (Darwin-specific metrics).
-- Dynacat: Home → Ops → Iris / Iris Overview; Health → Iris Gateway / Iris API Readiness.
+- Grafana: <https://grafana.khzaw.dev/d/iris-overview> (Darwin-specific metrics, OpenClaw readiness,
+  Hermes gateway/dashboard APIs, component readiness, active agents and platform connections).
+  Header buttons link to Iris Gateway, [Hermes / Athena](https://athena.khzaw.dev), and Uptime Kuma.
+- Dynacat: Home → Ops → Iris / Hermes (Athena) / Iris Overview; Health → Iris Gateway /
+  Iris API Readiness / Hermes Gateway / Hermes Dashboard / Hermes Readiness.
 - Uptime Kuma desired monitors, on the existing published `rangoonpulse` page:
 
   | ID | Name | Type / URL | Success |
@@ -24,22 +27,46 @@ The [dedicated SSH/HTTPS VIP](./iris-dedicated-vip.md) remains unchanged.
   | 23 | Iris API Readiness | HTTP `http://10.0.0.66:9101/healthz/openclaw` | HTTP 200 |
   | 24 | Iris HTTPS Edge | HTTP `https://iris.khzaw.dev/healthz` | HTTP 200 |
 
+  Hermes monitors on that same page:
+
+  | Name | URL | Success |
+  | --- | --- | --- |
+  | Hermes Gateway | `http://10.0.0.66:9101/healthz/hermes-gateway` | HTTP 200 and `"ok":true` |
+  | Hermes Dashboard | `http://10.0.0.66:9119/api/health` | HTTP 200 |
+  | Hermes Readiness | `http://10.0.0.66:9101/healthz/hermes` | HTTP 200 and `"ok":true` |
+  | Hermes HTTPS Edge | `https://athena.khzaw.dev/api/health` | HTTP 200 |
+
   All use 60-second intervals, 10-second timeout, 2 retries, 60-second retry interval.
   Kuma monitors/status-page membership are runtime-owned; configure through the authenticated UI,
   not live SQLite edits. Existing Kuma has no notification destinations; notifications here are
   owned by Alertmanager and the native sentinel, not a second Kuma notification configuration.
 - Prometheus blackbox additionally probes the direct SSH listener on `10.0.0.66:22`.
+  Hermes blackbox targets cover all four Hermes paths above, requiring HTTP 200 and JSON `ok: true`.
 - `Iris.*` critical and warning alerts reuse the existing Telegram/Discord Alertmanager route.
   Host metrics unavailable: 3m; agent process/readiness down: 3m; APFS Data free space:
   below 10% for 10m / below 5% for 5m; native telemetry stale/missing: 3m after a 180s stale threshold.
   Host unavailable means exporter/network/power loss, not a definitive diagnosis of which one.
+  `IrisHermesUnhealthy` alerts after 3m of failed Hermes gateway/dashboard/status/component readiness
+  or any Hermes blackbox target failure, through the same existing critical notification route.
 
 OpenClaw `/readyz` rejects unattributed remote requests with HTTP 403. **Do not relax
 `gateway.trustedProxies` to make monitoring work.** The native watchdog checks readiness over
 loopback and exposes only a cached `{ "ok": true/false }` on LAN port 9101. Missing/stale samples
 (90s) return HTTP 503. `/healthz` checks liveness, not agent/provider end-to-end success.
-Hermes is checked for running launchd processes; it has no verified health API in this integration.
-Its dashboard port 9119 `/metrics` is a login HTML page, **not** a Prometheus exporter.
+Hermes is checked through real application endpoints as well as launchd:
+
+- Gateway `http://127.0.0.1:8642/health`: requires `status: "ok"` and `platform: "hermes-agent"`.
+  The loopback-only listener stays private; `/healthz/hermes-gateway` relays only its cached boolean.
+- Dashboard `http://127.0.0.1:9119/api/health`: requires `ok: true`. The public health API also
+  works through `https://athena.khzaw.dev/api/health`; dashboard login remains enforced elsewhere.
+- Dashboard `/api/status`: exports only allowlisted numeric/boolean metrics for gateway, dashboard,
+  storage and platform component health, active agent count and connected/configured platform counts.
+  `/healthz/hermes` requires both HTTP APIs, a running gateway, no stale heartbeat, `overall: "ok"`
+  and all four components healthy. Missing/malformed responses fail closed; cached readiness expires
+  after 90s. Raw status payloads, platform error strings and profile metadata are not re-exported.
+
+These checks do not send inference requests or prove provider end-to-end success. Hermes's
+dashboard port 9119 `/metrics` is a login HTML page, **not** a Prometheus exporter.
 Hermes's gateway is in `user/501`, while other jobs use `gui/501`: inspect the caller's
 `launchctl list`, not GUI-only service paths. The metric label is `launchd_service` to avoid
 Prometheus's discovery-owned `service` label (which otherwise renames the metric label to `exported_service`).
@@ -55,7 +82,7 @@ Versioned implementation: [`native/iris/`](../native/iris/). Homebrew supplies `
 | `ai.hermes.gateway` | Existing Hermes gateway; unchanged |
 | `dev.khzaw.hermes.dashboard` | Existing Hermes dashboard; unchanged |
 | `dev.khzaw.iris.node-exporter` | Darwin exporter, LAN `10.0.0.66:9100`, textfile collector |
-| `dev.khzaw.iris.watchdog` | Readiness relay, launchd metrics, independent cluster checks/notifications |
+| `dev.khzaw.iris.watchdog` | OpenClaw/Hermes API readiness relays, launchd/component metrics, independent cluster checks/notifications |
 
 Both new jobs have `RunAtLoad`, `KeepAlive`, and a 10-second restart throttle. They are login
 **LaunchAgents**, consistent with the existing agents. They survive crashes but require the `iris`
@@ -94,6 +121,8 @@ Paths on Iris:
 ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.watchdog'
 ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.node-exporter'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/openclaw'
+ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes'
+ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes-gateway'
 ```
 
 ## Outside-cluster sentinel and credentials
@@ -141,7 +170,7 @@ An external dead-man's-switch would be needed for whole-site failure coverage; n
 
 Homebrew/native updates remain manual (`brew outdated node_exporter node`, review upstream release
 notes, upgrade, rerun deployer, verify plists/metrics and notification smoke test). Dynacat Releases
-includes OpenClaw and node_exporter. Existing application upgrade policies are unchanged.
+includes OpenClaw, Hermes and node_exporter. Existing application upgrade policies are unchanged.
 
 Kubernetes chart/image update rows, HPA, resource-advisor/Tuning apply policy, pod requests/limits,
 and disabled share plumbing are **N/A** for native host jobs: there is no pod, chart, HPA or share
@@ -151,12 +180,15 @@ ports. Prometheus/Grafana/blackbox reuse existing workloads with unchanged resou
 ## Validation and initial live evidence
 
 `node --test native/iris/watchdog.test.mjs` covers debounce/recovery, independent notification
-retries, stale readiness, endpoint response validation, and cross-domain launchd listings.
+retries, stale readiness, endpoint response validation, cross-domain launchd listings and Hermes
+readiness failures despite running processes (missing APIs, malformed status, stale heartbeat,
+disconnected platforms or unhealthy components).
 For alert regression tests, extract `PrometheusRule.spec` from
 `infrastructure/monitoring/prometheusrule-iris.yaml` into `iris-rules.yaml` beside a temporary
 copy of `native/iris/alerts.test.yaml`, then run `promtool test rules alerts.test.yaml` there.
 The fixtures include real discovery's `service="iris-node"` label, healthy telemetry,
-missing host/watchdog data, stopped agents, and low/critical APFS space.
+missing host/watchdog data, stopped agents, low/critical APFS space, Hermes component failures
+despite healthy processes/HTTP APIs, and independent Athena HTTPS-path failure.
 
 Initial live checks on 2026-10-25:
 

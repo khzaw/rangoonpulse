@@ -7,6 +7,9 @@
   "repeatSeconds": 14400,
   "dnsServers": ["1.1.1.1", "8.8.8.8"],
   "openclawUrl": "http://127.0.0.1:18789/readyz",
+  "hermesGatewayUrl": "http://127.0.0.1:8642/health",
+  "hermesDashboardUrl": "http://127.0.0.1:9119/api/health",
+  "hermesStatusUrl": "http://127.0.0.1:9119/api/status",
   "services": ["ai.openclaw.gateway", "ai.hermes.gateway", "dev.khzaw.hermes.dashboard"],
   "clusterChecks": [
     {"name": "kubernetes-api", "url": "https://10.0.0.197:6443/readyz", "kubernetesAuth": true},
