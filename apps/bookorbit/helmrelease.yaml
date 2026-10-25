@@ -69,6 +69,11 @@ spec:
                   secretKeyRef:
                     name: bookorbit-secret
                     key: JWT_SECRET
+              BOOK_REQUEST_ENCRYPTION_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: bookorbit-secret
+                    key: BOOK_REQUEST_ENCRYPTION_KEY
               SETUP_BOOTSTRAP_TOKEN:
                 valueFrom:
                   secretKeyRef:

@@ -40,6 +40,8 @@ This is an Anki sync endpoint, not a web application. A browser request to `/` r
 
 BookOrbit can write embedded metadata back to the shared library. Shelfmark also writes into that library. Avoid concurrent bulk mutation from both applications, and verify file-level effects before enabling new automation.
 
+Saved download-client and indexer credentials are encrypted with `BOOK_REQUEST_ENCRYPTION_KEY`, supplied by `bookorbit-secret`. Preserve this key across upgrades and recovery; replacing it makes existing encrypted credentials unreadable.
+
 BookOrbit scan cadence, users, and metadata-provider settings are runtime application state, not declared in this repository. Do not copy those values into Git docs unless they become managed configuration.
 
 A temporary BookOrbit share is fully wired through exposure-control and public-edge.

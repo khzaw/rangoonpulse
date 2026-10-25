@@ -19,7 +19,7 @@ All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and incl
 ## `default`
 
 - `anki-server-secret`: Anki sync server credentials
-- `bookorbit-secret`: BookOrbit application and `media-postgres` database bootstrap
+- `bookorbit-secret`: BookOrbit application, saved client/indexer credential encryption key, and `media-postgres` database bootstrap
 - `dynacat-github`: authenticated GitHub release-widget reads
 - `exposure-control-github`: control-panel GitHub reads and actions
 - `ghcr-pull-secret`: Erica Knight, Rangoon Mapper, and Retirement private image pulls
