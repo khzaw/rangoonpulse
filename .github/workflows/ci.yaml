@@ -53,11 +53,17 @@ jobs:
         run: |
           docker run -d --name power-ledger-sql-test -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine
           trap 'docker rm -f power-ledger-sql-test >/dev/null' EXIT
+          # Initialization uses a temporary socket-only server; wait for TCP.
           for attempt in $(seq 1 30); do
-            if docker exec power-ledger-sql-test pg_isready -U postgres; then break; fi
+            if docker exec power-ledger-sql-test pg_isready -h 127.0.0.1 -U postgres -d postgres; then break; fi
+            if [ "$attempt" -eq 30 ]; then
+              echo '::error::PostgreSQL did not become ready for the power ledger tests'
+              docker logs power-ledger-sql-test
+              exit 1
+            fi
             sleep 1
           done
-          python scripts/test_power_ledger_sql.py --psql-command 'docker exec -i power-ledger-sql-test psql -X -U postgres -d postgres'
+          python scripts/test_power_ledger_sql.py --psql-command 'docker exec -i power-ledger-sql-test psql -X -h 127.0.0.1 -U postgres -d postgres'
 
       - name: Set up Helm
         uses: azure/setup-helm@v5
