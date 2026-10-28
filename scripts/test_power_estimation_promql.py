@@ -4,6 +4,7 @@
 import argparse
 import copy
 import json
+import subprocess
 
 import yaml
 
@@ -13,6 +14,16 @@ from update_power_tariff import DATA, ROOT, RULES, epoch
 
 def run(promtool: str) -> None:
     settings = yaml.safe_load((ROOT / "flux/cluster-settings.yaml").read_text())["data"]
+    # Kustomize removes redundant source quotes before Flux substitutes values.
+    # Reproduce that ordering and verify Kubernetes env fields stay strings.
+    substitutions = settings | yaml.safe_load((ROOT / "flux/kustomizations/media-postgres.yaml").read_text())["spec"]["postBuild"].get("substitute", {})
+    rendered = subprocess.check_output(["kubectl", "kustomize", "apps/media-postgres"], cwd=ROOT, text=True)
+    for name, value in substitutions.items():
+        rendered = rendered.replace("${" + name + "}", str(value))
+    cronjob = next(obj for obj in yaml.safe_load_all(rendered) if obj.get("kind") == "CronJob" and obj["metadata"]["name"] == "power-cost-ledger")
+    env = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0]["env"]
+    assert all(isinstance(item["value"], str) for item in env if "value" in item), "Rendered environment values must remain strings"
+    assert next(item["value"] for item in env if item["name"] == "POWER_LEDGER_IRIS_START_SECONDS") == str(settings["IRIS_POWER_COST_START_SECONDS"])
     entries = json.loads(DATA.read_text())
     base = epoch(entries[-1]["start"])
     tariff = float(entries[-1]["sgd_per_kwh"])

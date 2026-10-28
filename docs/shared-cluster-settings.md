@@ -32,6 +32,13 @@ Use `${VAR}` for values Flux should substitute.
 
 Use `$${VAR}` when the rendered resource must retain a literal `${VAR}` for the application runtime. Flux consumes one dollar sign and leaves the placeholder intact.
 
+Numeric/boolean substitutions into string fields need Flux's quote-variable pattern:
+`flux/kustomizations/media-postgres.yaml` defines `quote: '"'` and the collector uses
+`${quote}${IRIS_POWER_COST_START_SECONDS}${quote}` for its environment value.
+Quoting `${VAR}` in source YAML alone is insufficient: Kustomize can remove those
+quotes before Flux substitutes the numeric value. Validate the post-substitution
+YAML types, not only the source YAML.
+
 Every child Kustomization that uses shared settings must reference the `cluster-settings` ConfigMap in `postBuild.substituteFrom`. Its `reconcile.fluxcd.io/watch: Enabled` label requeues consumers after a settings change, including when a new key lands with its consumers.
 
 ## Change Procedure

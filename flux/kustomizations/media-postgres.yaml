@@ -13,6 +13,9 @@ spec:
     kind: GitRepository
     name: flux-system
   postBuild:
+    # Keep numeric substitutions quoted after Kustomize serializes env values.
+    substitute:
+      quote: '"'
     substituteFrom:
       - kind: ConfigMap
         name: cluster-settings

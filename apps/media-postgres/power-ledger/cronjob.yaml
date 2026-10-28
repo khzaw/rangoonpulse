@@ -51,7 +51,7 @@ spec:
                 - name: POWER_LEDGER_EXPECTED_NODES
                   value: "2"
                 - name: POWER_LEDGER_IRIS_START_SECONDS
-                  value: "${IRIS_POWER_COST_START_SECONDS}"
+                  value: ${quote}${IRIS_POWER_COST_START_SECONDS}${quote}
                 - name: POWER_LEDGER_SNAPSHOT_TOKEN
                   valueFrom:
                     secretKeyRef:

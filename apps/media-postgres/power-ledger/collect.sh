@@ -4,6 +4,10 @@ set -eu
 umask 077
 export PGCONNECT_TIMEOUT=10
 export PGAPPNAME=power-ledger
+[ -n "$POWER_LEDGER_IRIS_START_SECONDS" ] || {
+  echo 'Iris enrollment is missing; refusing to advance the ledger' >&2
+  exit 1
+}
 # Five-minute settlement delay, aligned to the recording rule's two-minute cadence.
 POWER_LEDGER_CUTOFF=$(( ($(date +%s) - 300) / 120 * 120 ))
 export POWER_LEDGER_CUTOFF
