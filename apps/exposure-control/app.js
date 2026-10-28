@@ -1948,7 +1948,7 @@
       let pulseRequest = null;
       const pulseBatches = [
         { range: '24h', names: ['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h', 'node_watts', 'node_req_cpu', 'node_req_mem', 'node_info', 'node_role', 'node_hardware', 'node_ready', 'node_pods', 'rpi_low_voltage'] },
-        { range: '7d', names: ['cluster_watts', 'tariff'] },
+        { range: '7d', names: ['homelab_watts', 'tariff'] },
         { range: '24h', names: ['pvc_class', 'pvc_util', 'pvc_used', 'pvc_capacity', 'pvc_requested'] },
         { range: '7d', names: ['pvc_util_7d'] },
         { range: '24h', names: ['pod_info', 'pod_mem_request', 'pod_mem_usage', 'pod_restarts_24h', 'pod_phase'] },
@@ -2000,12 +2000,12 @@
 
       function renderPowerTicker() {
         const P = window.Pulse;
-        const series = pulseMetric('cluster_watts', '7d')?.series?.[0];
+        const series = pulseMetric('homelab_watts', '7d')?.series?.[0];
         const tariff = P.last(pulseMetric('tariff', '7d')?.series?.[0]);
         const power = P.power(series, tariff);
         const ticks = P.dayTicks(series);
         const stats = [
-          [P.fmt.watts(P.last(pulseMetric('cluster_watts')?.series?.[0])), 'estimated now'],
+          [P.fmt.watts(P.last(series)), 'homelab estimated now'],
           [P.numeric(power.kwh24h) ? P.number(power.kwh24h, 2) + '\u00a0kWh' : '—', 'energy / 24 h'],
           [P.fmt.sgd(power.sgdPerDay), 'cost / day'],
           [P.fmt.sgd(power.sgd30d), 'projected / 30 d'],
@@ -2014,9 +2014,9 @@
         const width = Math.max(280, el.parentElement.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
         el.innerHTML = pulseSectionHeader('03', 'power & cost', '7 days · ' + (P.numeric(tariff) ? 'S$ ' + tariff.toFixed(4) + ' / kWh' : 'tariff unavailable')) +
           '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
-          '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated cluster power over seven days' }) + '</div>' +
+          '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated homelab power over seven days' }) + '</div>' +
           '<div class="ticker-days">' + ticks.filter((tick) => tick.x > .015 && tick.x < .985).map((tick) => '<span style="left:' + tick.x * 100 + '%">' + escapeHtml(tick.label) + '</span>').join('') + '</div>' +
-          '<div class="ticker-note">Estimated from CPU load · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
+          '<div class="ticker-note">Kubernetes nodes + Iris · CPU-based estimate · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
       }
 
       const expandedStorageGroups = new Set();

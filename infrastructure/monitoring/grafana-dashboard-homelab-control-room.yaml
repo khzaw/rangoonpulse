@@ -259,7 +259,7 @@ data:
           "targets": [
             {
               "refId": "A",
-              "expr": "sum(homelab:node_estimated_power_watts)",
+              "expr": "homelab:cluster_estimated_power_watts",
               "instant": true,
               "datasource": {
                 "uid": "$datasource"

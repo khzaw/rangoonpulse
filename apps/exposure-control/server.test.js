@@ -300,6 +300,17 @@ test("metrics ranges clamp, fixed history ignores requested range, and endpoints
   assert.equal(fixed.series[0].values.length, 169);
 });
 
+test("metrics keep Kubernetes-only and combined homelab power as separate named queries", async () => {
+  const panel = await startMetricsPanel((url) => prometheusPayload(url));
+  const response = await panel.request("names=cluster_watts,homelab_watts&range=7d");
+  assert.equal(response.status, 200);
+  assert.equal(response.json().metrics.cluster_watts.state, "live");
+  assert.equal(response.json().metrics.homelab_watts.state, "live");
+  assert.deepEqual(panel.observations.map((url) => url.searchParams.get("query")).sort(), [
+    "homelab:cluster_estimated_power_watts", "homelab:estimated_power_watts",
+  ]);
+});
+
 test("metrics normalize non-finite values and expose absent data without fake zeros", async () => {
   const panel = await startMetricsPanel((url) => {
     if (url.searchParams.get("query").includes("tariff")) return prometheusPayload(url, []);

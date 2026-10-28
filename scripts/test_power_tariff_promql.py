@@ -20,7 +20,11 @@ from update_power_tariff import DATA, ROOT, RULES, epoch
 
 
 def run(promtool: str) -> None:
-    spec = yaml.safe_load(RULES.read_text())["spec"]
+    source = RULES.read_text()
+    settings = yaml.safe_load((ROOT / "flux/cluster-settings.yaml").read_text())["data"]
+    for name, value in settings.items():
+        source = source.replace("${" + name + "}", str(value))
+    spec = yaml.safe_load(source)["spec"]
     subprocess.run([promtool, "check", "rules", "/dev/stdin"],
                    input=yaml.safe_dump(spec), text=True, check=True)
     entries = json.loads(DATA.read_text())

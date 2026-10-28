@@ -123,12 +123,12 @@
     const through = Number.isFinite(collected) ? new Date(collected).toLocaleString('en-GB', { timeZone: 'Asia/Singapore', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : 'unknown';
     const money = (value) => 'S$\u00a0' + number(value, value > 0 && value < 0.01 ? 4 : 2);
     return '<div class="monthly-ledger' + (overdue ? ' is-overdue' : '') + '"><div class="monthly-heading"><h3>monthly totals</h3><span>' + (overdue ? 'Collection overdue · ' : 'Collected through ') + esc(through) + ' SGT</span></div>' +
-      '<div class="monthly-scroll"><ol class="monthly-bars" aria-label="Recorded monthly cluster electricity costs in Singapore dollars">' + shown.map((row) => {
+      '<div class="monthly-scroll"><ol class="monthly-bars" aria-label="Recorded monthly homelab electricity costs in Singapore dollars">' + shown.map((row) => {
         const status = (row.final ? 'Final' : 'In progress') + (row.partial ? ' · partial coverage' : '');
         const coverage = numeric(row.coveragePercent) ? number(row.coveragePercent, 2) + '% coverage' : 'Coverage unavailable';
         const reading = row.month + ': ' + money(row.costSgd) + '. ' + status + '. ' + coverage;
         return '<li tabindex="0" aria-label="' + esc(reading) + '" title="' + esc(reading) + '"><span class="monthly-track"><span class="monthly-bar' + (row.partial || !row.final ? ' is-partial' : '') + '" style="height:' + (row.costSgd / max * 100).toFixed(3) + '%"></span></span><span class="monthly-value">' + esc(money(row.costSgd)) + '</span><span class="monthly-month">' + esc(row.month) + '</span><span class="monthly-state">' + esc(status) + '</span></li>';
-      }).join('') + '</ol></div><div class="ticker-note"><span>Estimated · cluster total · ' + (shown.length < rows.length ? 'latest 24 months' : 'Singapore calendar months') + '</span><span>Dotted bars: in progress or partial coverage · collected weekly + month-start</span></div></div>';
+      }).join('') + '</ol></div><div class="ticker-note"><span>Estimated · homelab total · ' + (shown.length < rows.length ? 'latest 24 months' : 'Singapore calendar months') + '</span><span>Iris included from 28 Oct 2026, 16:30 SGT; earlier totals cluster-only · dotted bars: open or partial</span></div></div>';
   }
 
   function power(series, tariff) {

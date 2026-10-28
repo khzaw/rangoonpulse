@@ -15,7 +15,7 @@ data:
       "title": "Node Power Estimation",
       "timezone": "Asia/Singapore",
       "schemaVersion": 41,
-      "version": 3,
+      "version": 4,
       "refresh": "1m",
       "tags": ["power", "homelab", "estimated", "hardware"],
       "time": {
@@ -52,6 +52,7 @@ data:
           },
           {
             "name": "node",
+            "label": "Host (Kubernetes nodes + Iris)",
             "type": "query",
             "datasource": {
               "uid": "$datasource"
@@ -85,13 +86,13 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Estimated node watts are derived from fixed idle/max node constants plus CPU utilization. The model now prefers whole-host kubelet `/metrics/resource` CPU when available, and falls back to container CPU utilization otherwise. Energy and cost stats use the active Grafana time range. Cost integrates recorded cost/hour samples using the GST-inclusive Singapore tariff effective at each evaluation. Tariffs are checked daily through GitOps and switch at Singapore midnight. Cost history begins when cost recording was deployed; older data is not backfilled, and missing samples are not extrapolated. A stale tariff remains in use and fires SingaporePowerTariffStale; the tariff-status panel turns red after expiry. The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
+            "content": "Estimated host watts use fixed idle/max constants plus CPU utilization. Kubernetes nodes prefer whole-host kubelet CPU with a container-CPU fallback. Iris is an external M4 Mac mini, not a Kubernetes node: its native exporter supplies CPU load with a 4 W idle / 65 W maximum model based on Apple's M4 reference configuration (not a measurement of this 24 GB Mac). CPU load misses GPU/Neural Engine and peripheral variation. All hosts includes the two Kubernetes nodes plus Iris; Kubernetes cluster totals exclude Iris. Missing Iris telemetry is unavailable, not zero watts. Iris cost enrollment starts 28 October 2026 at 16:30 SGT; older monthly totals remain cluster-only. Energy and cost stats integrate recorded 2-minute samples in the active Grafana time range, without extrapolating Iris into the time before enrollment. Cost integrates recorded cost/hour samples using the GST-inclusive Singapore tariff effective at each evaluation. Tariffs are checked daily through GitOps and switch at Singapore midnight. Cost history begins when cost recording was deployed; older data is not backfilled, and missing samples are not extrapolated. A stale tariff remains in use and fires SingaporePowerTariffStale; the tariff-status panel turns red after expiry. The utility-node Raspberry Pi now also exposes a live low-voltage alarm from hardware telemetry so power trouble is visible before workloads crash."
           }
         },
         {
           "id": 2,
           "type": "stat",
-          "title": "Cluster Estimated Power",
+          "title": "Selected Scope Estimated Power",
           "datasource": {
             "uid": "$datasource"
           },
@@ -143,7 +144,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "sum(avg_over_time(homelab:node_estimated_power_watts{node=~\"$node\"}[$__range])) * $__range_s / 3600000",
+              "expr": "sum(sum_over_time(homelab:node_estimated_power_watts{node=~\"$node\"}[$__range])) * 120 / 3600000",
               "instant": true
             }
           ],
@@ -199,7 +200,7 @@ data:
         {
           "id": 5,
           "type": "stat",
-          "title": "Cluster Estimated Power",
+          "title": "Kubernetes Cluster Estimated Power",
           "datasource": {
             "uid": "$datasource"
           },
@@ -215,7 +216,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "sum(homelab:node_estimated_power_watts)",
+              "expr": "homelab:cluster_estimated_power_watts",
               "instant": true
             }
           ],
@@ -235,7 +236,7 @@ data:
         {
           "id": 6,
           "type": "stat",
-          "title": "Cluster Estimated Energy",
+          "title": "Homelab Estimated Energy",
           "datasource": {
             "uid": "$datasource"
           },
@@ -251,7 +252,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "sum(avg_over_time(homelab:node_estimated_power_watts[$__range])) * $__range_s / 3600000",
+              "expr": "sum(sum_over_time(homelab:node_estimated_power_watts[$__range])) * 120 / 3600000",
               "instant": true
             }
           ],
@@ -271,7 +272,7 @@ data:
         {
           "id": 7,
           "type": "stat",
-          "title": "Cluster Estimated Cost",
+          "title": "Homelab Estimated Cost",
           "datasource": {
             "uid": "$datasource"
           },
@@ -636,7 +637,7 @@ data:
         {
           "id": 16,
           "type": "stat",
-          "title": "Current Month — Recorded Cluster Cost",
+          "title": "Current Month — Recorded Homelab Cost",
           "description": "Durable monthly total, updated on Mondays and the first of each month. Not a live projection. Partial coverage is shown in the monthly table; this panel ignores the dashboard time picker.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
           "gridPos": {"h": 5, "w": 8, "x": 0, "y": 33},
@@ -650,8 +651,8 @@ data:
         {
           "id": 17,
           "type": "barchart",
-          "title": "Monthly Cluster Electricity Cost",
-          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods.",
+          "title": "Monthly Homelab Electricity Cost",
+          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Iris is included only from 28 October 2026 at 16:30 SGT; earlier totals remain cluster-only. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
           "gridPos": {"h": 8, "w": 16, "x": 8, "y": 29},
           "targets": [{
@@ -665,7 +666,7 @@ data:
           "id": 18,
           "type": "table",
           "title": "Saved Monthly Totals & Coverage",
-          "description": "One cluster-total row per Singapore month. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained.",
+          "description": "One homelab-total row per Singapore month. Iris joins at enrollment (28 October 2026, 16:30 SGT); earlier totals and their coverage are unchanged. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
           "gridPos": {"h": 7, "w": 24, "x": 0, "y": 38},
           "targets": [{

@@ -37,6 +37,19 @@ spec:
               0
             )
 
+        # Iris is an external Darwin host, not a Kubernetes node. Suppress stale
+        # CPU rates when its exporter is down; missing telemetry is not idle power.
+        - record: homelab:iris_cpu_utilization:ratio
+          expr: >
+            clamp_min(clamp_max(
+              1 - avg(
+                rate(node_cpu_seconds_total{job="iris-node",host="iris",mode="idle"}[5m])
+                and on(instance) (up{job="iris-node"} == 1)
+              ), 1), 0)
+            and on() (vector(time()) >= ${IRIS_POWER_COST_START_SECONDS})
+          labels:
+            node: iris
+
         # Prefer whole-host CPU utilization from kubelet /metrics/resource when present.
         # Fall back to container-only utilization if the host-level series is absent.
         - record: homelab:node_power_model_cpu_utilization:ratio
@@ -44,6 +57,8 @@ spec:
             homelab:node_host_cpu_utilization:ratio
             or
             homelab:node_cpu_utilization:ratio
+            or
+            homelab:iris_cpu_utilization:ratio
 
         # Tune these constants when hardware or node roles change.
         - record: homelab:node_idle_power_watts
@@ -51,12 +66,16 @@ spec:
             max by (node) (0 * kube_node_info{node="${PRIMARY_NODE_NAME}"} + 20)
             or
             max by (node) (0 * kube_node_info{node="${UTILITY_NODE_NAME}"} + 4)
+            or
+            (0 * homelab:iris_cpu_utilization:ratio + 4)
 
         - record: homelab:node_max_power_watts
           expr: >
             max by (node) (0 * kube_node_info{node="${PRIMARY_NODE_NAME}"} + 75)
             or
             max by (node) (0 * kube_node_info{node="${UTILITY_NODE_NAME}"} + 12)
+            or
+            (0 * homelab:iris_cpu_utilization:ratio + 65)
 
         - record: homelab:node_estimated_power_watts
           expr: >
@@ -84,7 +103,11 @@ spec:
               )
             )
 
+        # Keep scheduler-node totals separate from all monitored power-model hosts.
         - record: homelab:cluster_estimated_power_watts
+          expr: sum(homelab:node_estimated_power_watts and on(node) kube_node_info)
+
+        - record: homelab:estimated_power_watts
           expr: sum(homelab:node_estimated_power_watts)
 
         # BEGIN GENERATED TARIFFS

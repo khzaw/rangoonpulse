@@ -41,13 +41,14 @@ jobs:
       - name: Validate repository
         run: make validate-all
 
-      - name: Test power tariff PromQL
+      - name: Test power and tariff PromQL
         run: |
           python -m pip install PyYAML==6.0.3
           curl --fail --silent --show-error --location --retry 3 \
             https://github.com/prometheus/prometheus/releases/download/v3.15.0/prometheus-3.15.0.linux-amd64.tar.gz \
             | tar -xz -C "$RUNNER_TEMP" prometheus-3.15.0.linux-amd64/promtool
           python scripts/test_power_tariff_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
+          python scripts/test_power_estimation_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
 
       - name: Test durable monthly power ledger
         run: |

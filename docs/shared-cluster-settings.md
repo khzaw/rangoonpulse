@@ -18,7 +18,8 @@ Current keys cover:
 - primary and utility node names/IPs
 - shared ingress VIP
 - Transmission peer-to-peer VIP
-- Mac mini edge VIP and LAN IP
+- Mac mini edge VIP, LAN IP, and immutable power/cost enrollment timestamp (shared
+  between Prometheus rules and the monthly collector)
 - NAS and router IPs
 - AdGuard primary and secondary IPs
 - LAN, Pod, and Service CIDRs
@@ -31,7 +32,7 @@ Use `${VAR}` for values Flux should substitute.
 
 Use `$${VAR}` when the rendered resource must retain a literal `${VAR}` for the application runtime. Flux consumes one dollar sign and leaves the placeholder intact.
 
-Every child Kustomization that uses shared settings must reference the `cluster-settings` ConfigMap in `postBuild.substituteFrom`.
+Every child Kustomization that uses shared settings must reference the `cluster-settings` ConfigMap in `postBuild.substituteFrom`. Its `reconcile.fluxcd.io/watch: Enabled` label requeues consumers after a settings change, including when a new key lands with its consumers.
 
 ## Change Procedure
 

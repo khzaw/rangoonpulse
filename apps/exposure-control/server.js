@@ -240,7 +240,7 @@ const MANAGED_JOBS = [
     title: "Monthly power cost ledger",
     namespace: "default",
     cronJob: "power-cost-ledger",
-    description: "Saves one cluster-total row per month in existing PostgreSQL on Mondays and month-start. No per-node history or NAS backup.",
+    description: "Saves one homelab-total row per month (Kubernetes nodes plus Iris from enrollment) in existing PostgreSQL on Mondays and month-start. No per-node history or NAS backup.",
     repoPath: "apps/media-postgres/power-ledger/cronjob.yaml",
     fluxKustomization: "media-postgres",
   },
@@ -2218,6 +2218,7 @@ async function getResourceAdvisorUi() {
 // kubelet /metrics/resource and /metrics/cadvisor samples.
 const METRIC_QUERIES = Object.freeze(Object.fromEntries(Object.entries({
   cluster_watts: { expr: 'homelab:cluster_estimated_power_watts', kind: "range" },
+  homelab_watts: { expr: 'homelab:estimated_power_watts', kind: "range" },
   node_watts: { expr: 'homelab:node_estimated_power_watts', kind: "range", labels: "node" },
   node_cpu: { expr: 'homelab:node_host_cpu_utilization:ratio', kind: "range", labels: "node" },
   node_mem: { expr: 'homelab:node_host_memory_utilization:ratio', kind: "range", labels: "node" },

@@ -3,21 +3,23 @@ title: Node Power Estimation Dashboard
 summary: Current operating guidance for Node Power Estimation Dashboard.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-10-28
 ---
 
 # Node Power Estimation Dashboard
 
-This cluster exposes an estimated node power model in Grafana plus a live
-Raspberry Pi low-voltage signal for the utility node.
+Grafana models electricity usage for the two Kubernetes nodes and Iris, the external
+M4 Mac mini running native OpenClaw and Hermes. Iris remains outside Kubernetes;
+its existing Darwin node exporter supplies host CPU telemetry. The utility node
+also exposes a real Raspberry Pi low-voltage signal.
 
 ## Why Estimate-Only
 
 - There is no smart-plug/UPS wall-power telemetry source in this setup.
 - Node exporter is enabled so Grafana can surface the Raspberry Pi utility node's
   low-voltage alarm before workloads fail.
-- The wattage model still uses existing cluster metrics only, so runtime overhead
-  remains low and the power/cost figures are still estimates.
+- The wattage model reuses existing kubelet and Iris node-exporter metrics; no
+  additional agent, privileged power sampler, or steady-state workload is needed.
 - Energy and cost panels are still estimates because the underlying watt values are estimated.
 
 ## GitOps Objects
@@ -42,12 +44,30 @@ Where:
 - fallback if host-level resource metrics are absent:
   - `container_cpu_usage_seconds_total` (kubelet/cAdvisor, 5m rate)
   - divided by `machine_cpu_cores`
-- `idle_watts` and `max_watts` are fixed constants per node.
+- Iris uses `1 - avg(rate(node_cpu_seconds_total{job="iris-node",host="iris",mode="idle"}[5m]))`,
+  clamped to `[0, 1]`, with the stable power-model label `node="iris"`. This label
+  identifies a monitored host, not Kubernetes membership. Only a successful current
+  scrape contributes; missing/down exporter data yields no Iris estimate, not idle
+  or zero watts. Existing Iris alerts cover exporter loss.
+- `idle_watts` and `max_watts` are fixed constants per host.
 
 Current defaults:
 
 - `talos-7nf-osf`: idle `20W`, max `75W`
 - `talos-uua-g6r`: idle `4W`, max `12W`
+- `iris`: idle `4W`, max `65W`, based on [Apple's M4 Mac mini reference measurements](https://support.apple.com/en-us/103253)
+  (16 GB / 256 GB reference; Iris has 24 GB RAM). Apple's values are wall-power
+  figures including PSU losses, not the PSU rating or measurements of this Mac.
+  Linear CPU interpolation does not capture performance/efficiency-core differences,
+  GPU/Neural Engine load, attached peripherals, or sleep accurately. It estimates
+  whole-host electricity, not per-agent electricity or cloud inference bills.
+
+`homelab:cluster_estimated_power_watts` and the Control Room cluster panel remain
+Kubernetes-only. `homelab:estimated_power_watts` includes all modeled hosts.
+Grafana's host selector and per-host series include Iris; selecting All includes it.
+Pulse keeps the node cards/top-strip cluster reading Kubernetes-only and uses the
+combined homelab series in its power/cost section. These totals cover only the
+explicitly modeled hosts, not TrueNAS, networking, or the whole household.
 
 ## Live Utility-Node Power Health
 
@@ -65,23 +85,29 @@ When hardware changes (PSU, disks, CPU platform, added node), update constants i
 
 - `infrastructure/monitoring/prometheusrule-power-estimation.yaml`
 
-Also add explicit constants for every new node, or that node will not appear in
-estimated power results.
+Also add explicit constants for every new monitored host, or it will not appear in
+estimated power results. External hosts need their own metric source; do not invent
+`kube_node_info` or add them to scheduler/capacity inventory.
 
 ## Energy And Cost Panels
 
 - Energy stats use the active Grafana time range, not a fixed `24h` window.
-- The dashboard computes selected-range energy as average estimated watts over the
-  chosen period, converted to `kWh`.
+- The dashboard integrates recorded watts as `sum_over_time(...) * 120 / 3600000`
+  to obtain `kWh`. Missing samples and pre-enrollment time are not extrapolated.
 - Cost records `homelab:node_estimated_cost_sgd_per_hour` every **2 minutes**,
   multiplying estimated watts / 1000 by the tariff applicable at that evaluation.
   Grafana integrates samples with `sum_over_time(...) * 120 / 3600`, so a range
   crossing quarters preserves each sampled tariff rather than repricing history.
 - Cost history starts at deployment of this recording rule. It is **not backfilled**;
   missing samples are not extrapolated and retention limits still apply. Very short
-  ranges have 2-minute sampling granularity. Energy panels retain their existing
-  average-watts calculation, so energy and cost coverage can differ across gaps.
-- If the rule evaluation interval changes, change Grafana's `120`-second multiplier too.
+  ranges have 2-minute sampling granularity. Energy uses the same recorded-sample
+  integration, so neither energy nor cost fabricates usage across missing periods.
+- If the rule evaluation interval changes, change Grafana's `120`-second multipliers
+  for both energy and cost, plus the ledger collector.
+- Iris enrollment is **28 October 2026 at 16:30 SGT**, shared as
+  `IRIS_POWER_COST_START_SECONDS` in `flux/cluster-settings.yaml`. Its power/cost rules
+  are gated at that time. The ledger includes Iris samples and expects its coverage
+  only from enrollment, never retroactively. Preserve this timestamp after rollout.
 - Current verified tariff: `0.3116 SGD/kWh` (`31.16` cents/kWh, GST inclusive),
   effective **1 October–31 December 2026**. SP's matching pre-GST rate is `28.59`
   cents/kWh. The previous Q3 rate remains in the source history.
@@ -93,7 +119,7 @@ estimated power results.
 - `.github/workflows/power-tariff.yaml` checks the
   [SP Group tariff page](https://www.spgroup.com.sg/our-services/utilities/tariff-information)
   daily at **08:17 Asia/Singapore**, or on manual workflow dispatch. No new cluster
-  workload is needed. The two existing nodes add two cost series and one expiry series.
+  workload is needed. Each modeled host adds one cost series; tariff expiry is shared.
 - `scripts/update_power_tariff.py` parses the visible electricity tariff card only,
   excludes embedded script payloads and gas rates, cross-checks 9% GST, calendar
   quarter dates and the quarter heading, and rejects implausible/stale publications.
@@ -127,6 +153,7 @@ estimated power results.
 ```bash
 python3 -m unittest discover -s scripts/tests -p 'test_power_tariff*.py'
 uv run --no-project --with PyYAML==6.0.3 python scripts/test_power_tariff_promql.py # requires promtool
+uv run --no-project --with PyYAML==6.0.3 python scripts/test_power_estimation_promql.py
 python3 scripts/update_power_tariff.py --check   # offline generated-file check
 python3 scripts/update_power_tariff.py           # fetch official page and update locally
 ```
@@ -139,10 +166,12 @@ recorded samples only, not already recorded historical costs. Keep consecutive
 quarters in the history. Flux deploys merged rules through the existing monitoring
 Kustomization; review the tariff/expiry metrics, alerts, and dashboard after rollout.
 
-## Durable Monthly Cluster Totals
+## Durable Monthly Homelab Totals
 
-Monthly history is **one row per month for the whole cluster**, not per-node or daily
-rows. It lives in `postgres.power_estimation.monthly_cost` on the **existing**
+Monthly history is **one row per month for all modeled homelab hosts**, not per-host
+or daily rows. Earlier saved totals remain cluster-only; Iris contributes only from
+its enrollment, without rewriting old costs, checkpoints, or coverage. It lives in
+`postgres.power_estimation.monthly_cost` on the **existing**
 `media-postgres` server. No new database, server, exporter, or NAS copy is created.
 The local-path PostgreSQL PVC survives pod and Talos reboots. Loss of its disk is
 **not** covered by a separate backup, per the operator's explicit choice.
@@ -176,9 +205,13 @@ its small explicit resources remain operator-owned.
   and commits totals, sample counts, and checkpoint together. Repeated or concurrent
   runs cannot double-count. Earlier finalized rows are never repriced.
 - The first month is partial; its unrecorded prefix is included in missing coverage.
-  Counts track the expected two nodes without retaining per-node ledger records.
-  Update `POWER_LEDGER_NODES` and `POWER_LEDGER_EXPECTED_NODES` if cluster membership
-  changes. Changing the recording interval also requires updating this collector.
+  `POWER_LEDGER_NODES` selects the two Kubernetes nodes plus Iris.
+  `POWER_LEDGER_EXPECTED_NODES=2` retains the existing-node baseline; the SQL adds
+  one expected series only for the interval at/after `POWER_LEDGER_IRIS_START_SECONDS`,
+  sourced from the shared enrollment timestamp. No per-host ledger records are kept.
+  Another membership change needs an explicit effective-time policy, not just a count
+  bump that would mark earlier intervals missing. Changing the recording interval
+  also requires updating this collector.
 - Missing measurements, NaN observations, and outages beyond available retention
   remain missing, not fabricated zero consumption. Checkpoints can progress past a
   lost interval while retaining its partial-coverage status. API errors/warnings,

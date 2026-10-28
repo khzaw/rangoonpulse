@@ -5,6 +5,8 @@ kind: ConfigMap
 metadata:
   name: cluster-settings
   namespace: flux-system
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 data:
   BASE_DOMAIN: khzaw.dev
   ERICAKNIGHT_DOMAIN: ericaknight.me
@@ -20,6 +22,8 @@ data:
   NAS_IP: 10.0.0.210
   ROUTER_IP: 10.0.0.1
   IRIS_MAC_MINI_IP: 10.0.0.66
+  # Power/cost enrollment: 2026-10-28 16:30 SGT, aligned to the 2-minute rules.
+  IRIS_POWER_COST_START_SECONDS: "1793176200"
   ADGUARD_PRIMARY_IP: 10.0.0.233
   ADGUARD_SECONDARY_IP: 10.0.0.234
   LAN_CIDR: 10.0.0.0/24

@@ -3,7 +3,7 @@ title: Iris native macOS operations
 summary: Native launchd supervision, Darwin host telemetry, gateway checks, and an independent cluster sentinel.
 status: active
 owner: khz
-last_reviewed: 2026-10-25
+last_reviewed: 2026-10-28
 ---
 
 # Iris native macOS operations
@@ -11,6 +11,12 @@ last_reviewed: 2026-10-25
 Iris is the existing Apple Silicon Mac mini at `10.0.0.66`, login user `iris`.
 OpenClaw and Hermes remain **native macOS processes**, not Kubernetes workloads.
 The [dedicated SSH/HTTPS VIP](./mac-mini-edge.md) remains unchanged.
+Hardware is a Mac mini `Mac16,10`, Apple M4 (4 performance + 6 efficiency CPU cores),
+24 GB RAM. Its existing node-exporter CPU metrics also feed the
+[power/cost model](./power-estimation-dashboard.md), using 4 W idle / 65 W maximum
+reference assumptions. No additional Mac installation or Kubernetes membership is
+needed. Grafana includes Iris as a separate host and in combined homelab totals;
+Kubernetes-only power, readiness, and capacity remain separate.
 
 ## Operating surfaces
 

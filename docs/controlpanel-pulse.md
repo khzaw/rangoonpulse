@@ -3,7 +3,7 @@ title: Control Panel Pulse
 summary: Read-only node, power, storage, and placement telemetry in the operator cockpit.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-10-28
 ---
 
 # Control Panel Pulse
@@ -35,6 +35,9 @@ architecture is not present in kube-state-metrics' `kube_node_info`. CPU and
 memory bars show current whole-host usage with a tick for scheduler requests.
 Readiness and Raspberry Pi low voltage remain independent live signals.
 
+The node cards and top-strip power reading remain Kubernetes-only. The power/cost
+section uses `homelab_watts` (`homelab:estimated_power_watts`) to include Iris, the
+external M4 Mac mini, without adding it to Kubernetes readiness or pod inventory.
 Power history is sampled over seven days. Energy uses timestamp-weighted
 integration; cost uses the configured tariff, and the 30-day projection uses
 the seven-day mean. Missing tariffs or insufficient history leave cost blank.
@@ -42,7 +45,7 @@ Midnight ticks always use Asia/Singapore, independent of the browser's timezone.
 
 ## Monthly electricity cost
 
-The power section also shows the durable cluster-wide monthly cost ledger, using
+The power section also shows the durable homelab-wide monthly cost ledger, using
 Pulse's existing monochrome IBM Plex typography, hairlines, and halftone bars.
 Solid bars are finalized with complete coverage; dotted bars indicate an open or
 partial month. Values, keyboard-focusable readings, last collection time, and an
@@ -58,9 +61,11 @@ fixed authenticated POST route; its shared token is never returned or stored in
 the snapshot. The API validates months, finite nonnegative totals, coverage, and
 Singapore collection boundaries. No SQL or database credential reaches the browser,
 and Pulse does not poll PostgreSQL. The metric ticker still shows its independent
-short-range estimates/projection; monthly bars show saved samples only.
+short-range estimates/projection; monthly bars show saved samples only. Iris joins
+at 16:30 SGT on 28 October 2026; earlier totals remain cluster-only, with their
+costs and coverage unchanged.
 
-See [power estimation](./power-estimation-dashboard.md#durable-monthly-cluster-totals)
+See [power estimation](./power-estimation-dashboard.md#durable-monthly-homelab-totals)
 for weekly/month-start collection, transactional checkpoints, restart durability,
 explicit no-NAS-backup policy, and recovery limits.
 

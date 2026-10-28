@@ -32,7 +32,7 @@ All four use `concurrencyPolicy: Forbid`, `ttlSecondsAfterFinished: 21600` (6h),
 small job history limits. The ledger falls back to its creation time before its
 first scheduled success, so an uninitialized job cannot silently avoid staleness.
 Its eight-day alert leaves time to collect before Prometheus's 14-day/8GB retention
-expires. See [monthly cost collection](./power-estimation-dashboard.md#durable-monthly-cluster-totals).
+expires. See [monthly cost collection](./power-estimation-dashboard.md#durable-monthly-homelab-totals).
 
 ## Alert Families
 

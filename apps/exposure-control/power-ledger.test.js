@@ -47,6 +47,8 @@ test('monthly chart uses measured totals, partial patterns, real zero and keyboa
   data.months.push({ ...data.months[0], month: '2026-11', costSgd: 0, final: false });
   const html = Pulse.monthlyLedger(data, Date.parse('2026-11-02'));
   assert.match(html, /monthly-bars/);
+  assert.match(html, /Recorded monthly homelab electricity costs/);
+  assert.match(html, /Iris included from 28 Oct 2026, 16:30 SGT; earlier totals cluster-only/);
   assert.match(html, /height:0\.000%/);
   assert.match(html, /Final · partial coverage/);
   assert.match(html, /50% coverage/);
