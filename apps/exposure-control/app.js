@@ -1947,7 +1947,7 @@
 
       let pulseRequest = null;
       const pulseBatches = [
-        { range: '24h', names: ['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h', 'node_watts', 'node_req_cpu', 'node_req_mem', 'node_info', 'node_role', 'node_hardware', 'node_ready', 'node_pods', 'rpi_low_voltage'] },
+        { range: '24h', names: ['node_cpu', 'node_mem', 'cluster_watts', 'homelab_watts', 'restarts_1h', 'node_watts', 'node_req_cpu', 'node_req_mem', 'node_info', 'node_role', 'node_hardware', 'node_ready', 'node_pods', 'rpi_low_voltage'] },
         { range: '7d', names: ['homelab_watts', 'tariff'] },
         { range: '24h', names: ['pvc_class', 'pvc_util', 'pvc_used', 'pvc_capacity', 'pvc_requested'] },
         { range: '7d', names: ['pvc_util_7d'] },
@@ -2005,7 +2005,7 @@
         const power = P.power(series, tariff);
         const ticks = P.dayTicks(series);
         const stats = [
-          [P.fmt.watts(P.last(series)), 'homelab estimated now'],
+          [P.fmt.watts(P.last(pulseMetric('homelab_watts')?.series?.[0])), 'homelab estimated now'],
           [P.numeric(power.kwh24h) ? P.number(power.kwh24h, 2) + '\u00a0kWh' : '—', 'energy / 24 h'],
           [P.fmt.sgd(power.sgdPerDay), 'cost / day'],
           [P.fmt.sgd(power.sgd30d), 'projected / 30 d'],

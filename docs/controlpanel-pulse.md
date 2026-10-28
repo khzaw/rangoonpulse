@@ -40,7 +40,10 @@ section uses `homelab_watts` (`homelab:estimated_power_watts`) to include Iris, 
 external M4 Mac mini, without adding it to Kubernetes readiness or pod inventory.
 Power history is sampled over seven days. Energy uses timestamp-weighted
 integration; cost uses the configured tariff, and the 30-day projection uses
-the seven-day mean. Missing tariffs or insufficient history leave cost blank.
+the seven-day mean. The current homelab watt reading uses the finer 24-hour query,
+not the coarser seven-day history. Missing tariffs or insufficient history leave
+cost blank. The new combined series is not backfilled: daily energy/cost needs a
+full day of history and the 30-day projection needs seven days.
 Midnight ticks always use Asia/Singapore, independent of the browser's timezone.
 
 ## Monthly electricity cost

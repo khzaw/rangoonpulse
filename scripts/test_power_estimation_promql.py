@@ -69,14 +69,16 @@ def run(promtool: str) -> None:
         })
     check_case(promtool, rules, tests)
     enrolled = copy.deepcopy(rules)
-    next(rule for rule in enrolled if rule.get("record") == "homelab:iris_cpu_utilization:ratio")["expr"] = next(
-        rule["expr"] for rule in rules if rule.get("record") == "homelab:iris_cpu_utilization:ratio"
-    ).replace(f">= {base}", f">= {base + 600}")
+    iris_rule = next(rule for rule in enrolled if rule.get("record") == "homelab:iris_cpu_utilization:ratio")
+    iris_rule["expr"] = iris_rule["expr"].replace(f">= {base}", f">= {base + 600}")
     check_case(promtool, enrolled, [{
         "interval": "1m", "input_series": cluster_inputs + iris_inputs(),
         "promql_expr_test": [
             query('homelab:node_estimated_power_watts{node="iris"}', [], "6m"),
             query('homelab:node_estimated_power_watts{node="iris"}', sample("homelab:node_estimated_power_watts", 19.25), "10m"),
+            # One recorded sample, not an extrapolated hour of pre-enrollment energy/cost.
+            query('sum(sum_over_time(homelab:node_estimated_power_watts{node="iris"}[1h])) * 120 / 3600000', sample("{}", 19.25 * 120 / 3600000, False), "10m"),
+            query('sum(sum_over_time(homelab:node_estimated_cost_sgd_per_hour{node="iris"}[1h])) * 120 / 3600', sample("{}", 19.25 / 1000 * tariff * 120 / 3600, False), "10m"),
         ],
     }])
 
