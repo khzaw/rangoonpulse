@@ -49,6 +49,7 @@ jobs:
             | tar -xz -C "$RUNNER_TEMP" prometheus-3.15.0.linux-amd64/promtool
           python scripts/test_power_tariff_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
           python scripts/test_power_estimation_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
+          python scripts/test_truenas_power_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
 
       - name: Test durable monthly power ledger
         run: |

@@ -27,7 +27,8 @@ render as unavailable; a failed refresh does not present old readings as live.
 
 Power readings use the existing canonical power recording rules: CPU-derived
 estimates for Kubernetes nodes and fresh software-reported `macmon` system power
-for Iris. They are cost estimates, not calibrated wall-meter measurements. Iris
+for Iris, plus the TrueNAS chassis/CPU/disk model. They are cost estimates, not
+calibrated wall-meter measurements. Iris
 history before the sensor rollout retains its earlier CPU model; stale sensor
 samples contribute no Iris watts or cost, without a CPU/idle fallback.
 
@@ -39,8 +40,8 @@ memory bars show current whole-host usage with a tick for scheduler requests.
 Readiness and Raspberry Pi low voltage remain independent live signals.
 
 The node cards and top-strip power reading remain Kubernetes-only. The power/cost
-section uses `homelab_watts` (`homelab:estimated_power_watts`) to include Iris, the
-external M4 Mac mini, without adding it to Kubernetes readiness or pod inventory.
+section uses `homelab_watts` (`homelab:estimated_power_watts`) to include Iris and
+TrueNAS without adding either external host to Kubernetes readiness or pod inventory.
 Power history is sampled over seven days. Energy uses timestamp-weighted
 integration; cost uses the configured tariff, and the 30-day projection uses
 the seven-day mean. The current homelab watt reading uses the finer 24-hour query,

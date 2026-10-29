@@ -9,3 +9,8 @@ resources:
   - hr-nvme.yaml
   - truenas-maintenance-cronjob.yaml
   - truenas-pvc-dataset-exporter.yaml
+configMapGenerator:
+  - name: truenas-pvc-dataset-exporter-script
+    files:
+      - truenas-exporter/exporter.py
+      - truenas-exporter/power.py

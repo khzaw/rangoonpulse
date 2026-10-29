@@ -100,7 +100,7 @@ This is the desired-state overview. [The Flux reconciliation tree](flux/kustomiz
 | **Networking** | ingress-nginx, MetalLB, cert-manager, ExternalDNS, Tailscale Operator and subnet/exit Connector |
 | **DNS and public edge** | Dual AdGuard Home, Cloudflare Tunnel, exposure-control |
 | **Observability** | Prometheus, Alertmanager, Grafana, node exporter, Metrics Server, Uptime Kuma |
-| **Operations** | Resource Advisor, operator cockpit, native Iris telemetry and independent cluster sentinel |
+| **Operations** | Resource Advisor, operator cockpit, native Iris telemetry, TrueNAS power estimates, and independent cluster sentinel |
 | **Storage** | TrueNAS, democratic-csi, local-path provisioner |
 
 ### Media and library

@@ -2,6 +2,7 @@
 \getenv cutoff POWER_LEDGER_CUTOFF
 \getenv expected_nodes POWER_LEDGER_EXPECTED_NODES
 \getenv iris_start POWER_LEDGER_IRIS_START_SECONDS
+\getenv nas_start POWER_LEDGER_TRUENAS_START_SECONDS
 BEGIN;
 SET LOCAL statement_timeout = '60s';
 SET LOCAL lock_timeout = '10s';
@@ -32,7 +33,9 @@ FROM source,
 WHERE sample->>1 ~ '^[+]?[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$'
   -- Enrollment never backfills Iris into previously cluster-only accounting.
   AND (series->'metric'->>'node' IS DISTINCT FROM 'iris'
-       OR (sample->>0)::numeric >= :'iris_start'::numeric);
+       OR (sample->>0)::numeric >= :'iris_start'::numeric)
+  AND (series->'metric'->>'node' IS DISTINCT FROM 'truenas'
+       OR (sample->>0)::numeric >= :'nas_start'::numeric);
 -- NaN/missing observations count as missing coverage, never zero-valued observations.
 CREATE UNIQUE INDEX ON samples (node, ts);
 CREATE TEMP TABLE context ON COMMIT DROP AS
@@ -42,7 +45,8 @@ SELECT to_timestamp(:'cutoff'::double precision) AS cutoff,
          to_timestamp(floor((SELECT min(ts) FROM samples) / 120)::double precision * 120)
        ) AS cursor,
        :'expected_nodes'::integer AS expected_nodes,
-       to_timestamp(:'iris_start'::double precision) AS iris_since;
+       to_timestamp(:'iris_start'::double precision) AS iris_since,
+       to_timestamp(:'nas_start'::double precision) AS nas_since;
 DO $ledger$
 BEGIN
   IF EXISTS (SELECT 1 FROM context WHERE cursor IS NULL OR expected_nodes NOT BETWEEN 1 AND 100) THEN
@@ -50,6 +54,9 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM context WHERE iris_since IS NULL OR extract(epoch FROM iris_since) % 120 <> 0) THEN
     RAISE EXCEPTION 'Iris enrollment must align to the 2-minute recording interval';
+  END IF;
+  IF EXISTS (SELECT 1 FROM context WHERE nas_since IS NULL OR extract(epoch FROM nas_since) % 120 <> 0) THEN
+    RAISE EXCEPTION 'TrueNAS enrollment must align to the 2-minute recording interval';
   END IF;
   IF EXISTS (SELECT 1 FROM samples WHERE cost_per_hour < 0) THEN
     RAISE EXCEPTION 'Negative cost samples';
@@ -64,7 +71,7 @@ WITH months AS (
            THEN greatest(c.cursor, m AT TIME ZONE 'Asia/Singapore')
            ELSE m AT TIME ZONE 'Asia/Singapore'
          END AS coverage_start,
-         c.expected_nodes, c.iris_since
+         c.expected_nodes, c.iris_since, c.nas_since
   FROM context c,
        LATERAL generate_series(
          date_trunc('month', c.cursor AT TIME ZONE 'Asia/Singapore'),
@@ -77,12 +84,13 @@ WITH months AS (
          -- Existing nodes keep their historical expectation; Iris starts at enrollment.
          round(extract(epoch FROM (m.segment_end - m.coverage_start)) / 120 * m.expected_nodes
            + greatest(extract(epoch FROM (m.segment_end - greatest(m.coverage_start, m.iris_since))), 0) / 120
+           + greatest(extract(epoch FROM (m.segment_end - greatest(m.coverage_start, m.nas_since))), 0) / 120
          )::bigint AS expected_samples
   FROM months m
   LEFT JOIN samples s ON s.ts >= extract(epoch FROM m.segment_start)
                      AND s.ts < extract(epoch FROM m.segment_end)
   WHERE m.segment_end > m.segment_start
-  GROUP BY m.month, m.segment_start, m.segment_end, m.coverage_start, m.expected_nodes, m.iris_since
+  GROUP BY m.month, m.segment_start, m.segment_end, m.coverage_start, m.expected_nodes, m.iris_since, m.nas_since
 )
 INSERT INTO power_estimation.monthly_cost
   (month, cost_sgd, observed_samples, expected_samples, collected_until)

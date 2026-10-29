@@ -66,6 +66,37 @@ spec:
           labels:
             node: iris
 
+        # Preserve scrape labels until validation, so duplicate targets cannot
+        # borrow another target's successful status or sample timestamp.
+        - record: homelab:truenas_power_input_watts
+          expr: >
+            (truenas_estimated_power_watts{job="truenas-pvc-dataset-exporter",namespace="democratic-csi",host="truenas",telemetry="power"} > 0)
+            and (truenas_estimated_power_watts < +Inf)
+            and (truenas_power_scrape_success == 1)
+            and (up == 1)
+            and (time() - truenas_power_sample_timestamp_seconds >= 0)
+            and (time() - truenas_power_sample_timestamp_seconds <= 180)
+            and on() (vector(time()) >= ${TRUENAS_POWER_COST_START_SECONDS})
+
+        - record: homelab:truenas_estimated_power_watts
+          expr: max(homelab:truenas_power_input_watts)
+          labels:
+            node: truenas
+
+        - record: homelab:truenas_cpu_utilization:ratio
+          expr: >
+            max((truenas_power_cpu_utilization_ratio >= 0)
+              and (truenas_power_cpu_utilization_ratio <= 1)
+              and homelab:truenas_power_input_watts)
+          labels:
+            node: truenas
+
+        # Zero is a health status only, never fabricated zero consumption.
+        - record: homelab:truenas_power_sample_available
+          expr: count(homelab:truenas_estimated_power_watts) or on() vector(0)
+          labels:
+            node: truenas
+
         # Prefer whole-host CPU utilization from kubelet /metrics/resource when present.
         # Fall back to container-only utilization if the host-level series is absent.
         - record: homelab:node_power_model_cpu_utilization:ratio
@@ -73,6 +104,8 @@ spec:
             homelab:node_host_cpu_utilization:ratio
             or
             homelab:node_cpu_utilization:ratio
+            or
+            homelab:truenas_cpu_utilization:ratio
 
         # Tune these constants when hardware or node roles change.
         - record: homelab:node_idle_power_watts
@@ -96,6 +129,8 @@ spec:
             )
             or
             homelab:iris_system_power_watts
+            or
+            homelab:truenas_estimated_power_watts
 
         # Surface Raspberry Pi low-voltage alarms from node-exporter hwmon.
         - record: homelab:node_rpi_low_voltage_alarm
@@ -137,6 +172,17 @@ spec:
         # Same-group ordering records the tariff applicable at each evaluation.
         - record: homelab:node_estimated_cost_sgd_per_hour
           expr: homelab:node_estimated_power_watts / 1000 * scalar(homelab:singapore_household_tariff_sgd_per_kwh)
+
+        - alert: TrueNASPowerSampleUnavailable
+          expr: >
+            (homelab:truenas_power_sample_available == 0)
+            and on() (vector(time()) >= ${TRUENAS_POWER_COST_START_SECONDS})
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: TrueNAS power telemetry is unavailable
+            description: Check the exporter /power endpoint and NAS API reachability. Two successful polls establish a new baseline after restart or an outage; missing samples are not zero watts.
 
         - alert: SingaporePowerTariffStale
           expr: time() >= homelab:singapore_household_tariff_valid_until_seconds

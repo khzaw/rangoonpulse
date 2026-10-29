@@ -24,6 +24,8 @@ data:
   IRIS_MAC_MINI_IP: 10.0.0.66
   # Power/cost enrollment: 2026-10-28 16:30 SGT, aligned to the 2-minute rules.
   IRIS_POWER_COST_START_SECONDS: "1793176200"
+  # TrueNAS joins prospectively; preserve after rollout to retain cost coverage.
+  TRUENAS_POWER_COST_START_SECONDS: "1793265960"
   ADGUARD_PRIMARY_IP: 10.0.0.233
   ADGUARD_SECONDARY_IP: 10.0.0.234
   LAN_CIDR: 10.0.0.0/24

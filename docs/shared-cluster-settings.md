@@ -20,7 +20,7 @@ Current keys cover:
 - Transmission peer-to-peer VIP
 - Mac mini edge VIP, LAN IP, and immutable power/cost enrollment timestamp (shared
   between Prometheus rules and the monthly collector)
-- NAS and router IPs
+- NAS and router IPs, plus the immutable TrueNAS power/cost enrollment timestamp
 - AdGuard primary and secondary IPs
 - LAN, Pod, and Service CIDRs
 

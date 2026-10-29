@@ -8,8 +8,8 @@ last_reviewed: 2026-10-29
 
 # Node Power Estimation Dashboard
 
-Grafana estimates electricity usage for the two Kubernetes nodes and Iris, the external
-M4 Mac mini running native OpenClaw and Hermes. Kubernetes watts use CPU models;
+Grafana estimates electricity usage for two Kubernetes nodes, Iris and the external
+TrueNAS storage host. Iris is the M4 Mac mini running native OpenClaw and Hermes. Kubernetes watts use CPU models;
 Iris uses software-reported system power from `macmon` through its existing Darwin
 node exporter. Iris remains outside Kubernetes. The utility node also exposes a real
 Raspberry Pi low-voltage signal.
@@ -73,13 +73,85 @@ recording-rule rollout onward. Mixed historical ranges can include the previous
 backfilled or repriced. See [native supervision](./iris-operations.md#native-installation-and-supervision)
 for installation, fail-closed restart behavior and login-session recovery.
 
+### TrueNAS software-only model and restart recovery
+
+TrueNAS runs on TerraMaster T6-423-family hardware with a Celeron N5095, three
+spinning 8 TB Seagate HDDs, a PNY NVMe SSD and USB boot storage. No additional NAS
+application, monitoring service, package, SSH key or configuration change is required.
+
+The existing `democratic-csi/truenas-pvc-dataset-exporter` serves an independent
+`/power` endpoint on the same port. Its Kubernetes-managed ServiceMonitor polls
+every **120 seconds**, with a **15-second** scrape timeout. PVC dataset collection
+remains on `/metrics`; neither collector depends on the other's success. Credentials
+come from the existing `democratic-csi/truenas-credentials` Secret, not a temporary
+1Password share or interactive browser session.
+
+The NAS's supported reporting definitions are available, but its CPU/disk history
+queries currently return no data. The collector therefore uses the existing TrueNAS
+REST file API to stream `/proc/stat` and `/proc/diskstats`, plus `/disk` inventory.
+`core.download` invokes `filesystem.get` with `buffered: false`: tiny telemetry
+files stream through middleware job pipes without a NAS sampler or ramfs copy.
+This is five NAS HTTP requests per poll. Each request runs in a short-lived Python
+worker **inside the existing Kubernetes pod**, with a hard three-second deadline
+covering DNS, response headers, redirects, chunk framing and body reads. The parent
+kills and reaps an overdue worker before releasing sample state. The full collection
+budget is ten seconds; JSON is capped at 1 MiB and each counter file at 128 KiB.
+No worker or extra resident process runs on the NAS. Credentials, one-off download URLs and disk serials are never
+logged, exported as labels, or saved by the collector.
+
+The model deliberately uses rounded engineering allowances, not a hardware sensor:
+
+- Fixed **12 W** platform allowance includes idle CPU, RAM, fans, networking,
+  NVMe/USB and an approximate conversion-loss allowance.
+- Additional CPU allowance is **10 W × host CPU busy fraction**. The first eight
+  Linux CPU counters exclude duplicated guest counters; idle and I/O-wait time
+  do not contribute dynamic CPU power.
+- `ST8000VN004`: **8 W idle / 10 W active**.
+- `ST8000NT001`: **8 W idle / 10 W active**.
+- `ST8000VN002`: **4 W idle / 6 W active**.
+- Each drive interpolates between its idle and active allowance using the change
+  in Linux disk busy milliseconds divided by elapsed milliseconds, clamped to 1.
+  HDD standby must remain `ALWAYS ON` for this spinning-drive model.
+
+This configuration has a **32–48 W modeled envelope**, not measured minimum/maximum
+consumption or a PSU rating. The HDD allowances are rounded from manufacturer
+[IronWolf reference data](https://www.seagate.com/files/www-content/datasheets/pdfs/ironwolf-18tb-DS1904-20-2111US-en_US.pdf),
+[ST8000VN002 family specifications](https://www.seagate.com/www-content/product-content/ironwolf/en-us/docs/100807039n.pdf),
+and [ST8000NT001 specifications](https://seagate.com/content/dam/seagate/migrated-assets/www-content/product-content/ironwolf/en-us/docs/204502000a_Ironwolf_Pro_2-4-6-8-10.pdf).
+Platform and CPU increments are explicit uncalibrated assumptions. The
+[TerraMaster reference](https://terra-master.com/pages/t6-423-specification) uses a
+different fully-populated drive configuration and is not this NAS's measurement.
+Spin-up, temperature, PSU efficiency and dynamic NVMe activity are not measured.
+Update the profile when hardware or standby policy changes; an unexpected disk
+inventory produces unavailable telemetry instead of silently inventing a new model.
+
+Startup performs no NAS calls. A new process, NAS boot identity, changed disk
+identity, counter reset, failed request, or interval longer than five minutes
+requires a new baseline. Two successful polls then resume estimation automatically.
+A nonblocking lock prevents overlapping scrapes from racing counter state. Health
+probes remain independent of NAS availability. The source ConfigMap is hashed by
+Kustomize so source changes roll the Deployment without a manual process restart.
+
+`homelab:truenas_power_input_watts` validates each scrape before deduplication:
+positive finite modeled watts, successful HTTP scrape and NAS collection, and a
+non-future sample at most **180 seconds** old. The canonical host is `node="truenas"`.
+Missing or stale data contributes no watts or cost, never zero or an idle fallback.
+`TrueNASPowerSampleUnavailable` warns after ten minutes. Grafana shows NAS status,
+sample age, model components and the immutable cost-enrollment boundary.
+
+Resume-after-boot is distinct from the firmware setting that automatically powers
+the NAS on after AC restoration; this integration does not change firmware or
+claim a physical power-cycle test. Ordinary outages remain explicit coverage gaps,
+not replay queues or extrapolated history. Monthly PostgreSQL checkpoints and
+previously recorded totals remain unchanged.
+
 The canonical metric names and two-minute cadence remain unchanged.
 `homelab:cluster_estimated_power_watts` and the Control Room cluster panel remain
 Kubernetes-only. `homelab:estimated_power_watts` includes all modeled hosts.
-Grafana's host selector and per-host series include Iris; selecting All includes it.
+Grafana's host selector and per-host series include Iris and TrueNAS; All includes both.
 Pulse keeps the node cards/top-strip cluster reading Kubernetes-only and uses the
 combined homelab series in its power/cost section. These totals cover only the
-explicitly modeled hosts, not TrueNAS, networking, or the whole household.
+explicitly modeled hosts, not networking equipment or the whole household.
 
 ## Live Utility-Node Power Health
 
@@ -182,7 +254,8 @@ Kustomization; review the tariff/expiry metrics, alerts, and dashboard after rol
 
 Monthly history is **one row per month for all modeled homelab hosts**, not per-host
 or daily rows. Earlier saved totals remain cluster-only; Iris contributes only from
-its enrollment, without rewriting old costs, checkpoints, or coverage. It lives in
+its enrollment, without rewriting old costs, checkpoints, or coverage. TrueNAS joins only from its
+own effective enrollment boundary. It lives in
 `postgres.power_estimation.monthly_cost` on the **existing**
 `media-postgres` server. No new database, server, exporter, or NAS copy is created.
 The local-path PostgreSQL PVC survives pod and Talos reboots. Loss of its disk is
@@ -217,10 +290,13 @@ its small explicit resources remain operator-owned.
   and commits totals, sample counts, and checkpoint together. Repeated or concurrent
   runs cannot double-count. Earlier finalized rows are never repriced.
 - The first month is partial; its unrecorded prefix is included in missing coverage.
-  `POWER_LEDGER_NODES` selects the two Kubernetes nodes plus Iris.
+  `POWER_LEDGER_NODES` selects the two Kubernetes nodes, Iris and TrueNAS.
   `POWER_LEDGER_EXPECTED_NODES=2` retains the existing-node baseline; the SQL adds
   one expected series only for the interval at/after `POWER_LEDGER_IRIS_START_SECONDS`,
   sourced from the shared enrollment timestamp. No per-host ledger records are kept.
+  TrueNAS adds another expected series only after `POWER_LEDGER_TRUENAS_START_SECONDS`,
+  shared as `TRUENAS_POWER_COST_START_SECONDS`. Both sample inclusion and expected
+  coverage are time-gated. The existing-node baseline stays **2**, not 4.
   Another membership change needs an explicit effective-time policy, not just a count
   bump that would mark earlier intervals missing. Changing the recording interval
   also requires updating this collector.

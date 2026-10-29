@@ -8,6 +8,10 @@ export PGAPPNAME=power-ledger
   echo 'Iris enrollment is missing; refusing to advance the ledger' >&2
   exit 1
 }
+[ -n "$POWER_LEDGER_TRUENAS_START_SECONDS" ] || {
+  echo 'TrueNAS enrollment is missing; refusing to advance the ledger' >&2
+  exit 1
+}
 # Five-minute settlement delay, aligned to the recording rule's two-minute cadence.
 POWER_LEDGER_CUTOFF=$(( ($(date +%s) - 300) / 120 * 120 ))
 export POWER_LEDGER_CUTOFF

@@ -46,12 +46,14 @@ spec:
                 - name: POWER_LEDGER_COCKPIT_HOST
                   value: controlpanel.${BASE_DOMAIN}
                 - name: POWER_LEDGER_NODES
-                  value: "${PRIMARY_NODE_NAME}|${UTILITY_NODE_NAME}|iris"
+                  value: "${PRIMARY_NODE_NAME}|${UTILITY_NODE_NAME}|iris|truenas"
                 # Two existing nodes; Iris adds one expected series only after enrollment.
                 - name: POWER_LEDGER_EXPECTED_NODES
                   value: "2"
                 - name: POWER_LEDGER_IRIS_START_SECONDS
                   value: ${quote}${IRIS_POWER_COST_START_SECONDS}${quote}
+                - name: POWER_LEDGER_TRUENAS_START_SECONDS
+                  value: ${quote}${TRUENAS_POWER_COST_START_SECONDS}${quote}
                 - name: POWER_LEDGER_SNAPSHOT_TOKEN
                   valueFrom:
                     secretKeyRef:

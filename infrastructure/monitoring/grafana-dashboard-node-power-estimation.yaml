@@ -15,7 +15,7 @@ data:
       "title": "Node Power Estimation",
       "timezone": "Asia/Singapore",
       "schemaVersion": 41,
-      "version": 4,
+      "version": 5,
       "refresh": "1m",
       "tags": ["power", "homelab", "estimated", "hardware"],
       "time": {
@@ -52,7 +52,7 @@ data:
           },
           {
             "name": "node",
-            "label": "Host (Kubernetes nodes + Iris)",
+            "label": "Host (Kubernetes + Iris + TrueNAS)",
             "type": "query",
             "datasource": {
               "uid": "$datasource"
@@ -79,14 +79,14 @@ data:
           "type": "text",
           "title": "Model Notes",
           "gridPos": {
-            "h": 4,
+            "h": 8,
             "w": 24,
             "x": 0,
             "y": 0
           },
           "options": {
             "mode": "markdown",
-            "content": "Estimated Kubernetes-node watts use fixed idle/max constants plus whole-host kubelet CPU utilization, with a container-CPU fallback. Iris is an external M4 Mac mini, not a Kubernetes node: macmon supplies software-reported system power through the existing native exporter, with no added idle allowance or CPU-model fallback. Only a successful scrape and a valid, non-future sample at most 90 seconds old contribute Iris power and cost. This is not calibrated AC wall-power measurement. The sensor source starts at its recording-rule rollout; mixed historical ranges retain the earlier Iris CPU model before that boundary. All hosts includes the two Kubernetes nodes plus Iris; Kubernetes cluster totals exclude Iris. Missing Iris telemetry is unavailable, not zero watts. Iris cost enrollment starts 28 October 2026 at 16:30 SGT; older monthly totals remain cluster-only. Energy and cost stats integrate recorded 2-minute samples in the active Grafana time range, without extrapolating Iris into the time before enrollment. Cost integrates recorded cost/hour samples using the GST-inclusive Singapore tariff effective at each evaluation. Tariffs are checked daily through GitOps and switch at Singapore midnight. Cost history begins when cost recording was deployed; older data is not backfilled, and missing samples are not extrapolated. A stale tariff remains in use and fires SingaporePowerTariffStale; the tariff-status panel turns red after expiry. The utility-node Raspberry Pi also exposes a live low-voltage alarm from hardware telemetry."
+            "content": "Kubernetes nodes use fixed idle/max CPU models. Iris uses fresh macmon software-reported system watts, without an added baseline. TrueNAS is an external TerraMaster/Celeron NAS: its existing API streams live CPU and disk counters to the Kubernetes exporter every two minutes. No extra NAS service or package is installed.\n\nThe uncalibrated TrueNAS model uses a 12 W platform/RAM/NVMe/USB allowance, up to 10 W additional CPU load, and per-drive idle/active allowances: ST8000VN004 8/10 W, ST8000NT001 8/10 W, ST8000VN002 4/6 W. Disk busy-time fractions interpolate each drive's allowance. The 32–48 W modeled envelope is not a measured minimum/maximum; spin-up, PSU losses and temperature effects are not captured accurately.\n\nAll hosts includes Kubernetes nodes, Iris and TrueNAS. Kubernetes cluster totals exclude both external hosts. Valid current scrapes and fresh samples are required (Iris ≤90 s; TrueNAS ≤180 s). Missing or warming-up telemetry leaves gaps, never zero/idle watts. NAS boot/counter changes and outages establish a new two-poll baseline automatically.\n\nEnergy and cost integrate recorded two-minute samples without filling gaps. Each host joins only from its enrollment boundary; old costs/checkpoints remain unchanged. Iris enrollment remains 28 October 2026 at 16:30 SGT. The TrueNAS enrollment panel shows its effective boundary. Cost uses the GST-inclusive Singapore tariff effective at each evaluation; quarterly changes do not reprice history. Monthly totals are saved snapshots, not live projections. Raspberry Pi low-voltage panels are hardware alarms, separate from estimated consumption."
           }
         },
         {
@@ -100,7 +100,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 0,
-            "y": 4
+            "y": 8
           },
           "targets": [
             {
@@ -136,7 +136,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 4,
-            "y": 4
+            "y": 8
           },
           "targets": [
             {
@@ -172,7 +172,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 8,
-            "y": 4
+            "y": 8
           },
           "targets": [
             {
@@ -208,7 +208,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 12,
-            "y": 4
+            "y": 8
           },
           "targets": [
             {
@@ -244,7 +244,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 16,
-            "y": 4
+            "y": 8
           },
           "targets": [
             {
@@ -280,7 +280,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 20,
-            "y": 4
+            "y": 8
           },
           "targets": [
             {
@@ -316,7 +316,7 @@ data:
             "h": 8,
             "w": 6,
             "x": 0,
-            "y": 9
+            "y": 13
           },
           "targets": [
             {
@@ -352,7 +352,7 @@ data:
             "h": 8,
             "w": 6,
             "x": 6,
-            "y": 9
+            "y": 13
           },
           "targets": [
             {
@@ -380,7 +380,7 @@ data:
         {
           "id": 10,
           "type": "timeseries",
-          "title": "Estimated Power by Node",
+          "title": "Estimated Power by Host",
           "datasource": {
             "uid": "$datasource"
           },
@@ -388,7 +388,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 9
+            "y": 13
           },
           "targets": [
             {
@@ -410,7 +410,7 @@ data:
         {
           "id": 11,
           "type": "timeseries",
-          "title": "CPU Utilization by Node (Model Input)",
+          "title": "CPU Utilization by Host (Model Input)",
           "datasource": {
             "uid": "$datasource"
           },
@@ -418,7 +418,7 @@ data:
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 17
+            "y": 21
           },
           "targets": [
             {
@@ -448,7 +448,7 @@ data:
             "h": 4,
             "w": 4,
             "x": 0,
-            "y": 25
+            "y": 29
           },
           "targets": [
             {
@@ -511,7 +511,7 @@ data:
             "h": 4,
             "w": 4,
             "x": 4,
-            "y": 25
+            "y": 29
           },
           "targets": [
             {
@@ -574,7 +574,7 @@ data:
             "h": 4,
             "w": 16,
             "x": 8,
-            "y": 25
+            "y": 29
           },
           "targets": [
             {
@@ -612,7 +612,7 @@ data:
           "type": "stat",
           "title": "Tariff Status",
           "datasource": {"uid": "$datasource"},
-          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 29},
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 33},
           "targets": [{
             "refId": "A",
             "expr": "max(vector(time()) >= bool on() homelab:singapore_household_tariff_valid_until_seconds)",
@@ -640,7 +640,7 @@ data:
           "title": "Current Month — Recorded Homelab Cost",
           "description": "Durable monthly total, updated on Mondays and the first of each month. Not a live projection. Partial coverage is shown in the monthly table; this panel ignores the dashboard time picker.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
-          "gridPos": {"h": 5, "w": 8, "x": 0, "y": 33},
+          "gridPos": {"h": 5, "w": 8, "x": 0, "y": 37},
           "targets": [{
             "refId": "A", "format": "table", "rawQuery": true,
             "rawSql": "SELECT cost_sgd::double precision AS \"Recorded SGD\" FROM power_estimation.monthly_cost WHERE month = date_trunc('month', now() AT TIME ZONE 'Asia/Singapore')::date"
@@ -652,9 +652,9 @@ data:
           "id": 17,
           "type": "barchart",
           "title": "Monthly Homelab Electricity Cost",
-          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Iris is included only from 28 October 2026 at 16:30 SGT; earlier totals remain cluster-only. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods.",
+          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Iris is included only from 28 October 2026 at 16:30 SGT; earlier totals remain cluster-only. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods. TrueNAS contributes only from its own enrollment boundary; earlier costs and coverage are preserved.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
-          "gridPos": {"h": 8, "w": 16, "x": 8, "y": 29},
+          "gridPos": {"h": 8, "w": 16, "x": 8, "y": 33},
           "targets": [{
             "refId": "A", "format": "table", "rawQuery": true,
             "rawSql": "SELECT to_char(month, 'YYYY-MM') AS \"Month\", cost_sgd::double precision AS \"Estimated cost\" FROM power_estimation.monthly_cost ORDER BY month"
@@ -666,9 +666,9 @@ data:
           "id": 18,
           "type": "table",
           "title": "Saved Monthly Totals & Coverage",
-          "description": "One homelab-total row per Singapore month. Iris joins at enrollment (28 October 2026, 16:30 SGT); earlier totals and their coverage are unchanged. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained.",
+          "description": "One homelab-total row per Singapore month. Iris joins at enrollment (28 October 2026, 16:30 SGT); earlier totals and their coverage are unchanged. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained. TrueNAS contributes only from its own enrollment boundary; earlier costs and coverage are preserved.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
-          "gridPos": {"h": 7, "w": 24, "x": 0, "y": 38},
+          "gridPos": {"h": 7, "w": 24, "x": 0, "y": 82},
           "targets": [{
             "refId": "A", "format": "table", "rawQuery": true,
             "rawSql": "SELECT to_char(month, 'YYYY-MM') AS \"Month\", cost_sgd::double precision AS \"Cost (SGD)\", round(100.0 * observed_samples / nullif(expected_samples, 0), 2)::double precision AS \"Coverage (%)\", CASE WHEN collected_until >= (month::timestamp + interval '1 month') AT TIME ZONE 'Asia/Singapore' THEN 'Final' ELSE 'In progress' END || CASE WHEN observed_samples < expected_samples THEN ' · partial coverage' ELSE '' END AS \"Status\", collected_until AS \"Collected through\" FROM power_estimation.monthly_cost ORDER BY month DESC"
@@ -678,6 +678,173 @@ data:
             {"matcher": {"id": "byName", "options": "Coverage (%)"}, "properties": [{"id": "decimals", "value": 2}]}
           ]},
           "options": {"showHeader": true}
+        },
+        {
+          "id": 19,
+          "type": "stat",
+          "title": "TrueNAS Telemetry",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 0,
+            "y": 89
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "homelab:truenas_power_sample_available",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "Unavailable",
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "Unavailable / warming up",
+                      "color": "orange"
+                    },
+                    "1": {
+                      "text": "Live",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 20,
+          "type": "stat",
+          "title": "TrueNAS Sample Age",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 4,
+            "x": 4,
+            "y": 89
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max((time() - truenas_power_sample_timestamp_seconds) and homelab:truenas_power_input_watts)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "decimals": 0,
+              "noValue": "Unavailable"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 21,
+          "type": "timeseries",
+          "title": "TrueNAS Estimated Power Components",
+          "description": "Uncalibrated software model, not hardware watt sensors. Gaps mean unavailable telemetry. Fixed platform includes RAM, fans, NVMe and USB boot allowance; HDDs remain spinning.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 16,
+            "x": 8,
+            "y": 89
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "truenas_power_platform_watts and homelab:truenas_power_input_watts",
+              "legendFormat": "Platform / RAM / NVMe / USB"
+            },
+            {
+              "refId": "B",
+              "expr": "truenas_power_cpu_dynamic_watts and homelab:truenas_power_input_watts",
+              "legendFormat": "Additional CPU load"
+            },
+            {
+              "refId": "C",
+              "expr": "truenas_power_disks_estimated_watts and homelab:truenas_power_input_watts",
+              "legendFormat": "Spinning HDDs"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "decimals": 1,
+              "custom": {
+                "fillOpacity": 35,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": 22,
+          "type": "stat",
+          "title": "TrueNAS Cost Enrollment",
+          "description": "The NAS is never backfilled into earlier power or monthly ledger history.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 0,
+            "y": 53
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "vector(${TRUENAS_POWER_COST_START_SECONDS} * 1000)",
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "dateTimeAsIso",
+              "noValue": "Unavailable"
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            }
+          }
         }
       ]
     }
