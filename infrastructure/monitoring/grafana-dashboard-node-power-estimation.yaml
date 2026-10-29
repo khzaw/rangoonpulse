@@ -15,7 +15,7 @@ data:
       "title": "Node Power Estimation",
       "timezone": "Asia/Singapore",
       "schemaVersion": 41,
-      "version": 6,
+      "version": 7,
       "refresh": "1m",
       "tags": ["power", "homelab", "estimated", "hardware"],
       "time": {
@@ -345,7 +345,7 @@ data:
         {
           "id": 9,
           "type": "stat",
-          "title": "Selected Scope CPU Utilization (Model Input)",
+          "title": "Selected Scope CPU Utilization",
           "datasource": {
             "uid": "$datasource"
           },
@@ -361,7 +361,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "avg(homelab:node_power_model_cpu_utilization:ratio{node=~\"$node\"})",
+              "expr": "avg(max by (node) (homelab:node_power_model_cpu_utilization:ratio{node=~\"$node\"} or on(node) homelab:iris_cpu_utilization:ratio{node=~\"$node\"}))",
               "instant": true
             }
           ],
@@ -417,7 +417,7 @@ data:
         {
           "id": 11,
           "type": "timeseries",
-          "title": "CPU Utilization by Host (Model Input)",
+          "title": "CPU Utilization by Host",
           "datasource": {
             "uid": "$datasource"
           },
@@ -433,7 +433,7 @@ data:
               "datasource": {
                 "uid": "$datasource"
               },
-              "expr": "homelab:node_power_model_cpu_utilization:ratio{node=~\"$node\"}",
+              "expr": "max by (node) (homelab:node_power_model_cpu_utilization:ratio{node=~\"$node\"} or on(node) homelab:iris_cpu_utilization:ratio{node=~\"$node\"})",
               "legendFormat": "{{node}}"
             }
           ],

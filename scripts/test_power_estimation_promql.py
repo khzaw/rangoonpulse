@@ -159,6 +159,61 @@ def run(promtool: str) -> None:
         ],
     }])
     check_alerts(promtool, settings)
+    check_dashboard_cpu(promtool)
+
+
+def check_dashboard_cpu(promtool: str) -> None:
+    """CPU panels must include Iris without adding it back to power-model inputs."""
+    source = (ROOT / "infrastructure/monitoring/grafana-dashboard-node-power-estimation.yaml").read_text()
+    dashboard = json.loads(yaml.safe_load(source)["data"]["node-power-estimation.json"])
+    panels = {panel["id"]: panel for panel in dashboard["panels"]}
+    model = "homelab:node_power_model_cpu_utilization:ratio"
+    diagnostic = "homelab:iris_cpu_utilization:ratio"
+    ratios = {"primary": .2, "utility": .5, "truenas": .1, "iris": .25}
+    inputs = [
+        {"series": f'{model}{{node="{node}"}}', "values": f"{ratio}+0x10"}
+        for node, ratio in ratios.items() if node != "iris"
+    ] + [{"series": f'{diagnostic}{{node="iris"}}', "values": ".25+0x10"}]
+
+    def checks(selector: str, expected: dict, at: str = "6m") -> list:
+        graph = panels[11]["targets"][0]["expr"].replace("$node", selector)
+        stat = panels[9]["targets"][0]["expr"].replace("$node", selector)
+        return [
+            query(graph, [{"labels": f'{{node="{node}"}}', "value": ratio}
+                          for node, ratio in expected.items()], at),
+            query(stat, sample("{}", sum(expected.values()) / len(expected), False)
+                  if expected else [], at),
+        ]
+
+    tests = [{
+        "name": "Iris CPU panels stay live after leaving the power model",
+        "interval": "1m", "input_series": inputs,
+        "promql_expr_test": checks("iris", {"iris": .25}),
+    }]
+    for selector in (".*", "primary", "truenas"):
+        expected = ratios if selector == ".*" else {selector: ratios[selector]}
+        tests.append({
+            "name": f"CPU selector preserves each host once: {selector}",
+            "interval": "1m", "input_series": inputs,
+            "promql_expr_test": checks(selector, expected),
+        })
+    tests.append({
+        "name": "Missing Iris CPU remains unavailable rather than zero",
+        "interval": "1m", "input_series": inputs[:-1],
+        "promql_expr_test": checks("iris", {}),
+    })
+    tests.append({
+        "name": "Historical model to diagnostic crossover keeps one Iris series",
+        "interval": "1m", "input_series": inputs[:-1] + [
+            {"series": f'{model}{{node="iris"}}', "values": ".25+0x3 stale"},
+            {"series": f'{diagnostic}{{node="iris"}}', "values": ".25+0x3 .4+0x6"},
+        ],
+        "promql_expr_test": checks("iris", {"iris": .25}, "2m")
+        + checks("iris", {"iris": .4}, "6m"),
+    })
+    check_case(promtool, [], tests)
+    assert panels[9]["title"] == "Selected Scope CPU Utilization"
+    assert panels[11]["title"] == "CPU Utilization by Host"
 
 
 def check_alerts(promtool: str, settings: dict) -> None:

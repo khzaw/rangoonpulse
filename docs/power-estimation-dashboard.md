@@ -73,6 +73,12 @@ recording-rule rollout onward. Mixed historical ranges can include the previous
 backfilled or repriced. See [native supervision](./iris-operations.md#native-installation-and-supervision)
 for installation, fail-closed restart behavior and login-session recovery.
 
+CPU utilization remains independent of the power source. The dashboard CPU stat
+and host graph combine the existing model-host CPU series with
+`homelab:iris_cpu_utilization:ratio`, normalized to one series per host. Iris CPU
+therefore remains visible for Iris-only and All selections without becoming a
+power-model input or changing its macmon-derived watts and costs.
+
 ### TrueNAS software-only model and restart recovery
 
 TrueNAS runs on TerraMaster T6-423-family hardware with a Celeron N5095, three
