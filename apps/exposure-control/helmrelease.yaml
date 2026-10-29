@@ -46,7 +46,7 @@ spec:
           main:
             image:
               repository: node
-              tag: 24-alpine
+              tag: 26-alpine
             command:
               - node
               - /app-files/server.js
