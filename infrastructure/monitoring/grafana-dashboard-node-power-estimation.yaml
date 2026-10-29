@@ -15,7 +15,7 @@ data:
       "title": "Node Power Estimation",
       "timezone": "Asia/Singapore",
       "schemaVersion": 41,
-      "version": 5,
+      "version": 6,
       "refresh": "1m",
       "tags": ["power", "homelab", "estimated", "hardware"],
       "time": {
@@ -52,15 +52,16 @@ data:
           },
           {
             "name": "node",
-            "label": "Host (Kubernetes + Iris + TrueNAS)",
+            "label": "Host (Kubernetes + Iris + nas)",
             "type": "query",
             "datasource": {
               "uid": "$datasource"
             },
             "query": {
-              "query": "label_values(homelab:node_estimated_power_watts, node)",
+              "query": "query_result(label_replace(label_replace(homelab:node_estimated_power_watts, \"display_host\", \"$1\", \"node\", \"(.*)\"), \"display_host\", \"nas\", \"node\", \"truenas\"))",
               "refId": "NodeVariableQuery"
             },
+            "regex": "/display_host=\"(?<text>[^\"]+)\"|node=\"(?<value>[^\"]+)\"/g",
             "multi": false,
             "includeAll": true,
             "allValue": ".*",
@@ -86,7 +87,7 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Kubernetes nodes use fixed idle/max CPU models. Iris uses fresh macmon software-reported system watts, without an added baseline. TrueNAS is an external TerraMaster/Celeron NAS: its existing API streams live CPU and disk counters to the Kubernetes exporter every two minutes. No extra NAS service or package is installed.\n\nThe uncalibrated TrueNAS model uses a 12 W platform/RAM/NVMe/USB allowance, up to 10 W additional CPU load, and per-drive idle/active allowances: ST8000VN004 8/10 W, ST8000NT001 8/10 W, ST8000VN002 4/6 W. Disk busy-time fractions interpolate each drive's allowance. The 32–48 W modeled envelope is not a measured minimum/maximum; spin-up, PSU losses and temperature effects are not captured accurately.\n\nAll hosts includes Kubernetes nodes, Iris and TrueNAS. Kubernetes cluster totals exclude both external hosts. Valid current scrapes and fresh samples are required (Iris ≤90 s; TrueNAS ≤180 s). Missing or warming-up telemetry leaves gaps, never zero/idle watts. NAS boot/counter changes and outages establish a new two-poll baseline automatically.\n\nEnergy and cost integrate recorded two-minute samples without filling gaps. Each host joins only from its enrollment boundary; old costs/checkpoints remain unchanged. Iris enrollment remains 28 October 2026 at 16:30 SGT. The TrueNAS enrollment panel shows its effective boundary. Cost uses the GST-inclusive Singapore tariff effective at each evaluation; quarterly changes do not reprice history. Monthly totals are saved snapshots, not live projections. Raspberry Pi low-voltage panels are hardware alarms, separate from estimated consumption."
+            "content": "Kubernetes nodes use fixed idle/max CPU models. Iris uses fresh macmon software-reported system watts, without an added baseline. nas is an external TerraMaster/Celeron NAS: its existing API streams live CPU and disk counters to the Kubernetes exporter every two minutes. No extra NAS service or package is installed.\n\nThe uncalibrated nas model uses a 12 W platform/RAM/NVMe/USB allowance, up to 10 W additional CPU load, and per-drive idle/active allowances: ST8000VN004 8/10 W, ST8000NT001 8/10 W, ST8000VN002 4/6 W. Disk busy-time fractions interpolate each drive's allowance. The 32–48 W modeled envelope is not a measured minimum/maximum; spin-up, PSU losses and temperature effects are not captured accurately.\n\nAll hosts includes Kubernetes nodes, Iris and nas. Kubernetes cluster totals exclude both external hosts. Valid current scrapes and fresh samples are required (Iris ≤90 s; nas ≤180 s). Missing or warming-up telemetry leaves gaps, never zero/idle watts. NAS boot/counter changes and outages establish a new two-poll baseline automatically.\n\nEnergy and cost integrate recorded two-minute samples without filling gaps. Each host joins only from its enrollment boundary; old costs/checkpoints remain unchanged. Iris enrollment remains 28 October 2026 at 16:30 SGT. The nas enrollment panel shows its effective boundary. Cost uses the GST-inclusive Singapore tariff effective at each evaluation; quarterly changes do not reprice history. Monthly totals are saved snapshots, not live projections. Raspberry Pi low-voltage panels are hardware alarms, separate from estimated consumption."
           }
         },
         {
@@ -404,7 +405,13 @@ data:
             "defaults": {
               "unit": "watt",
               "decimals": 1
-            }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "truenas"},
+                "properties": [{"id": "displayName", "value": "nas"}]
+              }
+            ]
           }
         },
         {
@@ -434,7 +441,13 @@ data:
             "defaults": {
               "unit": "percentunit",
               "decimals": 2
-            }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "truenas"},
+                "properties": [{"id": "displayName", "value": "nas"}]
+              }
+            ]
           }
         },
         {
@@ -652,7 +665,7 @@ data:
           "id": 17,
           "type": "barchart",
           "title": "Monthly Homelab Electricity Cost",
-          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Iris is included only from 28 October 2026 at 16:30 SGT; earlier totals remain cluster-only. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods. TrueNAS contributes only from its own enrollment boundary; earlier costs and coverage are preserved.",
+          "description": "Saved monthly estimates in SGD, independent of Prometheus retention and the dashboard time picker. Iris is included only from 28 October 2026 at 16:30 SGT; earlier totals remain cluster-only. Current month is provisional; consult the table for partial coverage and collection time. No data is invented for missing periods. nas contributes only from its own enrollment boundary; earlier costs and coverage are preserved.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
           "gridPos": {"h": 8, "w": 16, "x": 8, "y": 33},
           "targets": [{
@@ -666,7 +679,7 @@ data:
           "id": 18,
           "type": "table",
           "title": "Saved Monthly Totals & Coverage",
-          "description": "One homelab-total row per Singapore month. Iris joins at enrollment (28 October 2026, 16:30 SGT); earlier totals and their coverage are unchanged. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained. TrueNAS contributes only from its own enrollment boundary; earlier costs and coverage are preserved.",
+          "description": "One homelab-total row per Singapore month. Iris joins at enrollment (28 October 2026, 16:30 SGT); earlier totals and their coverage are unchanged. Final means collection passed month-end; partial means measurements are missing, including the first month's unrecorded prefix. Weekly job checkpoints and totals commit together. No per-node or daily ledger is retained. nas contributes only from its own enrollment boundary; earlier costs and coverage are preserved.",
           "datasource": {"type": "postgres", "uid": "power-cost-ledger"},
           "gridPos": {"h": 7, "w": 24, "x": 0, "y": 82},
           "targets": [{
@@ -682,7 +695,7 @@ data:
         {
           "id": 19,
           "type": "stat",
-          "title": "TrueNAS Telemetry",
+          "title": "nas Telemetry",
           "datasource": {
             "uid": "$datasource"
           },
@@ -732,7 +745,7 @@ data:
         {
           "id": 20,
           "type": "stat",
-          "title": "TrueNAS Sample Age",
+          "title": "nas Sample Age",
           "datasource": {
             "uid": "$datasource"
           },
@@ -768,7 +781,7 @@ data:
         {
           "id": 21,
           "type": "timeseries",
-          "title": "TrueNAS Estimated Power Components",
+          "title": "nas Estimated Power Components",
           "description": "Uncalibrated software model, not hardware watt sensors. Gaps mean unavailable telemetry. Fixed platform includes RAM, fans, NVMe and USB boot allowance; HDDs remain spinning.",
           "datasource": {
             "uid": "$datasource"
@@ -813,7 +826,7 @@ data:
         {
           "id": 22,
           "type": "stat",
-          "title": "TrueNAS Cost Enrollment",
+          "title": "nas Cost Enrollment",
           "description": "The NAS is never backfilled into earlier power or monthly ledger history.",
           "datasource": {
             "uid": "$datasource"

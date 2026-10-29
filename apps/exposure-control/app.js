@@ -2016,7 +2016,7 @@
           '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
           '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated homelab power over seven days' }) + '</div>' +
           '<div class="ticker-days">' + ticks.filter((tick) => tick.x > .015 && tick.x < .985).map((tick) => '<span style="left:' + tick.x * 100 + '%">' + escapeHtml(tick.label) + '</span>').join('') + '</div>' +
-          '<div class="ticker-note">Kubernetes nodes + Iris + TrueNAS · Software power estimates · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
+          '<div class="ticker-note">Kubernetes nodes + Iris + nas · Software power estimates · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
       }
 
       const expandedStorageGroups = new Set();

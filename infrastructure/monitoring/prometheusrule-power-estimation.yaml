@@ -181,7 +181,7 @@ spec:
           labels:
             severity: warning
           annotations:
-            summary: TrueNAS power telemetry is unavailable
+            summary: nas power telemetry is unavailable
             description: Check the exporter /power endpoint and NAS API reachability. Two successful polls establish a new baseline after restart or an outage; missing samples are not zero watts.
 
         - alert: SingaporePowerTariffStale

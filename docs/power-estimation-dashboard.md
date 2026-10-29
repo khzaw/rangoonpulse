@@ -136,7 +136,9 @@ Kustomize so source changes roll the Deployment without a manual process restart
 
 `homelab:truenas_power_input_watts` validates each scrape before deduplication:
 positive finite modeled watts, successful HTTP scrape and NAS collection, and a
-non-future sample at most **180 seconds** old. The canonical host is `node="truenas"`.
+non-future sample at most **180 seconds** old. The canonical host remains `node="truenas"` for historical continuity.
+Grafana and Pulse display this host as `nas`; the selector value and stored series
+identity are unchanged, so existing history and cost enrollment are preserved.
 Missing or stale data contributes no watts or cost, never zero or an idle fallback.
 `TrueNASPowerSampleUnavailable` warns after ten minutes. Grafana shows NAS status,
 sample age, model components and the immutable cost-enrollment boundary.
