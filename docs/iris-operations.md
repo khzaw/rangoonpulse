@@ -3,7 +3,7 @@ title: Iris native macOS operations
 summary: Native launchd supervision, Darwin host telemetry, gateway checks, and an independent cluster sentinel.
 status: active
 owner: khz
-last_reviewed: 2026-10-28
+last_reviewed: 2026-10-29
 ---
 
 # Iris native macOS operations
@@ -12,10 +12,10 @@ Iris is the existing Apple Silicon Mac mini at `10.0.0.66`, login user `iris`.
 OpenClaw and Hermes remain **native macOS processes**, not Kubernetes workloads.
 The [dedicated SSH/HTTPS VIP](./mac-mini-edge.md) remains unchanged.
 Hardware is a Mac mini `Mac16,10`, Apple M4 (4 performance + 6 efficiency CPU cores),
-24 GB RAM. Its existing node-exporter CPU metrics also feed the
-[power/cost model](./power-estimation-dashboard.md), using 4 W idle / 65 W maximum
-reference assumptions. No additional Mac installation or Kubernetes membership is
-needed. Grafana includes Iris as a separate host and in combined homelab totals;
+24 GB RAM. An independent unprivileged `macmon` sampler feeds software-reported
+system watts through its existing node exporter into the
+[power/cost pipeline](./power-estimation-dashboard.md). No Kubernetes membership or
+additional network listener is needed. Grafana includes Iris as a separate host and in combined homelab totals;
 Kubernetes-only power, readiness, and capacity remain separate.
 
 ## Operating surfaces
@@ -79,8 +79,8 @@ Prometheus's discovery-owned `service` label (which otherwise renames the metric
 
 ## Native installation and supervision
 
-Versioned implementation: [`native/iris/`](../native/iris/). Homebrew supplies `node_exporter`
-and the existing Node installation; no npm packages or containers are needed.
+Versioned implementation: [`native/iris/`](../native/iris/). Homebrew supplies `node_exporter`,
+`macmon` and the existing Node installation; no npm packages or containers are needed.
 
 | launchd label | Function |
 | --- | --- |
@@ -89,8 +89,9 @@ and the existing Node installation; no npm packages or containers are needed.
 | `dev.khzaw.hermes.dashboard` | Existing Hermes dashboard; unchanged |
 | `dev.khzaw.iris.node-exporter` | Darwin exporter, LAN `10.0.0.66:9100`, textfile collector |
 | `dev.khzaw.iris.watchdog` | OpenClaw/Hermes API readiness relays, launchd/component metrics, independent cluster checks/notifications |
+| `dev.khzaw.iris.power` | Independent `macmon pipe` sampler and atomic power/freshness textfile output |
 
-Both managed jobs have `RunAtLoad`, `KeepAlive`, and a 10-second restart throttle. They are login
+All three managed jobs have `RunAtLoad`, `KeepAlive`, and a 10-second restart throttle. They are login
 **LaunchAgents**, consistent with the existing agents. They survive crashes but require the `iris`
 GUI login session after reboot. These jobs do not provide pre-login LaunchDaemon supervision. An administrator must explicitly migrate/test startup if
 unattended pre-login service is required. Existing AC sleep is disabled and autorestart enabled;
@@ -99,17 +100,44 @@ FileVault/login behavior is still an operator dependency.
 Metrics are private LAN listeners only: no new Ingress, DNS records, share route, or public exposure.
 Do not run `brew services start node_exporter` alongside the managed job (port/ownership conflict).
 
-From this repo after monitoring GitOps has reconciled:
+Install/update only the power collector without touching the exporter, watchdog,
+private credentials or notification destinations. Install Homebrew `macmon` on
+Iris (not on a separate deployment workstation):
 
 ```sh
-ssh iris@iris.khzaw.dev 'HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew install node_exporter'
+ssh iris@iris.khzaw.dev 'HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew install macmon'
+node --test native/iris/power.test.mjs
+node native/iris/deploy.mjs --only power iris@iris.khzaw.dev
+```
+
+When running directly on Iris, SSH is unnecessary; install the same versioned
+files and select only the power job:
+
+```sh
+cp native/iris/{power,install}.mjs ~/.local/share/rangoonpulse/iris/
+node ~/.local/share/rangoonpulse/iris/install.mjs --only power
+```
+
+The power job starts without Kubernetes, DNS or network access. It samples roughly
+every ten seconds, bounds input and the wait for valid samples, and removes old
+output before startup. Child exit, a stalled sampler or write failure removes
+power output and exits nonzero for launchd recovery. Shutdown terminates and waits
+for its child. Neither power failures nor its deployment restart the independent
+watchdog/sentinel. Prometheus requires a sample age of at most 90 seconds even if
+the exporter can still serve an old file. Missing periods stay missing; there is
+no durable sample queue or replay. Normal scrapes resume after reconnection.
+
+For a complete native telemetry deployment after monitoring GitOps has reconciled:
+
+```sh
+ssh iris@iris.khzaw.dev 'HOMEBREW_NO_AUTO_UPDATE=1 /opt/homebrew/bin/brew install node_exporter macmon'
 node --test native/iris/watchdog.test.mjs
 KUBECONFIG="$PWD/kubeconfig" node native/iris/deploy.mjs
 ssh iris@iris.khzaw.dev '/opt/homebrew/bin/node ~/.local/share/rangoonpulse/iris/smoke.mjs'
 ```
 
 The deployer reads live cluster settings and existing receiver credentials, copies source/config
-over SSH, validates plists, and replaces **only the two managed jobs**. No credentials appear in argv,
+over SSH, validates plists, and replaces **only the three managed jobs**. No credentials appear in argv,
 Git, or console output. Existing OpenClaw/Hermes configs and processes are never rewritten.
 
 Paths on Iris:
@@ -117,7 +145,8 @@ Paths on Iris:
 - `~/.local/share/rangoonpulse/iris/`: installed versioned source.
 - `~/.config/rangoonpulse/iris/{config,notifications,kubernetes}.json`: private config, mode 0600.
 - `~/.local/state/rangoonpulse/iris/alerts.json`: persisted debounce/delivery state, mode 0600.
-- `~/.local/state/rangoonpulse/iris/textfile/iris.prom`: atomically replaced native metrics.
+- `~/.local/state/rangoonpulse/iris/textfile/iris.prom`: atomically replaced watchdog metrics.
+- `~/.local/state/rangoonpulse/iris/textfile/iris-power.prom`: independent system watts and valid-sample receipt timestamp.
 - `~/Library/LaunchAgents/dev.khzaw.iris.*.plist`: telemetry supervision definitions.
 - `~/Library/Logs/rangoonpulse/`: telemetry job stdout/stderr. Successful cycles are quiet;
   inspect/rotate logs during prolonged notification failures (no system log-rotation rule installed).
@@ -125,6 +154,7 @@ Paths on Iris:
 ```sh
 ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.watchdog'
 ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.node-exporter'
+ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.power'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/openclaw'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes-gateway'
@@ -173,7 +203,7 @@ An external dead-man's-switch would be needed for whole-site failure coverage; n
 
 ## Maintenance / onboarding exceptions
 
-Homebrew/native updates remain manual (`brew outdated node_exporter node`, review upstream release
+Homebrew/native updates remain manual (`brew outdated node_exporter node macmon`, review upstream release
 notes, upgrade, rerun deployer, verify plists/metrics and notification smoke test). Dynacat Releases
 includes OpenClaw, Hermes and node_exporter. Existing application upgrade policies are unchanged.
 
@@ -184,17 +214,20 @@ ports. Prometheus/Grafana/blackbox reuse existing workloads with unchanged resou
 
 ## Validation
 
+`node --test native/iris/*.test.mjs` covers power parsing, real child/atomic-file
+lifecycle, stalled samples, crash cleanup, deployment isolation and plist contracts.
 `node --test native/iris/watchdog.test.mjs` covers debounce/recovery, independent notification
 retries, stale readiness, endpoint response validation, cross-domain launchd listings and Hermes
 readiness failures despite running processes (missing APIs, malformed status, stale heartbeat,
 disconnected platforms or unhealthy components).
-For alert regression tests, extract `PrometheusRule.spec` from
-`infrastructure/monitoring/prometheusrule-iris.yaml` into `iris-rules.yaml` beside a temporary
-copy of `native/iris/alerts.test.yaml`, then run `promtool test rules alerts.test.yaml` there.
+For alert and power regression tests, run
+`uv run --no-project --with PyYAML==6.0.3 python scripts/test_power_estimation_promql.py`.
+It renders the power and Iris rule groups together, preserves their evaluation
+ordering, and runs the native alert fixtures with `promtool`.
 The fixtures include real discovery's `service="iris-node"` label, healthy telemetry,
 missing host/watchdog data, stopped agents, low/critical APFS space, Hermes component failures
 despite healthy processes/HTTP APIs, and independent Athena HTTPS-path failure.
 
-Verify launchd restart behavior for the two managed telemetry jobs, process/readiness samples, both cluster probes, private scrape targets, Darwin/APFS dashboard metrics, and actual Dynacat/Kuma entries. Confirm the restricted identity can read readiness but cannot list nodes or Secrets. Check native credential/state files are mode 0600.
+Verify launchd restart behavior for the three managed telemetry jobs, process/readiness samples, both cluster probes, private scrape targets, Darwin/APFS dashboard metrics, and actual Dynacat/Kuma entries. Confirm the restricted identity can read readiness but cannot list nodes or Secrets. Check native credential/state files are mode 0600.
 
 The installer retries launchd's asynchronous `bootout`/`bootstrap` race for up to ten seconds. A transient code 5 after successful unload is not by itself a reason to add sudo or alter existing agent jobs.

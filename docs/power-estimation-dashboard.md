@@ -3,23 +3,25 @@ title: Node Power Estimation Dashboard
 summary: Current operating guidance for Node Power Estimation Dashboard.
 status: active
 owner: homelab
-last_reviewed: 2026-10-28
+last_reviewed: 2026-10-29
 ---
 
 # Node Power Estimation Dashboard
 
-Grafana models electricity usage for the two Kubernetes nodes and Iris, the external
-M4 Mac mini running native OpenClaw and Hermes. Iris remains outside Kubernetes;
-its existing Darwin node exporter supplies host CPU telemetry. The utility node
-also exposes a real Raspberry Pi low-voltage signal.
+Grafana estimates electricity usage for the two Kubernetes nodes and Iris, the external
+M4 Mac mini running native OpenClaw and Hermes. Kubernetes watts use CPU models;
+Iris uses software-reported system power from `macmon` through its existing Darwin
+node exporter. Iris remains outside Kubernetes. The utility node also exposes a real
+Raspberry Pi low-voltage signal.
 
 ## Why Estimate-Only
 
 - There is no smart-plug/UPS wall-power telemetry source in this setup.
 - Node exporter is enabled so Grafana can surface the Raspberry Pi utility node's
   low-voltage alarm before workloads fail.
-- The wattage model reuses existing kubelet and Iris node-exporter metrics; no
-  additional agent, privileged power sampler, or steady-state workload is needed.
+- Kubernetes wattage models reuse existing kubelet metrics. Iris has an independent,
+  unprivileged native `macmon` sampler, reusing the existing node-exporter textfile
+  collector and scrape target without another listener or Kubernetes workload.
 - Energy and cost panels are still estimates because the underlying watt values are estimated.
 
 ## GitOps Objects
@@ -30,7 +32,7 @@ also exposes a real Raspberry Pi low-voltage signal.
 
 ## Model
 
-Per-node estimate:
+Kubernetes-node estimate:
 
 ```
 estimated_watts = idle_watts + (max_watts - idle_watts) * cpu_utilization_ratio
@@ -44,24 +46,34 @@ Where:
 - fallback if host-level resource metrics are absent:
   - `container_cpu_usage_seconds_total` (kubelet/cAdvisor, 5m rate)
   - divided by `machine_cpu_cores`
-- Iris uses `1 - avg(rate(node_cpu_seconds_total{job="iris-node",host="iris",mode="idle"}[5m]))`,
-  clamped to `[0, 1]`, with the stable power-model label `node="iris"`. This label
-  identifies a monitored host, not Kubernetes membership. Only a successful current
-  scrape contributes; missing/down exporter data yields no Iris estimate, not idle
-  or zero watts. Existing Iris alerts cover exporter loss.
 - `idle_watts` and `max_watts` are fixed constants per host.
 
 Current defaults:
 
 - `talos-7nf-osf`: idle `20W`, max `75W`
 - `talos-uua-g6r`: idle `4W`, max `12W`
-- `iris`: idle `4W`, max `65W`, based on [Apple's M4 Mac mini reference measurements](https://support.apple.com/en-us/103253)
-  (16 GB / 256 GB reference; Iris has 24 GB RAM). Apple's values are wall-power
-  figures including PSU losses, not the PSU rating or measurements of this Mac.
-  Linear CPU interpolation does not capture performance/efficiency-core differences,
-  GPU/Neural Engine load, attached peripherals, or sleep accurately. It estimates
-  whole-host electricity, not per-agent electricity or cloud inference bills.
 
+### Iris software-reported system power
+
+`dev.khzaw.iris.power` samples `macmon pipe --interval 10000` and atomically
+writes `iris_system_power_watts` and `iris_power_sample_timestamp_seconds` to
+`iris-power.prom` in the existing textfile directory. The timestamp advances only
+on a valid, finite positive `sys_power` sample. No idle allowance is added.
+
+The recording rules normalize this to `node="iris"`, with no scrape labels, and
+require a successful current exporter scrape plus a non-future sample at most
+90 seconds old. Missing, stale or invalid samples contribute no Iris watts or
+cost, not zero, idle power, or a CPU-model fallback. `IrisPowerSampleUnavailable`
+warns when the exporter is healthy but power samples remain unavailable.
+
+This is software-reported system power, not calibrated AC wall consumption or
+per-agent/cloud inference cost. The sensor replaces only Iris's input from the
+recording-rule rollout onward. Mixed historical ranges can include the previous
+4 W / 65 W CPU interpolation before that boundary; no samples or saved costs are
+backfilled or repriced. See [native supervision](./iris-operations.md#native-installation-and-supervision)
+for installation, fail-closed restart behavior and login-session recovery.
+
+The canonical metric names and two-minute cadence remain unchanged.
 `homelab:cluster_estimated_power_watts` and the Control Room cluster panel remain
 Kubernetes-only. `homelab:estimated_power_watts` includes all modeled hosts.
 Grafana's host selector and per-host series include Iris; selecting All includes it.

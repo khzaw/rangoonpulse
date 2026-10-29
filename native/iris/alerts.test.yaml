@@ -1,4 +1,5 @@
-# Extract PrometheusRule.spec to iris-rules.yaml beside this file before running promtool test rules.
+# scripts/test_power_estimation_promql.py extracts both power and Iris rule specs,
+# enrolling the epoch-zero alert fixtures at zero, then runs these with promtool.
 rule_files:
   - iris-rules.yaml
 evaluation_interval: 1m
@@ -6,8 +7,12 @@ tests:
   - name: Healthy native telemetry with Prometheus discovery labels never alerts
     interval: 1m
     input_series:
-      - series: 'up{job="iris-node",service="iris-node"}'
+      - series: 'up{job="iris-node",host="iris",service="iris-node"}'
         values: '1+0x20'
+      - series: 'iris_system_power_watts{job="iris-node",host="iris",service="iris-node"}'
+        values: '17.5+0x20'
+      - series: 'iris_power_sample_timestamp_seconds{job="iris-node",host="iris",service="iris-node"}'
+        values: '0+60x20'
       - series: 'iris_openclaw_ready{job="iris-node",service="iris-node"}'
         values: '1+0x20'
       - series: 'iris_hermes_ready{job="iris-node",service="iris-node"}'
@@ -47,6 +52,9 @@ tests:
         exp_samples:
           - labels: '{}'
             value: 1
+      - expr: 'ALERTS{alertname="IrisPowerSampleUnavailable",alertstate="firing"}'
+        eval_time: 10m
+        exp_samples: []
   - name: Agent down and nearly full APFS data volume alert
     interval: 1m
     input_series:
@@ -106,3 +114,57 @@ tests:
         exp_samples:
           - labels: '{}'
             value: 1
+  - name: Missing power sample warns while exporter remains healthy
+    interval: 1m
+    input_series:
+      - series: 'up{job="iris-node",host="iris",instance="mac:9100",service="iris-node"}'
+        values: '1+0x20'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: IrisPowerSampleUnavailable
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: IrisPowerSampleUnavailable
+        exp_alerts:
+          - exp_labels:
+              node: iris
+              severity: warning
+            exp_annotations:
+              summary: Iris power sample is missing or stale
+              description: Check dev.khzaw.iris.power and macmon on Iris. Power and cost omit Iris until a positive finite sample with a timestamp no more than 90 seconds old is available.
+  - name: Stale power sample warns after fresh data stops
+    interval: 1m
+    input_series:
+      - series: 'up{job="iris-node",host="iris",instance="mac:9100",service="iris-node"}'
+        values: '1+0x20'
+      - series: 'iris_system_power_watts{job="iris-node",host="iris",instance="mac:9100",service="iris-node"}'
+        values: '17.5+0x20'
+      - series: 'iris_power_sample_timestamp_seconds{job="iris-node",host="iris",instance="mac:9100",service="iris-node"}'
+        values: '0+60x4 240+0x15'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: IrisPowerSampleUnavailable
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: IrisPowerSampleUnavailable
+        exp_alerts:
+          - exp_labels:
+              node: iris
+              severity: warning
+            exp_annotations:
+              summary: Iris power sample is missing or stale
+              description: Check dev.khzaw.iris.power and macmon on Iris. Power and cost omit Iris until a positive finite sample with a timestamp no more than 90 seconds old is available.
+  - name: Exporter down does not generate a redundant power warning
+    interval: 1m
+    input_series:
+      - series: 'up{job="iris-node",host="iris",instance="mac:9100"}'
+        values: '0+0x20'
+    promql_expr_test:
+      - expr: 'count(ALERTS{alertname="IrisHostUnavailable",alertstate="firing"})'
+        eval_time: 10m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: 'ALERTS{alertname="IrisPowerSampleUnavailable",alertstate="firing"}'
+        eval_time: 10m
+        exp_samples: []

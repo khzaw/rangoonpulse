@@ -3,7 +3,7 @@ title: Control Panel Pulse
 summary: Read-only node, power, storage, and placement telemetry in the operator cockpit.
 status: active
 owner: homelab
-last_reviewed: 2026-10-28
+last_reviewed: 2026-10-29
 ---
 
 # Control Panel Pulse
@@ -25,8 +25,11 @@ The page refreshes every 60 seconds only while visible and selected, and refresh
 when reopened. Metrics load independently of control actions. Missing readings
 render as unavailable; a failed refresh does not present old readings as live.
 
-Power readings use the existing estimated-power recording rules. They are
-estimates, not wall-meter measurements.
+Power readings use the existing canonical power recording rules: CPU-derived
+estimates for Kubernetes nodes and fresh software-reported `macmon` system power
+for Iris. They are cost estimates, not calibrated wall-meter measurements. Iris
+history before the sensor rollout retains its earlier CPU model; stale sensor
+samples contribute no Iris watts or cost, without a CPU/idle fallback.
 
 ## Nodes and power
 

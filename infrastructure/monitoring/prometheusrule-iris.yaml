@@ -18,6 +18,17 @@ spec:
           annotations:
             summary: Iris host metrics are unavailable
             description: Check the Mac mini's power, LAN connectivity and dev.khzaw.iris.node-exporter launchd job. This cannot distinguish host loss from exporter loss.
+        - alert: IrisPowerSampleUnavailable
+          expr: >
+            max(up{job="iris-node",host="iris"} == 1)
+            unless on() homelab:iris_system_power_watts
+          for: 5m
+          labels:
+            node: iris
+            severity: warning
+          annotations:
+            summary: Iris power sample is missing or stale
+            description: Check dev.khzaw.iris.power and macmon on Iris. Power and cost omit Iris until a positive finite sample with a timestamp no more than 90 seconds old is available.
         - alert: IrisDiskSpaceLow
           expr: node_filesystem_avail_bytes{job="iris-node",mountpoint="/System/Volumes/Data"} / node_filesystem_size_bytes{job="iris-node",mountpoint="/System/Volumes/Data"} < 0.10
           for: 10m
