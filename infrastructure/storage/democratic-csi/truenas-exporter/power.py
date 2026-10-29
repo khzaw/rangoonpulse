@@ -42,14 +42,22 @@ class ApiClient:
         self.opener = urllib.request.build_opener(SameOriginRedirect())
 
     def _request(self, url, deadline, body=None, limit=1048576, authenticated=True):
-        # urllib's socket timeout is per read, not a deadline for DNS/headers.
-        # A short-lived cluster-side worker provides a hard wall-clock bound;
-        # credentials travel only over stdin. Kill/reap it before releasing state.
-        remaining = min(3, deadline - time.monotonic())
-        if remaining <= 0:
-            raise TimeoutError("NAS power collection deadline exceeded")
         payload = {"base": self.base, "auth": self.auth, "url": url, "deadline": deadline,
                    "body": body, "limit": limit, "authenticated": authenticated}
+        return self._isolated(payload, min(deadline, time.monotonic() + 3), limit)
+
+    def snapshot(self, deadline):
+        # One interpreter per poll, not one cold import per HTTP request. This
+        # preserves the existing 100m CPU cap without weakening cancellation.
+        payload = {"base": self.base, "auth": self.auth, "operation": "snapshot", "deadline": deadline}
+        return json.loads(self._isolated(payload, deadline, 2097152))
+
+    def _isolated(self, payload, deadline, limit):
+        # urllib's inactivity timeout does not bound slow headers or framing.
+        # Kill/reap a whole overdue poll before releasing the parent's lock.
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("NAS power collection deadline exceeded")
         with subprocess.Popen([sys.executable, __file__], stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as worker:
             try:
@@ -102,6 +110,13 @@ class ApiClient:
         return self._request(self.origin + result[1], deadline, limit=131072, authenticated=False).decode()
 
 
+class DirectApiClient(ApiClient):
+    """Used only inside the already-supervised collection worker."""
+
+    def _request(self, url, deadline, body=None, limit=1048576, authenticated=True):
+        return self._fetch(url, deadline, body, limit, authenticated)
+
+
 class PowerCollector:
     def __init__(self, api, clock=time, platform_watts=12.0, cpu_watts=10.0):
         if any(not math.isfinite(value) or value <= 0 for value in (platform_watts, cpu_watts)):
@@ -126,10 +141,9 @@ class PowerCollector:
             self.lock.release()
 
     def _sample(self):
-        deadline = self.clock.monotonic() + 10
-        inventory = self.api.get("/disk", deadline)
-        cpu_text = self.api.read_file("/proc/stat", deadline)
-        disk_text = self.api.read_file("/proc/diskstats", deadline)
+        deadline = self.clock.monotonic() + 25
+        snapshot = self.api.snapshot(deadline)
+        inventory, cpu_text, disk_text = snapshot["inventory"], snapshot["cpu"], snapshot["disks"]
         cpu_lines = [line.split() for line in cpu_text.splitlines()]
         cpu = next([int(x) for x in line[1:9]] for line in cpu_lines if line[0] == "cpu")
         boot = next(int(line[1]) for line in cpu_lines if line[0] == "btime")
@@ -174,8 +188,16 @@ class PowerCollector:
 if __name__ == "__main__":
     try:
         params = json.loads(sys.stdin.buffer.read(131073))
-        client = ApiClient(params.pop("base"), "", "")
+        operation = params.pop("operation", "request")
+        client = DirectApiClient(params.pop("base"), "", "")
         client.auth = params.pop("auth")
-        sys.stdout.buffer.write(client._fetch(**params))
+        if operation == "snapshot":
+            deadline = params["deadline"]
+            result = {"inventory": client.get("/disk", deadline),
+                      "cpu": client.read_file("/proc/stat", deadline),
+                      "disks": client.read_file("/proc/diskstats", deadline)}
+            sys.stdout.buffer.write(json.dumps(result).encode())
+        else:
+            sys.stdout.buffer.write(client._fetch(**params))
     except Exception:  # noqa: BLE001 - never log URLs, credentials or remote errors.
         raise SystemExit(1) from None

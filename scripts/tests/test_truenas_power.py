@@ -12,6 +12,7 @@ import unittest
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 POWER = ROOT / "infrastructure/storage/democratic-csi/truenas-exporter/power.py"
@@ -38,6 +39,11 @@ class API:
         self.fail = False
         self.boot = 1700000000
         self.models = ["ST8000VN004-3CP101", "ST8000NT001-3LZ101", "ST8000VN002-2ZM188"]
+
+    def snapshot(self, deadline):
+        return {"inventory": self.get("/disk", deadline),
+                "cpu": self.read_file("/proc/stat", deadline),
+                "disks": self.read_file("/proc/diskstats", deadline)}
 
     def get(self, path, deadline):
         if self.fail:
@@ -313,7 +319,10 @@ class PowerTests(unittest.TestCase):
                     return
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(fixture.read_file("/proc/stat", 0).encode())
+                if self.path.endswith("/disk"):
+                    self.wfile.write(json.dumps(fixture.get("/disk", 0)).encode())
+                else:
+                    self.wfile.write(fixture.read_file(requests[-1]["args"][0], 0).encode())
 
             def log_message(self, format, *args):
                 pass
@@ -331,6 +340,13 @@ class PowerTests(unittest.TestCase):
                     client.get("/disk", time.monotonic()-1)
                 with self.assertRaises(ValueError):
                     client.get("/redirect", time.monotonic()+3)
+                self.assertTrue(hasattr(client, "snapshot"), "Batch a poll into one worker instead of five cold imports")
+                with mock.patch.object(module.subprocess, "Popen", wraps=subprocess.Popen) as workers:
+                    snapshot = client.snapshot(time.monotonic()+5)
+                    self.assertEqual(workers.call_count, 1)
+                self.assertEqual(len(snapshot["inventory"]), 3)
+                self.assertTrue(snapshot["cpu"].startswith("cpu "))
+                self.assertIn("sda", snapshot["disks"])
             finally:
                 server.shutdown()
                 worker.join(2)

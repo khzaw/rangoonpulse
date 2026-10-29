@@ -152,7 +152,7 @@ spec:
       path: /power
       honorLabels: true
       interval: 120s
-      scrapeTimeout: 15s
+      scrapeTimeout: 30s
       relabelings:
         - targetLabel: host
           replacement: truenas

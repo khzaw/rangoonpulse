@@ -81,7 +81,7 @@ application, monitoring service, package, SSH key or configuration change is req
 
 The existing `democratic-csi/truenas-pvc-dataset-exporter` serves an independent
 `/power` endpoint on the same port. Its Kubernetes-managed ServiceMonitor polls
-every **120 seconds**, with a **15-second** scrape timeout. PVC dataset collection
+every **120 seconds**, with a **30-second** scrape timeout. PVC dataset collection
 remains on `/metrics`; neither collector depends on the other's success. Credentials
 come from the existing `democratic-csi/truenas-credentials` Secret, not a temporary
 1Password share or interactive browser session.
@@ -91,11 +91,13 @@ queries currently return no data. The collector therefore uses the existing True
 REST file API to stream `/proc/stat` and `/proc/diskstats`, plus `/disk` inventory.
 `core.download` invokes `filesystem.get` with `buffered: false`: tiny telemetry
 files stream through middleware job pipes without a NAS sampler or ramfs copy.
-This is five NAS HTTP requests per poll. Each request runs in a short-lived Python
-worker **inside the existing Kubernetes pod**, with a hard three-second deadline
-covering DNS, response headers, redirects, chunk framing and body reads. The parent
-kills and reaps an overdue worker before releasing sample state. The full collection
-budget is ten seconds; JSON is capped at 1 MiB and each counter file at 128 KiB.
+This is five NAS HTTP requests batched into **one short-lived Python worker per
+poll inside the existing Kubernetes pod**. A hard **25-second** whole-poll deadline
+covers interpreter startup, DNS, headers, redirects, framing and bodies; socket
+inactivity is bounded to three seconds. The parent kills and reaps an overdue
+worker before releasing sample state. Batching avoids repeated cold imports under
+the existing 100m CPU cap without increasing CPU or RAM limits. JSON is capped at
+1 MiB per response, each counter file at 128 KiB, and worker output at 2 MiB.
 No worker or extra resident process runs on the NAS. Credentials, one-off download URLs and disk serials are never
 logged, exported as labels, or saved by the collector.
 

@@ -17,7 +17,7 @@ def run(promtool):
     monitor = next(obj for obj in objects if obj["kind"] == "ServiceMonitor")
     endpoint = next(item for item in monitor["spec"]["endpoints"] if item["path"] == "/power")
     assert endpoint.get("honorLabels") is True, "Preserve raw host labels without exported_host breaking up joins"
-    assert endpoint["interval"] == "120s" and endpoint["scrapeTimeout"] == "15s"
+    assert endpoint["interval"] == "120s" and endpoint["scrapeTimeout"] == "30s"
     base = int(settings["TRUENAS_POWER_COST_START_SECONDS"])
     spec = render(RULES, settings, base)
     assert spec["groups"][0]["interval"] == "2m"
