@@ -3,7 +3,7 @@ title: CPU Headroom Validation
 summary: Git and CI capacity checks for resource edits, new workloads, and replica scaling without live admission enforcement.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-10-31
 ---
 
 # CPU Headroom Validation
@@ -27,6 +27,9 @@ Helm releases with their pinned chart versions. It compares actual workload CPU,
 replicas, placement, and surge settings. Image-only and CPU-neutral changes do not
 need spare reservation budget. Chart defaults are included; HelmRelease values
 alone are not an acceptable substitute for rendering.
+Optional ConfigMap values absent from Git use the HelmRelease's inline defaults,
+as Transmission does in direct mode. CI cannot see runtime-owned overrides;
+validate their capacity separately before switching modes or changing their resources.
 
 CI compares a PR to its base, or a master push to its previous commit. Changed
 workloads are checked together, so two services cannot independently spend the

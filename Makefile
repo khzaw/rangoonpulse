@@ -162,6 +162,7 @@ check-shell: ## Syntax-check shell scripts
 
 test-python: ## Run Python unit tests
 	python3 -m unittest discover -s infrastructure/resource-advisor/tests -p 'test_*.py'
+	python3 -m unittest scripts/tests/test_check_git_capacity.py
 	python3 -m unittest discover -s scripts/tests -p 'test_power_tariff*.py'
 	python3 -m unittest discover -s scripts/tests -p 'test_truenas*.py'
 	python3 scripts/update_power_tariff.py --check

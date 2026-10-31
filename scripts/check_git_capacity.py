@@ -70,7 +70,12 @@ def chart_inputs(release, objects):
     for ref in spec.get('valuesFrom', []):
         if ref.get('kind', 'Secret') != 'ConfigMap' or ref.get('targetPath'):
             raise ValueError('Capacity rendering cannot resolve Secret valuesFrom or targetPath; use Git-managed ConfigMap values')
-        obj = objects[('ConfigMap', release['metadata'].get('namespace', 'default'), ref['name'])]
+        key = ('ConfigMap', release['metadata'].get('namespace', 'default'), ref['name'])
+        obj = objects.get(key)
+        if obj is None:
+            if ref.get('optional', False):
+                continue
+            raise ValueError(f'Capacity rendering requires Git-managed ConfigMap {key[1]}/{key[2]}')
         text = obj['data'][ref.get('valuesKey', 'values.yaml')]
         import yaml
         values = merge(values, yaml.safe_load(text) or {})
