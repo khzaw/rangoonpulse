@@ -2716,7 +2716,7 @@ tr:hover td {
 
 .secret-key-row {
   display: grid;
-  grid-template-columns: minmax(160px, 0.35fr) minmax(180px, 1fr) auto auto;
+  grid-template-columns: minmax(160px, 0.35fr) minmax(240px, 1fr) auto;
   gap: 10px;
   align-items: center;
   padding: 10px 0 12px;
@@ -2727,6 +2727,56 @@ tr:hover td {
     background 200ms var(--ease-snappy),
     opacity 160ms var(--ease-snappy),
     transform 160ms var(--ease-snappy);
+}
+
+.secret-value-control {
+  position: relative;
+  min-width: 0;
+}
+
+.secret-value-control .secret-key-value {
+  width: 100%;
+  padding-right: 100px;
+  min-height: 48px;
+}
+
+.secret-value-actions {
+  position: absolute;
+  inset: 0 4px 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.secret-value-actions .secret-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  transition: color 160ms var(--ease-snappy), background 160ms var(--ease-snappy);
+}
+
+.secret-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.secret-value-actions .secret-icon-btn:hover,
+.secret-value-actions .secret-icon-btn:focus-visible {
+  color: var(--text-1);
+  background: var(--code-bg);
+}
+
+.secret-value-actions .secret-icon-btn.is-copied {
+  color: var(--text-1);
+  opacity: 1;
+  background: var(--secret-focus-bg);
 }
 
 .secret-key-row:focus-within {

@@ -1807,12 +1807,50 @@
         renderSecretsList(dashboardState.secrets);
       }
 
+      function secretActionIcon(name) {
+        const paths = {
+          reveal: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+          hide: '<path d="m3 3 18 18M10.6 5.1 12 5c6.5 0 10 7 10 7a19 19 0 0 1-3 3.8M6.3 6.3A21 21 0 0 0 2 12s3.5 7 10 7a11 11 0 0 0 5.7-1.7M10 10a3 3 0 0 0 4 4"/>',
+          copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+          check: '<path d="m5 12 4 4L19 6"/>',
+        };
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + paths[name] + '</svg>';
+      }
+
+      async function copySecretValue(button) {
+        const input = button.closest('.secret-key-row').querySelector('.secret-key-value');
+        button.disabled = true;
+        try {
+          await navigator.clipboard.writeText(input.value);
+          button.innerHTML = secretActionIcon('check');
+          button.classList.add('is-copied');
+          button.title = 'Copied';
+          button.setAttribute('aria-label', 'Copied');
+          setSecretsMsg('Value copied to clipboard.');
+          window.setTimeout(() => {
+            button.innerHTML = secretActionIcon('copy');
+            button.classList.remove('is-copied');
+            button.title = 'Copy value';
+            button.setAttribute('aria-label', 'Copy value');
+            button.disabled = false;
+          }, 1800);
+        } catch {
+          button.disabled = false;
+          setSecretsMsg('Could not copy. Allow clipboard access or reveal the value and copy it manually.', true);
+        }
+      }
+
       function secretKeyRowHtml(key, value) {
         return (
           '<div class="secret-key-row">' +
             '<input class="secret-key-name" type="text" value="' + escapeHtml(key) + '" placeholder="KEY_NAME" autocomplete="off" />' +
-            '<input class="secret-key-value" type="password" value="' + escapeHtml(value) + '" placeholder="value" autocomplete="off" />' +
-            '<button class="secret-reveal-btn" type="button" title="Reveal or hide value">Reveal</button>' +
+            '<div class="secret-value-control">' +
+              '<input class="secret-key-value" type="password" value="' + escapeHtml(value) + '" placeholder="value" aria-label="Secret value" autocomplete="off" />' +
+              '<div class="secret-value-actions">' +
+                '<button class="secret-icon-btn secret-reveal-btn" type="button" title="Reveal value" aria-label="Reveal value">' + secretActionIcon('reveal') + '</button>' +
+                '<button class="secret-icon-btn secret-copy-btn" type="button" title="Copy value" aria-label="Copy value">' + secretActionIcon('copy') + '</button>' +
+              '</div>' +
+            '</div>' +
             '<button class="secret-remove-key-btn danger" type="button" title="Remove key">Remove</button>' +
           '</div>'
         );
@@ -2383,11 +2421,15 @@
       secretKeyRowsEl.addEventListener('click', (event) => {
         const reveal = event.target.closest('.secret-reveal-btn');
         const remove = event.target.closest('.secret-remove-key-btn');
+        const copy = event.target.closest('.secret-copy-btn');
+        if (copy && !copy.disabled) copySecretValue(copy);
         if (reveal) {
           const input = reveal.closest('.secret-key-row').querySelector('.secret-key-value');
           const visible = input.type === 'text';
           input.type = visible ? 'password' : 'text';
-          reveal.textContent = visible ? 'Reveal' : 'Hide';
+          reveal.innerHTML = secretActionIcon(visible ? 'reveal' : 'hide');
+          reveal.title = visible ? 'Reveal value' : 'Hide value';
+          reveal.setAttribute('aria-label', reveal.title);
         }
         if (remove) {
           const row = remove.closest('.secret-key-row');

@@ -33,6 +33,8 @@ The control panel provides an allowlisted editor for Git-managed secrets. The fl
 5. request Flux reconciliation
 6. remove transient payload resources
 
+Each value has an eye icon to reveal or hide it and a copy icon to copy the current field value without revealing it. Copy requires browser clipboard access, confirms success with a checkmark, and leaves the value on the system clipboard until it is replaced.
+
 The helper path must never log secret values. Read-back verification should compare metadata and key names only.
 
 The private Secrets page inventories Git files before joining live Kubernetes metadata. A GitHub `Bad credentials` error can therefore hide valid live Secrets; check the GitHub credential before changing registration or RBAC. Refresh `/api/secrets?force=1` and check expected keys, `existsLive`, and the managed path without revealing values. Credential updates captured in environment variables require a consumer restart.
