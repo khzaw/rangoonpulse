@@ -25,7 +25,7 @@ All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and incl
 - `ghcr-pull-secret`: Erica Knight, Rangoon Mapper, and Retirement private image pulls
 - `homepage-widget-secrets`: Dynacat widgets
 - `immich-db-secret`: Immich PostgreSQL
-- `media-postgres-secret`: shared media TimescaleDB administration and ledger provisioning hook only
+- `media-postgres-secret`: shared TimescaleDB administration and app-owned database provisioning hooks; application runtimes use their restricted roles
 - `miniflux-secret`: `POSTGRES_PASSWORD`, `DATABASE_URL`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` for Miniflux's restricted database role and initial administrator; its provisioning hook also consumes `media-postgres-secret`
 - `power-ledger-db`: `writer-password` and `reader-password` for the isolated monthly cost table; `snapshot-token` for collector-to-Control Panel publication. Reader copy in monitoring must rotate together.
 - `obsidian-livesync-secret`: CouchDB/LiveSync credentials

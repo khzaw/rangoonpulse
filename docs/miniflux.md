@@ -58,7 +58,9 @@ restarting only the pod does not run the provisioning hook.
 
 The cert-manager-owned Certificate and TLS Secret `default/miniflux-tls` use
 `letsencrypt-prod` for Ingress `miniflux` and hostname `rss.khzaw.dev`. TLS material
-is managed read-only, separately from editable application credentials.
+is separate from editable application credentials. The Secrets page inventories
+only SOPS-managed objects and has no managed-TLS view; verify this certificate
+and Secret's metadata through Kubernetes without exposing private keys.
 
 The shared PostgreSQL volume has no repository-defined automated backup. Miniflux
 subscriptions, articles, users, and settings share that existing recovery gap;
@@ -69,7 +71,7 @@ SOPS and OPML exports do not back up the complete database.
 - Dynacat: RSS bookmark, Health monitor using the cluster-local `/healthcheck`,
   and upstream `miniflux/v2` release watcher.
 - Control Panel: live image/chart update rows, editable SOPS credential inventory,
-  managed TLS metadata, and resource tuning.
+  and resource tuning. Managed TLS metadata uses Kubernetes as described above.
 - Resource Advisor: mapped app-template release with normal maturity and safety
   gates for resource recommendations and apply PRs. Fixed replicas avoid HPA conflicts.
 - Exposure Control: `miniflux` targets port `8080`; `share-miniflux.khzaw.dev`
