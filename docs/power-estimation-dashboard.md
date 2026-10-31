@@ -3,7 +3,7 @@ title: Node Power Estimation Dashboard
 summary: Current operating guidance for Node Power Estimation Dashboard.
 status: active
 owner: homelab
-last_reviewed: 2026-10-29
+last_reviewed: 2026-11-01
 ---
 
 # Node Power Estimation Dashboard
@@ -162,6 +162,23 @@ Grafana's host selector and per-host series include Iris and TrueNAS; All includ
 Pulse keeps the node cards/top-strip cluster reading Kubernetes-only and uses the
 combined homelab series in its power/cost section. These totals cover only the
 explicitly modeled hosts, not networking equipment or the whole household.
+
+### Local TrueNAS exporter checks
+
+Run the exporter tests with Python 3.15, matching CI:
+
+```bash
+python3 -m unittest discover -s scripts/tests -p 'test_truenas*.py'
+```
+
+Process tests execute the real exporter entrypoint with a test-only listener on
+loopback and an OS-assigned port. Fixture servers skip reverse DNS, and tests
+isolate proxy, Python, Kubernetes, and TrueNAS environment overrides. Startup
+failures include child output, exit status, and the last readiness error; temporary
+logs and processes are cleaned up on success or failure. Slow-response checks
+require the worker to reach the HTTP fixture before accepting a bounded failure,
+with a separate deterministic check for killing and reaping overdue workers.
+These tests use simulated NAS responses and do not require a live NAS or cluster.
 
 ## Live Utility-Node Power Health
 

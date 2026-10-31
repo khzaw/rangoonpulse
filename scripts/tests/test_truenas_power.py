@@ -3,16 +3,19 @@
 import importlib.util
 import json
 import os
-import socket
 import subprocess
-import sys
 import threading
 import time
 import unittest
-import urllib.request
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from unittest import mock
+
+# Support both unittest discovery and package-qualified invocation.
+try:
+    from . import truenas_exporter_fixture as fixture
+except ImportError:
+    import truenas_exporter_fixture as fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 POWER = ROOT / "infrastructure/storage/democratic-csi/truenas-exporter/power.py"
@@ -63,6 +66,48 @@ class API:
 
 
 class PowerTests(unittest.TestCase):
+    def setUp(self):
+        # Isolate both this process's HTTP clients and their Python workers.
+        self.enterContext(mock.patch.dict(os.environ, fixture.fixture_environment(), clear=True))
+
+    def test_fixture_server_does_not_depend_on_reverse_dns(self):
+        with mock.patch("socket.getfqdn", side_effect=AssertionError("Unexpected reverse DNS lookup")):
+            with fixture.LoopbackHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler) as server:
+                self.assertEqual(server.server_address[0], "127.0.0.1")
+                self.assertGreater(server.server_port, 0)
+
+    def test_fixture_environment_ignores_host_configuration(self):
+        with mock.patch.dict(os.environ, {
+            "TRUENAS_API_BASE": "http://host.invalid", "TRUENAS_PASSWORD": "host-password",
+            "TRUENAS_PLATFORM_IDLE_WATTS": "invalid", "KUBERNETES_SERVICE_HOST": "host.invalid",
+            "PYTHONPATH": "/host-packages", "HTTPS_PROXY": "http://proxy.invalid",
+            "http_proxy": "http://proxy.invalid", "NO_PROXY": "host.invalid", "PORT": "9118",
+        }):
+            env = fixture.fixture_environment()
+        self.assertNotIn("TRUENAS_API_BASE", env)
+        self.assertNotIn("KUBERNETES_SERVICE_HOST", env)
+        self.assertNotIn("PYTHONPATH", env)
+        self.assertNotIn("HTTPS_PROXY", env)
+        self.assertNotIn("http_proxy", env)
+        self.assertEqual(env["TRUENAS_PASSWORD"], "fixture")
+        self.assertEqual(env["TRUENAS_PLATFORM_IDLE_WATTS"], "12")
+        self.assertEqual(env["NO_PROXY"], "*")
+        self.assertEqual(env["PORT"], "0")
+
+    def test_exporter_startup_failure_includes_child_diagnostics(self):
+        env = fixture.fixture_environment()
+        env["TRUENAS_PLATFORM_IDLE_WATTS"] = "invalid-fixture-value"
+        with mock.patch.object(fixture, "fixture_environment", return_value=env):
+            with self.assertRaises(AssertionError) as failure:
+                with fixture.exporter_process("http://127.0.0.1:1/api/v2.0"):
+                    self.fail("Exporter unexpectedly accepted invalid configuration")
+        message = str(failure.exception)
+        self.assertIn("Exporter exited before becoming ready", message)
+        self.assertIn("exit=1", message)
+        self.assertIn("last readiness error=", message)
+        self.assertIn("ValueError", message)
+        self.assertIn("invalid-fixture-value", message)
+
     def load(self):
         self.assertTrue(POWER.is_file(), "Add the restart-safe NAS power collector")
         spec = importlib.util.spec_from_file_location("truenas_power", POWER)
@@ -71,102 +116,82 @@ class PowerTests(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
-    def test_slow_headers_are_bounded_before_urlopen_returns(self):
+    def assert_slow_response_bounded(self, framing):
         module = self.load()
+        entered, release = threading.Event(), threading.Event()
+
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
                 try:
-                    if self.path.endswith("/chunk"):
+                    if framing == "headers":
+                        self.connection.sendall(b"HTTP/1.1 200 OK\r\nX-Delay: ")
+                    elif framing == "chunk":
                         self.connection.sendall(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n")
                     else:
-                        self.connection.sendall(b"HTTP/1.1 200 OK\r\nX-Delay: ")
-                    for _ in range(30):
-                        self.connection.sendall(b"0" if self.path.endswith("/chunk") else b"x")
-                        time.sleep(.02)
-                    self.connection.sendall(b"2\r\n{}\r\n0\r\n\r\n" if self.path.endswith("/chunk") else b"\r\nContent-Length: 2\r\n\r\n{}")
+                        self.connection.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 1000000\r\n\r\n")
+                    entered.set()
+                    # Keep data arriving below the inactivity timeout until the
+                    # parent kills the poll, rather than finishing on a timer.
+                    while not release.is_set():
+                        self.connection.sendall(b"0" if framing == "chunk" else b"x")
+                        release.wait(.05)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
-            def log_message(self, format, *args):
-                pass
-        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
-            worker = threading.Thread(target=server.serve_forever, daemon=True)
-            worker.start()
-            try:
-                client = module.ApiClient(f"http://127.0.0.1:{server.server_port}/api/v2.0", "fixture", "fixture")
-                for path in ("/slow", "/chunk"):
-                    started = time.monotonic()
-                    with self.assertRaises((TimeoutError, ValueError, OSError)):
-                        client.get(path, time.monotonic()+.12)
-                    self.assertLess(time.monotonic()-started, .35)
-            finally:
-                server.shutdown()
-                worker.join(2)
 
-    def test_slow_trickle_cannot_hold_a_collection_lock_forever(self):
-        module = self.load()
-        class Handler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                self.send_response(200)
-                self.send_header("Content-Length", "40")
-                self.end_headers()
-                try:
-                    for _ in range(40):
-                        self.wfile.write(b"x")
-                        self.wfile.flush()
-                        time.sleep(.02)
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
             def log_message(self, format, *args):
                 pass
-        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+
+        with fixture.LoopbackHTTPServer(("127.0.0.1", 0), Handler) as server:
             worker = threading.Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
                 client = module.ApiClient(f"http://127.0.0.1:{server.server_port}/api/v2.0", "fixture", "fixture")
                 started = time.monotonic()
+                # Either the worker notices its deadline or its supervisor
+                # kills it; both must be bounded after reaching the fixture.
                 with self.assertRaises((TimeoutError, ValueError)):
-                    client.get("/slow", time.monotonic()+.12)
-                self.assertLess(time.monotonic()-started, .35)
+                    client.get("/slow", started + 2)
+                elapsed = time.monotonic() - started
+                self.assertTrue(entered.is_set(), "Worker timed out before reaching the slow HTTP fixture")
+                self.assertGreater(elapsed, 1, "Request failed before exercising the slow-response deadline")
+                self.assertLess(elapsed, 3, "Overdue worker was not promptly reaped")
             finally:
+                release.set()
                 server.shutdown()
                 worker.join(2)
 
+    def test_slow_headers_are_bounded_before_urlopen_returns(self):
+        for framing in ("headers", "chunk"):
+            with self.subTest(framing=framing):
+                self.assert_slow_response_bounded(framing)
+
+    def test_slow_trickle_cannot_hold_a_collection_lock_forever(self):
+        self.assert_slow_response_bounded("body")
+
+    def test_overdue_worker_is_killed_and_reaped(self):
+        module = self.load()
+        worker = mock.MagicMock()
+        worker.__enter__.return_value = worker
+        worker.communicate.side_effect = [subprocess.TimeoutExpired("fixture", 2), (b"", None)]
+        client = module.ApiClient("http://127.0.0.1:1/api/v2.0", "fixture", "fixture")
+        with mock.patch.object(module.subprocess, "Popen", return_value=worker):
+            with self.assertRaisesRegex(TimeoutError, "NAS telemetry worker exceeded deadline"):
+                client.get("/disk", time.monotonic() + 2)
+        worker.kill.assert_called_once_with()
+        self.assertEqual(worker.communicate.call_count, 2)
+        self.assertEqual(worker.communicate.call_args, mock.call())
+
     def test_real_exporter_starts_offline_and_recovers_after_process_restart(self):
-        exporter = POWER.with_name("exporter.py")
-        self.assertTrue(exporter.is_file(), "Serve power through the existing exporter")
-        with socket.socket() as sock:
-            sock.bind(("127.0.0.1", 0))
-            port = sock.getsockname()[1]
-        env = dict(os.environ, PORT=str(port), TRUENAS_USERNAME="fixture", TRUENAS_PASSWORD="fixture",
-                   TRUENAS_API_BASE="http://127.0.0.1:1/api/v2.0")
-        for _ in range(2):
-            worker = subprocess.Popen([sys.executable, str(exporter)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            try:
-                deadline = time.monotonic()+5
-                while True:
-                    try:
-                        with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=.5) as response:
-                            self.assertEqual(response.read(), b"ok\n")
-                        break
-                    except OSError:
-                        if worker.poll() is not None or time.monotonic() >= deadline:
-                            self.fail("Exporter did not start independently of NAS availability")
-                        time.sleep(.05)
-                with urllib.request.urlopen(f"http://127.0.0.1:{port}/power", timeout=2) as response:
+        for restart in range(2):
+            with self.subTest(restart=restart), fixture.exporter_process("http://127.0.0.1:1/api/v2.0") as base:
+                with fixture.HTTP.open(base + "/power", timeout=10) as response:
                     body = response.read().decode()
                     self.assertIn('truenas_power_scrape_success{host="truenas"} 0', body)
                     self.assertNotIn("truenas_estimated_power_watts{", body)
-            finally:
-                worker.terminate()
-                try:
-                    worker.communicate(timeout=3)
-                except subprocess.TimeoutExpired:
-                    worker.kill()
-                    worker.communicate(timeout=3)
 
     def test_real_process_collects_after_reconnect_and_restart(self):
         self.load()
-        fixture = API()
+        api_fixture = API()
         state = {"online": True, "generation": 0}
         class NAS(BaseHTTPRequestHandler):
             def respond(self, body):
@@ -177,7 +202,7 @@ class PowerTests(unittest.TestCase):
                 if not state["online"]:
                     self.send_error(503)
                 elif self.path.endswith("/disk"):
-                    self.respond(json.dumps(fixture.get("/disk", 0)).encode())
+                    self.respond(json.dumps(api_fixture.get("/disk", 0)).encode())
                 elif self.path == "/_download/1":
                     state["generation"] += 1
                     generation = state["generation"]
@@ -191,32 +216,18 @@ class PowerTests(unittest.TestCase):
                 self.respond(json.dumps([number, f"/_download/{number}"]).encode())
             def log_message(self, format, *args):
                 pass
-        with ThreadingHTTPServer(("127.0.0.1", 0), NAS) as server:
+        with fixture.LoopbackHTTPServer(("127.0.0.1", 0), NAS) as server:
             nas_worker = threading.Thread(target=server.serve_forever, daemon=True)
             nas_worker.start()
-            with socket.socket() as sock:
-                sock.bind(("127.0.0.1", 0))
-                port = sock.getsockname()[1]
-            env = dict(os.environ, PORT=str(port), TRUENAS_USERNAME="fixture", TRUENAS_PASSWORD="fixture",
-                       TRUENAS_API_BASE=f"http://127.0.0.1:{server.server_port}/api/v2.0")
-            def power():
-                with urllib.request.urlopen(f"http://127.0.0.1:{port}/power", timeout=10) as response:
-                    return response.read().decode()
             try:
-                for _ in range(2):
-                    process = subprocess.Popen([sys.executable, str(POWER.with_name("exporter.py"))], env=env,
-                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    try:
-                        deadline = time.monotonic()+5
-                        while True:
-                            try:
-                                with urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=.5) as response:
-                                    self.assertEqual(response.status, 200)
-                                break
-                            except OSError:
-                                if process.poll() is not None or time.monotonic() >= deadline:
-                                    self.fail("Exporter failed to restart")
-                                time.sleep(.05)
+                for restart in range(2):
+                    with self.subTest(restart=restart), fixture.exporter_process(
+                        f"http://127.0.0.1:{server.server_port}/api/v2.0"
+                    ) as base:
+                        def power():
+                            with fixture.HTTP.open(base + "/power", timeout=10) as response:
+                                return response.read().decode()
+
                         self.assertNotIn("truenas_estimated_power_watts{", power())
                         self.assertIn('truenas_power_scrape_success{host="truenas"} 1', power())
                         state["online"] = False
@@ -224,13 +235,6 @@ class PowerTests(unittest.TestCase):
                         state["online"] = True
                         self.assertNotIn("truenas_estimated_power_watts{", power())
                         self.assertIn('truenas_power_scrape_success{host="truenas"} 1', power())
-                    finally:
-                        process.terminate()
-                        try:
-                            process.communicate(timeout=3)
-                        except subprocess.TimeoutExpired:
-                            process.kill()
-                            process.communicate(timeout=3)
             finally:
                 server.shutdown()
                 nas_worker.join(2)
@@ -301,7 +305,7 @@ class PowerTests(unittest.TestCase):
         module = self.load()
         self.assertTrue(hasattr(module, "ApiClient"), "Add bounded read-only TrueNAS API transport")
         requests = []
-        fixture = API()
+        api_fixture = API()
 
         class Handler(BaseHTTPRequestHandler):
             def do_POST(self):
@@ -320,14 +324,14 @@ class PowerTests(unittest.TestCase):
                 self.send_response(200)
                 self.end_headers()
                 if self.path.endswith("/disk"):
-                    self.wfile.write(json.dumps(fixture.get("/disk", 0)).encode())
+                    self.wfile.write(json.dumps(api_fixture.get("/disk", 0)).encode())
                 else:
-                    self.wfile.write(fixture.read_file(requests[-1]["args"][0], 0).encode())
+                    self.wfile.write(api_fixture.read_file(requests[-1]["args"][0], 0).encode())
 
             def log_message(self, format, *args):
                 pass
 
-        with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
+        with fixture.LoopbackHTTPServer(("127.0.0.1", 0), Handler) as server:
             worker = threading.Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
