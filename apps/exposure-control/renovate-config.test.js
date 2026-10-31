@@ -14,8 +14,8 @@ const workflow = fs.readFileSync(
 
 test("Renovate refills the bounded PR queue every six hours", () => {
   assert.match(workflow, /cron:\s*["']23 \*\/6 \* \* \*["']/);
-  assert.equal(renovate.prConcurrentLimit, 5);
-  assert.equal(renovate.prHourlyLimit, 5);
+  assert.equal(renovate.prConcurrentLimit, 7);
+  assert.equal(renovate.prHourlyLimit, 7);
 });
 
 test("Renovate tracks images in raw Kubernetes workloads", () => {

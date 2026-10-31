@@ -3,7 +3,7 @@ title: Dependency Updates
 summary: Current Renovate, Flux image automation, ownership boundaries, cadence, and verification.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-10-31
 ---
 
 # Dependency Updates
@@ -13,7 +13,7 @@ last_reviewed: 2026-10-25
 - configuration: `renovate.json`
 - workflow: `.github/workflows/renovate.yaml`
 - execution: GitHub Actions every six hours
-- PR concurrency and hourly creation limits: five
+- PR concurrency and hourly creation limits: seven
 
 Renovate owns normal chart, image, GitHub Actions, and other declared dependency updates except where package/path rules delegate ownership or intentionally pin a dependency.
 

@@ -23,8 +23,8 @@
     "apps/rangoon-mapper/**",
     "apps/ericaknight/**"
   ],
-  "prConcurrentLimit": 5,
-  "prHourlyLimit": 5,
+  "prConcurrentLimit": 7,
+  "prHourlyLimit": 7,
   "flux": {
     "managerFilePatterns": [
       "/(^|/)(apps|core|infrastructure)/.+\\.ya?ml$/",
