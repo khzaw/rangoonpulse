@@ -55,7 +55,7 @@ spec:
           main:
             image:
               repository: ghcr.io/alam00000/bentopdf-simple
-              tag: 2.8.10
+              tag: 2.8.11
             env:
               TZ: ${TIMEZONE}
             probes:
