@@ -134,6 +134,7 @@ Transmission's optional VPN sidecar still contains placeholder network material;
 |---|---|
 | **Finance** | Actual Budget, Retirement |
 | **Study and notes** | Interview Prep, Obsidian LiveSync, Anki sync |
+| **RSS** | [Miniflux](docs/miniflux.md) at `rss.khzaw.dev` |
 | **Personal tools** | 75 Soft, Reactive Resume, Vaultwarden, ChartDB, BentoPDF |
 | **Dashboards and utilities** | Dynacat, Speedtest Tracker, Kroki, Flux UI |
 | **Self-built sites** | Blog, MMCal, Rangoon Mapper, Erica Knight |

@@ -25,6 +25,13 @@
     "description": "Digital book library"
   },
   {
+    "id": "miniflux",
+    "name": "Miniflux",
+    "target": "http://miniflux.default.svc.cluster.local:8080",
+    "description": "RSS feed reader",
+    "authMode": "cloudflare-access"
+  },
+  {
     "id": "shelfmark",
     "name": "Shelfmark",
     "target": "http://shelfmark.default.svc.cluster.local:8084",

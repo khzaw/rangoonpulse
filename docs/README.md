@@ -72,6 +72,7 @@ Docs describe present desired state, active constraints, and reusable recovery p
 - [`reactive-resume.md`](./reactive-resume.md): Reactive Resume and printer sidecar
 - [`bentopdf.md`](./bentopdf.md): private browser PDF tools, HPA, and operator integrations
 - [`romm.md`](./romm.md): ROM library, shared PostgreSQL provisioning, and expandable NAS storage
+- [`miniflux.md`](./miniflux.md): private RSS reader, shared PostgreSQL, and encrypted administrator bootstrap
 - [`shelfmark.md`](./shelfmark.md): Shelfmark storage and share wiring
 - [`subarr.md`](./subarr.md): Subarr SQLite/media state and incomplete share wiring
 - [`tracerr.md`](./tracerr.md): Tracerr/Tracearr naming, database, Redis, and secrets

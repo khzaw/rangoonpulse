@@ -26,6 +26,7 @@ All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and incl
 - `homepage-widget-secrets`: Dynacat widgets
 - `immich-db-secret`: Immich PostgreSQL
 - `media-postgres-secret`: shared media TimescaleDB administration and ledger provisioning hook only
+- `miniflux-secret`: `POSTGRES_PASSWORD`, `DATABASE_URL`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` for Miniflux's restricted database role and initial administrator; its provisioning hook also consumes `media-postgres-secret`
 - `power-ledger-db`: `writer-password` and `reader-password` for the isolated monthly cost table; `snapshot-token` for collector-to-Control Panel publication. Reader copy in monitoring must rotate together.
 - `obsidian-livesync-secret`: CouchDB/LiveSync credentials
 - `reactive-resume-app-secret`: Reactive Resume application secrets

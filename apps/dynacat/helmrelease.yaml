@@ -264,6 +264,9 @@ spec:
                               - title: Anki
                                 url: https://anki.${BASE_DOMAIN}
                                 icon: mdi:cards-outline
+                              - title: Miniflux
+                                url: https://rss.${BASE_DOMAIN}
+                                icon: mdi:rss
                               - title: Interview Prep
                                 url: https://itvp.${BASE_DOMAIN}
                                 icon: mdi:head-lightbulb-outline
@@ -653,6 +656,7 @@ spec:
                           - advplyr/audiobookshelf
                           - calibrain/shelfmark
                           - rommapp/romm
+                          - miniflux/v2
                           - seerr-team/seerr
                           - chrisbenincasa/tunarr
                           - actualbudget/actual
@@ -801,6 +805,10 @@ spec:
                             url: https://bento.${BASE_DOMAIN}
                             check-url: http://bentopdf.default.svc.cluster.local:8080
                             icon: mdi:file-pdf-box
+                          - title: Miniflux
+                            url: https://rss.${BASE_DOMAIN}
+                            check-url: http://miniflux.default.svc.cluster.local:8080/healthcheck
+                            icon: mdi:rss
                           - title: Diagrams
                             url: https://diagrams.${BASE_DOMAIN}
                             check-url: http://kroki.default.svc.cluster.local:8000

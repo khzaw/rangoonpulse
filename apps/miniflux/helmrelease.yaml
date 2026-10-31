@@ -1,0 +1,205 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: miniflux
+  namespace: default
+spec:
+  interval: 24h
+  timeout: 10m
+  dependsOn:
+    - name: media-postgres
+  chart:
+    spec:
+      chart: app-template
+      version: "5.3.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+
+    controllers:
+      main:
+        forceRename: miniflux
+        # One scheduler/poller; avoid overlapping migrations and feed workers.
+        replicas: 1
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: ghcr.io/miniflux/miniflux
+              tag: "2.3.4"
+            env:
+              TZ: "${TIMEZONE}"
+              BASE_URL: https://rss.${BASE_DOMAIN}
+              LISTEN_ADDR: 0.0.0.0:8080
+              HTTPS: "1"
+              RUN_MIGRATIONS: "1"
+              CREATE_ADMIN: "1"
+              DATABASE_MAX_CONNS: "5"
+              DATABASE_MIN_CONNS: "1"
+              WORKER_POOL_SIZE: "2"
+              DATABASE_URL:
+                valueFrom:
+                  secretKeyRef:
+                    name: miniflux-secret
+                    key: DATABASE_URL
+              ADMIN_USERNAME:
+                valueFrom:
+                  secretKeyRef:
+                    name: miniflux-secret
+                    key: ADMIN_USERNAME
+              ADMIN_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: miniflux-secret
+                    key: ADMIN_PASSWORD
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthcheck
+                    port: 8080
+                  periodSeconds: 5
+                  failureThreshold: 60
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthcheck
+                    port: 8080
+                  timeoutSeconds: 5
+                  periodSeconds: 10
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /liveness
+                    port: 8080
+                  timeoutSeconds: 5
+                  periodSeconds: 30
+
+      database:
+        type: job
+        serviceAccount:
+          name: default
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        job:
+          backoffLimit: 3
+          activeDeadlineSeconds: 300
+        containers:
+          main:
+            image:
+              repository: postgres
+              tag: "18.6-alpine"
+            command: [sh, -c]
+            args:
+              - |
+                set -eu
+                psql -X -w -q -v ON_ERROR_STOP=1 -v ECHO=none <<'SQL'
+                \getenv miniflux_password MINIFLUX_DB_PASSWORD
+                SELECT pg_advisory_lock(1296647768, 1);
+                SELECT 'CREATE ROLE miniflux LOGIN'
+                WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'miniflux')
+                \gexec
+                ALTER ROLE miniflux WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 8 PASSWORD :'miniflux_password';
+                SELECT 'CREATE DATABASE miniflux OWNER miniflux'
+                WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'miniflux')
+                \gexec
+                ALTER DATABASE miniflux OWNER TO miniflux;
+                REVOKE ALL ON DATABASE miniflux FROM PUBLIC;
+                SELECT pg_advisory_unlock(1296647768, 1);
+                SQL
+                echo "Miniflux database and role are ready."
+            env:
+              PGHOST: media-postgres.default.svc.cluster.local
+              PGPORT: "5432"
+              PGDATABASE: postgres
+              PGUSER: postgres
+              PGCONNECT_TIMEOUT: "10"
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: media-postgres-secret
+                    key: POSTGRES_PASSWORD
+              MINIFLUX_DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: miniflux-secret
+                    key: POSTGRES_PASSWORD
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: [ALL]
+            resources:
+              requests:
+                cpu: 25m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: rss.${BASE_DOMAIN}
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        hosts:
+          - host: rss.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: miniflux-tls
+            hosts:
+              - rss.${BASE_DOMAIN}

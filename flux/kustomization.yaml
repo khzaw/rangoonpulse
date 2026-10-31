@@ -59,6 +59,7 @@ resources:
   - ./kustomizations/seventyfivesoft.yaml
   - ./kustomizations/bookorbit.yaml
   - ./kustomizations/romm.yaml
+  - ./kustomizations/miniflux.yaml
   - ./kustomizations/profilarr.yaml
   - ./kustomizations/autobrr.yaml
   - ./kustomizations/media-postgres.yaml

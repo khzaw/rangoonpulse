@@ -15,6 +15,7 @@ last_reviewed: 2026-10-25
 - Speedtest Tracker: `speedtest_tracker`
 - BookOrbit: `bookorbit`
 - RomM: `romm`, provisioned by its own pre-install/pre-upgrade hook; see [RomM](./romm.md)
+- Miniflux: `miniflux`, provisioned by its own pre-install/pre-upgrade hook; see [Miniflux](./miniflux.md)
 
 Monthly homelab power costs (Kubernetes nodes plus Iris from enrollment) reuse the existing maintenance database `postgres`,
 adding only `power_estimation.monthly_cost`. A post-install/post-upgrade hook
@@ -49,10 +50,15 @@ All database credentials are SOPS-managed:
 - `speedtest-tracker-secret`
 - `bookorbit-secret`
 - `romm-secret`, consumed by RomM and its database-provisioning hook
+- `miniflux-secret`, consumed by Miniflux and its database-provisioning hook
 
 Initialization creates roles and databases on first boot only. Keep init configuration and Secret values aligned when rebuilding storage.
 
 RomM's hook creates or updates its role/database against both existing and newly initialized servers. Its credentials are not injected into the shared database release, so installing RomM does not roll media-postgres. One API worker, one scan worker, and a 30-connection role limit bound its share of the 100-connection budget.
+
+Miniflux uses the same app-owned hook pattern without changing this release.
+Its five-connection runtime pool and eight-connection role limit bound its share
+of the existing connection budget.
 
 ## Backup Status
 

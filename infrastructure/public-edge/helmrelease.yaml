@@ -108,6 +108,8 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}bookorbit.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
+              - hostname: ${SHARE_HOST_PREFIX}miniflux.${BASE_DOMAIN}
+                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}shelfmark.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}jellyfin.${BASE_DOMAIN}
