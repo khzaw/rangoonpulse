@@ -67,10 +67,10 @@ spec:
                 value: "true"
             resources:
               requests:
-                cpu: "118m"
+                cpu: "148m"
                 memory: "500Mi"
               limits:
-                cpu: "702m"
+                cpu: "878m"
                 memory: "757Mi"
             securityContext:
               allowPrivilegeEscalation: false
