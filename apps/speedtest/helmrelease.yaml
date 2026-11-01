@@ -33,7 +33,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/speedtest-tracker
-              tag: v1.15.1-ls178
+              tag: v1.15.1-ls179
             env:
               - name: TZ
                 value: "${TIMEZONE}"
