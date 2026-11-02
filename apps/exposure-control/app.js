@@ -14,6 +14,7 @@
       const travelSharesEl = document.getElementById('travelShares');
       const travelNotesEl = document.getElementById('travelNotes');
       const tuningView = window.Tuning.createView(document.getElementById('tuning'));
+      const exposureClient = window.ExposureClient.createExposureClient({ request });
       const jobsSummaryEl = document.getElementById('jobsSummary');
       const jobsOverviewStripEl = document.getElementById('jobsOverviewStrip');
       const jobsOverviewMetaEl = document.getElementById('jobsOverviewMeta');
@@ -1392,11 +1393,11 @@
           const controls = document.createElement('div');
           controls.className = 'controls';
 
-          async function runMutation(btn, path, body, doneText) {
+          async function runMutation(btn, mutate, doneText) {
             try {
               mutationInFlight += 1;
               setBtnLoading(btn, true);
-              await request(path, 'POST', body);
+              await mutate();
               setMsg(doneText);
               await loadDashboard({ silent: true });
             } catch (err) {
@@ -1412,7 +1413,7 @@
               const disableBtn = document.createElement('button');
               disableBtn.textContent = 'Disable';
               disableBtn.className = 'danger';
-              disableBtn.onclick = () => runMutation(disableBtn, '/api/services/' + svc.id + '/disable', undefined, 'Disabled ' + svc.id);
+              disableBtn.onclick = () => runMutation(disableBtn, () => exposureClient.disable(svc.id), 'Disabled ' + svc.id);
               controls.appendChild(disableBtn);
               return;
             }
@@ -1457,7 +1458,7 @@
             confirmBtn.className = 'danger';
             confirmBtn.onclick = () => {
               const hours = expirySelect.value === 'until-disabled' ? null : Number(expirySelect.value);
-              runMutation(confirmBtn, '/api/services/' + svc.id + '/enable', { hours, authMode: authSelect.value }, 'Enabled ' + svc.id);
+              runMutation(confirmBtn, () => exposureClient.enable(svc.id, { hours, authMode: authSelect.value }), 'Enabled ' + svc.id);
             };
 
             const cancelBtn = document.createElement('button');
@@ -1976,7 +1977,7 @@
       }
 
       async function refreshServicesOnly() {
-        const payload = await request('/api/services', 'GET');
+        const payload = await exposureClient.list();
         dashboardState.services = payload.services || [];
         renderRows(dashboardState.services);
         renderOverview();
@@ -2241,8 +2242,8 @@
           const includeJobs = activePage === 'jobs';
           const includeSiteDeployments = activePage === 'deploy';
           const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, jobsData, siteDeployData, secretsData] = await Promise.allSettled([
-            request('/api/services', 'GET'),
-            request('/api/audit', 'GET'),
+            exposureClient.list(),
+            exposureClient.audit(),
             request('/api/transmission-vpn', 'GET'),
             request('/api/tuning', 'GET'),
             request('/api/image-updates', 'GET'),
@@ -2494,7 +2495,7 @@
         try {
           mutationInFlight += 1;
           setBtnLoading(emergencyBtn, true);
-          await request('/api/admin/disable-all', 'POST');
+          await exposureClient.disableAll();
           setMsg('All exposures disabled');
           await loadDashboard({ silent: true });
         } catch (err) {
@@ -2547,7 +2548,7 @@
             mutationInFlight += 1;
             setBtnLoading(travelDisableSharesBtn, true);
             setBtnLoading(emergencyBtn, true);
-            await request('/api/admin/disable-all', 'POST');
+            await exposureClient.disableAll();
             setTravelMsg('All exposures disabled');
             setMsg('All exposures disabled');
             await loadDashboard({ silent: true });

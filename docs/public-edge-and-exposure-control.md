@@ -3,7 +3,7 @@ title: Public Edge and Exposure Control
 summary: Current permanent-public and temporary-share routing, ownership, state, and emergency controls.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Public Edge and Exposure Control
@@ -16,7 +16,10 @@ The public edge is split deliberately:
 - `infrastructure/public-edge/share-hosts-cname.yaml`: proxied public DNS aliases
 - `apps/exposure-control/services.json`: services the cockpit can target
 - `apps/exposure-control/helmrelease.yaml`: control-plane runtime, persistence, ingress, and configuration
-- `apps/exposure-control/server.js`: share state, expiry, auth-presence, rate limiting, proxying, and operator APIs
+- `apps/exposure-control/exposure-core.js`: share transitions, effective state, expiry, authentication policy, and audit events
+- `apps/exposure-control/server.js`: state persistence, HTTP APIs, expiry scheduling, auth-presence enforcement, rate limiting, and proxying
+- `apps/exposure-control/exposure-client.js`: shared browser/Node API client for the cockpit and CLI
+- `apps/exposure-control/cli.js`: local `exposure` command
 
 There is no `PublicExposure` CRD or separate exposure controller. Public routes and DNS are static GitOps inventory. Exposure-control owns runtime enabled/disabled state.
 
@@ -48,7 +51,47 @@ Exposure-control stores enabled state and audit data on its PVC. Shares support 
 
 Authentication mode is per service/share. The backend fallback is Cloudflare Access, while the operator UI may present `none` as the selectable default. The backend currently checks for the Cloudflare Access assertion header; cryptographic JWT verification is not implemented.
 
-State lives at `/data/state.json`; the append-only audit stream is `/data/audit.json`. `GET /api/audit` returns recent entries newest first. Recognized share hosts proxy target application paths including `/api/*`, preserving request bodies and `Content-Length`. Exposure-control's own APIs are restricted to the control-panel host.
+State lives at `/data/state.json`; the append-only audit stream is `/data/audit.json`. `GET /api/audit` returns the latest 100 entries newest first. Recognized share hosts proxy target application paths including `/api/*`, preserving request bodies and `Content-Length`. Exposure-control's own APIs are restricted to the control-panel host.
+
+The core has no HTTP, filesystem, or Kubernetes dependency. The server supplies persistence, audit delivery, hostname configuration, and a clock; the proxy, API, startup recovery, and periodic reconciler use the same core policy. Both user interfaces call the same private API through the shared client. The CLI never reads or writes the server's state files directly.
+
+Enable requests accept numeric `hours` from `0.25` to `24` in 15-minute increments, or `null` for until disabled. Omitted duration and authentication use server/catalog defaults; invalid explicit values return `400` instead of being silently clamped or replaced. Existing valid GUI requests and persisted state retain their behavior.
+
+## Command Line
+
+Run locally with Node.js 24 or newer from the repository root:
+
+```bash
+npm run --silent exposure -- list
+npm run --silent exposure -- show bookorbit --json
+```
+
+To make `exposure` available on the current Node installation's command path, run `npm link --ignore-scripts --package-lock=false` from the repository root. This links the executable to the checkout; keep the checkout available and relink after changing Node installations. No dependencies or Kubernetes credentials are required.
+
+```bash
+exposure list --active
+exposure show bookorbit
+exposure enable bookorbit --for 2h --auth none
+exposure enable immich --until-disabled --auth cloudflare-access
+exposure disable bookorbit
+exposure disable-all --yes
+exposure audit bookorbit --limit 20
+exposure list --json
+```
+
+`enable` without flags uses the server's one-hour default and the catalog/server authentication default. `--for` accepts minutes or hours, such as `15m`, `90m`, or `2h`; it cannot be combined with `--until-disabled`. `list --active` uses effective enabled state, including immediate expiry enforcement. `audit [service]` filters the latest 100 server events and displays up to `--limit` entries (default 20). JSON output preserves the API's `services`, `service`, or `entries` envelope, including `disabled` for disable-all. Exit codes are `0` for success, `1` for API/connection failures, and `2` for command usage errors.
+
+The default origin is `https://controlpanel.khzaw.dev`, reachable over LAN or Tailscale. Override it with `EXPOSURE_CONTROL_URL` or `--url` (which takes precedence). The URL must be an HTTP(S) origin with no embedded credentials, path, query, or fragment. Requests have a ten-second timeout, refuse redirects, and require JSON responses so a login page cannot be mistaken for success.
+
+If private ingress is unavailable, an operator with Kubernetes access can forward the existing Service:
+
+```bash
+kubectl -n default port-forward service/exposure-control 8080:8080
+# In a second terminal:
+exposure --url http://127.0.0.1:8080 list
+```
+
+The CLI runs on the operator's machine; `kubectl run` and an in-cluster CLI workload are unnecessary. It uses the existing private control-host trust boundary, with no additional public operator endpoint.
 
 ## Operator Cockpit
 

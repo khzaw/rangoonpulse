@@ -396,6 +396,7 @@ test('dashboard refresh clears failed tuning even when an unrelated service API 
   const seen = [];
   const context = { activePage: 'tuning', dashboardState: { tuning: snapshot() },
     request: async () => { throw new Error('offline'); }, renderPlanner: value => seen.push(value), setLoadState() {} };
+  context.exposureClient = require('./exposure-client.js').createExposureClient({ request: context.request });
   vm.createContext(context);
   vm.runInContext(functionSource, context);
   await context.loadDashboard({ silent: true });

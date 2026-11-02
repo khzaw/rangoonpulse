@@ -4,8 +4,11 @@ const http = require("node:http");
 const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const { spawn, execFile } = require("node:child_process");
+const { promisify } = require("node:util");
+const { once } = require("node:events");
 const { after, test } = require("node:test");
+const { createExposureClient } = require("./exposure-client.js");
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const SERVER_PATH = path.join(__dirname, "server.js");
@@ -200,6 +203,114 @@ function requestPanel(port, pathname) {
     req.on("error", reject);
   });
 }
+
+function exposureRequest(port, pathname, method = "GET", body, host = "controlpanel.example.test", headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ hostname: "127.0.0.1", port, path: pathname, method,
+      headers: { host, "content-type": "application/json", ...headers } }, (res) => {
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        resolve({ status: res.statusCode, headers: res.headers, text, json: () => JSON.parse(text) });
+      });
+    });
+    req.on("error", reject);
+    req.end(body === undefined ? undefined : JSON.stringify(body));
+  });
+}
+
+test("CLI and GUI share persisted state, expiry, auth enforcement and audit through the private API", async () => {
+  const upstream = http.createServer((req, res) => {
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ upstream: true, path: req.url }));
+  });
+  servers.push(upstream);
+  const upstreamPort = await listen(upstream);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "exposure-cli-integration-"));
+  temporaryDirectories.push(directory);
+  const servicesPath = path.join(directory, "services.json");
+  fs.writeFileSync(servicesPath, JSON.stringify([
+    { id: "books", name: "Books", target: `http://127.0.0.1:${upstreamPort}` },
+    { id: "photos", name: "Photos", target: `http://127.0.0.1:${upstreamPort}`, publicHostOverride: "photos.example.test" },
+  ]));
+  const port = await availablePort();
+  async function start() {
+    const child = spawn(process.execPath, [SERVER_PATH], { cwd: REPO_ROOT, env: {
+      ...process.env, PORT: String(port), APP_DIR: __dirname, DATA_DIR: directory,
+      SERVICES_FILE: servicesPath, TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
+      PUBLIC_DOMAIN: "example.test", SHARE_HOST_PREFIX: "share-",
+      CONTROL_PANEL_HOST: "controlpanel.example.test", DEFAULT_AUTH_MODE: "cloudflare-access",
+      DEFAULT_EXPIRY_HOURS: "1", KUBERNETES_SERVICE_HOST: "",
+    }, stdio: ["ignore", "pipe", "pipe"] });
+    children.push(child);
+    await waitForStartup(child);
+    return child;
+  }
+  async function stop(child) {
+    const closed = once(child, "exit");
+    child.kill("SIGTERM");
+    await closed;
+  }
+  const cli = async (...args) => JSON.parse((await promisify(execFile)(process.execPath,
+    [path.join(__dirname, "cli.js"), ...args, "--json"],
+    { env: { ...process.env, EXPOSURE_CONTROL_URL: `http://127.0.0.1:${port}` } })).stdout);
+  const gui = createExposureClient({ request: async (...args) => {
+    const response = await exposureRequest(port, ...args);
+    assert.equal(response.status, 200);
+    return response.json();
+  } });
+  let child = await start();
+  assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test")).status, 403);
+  assert.equal((await exposureRequest(port, "/api/services", "GET", undefined, "other.example.test")).status, 403);
+  const enabled = await cli("enable", "books", "--for", "15m", "--auth", "none");
+  assert.deepEqual((await gui.list()).services.find((service) => service.id === "books"), enabled.service);
+  assert.equal((await exposureRequest(port, "/api/services", "GET", undefined, "share-books.example.test")).json().upstream, true);
+  await gui.disable("books");
+  assert.equal((await cli("show", "books")).service.enabled, false);
+  await cli("enable", "books", "--until-disabled");
+  assert.equal((await cli("show", "books")).service.authMode, "cloudflare-access");
+  assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test")).status, 403);
+  assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test",
+    { "cf-access-jwt-assertion": "test-assertion" })).status, 200);
+  await cli("enable", "photos", "--until-disabled", "--auth", "none");
+  assert.equal((await exposureRequest(port, "/", "GET", undefined, "photos.example.test")).status, 200);
+  const beforeRestart = await gui.list();
+  await stop(child);
+  child = await start();
+  assert.deepEqual(await gui.list(), beforeRestart);
+  const auditBefore = (await gui.audit()).entries;
+  const stateBefore = fs.readFileSync(path.join(directory, "state.json"), "utf8");
+  for (const body of [{ hours: 99 }, { authMode: "typo" }, null]) {
+    assert.equal((await exposureRequest(port, "/api/services/books/enable", "POST", body)).status, 400);
+  }
+  assert.equal((await exposureRequest(port, "/api/services/missing/disable", "POST")).status, 404);
+  assert.deepEqual((await gui.audit()).entries, auditBefore);
+  assert.equal(fs.readFileSync(path.join(directory, "state.json"), "utf8"), stateBefore);
+
+  await cli("enable", "books", "--for", "15m");
+  await stop(child);
+  const expiredState = JSON.parse(fs.readFileSync(path.join(directory, "state.json"), "utf8"));
+  expiredState.exposures.books.expiresAt = new Date(Date.now() - 1000).toISOString();
+  fs.writeFileSync(path.join(directory, "state.json"), JSON.stringify(expiredState));
+  child = await start();
+  assert.equal((await cli("show", "books")).service.enabled, false);
+  assert.equal((await cli("show", "photos")).service.enabled, true);
+  assert.equal((await cli("audit", "books")).entries[0].trigger, "startup");
+  assert.equal((await cli("disable-all", "--yes")).disabled, 1);
+  assert.ok((await gui.list()).services.every((service) => !service.enabled));
+  assert.equal((await gui.audit()).entries[0].action, "emergency-disable-all");
+  assert.equal((await exposureRequest(port, "/", "GET", undefined, "photos.example.test")).status, 403);
+
+  const html = await exposureRequest(port, "/");
+  const assetUrl = html.text.match(/src="(\/assets\/exposure-client.js\?v=[^"]+)"/)[1];
+  assert.ok(html.text.indexOf(assetUrl) < html.text.indexOf('/assets/app.js'));
+  const asset = await exposureRequest(port, assetUrl);
+  assert.equal(asset.status, 200);
+  assert.match(asset.headers["cache-control"], /immutable/);
+  assert.match(asset.text, /createExposureClient/);
+  await stop(child);
+});
 
 function prometheusPayload(url, result) {
   const range = url.pathname.endsWith("query_range");

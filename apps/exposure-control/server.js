@@ -7,6 +7,7 @@ const path = require("node:path");
 const zlib = require("node:zlib");
 const { URL } = require("node:url");
 const { parseDependencyDashboard } = require("./renovate-dashboard");
+const { createExposureCore, ExposureError, normalizeAuthMode } = require("./exposure-core.js");
 
 const CONFIGURED_BASE_DOMAIN = String(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "",
@@ -449,12 +450,6 @@ function clampInt(value, fallback, min, max) {
   return Math.trunc(n);
 }
 
-function normalizeAuthMode(value) {
-  const mode = String(value || "").toLowerCase();
-  if (mode === "none" || mode === "cloudflare-access") return mode;
-  return null;
-}
-
 function normalizeTransmissionVpnMode(value) {
   const mode = String(value || "").toLowerCase();
   if (mode === "direct" || mode === "vpn") return mode;
@@ -472,13 +467,6 @@ function escapeHtml(value) {
 
 function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-function clampHours(value) {
-  if (!Number.isFinite(value)) return DEFAULT_EXPIRY_HOURS;
-  if (value < 0.25) return 0.25;
-  if (value > 24) return 24;
-  return Math.round(value * 4) / 4;
 }
 
 function loadServices() {
@@ -601,34 +589,11 @@ function loadAuditEntries(limit) {
   return entries;
 }
 
-function isExpired(exposure) {
-  if (!exposure || !exposure.enabled) return false;
-  if (!exposure.expiresAt) return false;
-  const ts = Date.parse(exposure.expiresAt);
-  if (Number.isNaN(ts)) return true;
-  return ts <= Date.now();
-}
-
-function effectiveEnabled(exposure) {
-  return Boolean(exposure && exposure.enabled && !isExpired(exposure));
-}
-
 function servicePublicHost(service) {
   if (service.publicHostOverride) {
     return expandBaseDomainTokens(service.publicHostOverride);
   }
   return SHARE_HOST_PREFIX + service.id + "." + PUBLIC_DOMAIN;
-}
-
-function serviceDefaultAuthMode(service) {
-  return normalizeAuthMode(service.authMode) || DEFAULT_AUTH_MODE;
-}
-
-function exposureAuthMode(service, exposure) {
-  return (
-    normalizeAuthMode(exposure && exposure.authMode) ||
-    serviceDefaultAuthMode(service)
-  );
 }
 
 function getHost(req) {
@@ -4014,7 +3979,15 @@ const serviceById = new Map(services.map((svc) => [svc.id, svc]));
 const serviceByHost = new Map(
   services.map((svc) => [servicePublicHost(svc), svc]),
 );
-const state = loadState(services);
+const exposureCore = createExposureCore({
+  services,
+  initialState: loadState(services),
+  saveState,
+  appendAuditEntry,
+  publicHost: servicePublicHost,
+  defaultExpiryHours: DEFAULT_EXPIRY_HOURS,
+  defaultAuthMode: DEFAULT_AUTH_MODE,
+});
 
 async function buildTravelSnapshot() {
   const connector = await getTravelConnectorStatus(travelConfig);
@@ -4170,31 +4143,12 @@ async function getTravelSnapshot(forceRefresh) {
   return travelSnapshotCache.promise;
 }
 
-// Startup reconciliation: expire stale exposures and log recovered state
-(function startupReconcile() {
-  let activeCount = 0;
-  let expiredCount = 0;
-  for (const svc of services) {
-    const exposure = state.exposures[svc.id];
-    if (exposure && exposure.enabled) {
-      if (isExpired(exposure)) {
-        state.exposures[svc.id] = { ...exposure, enabled: false, expiresAt: null, updatedAt: nowIso() };
-        appendAuditEntry({
-          action: "auto-expire",
-          serviceId: svc.id,
-          trigger: "startup",
-        });
-        expiredCount++;
-      } else {
-        activeCount++;
-      }
-    }
-  }
-  if (expiredCount > 0) saveState(state);
-  console.log(
-    "state: recovered " + services.length + " services, " + activeCount + " active, " + expiredCount + " expired on startup",
-  );
-})();
+// Startup and periodic reconciliation use the same policy as manual writes.
+const expiredOnStartup = exposureCore.expire("startup");
+console.log(
+  "state: recovered " + services.length + " services, " + exposureCore.activeCount() +
+  " active, " + expiredOnStartup + " expired on startup",
+);
 
 if (kubeApiAvailable()) {
   getTransmissionVpnStatus()
@@ -4209,46 +4163,12 @@ if (kubeApiAvailable()) {
 }
 
 function snapshotServices() {
-  return services.map((svc) => {
-    const exposure = state.exposures[svc.id];
-    const authMode = exposureAuthMode(svc, exposure);
-    return {
-      id: svc.id,
-      name: svc.name,
-      description: svc.description || "",
-      target: svc.target,
-      publicHost: servicePublicHost(svc),
-      publicUrl: "https://" + servicePublicHost(svc),
-      enabled: effectiveEnabled(exposure),
-      desiredEnabled: Boolean(exposure && exposure.enabled),
-      expiresAt: exposure ? exposure.expiresAt : null,
-      updatedAt: exposure ? exposure.updatedAt : null,
-      defaultExpiryHours: DEFAULT_EXPIRY_HOURS,
-      defaultAuthMode: serviceDefaultAuthMode(svc),
-      authMode,
-    };
-  });
+  return exposureCore.list();
 }
 
 function disableExpiredExposures() {
   try {
-    let changed = false;
-    for (const svc of services) {
-      const exposure = state.exposures[svc.id];
-      if (isExpired(exposure)) {
-        state.exposures[svc.id] = {
-          ...exposure,
-          enabled: false,
-          expiresAt: null,
-          updatedAt: nowIso(),
-          authMode: exposureAuthMode(svc, exposure),
-        };
-        metrics.expiredDisableTotal += 1;
-        appendAuditEntry({ action: "auto-expire", serviceId: svc.id });
-        changed = true;
-      }
-    }
-    if (changed) saveState(state);
+    metrics.expiredDisableTotal += exposureCore.expire();
     metrics.lastReconcileTimestampSeconds = Math.floor(Date.now() / 1000);
   } catch (err) {
     metrics.reconcileErrorsTotal += 1;
@@ -4272,7 +4192,7 @@ setInterval(
 );
 
 function activeExposureCount() {
-  return services.reduce((n, svc) => n + (effectiveEnabled(state.exposures[svc.id]) ? 1 : 0), 0);
+  return exposureCore.activeCount();
 }
 
 function renderMetrics() {
@@ -4355,70 +4275,22 @@ async function handleApi(req, res, parsedUrl) {
       return sendJson(res, 400, { error: err.message });
     }
 
-    const hours = body.hours === null
-      ? null
-      : clampHours(Number(body.hours ?? DEFAULT_EXPIRY_HOURS));
-    const authMode =
-      normalizeAuthMode(body.authMode) || serviceDefaultAuthMode(svc);
-    const expiresAt = hours === null
-      ? null
-      : new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-    state.exposures[id] = {
-      enabled: true,
-      expiresAt,
-      updatedAt: nowIso(),
-      authMode,
-    };
-    saveState(state);
+    const service = exposureCore.enable(id, body);
     metrics.enableTotal += 1;
-    appendAuditEntry({
-      action: "enable",
-      serviceId: id,
-      ...(hours === null ? { expiryMode: "until-disabled" } : { hours }),
-      authMode,
-    });
-    return sendJson(res, 200, {
-      service: snapshotServices().find((item) => item.id === id),
-    });
+    return sendJson(res, 200, { service });
   }
 
-  const disableMatch = pathname.match(
-    /^\/api\/services\/([a-z0-9-]+)\/disable$/,
-  );
+  const disableMatch = pathname.match(/^\/api\/services\/([a-z0-9-]+)\/disable$/);
   if (req.method === "POST" && disableMatch) {
-    const id = disableMatch[1];
-    const svc = serviceById.get(id);
-    if (!svc) return sendJson(res, 404, { error: "service not found" });
-
-    state.exposures[id] = {
-      enabled: false,
-      expiresAt: null,
-      updatedAt: nowIso(),
-      authMode: exposureAuthMode(svc, state.exposures[id]),
-    };
-    saveState(state);
+    const service = exposureCore.disable(disableMatch[1]);
     metrics.disableTotal += 1;
-    appendAuditEntry({ action: "disable", serviceId: id });
-    return sendJson(res, 200, {
-      service: snapshotServices().find((item) => item.id === id),
-    });
+    return sendJson(res, 200, { service });
   }
 
   if (req.method === "POST" && pathname === "/api/admin/disable-all") {
-    const disabled = services.filter((svc) => state.exposures[svc.id]?.enabled).length;
-    for (const svc of services) {
-      const exposure = state.exposures[svc.id];
-      state.exposures[svc.id] = {
-        enabled: false,
-        expiresAt: null,
-        updatedAt: nowIso(),
-        authMode: exposureAuthMode(svc, exposure),
-      };
-    }
-    saveState(state);
-    metrics.emergencyDisableTotal += disabled;
-    appendAuditEntry({ action: "emergency-disable-all", disabled });
-    return sendJson(res, 200, { disabled, services: snapshotServices() });
+    const result = exposureCore.disableAll();
+    metrics.emergencyDisableTotal += result.disabled;
+    return sendJson(res, 200, result);
   }
 
   if (req.method === "GET" && pathname === "/api/transmission-vpn") {
@@ -4816,6 +4688,10 @@ const CONTROL_PANEL_ASSETS = new Map([
     filePath: path.join(APP_DIR, "tuning.js"),
     contentType: "application/javascript; charset=utf-8",
   }],
+  ["/assets/exposure-client.js", {
+    filePath: path.join(APP_DIR, "exposure-client.js"),
+    contentType: "application/javascript; charset=utf-8",
+  }],
   ["/assets/app.js", {
     filePath: path.join(APP_DIR, "app.js"),
     contentType: "application/javascript; charset=utf-8",
@@ -4925,7 +4801,7 @@ function renderCombinedCockpitHtml(template) {
       /__TRANSMISSION_VPN_WEBUI_URL__/g,
       escapeHtml(TRANSMISSION_VPN_WEBUI_URL),
     )
-    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|tuning\.js|app\.js)/g, (match) => {
+    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|tuning\.js|exposure-client\.js|app\.js)/g, (match) => {
       const asset = CONTROL_PANEL_ASSETS.get(match);
       if (!asset) return match;
       return match + "?v=" + loadStaticAsset(asset.filePath).version;
@@ -4990,8 +4866,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (svc) {
-      const exposure = state.exposures[svc.id];
-      if (!effectiveEnabled(exposure)) {
+      const exposure = exposureCore.get(svc.id);
+      if (!exposure.enabled) {
         metrics.shareDeniedDisabledTotal += 1;
         return sendText(res, 403, "exposure is disabled or expired");
       }
@@ -4999,7 +4875,7 @@ const server = http.createServer(async (req, res) => {
         metrics.shareDeniedRateLimitedTotal += 1;
         return sendText(res, 429, "rate limited");
       }
-      const authMode = exposureAuthMode(svc, exposure);
+      const authMode = exposure.authMode;
       if (authMode === "cloudflare-access") {
         const cfJwt = req.headers["cf-access-jwt-assertion"];
         if (!cfJwt) {
@@ -5040,6 +4916,7 @@ const server = http.createServer(async (req, res) => {
     }
     return sendText(res, 404, "not found");
   } catch (err) {
+    if (err instanceof ExposureError) return sendJson(res, err.status, { error: err.message });
     console.error("request handling error:", err);
     return sendJson(res, 500, { error: "internal error" });
   }
