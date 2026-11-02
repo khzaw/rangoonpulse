@@ -16,7 +16,7 @@ All repository documentation is public. These guides retain technical context ne
 
 ## Networking, DNS, And Access
 
-- [`agent-access.md`](./agent-access.md): portable tailnet identity, Kubernetes RBAC profiles, host enrollment, and revocation
+- [`agent-access.md`](./agent-access.md): new host provisioning, interactive/headless tailnet enrollment, RBAC checks, agent runtime setup, revocation, and optional Talos access
 - [`networking.md`](./networking.md): three access paths, DNS ownership, and topology
 - [`lan-access.md`](./lan-access.md): private LAN/Tailscale path and LAN-device proxies
 - [`mac-mini-edge.md`](./mac-mini-edge.md): Mac mini OpenClaw/Hermes edge and SSH VIP
