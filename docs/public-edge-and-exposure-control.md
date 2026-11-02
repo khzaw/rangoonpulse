@@ -59,7 +59,26 @@ Enable requests accept numeric `hours` from `0.25` to `24` in 15-minute incremen
 
 ## Command Line
 
-Run locally with Node.js 24 or newer from the repository root:
+Any machine with `kubectl`, a working cluster connection, and permission to exec into the exposure-control pod can run the CLI without a repository checkout or local Node installation:
+
+```bash
+kubectl -n default exec deployment/exposure-control -- node /app-files/cli.js --url http://127.0.0.1:8080 list
+kubectl -n default exec deployment/exposure-control -- node /app-files/cli.js --url http://127.0.0.1:8080 enable bookorbit
+```
+
+The Git-managed ConfigMap mounts the CLI and shared client in the existing Node container. Each invocation runs the CLI in that pod and calls its loopback API, using the same core and persisted state as the GUI. No separate CLI workload or image is needed. This path requires a running exposure-control pod and Kubernetes `pods/exec` access; the command does not bypass the existing cluster permissions.
+
+For a shorter command in a POSIX shell, define a function:
+
+```sh
+exposure() {
+  kubectl -n default exec deployment/exposure-control -- node /app-files/cli.js --url http://127.0.0.1:8080 "$@"
+}
+exposure list --active
+exposure enable bookorbit
+```
+
+Alternatively, run locally with Node.js 24 or newer from the repository root:
 
 ```bash
 npm run --silent exposure -- list
@@ -82,7 +101,7 @@ exposure list --json
 
 The CLI defaults to `authMode: none` and indefinite duration: `exposure enable bookorbit` enables the share until disabled, and `exposure enable bookorbit --for 2h` adds a two-hour expiry with no authentication. These defaults are sent explicitly to the shared API. Use `--auth cloudflare-access` to require Access. `--for` accepts minutes or hours, such as `15m`, `90m`, or `2h`; it cannot be combined with `--until-disabled`. `list --active` uses effective enabled state, including immediate expiry enforcement. `audit [service]` filters the latest 100 server events and displays up to `--limit` entries (default 20). JSON output preserves the API's `services`, `service`, or `entries` envelope, including `disabled` for disable-all. Exit codes are `0` for success, `1` for API/connection failures, and `2` for command usage errors.
 
-The default origin is `https://controlpanel.khzaw.dev`, reachable over LAN or Tailscale. Override it with `EXPOSURE_CONTROL_URL` or `--url` (which takes precedence). The URL must be an HTTP(S) origin with no embedded credentials, path, query, or fragment. Requests have a ten-second timeout, refuse redirects, and require JSON responses so a login page cannot be mistaken for success.
+When running locally, the default origin is `https://controlpanel.khzaw.dev`, reachable over LAN or Tailscale. Override it with `EXPOSURE_CONTROL_URL` or `--url` (which takes precedence). The URL must be an HTTP(S) origin with no embedded credentials, path, query, or fragment. Requests have a ten-second timeout, refuse redirects, and require JSON responses so a login page cannot be mistaken for success.
 
 If private ingress is unavailable, an operator with Kubernetes access can forward the existing Service:
 
@@ -92,7 +111,7 @@ kubectl -n default port-forward service/exposure-control 8080:8080
 exposure --url http://127.0.0.1:8080 list
 ```
 
-The CLI runs on the operator's machine; `kubectl run` and an in-cluster CLI workload are unnecessary. It uses the existing private control-host trust boundary, with no additional public operator endpoint.
+The CLI can run locally or through `kubectl exec` in the existing pod. `kubectl run` and a separate in-cluster CLI workload are unnecessary. Both paths use the existing private control-host trust boundary, with no additional public operator endpoint.
 
 ## Operator Cockpit
 
