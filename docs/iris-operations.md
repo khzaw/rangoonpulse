@@ -2,16 +2,16 @@
 title: Iris native macOS operations
 summary: Native launchd supervision, shared agent cluster access, Darwin telemetry, gateway checks, and an independent sentinel.
 status: active
-owner: khz
+owner: homelab
 last_reviewed: 2026-11-02
 ---
 
 # Iris native macOS operations
 
-Iris is the existing Apple Silicon Mac mini at `10.0.0.66`, login user `iris`.
-OpenClaw and Hermes remain **native macOS processes**, not Kubernetes workloads.
-The [dedicated SSH/HTTPS VIP](./mac-mini-edge.md) remains unchanged.
-Hardware is a Mac mini `Mac16,10`, Apple M4 (4 performance + 6 efficiency CPU cores),
+Iris is the Apple Silicon Mac mini identified by `IRIS_MAC_MINI_IP` in
+`flux/cluster-settings.yaml`. OpenClaw and Hermes run as native macOS processes.
+The [dedicated SSH/HTTPS VIP](./mac-mini-edge.md) routes to those host services.
+Hardware is an Apple M4 (4 performance + 6 efficiency CPU cores),
 24 GB RAM. An independent unprivileged `macmon` sampler feeds software-reported
 system watts through its existing node exporter into the
 [power/cost pipeline](./power-estimation-dashboard.md). No Kubernetes membership or
@@ -25,29 +25,14 @@ Kubernetes-only power, readiness, and capacity remain separate.
   Header buttons link to Iris Gateway, [Hermes / Athena](https://athena.khzaw.dev), and Uptime Kuma.
 - Dynacat: Home → Ops → Iris / Hermes (Athena) / Iris Overview; Health → Iris Gateway /
   Iris API Readiness / Hermes Gateway / Hermes Dashboard / Hermes Readiness.
-- Uptime Kuma desired monitors, on the existing published `rangoonpulse` page:
-
-  | ID | Name | Type / URL | Success |
-  | --- | --- | --- | --- |
-  | 22 | Iris Gateway | HTTP keyword `http://10.0.0.66:18789/healthz` | HTTP 200 and `"ok":true` |
-  | 23 | Iris API Readiness | HTTP `http://10.0.0.66:9101/healthz/openclaw` | HTTP 200 |
-  | 24 | Iris HTTPS Edge | HTTP `https://iris.khzaw.dev/healthz` | HTTP 200 |
-
-  Hermes monitors on that same page:
-
-  | ID | Name | URL | Success |
-  | --- | --- | --- | --- |
-  | 26 | Hermes Gateway | `http://10.0.0.66:9101/healthz/hermes-gateway` | HTTP 200 and `"ok":true` |
-  | 28 | Hermes Dashboard | `http://10.0.0.66:9119/api/health` | HTTP 200 |
-  | 27 | Hermes Readiness | `http://10.0.0.66:9101/healthz/hermes` | HTTP 200 and `"ok":true` |
-  | 29 | Hermes HTTPS Edge | `https://athena.khzaw.dev/api/health` | HTTP 200 |
-
-  All use 60-second intervals, 10-second timeout, 2 retries, 60-second retry interval.
-  Kuma monitors/status-page membership are runtime-owned; configure through the authenticated UI,
-  not live SQLite edits. Existing Kuma has no notification destinations; notifications here are
-  owned by Alertmanager and the native sentinel, not a second Kuma notification configuration.
-- Prometheus blackbox additionally probes the direct SSH listener on `10.0.0.66:22`.
-  Hermes blackbox targets cover all four Hermes paths above, requiring HTTP 200 and JSON `ok: true`.
+- Uptime Kuma monitors and status-page membership are runtime-owned. Inspect current
+  entries through its authenticated UI; do not copy numeric monitor IDs or notification
+  status into this guide. Monitor the gateway, cached readiness relays, and HTTPS edge
+  separately using the endpoint contracts below. Configure through the UI, not live SQLite edits.
+- Prometheus blackbox probes the direct SSH listener on `10.0.0.66:22` and the
+  Hermes gateway relay, dashboard health, combined readiness relay, and HTTPS edge.
+  HTTP probes require status 200 and JSON `ok: true`. Targets are declared in
+  `infrastructure/monitoring/helmrelease-blackbox-exporter.yaml`.
 - `Iris.*` critical and warning alerts reuse the existing Telegram/Discord Alertmanager route.
   Host metrics unavailable: 3m; agent process/readiness down: 3m; APFS Data free space:
   below 10% for 10m / below 5% for 5m; native telemetry stale/missing: 3m after a 180s stale threshold.
@@ -73,8 +58,9 @@ Hermes is checked through real application endpoints as well as launchd:
 
 These checks do not send inference requests or prove provider end-to-end success. Hermes's
 dashboard port 9119 `/metrics` is a login HTML page, **not** a Prometheus exporter.
-Hermes's gateway is in `user/501`, while other jobs use `gui/501`: inspect the caller's
-`launchctl list`, not GUI-only service paths. The metric label is `launchd_service` to avoid
+The Hermes gateway uses the user's launchd domain, while other jobs use the GUI domain:
+inspect the caller's `launchctl list`, not GUI-only service paths. Derive the UID with
+`id -u` rather than assuming a numeric account ID. The metric label is `launchd_service` to avoid
 Prometheus's discovery-owned `service` label (which otherwise renames the metric label to `exported_service`).
 
 ## Native installation and supervision
@@ -84,18 +70,18 @@ Versioned implementation: [`native/iris/`](../native/iris/). Homebrew supplies `
 
 | launchd label | Function |
 | --- | --- |
-| `ai.openclaw.gateway` | Existing OpenClaw gateway; unchanged |
-| `ai.hermes.gateway` | Existing Hermes gateway; unchanged |
-| `dev.khzaw.hermes.dashboard` | Existing Hermes dashboard; unchanged |
+| `ai.openclaw.gateway` | OpenClaw gateway; managed outside the telemetry installer |
+| `ai.hermes.gateway` | Hermes gateway; managed outside the telemetry installer |
+| `dev.khzaw.hermes.dashboard` | Hermes dashboard; managed outside the telemetry installer |
 | `dev.khzaw.iris.node-exporter` | Darwin exporter, LAN `10.0.0.66:9100`, textfile collector |
 | `dev.khzaw.iris.watchdog` | OpenClaw/Hermes API readiness relays, launchd/component metrics, independent cluster checks/notifications |
 | `dev.khzaw.iris.power` | Independent `macmon pipe` sampler and atomic power/freshness textfile output |
 
 All three managed jobs have `RunAtLoad`, `KeepAlive`, and a 10-second restart throttle. They are login
-**LaunchAgents**, consistent with the existing agents. They survive crashes but require the `iris`
-GUI login session after reboot. These jobs do not provide pre-login LaunchDaemon supervision. An administrator must explicitly migrate/test startup if
-unattended pre-login service is required. Existing AC sleep is disabled and autorestart enabled;
-FileVault/login behavior is still an operator dependency.
+**LaunchAgents**, consistent with the existing agents. They survive crashes but require the host
+GUI login session after reboot. These jobs do not provide pre-login LaunchDaemon supervision.
+Unattended startup requires separate verification of login, FileVault, sleep, and power-recovery settings;
+those host settings are outside the repository's installation contract.
 
 Metrics are private LAN listeners only: no new Ingress, DNS records, share route, or public exposure.
 Do not run `brew services start node_exporter` alongside the managed job (port/ownership conflict).
@@ -152,9 +138,9 @@ Paths on Iris:
   inspect/rotate logs during prolonged notification failures (no system log-rotation rule installed).
 
 ```sh
-ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.watchdog'
-ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.node-exporter'
-ssh iris@iris.khzaw.dev 'launchctl print gui/501/dev.khzaw.iris.power'
+ssh iris@iris.khzaw.dev 'launchctl print gui/$(id -u)/dev.khzaw.iris.watchdog'
+ssh iris@iris.khzaw.dev 'launchctl print gui/$(id -u)/dev.khzaw.iris.node-exporter'
+ssh iris@iris.khzaw.dev 'launchctl print gui/$(id -u)/dev.khzaw.iris.power'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/openclaw'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes-gateway'
@@ -164,8 +150,7 @@ ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes-gateway'
 
 Trusted agents running as the macOS `iris` user share `~/.kube/config` and
 `~/.talos/config`. Kubernetes uses the primary node's LAN API endpoint from
-`flux/cluster-settings.yaml`. Slack and other bot channels deliver instructions;
-the agent then runs the local CLI against that endpoint. No Tailscale proxy,
+`flux/cluster-settings.yaml`. Agents run the local CLI against that endpoint. No Tailscale proxy,
 per-agent login, or shell-profile environment variable is required on the LAN.
 Agents running in containers or under another OS account need explicit access to
 the credentials and network. Homebrew tools must be on the agent's `PATH`.
@@ -264,12 +249,12 @@ An external dead-man's-switch would be needed for whole-site failure coverage; n
 
 Homebrew/native updates remain manual (`brew outdated node_exporter node macmon`, review upstream release
 notes, upgrade, rerun deployer, verify plists/metrics and notification smoke test). Dynacat Releases
-includes OpenClaw, Hermes and node_exporter. Existing application upgrade policies are unchanged.
+includes OpenClaw, Hermes and node_exporter. Consult each application's update policy separately.
 
 Kubernetes chart/image update rows, HPA, resource-advisor/Tuning apply policy, pod requests/limits,
 and disabled share plumbing are **N/A** for native host jobs: there is no pod, chart, HPA or share
 service to register. Do not invent Kubernetes inventory rows or publicly expose exporter/readiness
-ports. Prometheus/Grafana/blackbox reuse existing workloads with unchanged resource reservations.
+ports. Prometheus/Grafana/blackbox integrations use the existing monitoring workloads.
 
 ## Validation
 

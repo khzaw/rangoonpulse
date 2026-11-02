@@ -1,8 +1,8 @@
 # Rangoonpulse Documentation
 
-This index routes to current operating guidance. Read `AGENTS.md` and `README.md` first, then open only the docs and project-local skill that own the task.
+Operating reference for maintainers and agent sessions. Use this index to find the source files, constraints, and verification procedure for the affected component. Agent sessions start with [`AGENTS.md`](../AGENTS.md).
 
-Docs describe present desired state, active constraints, and reusable recovery procedures. Completed plans, superseded designs, and incident chronology belong in Git history.
+All repository documentation is public. These guides retain technical context needed to operate this deployment; personal notes and conversation history do not belong here. [`ideas.md`](../ideas.md) holds unresolved proposals separately from implemented behavior.
 
 ## Repository And Configuration
 
@@ -54,7 +54,7 @@ Docs describe present desired state, active constraints, and reusable recovery p
 - [`gitops-change-timeline-dashboard.md`](./gitops-change-timeline-dashboard.md): Flux change timeline
 - [`dns-access-path-dashboard.md`](./dns-access-path-dashboard.md): DNS and ingress observability
 - [`node-capacity-dashboard.md`](./node-capacity-dashboard.md): node fit and capacity
-- [`power-estimation-dashboard.md`](./power-estimation-dashboard.md): estimated power, tariff automation, and lightweight weekly PostgreSQL collection of durable monthly homelab costs (Kubernetes nodes plus external Iris and TrueNAS) in Grafana/Pulse
+- [`power-estimation-dashboard.md`](./power-estimation-dashboard.md): power models, tariff automation, and monthly cost collection for Kubernetes nodes, Iris, and TrueNAS
 - [`metrics-server-operational-metrics.md`](./metrics-server-operational-metrics.md): live Kubernetes Metrics API
 - [`flux-web-ui.md`](./flux-web-ui.md): Flux Operator UI and controller-manifest caveat
 - [`cronjob-deadman-alerts.md`](./cronjob-deadman-alerts.md): scheduled-job staleness and failure alerts
@@ -77,7 +77,7 @@ Docs describe present desired state, active constraints, and reusable recovery p
 - [`subarr.md`](./subarr.md): Subarr SQLite/media state and incomplete share wiring
 - [`tracerr.md`](./tracerr.md): Tracerr/Tracearr naming, database, Redis, and secrets
 - [`isponsorblocktv.md`](./isponsorblocktv.md): headless device setup and networking
-- [`live-tv-services.md`](./live-tv-services.md): active live-TV services and dormant ErsatzTV source
+- [`live-tv-services.md`](./live-tv-services.md): Nodecast TV and Tunarr runtime, storage, and hardware access
 - [`static-site-deployment.md`](./static-site-deployment.md): self-built static-site promotion and public-edge ownership
 
 ## Commands

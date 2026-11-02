@@ -3,7 +3,7 @@ title: Talos Kubelet Image Garbage Collection
 summary: Cluster policy and verification runbook for bounding container-image growth on Talos EPHEMERAL filesystems.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Talos Kubelet Image Garbage Collection
@@ -36,15 +36,14 @@ Large node filesystems can retain substantial unused image history before percen
 
 ## Applying The Policy
 
-The full Talos machine configurations contain sensitive material and are intentionally ignored by Git. Update the secure source machine configurations with the YAML policy above whenever they are regenerated.
+The full Talos machine configurations contain sensitive material and are intentionally ignored by Git. Update the secure source machine configurations with the YAML policy above whenever they are regenerated. Select the intended Talos context before running commands; on Iris, use the host configuration described in [native operations](./iris-operations.md#shared-agent-cluster-access).
 
 For a live node whose `machine.kubelet.extraConfig` is currently empty, apply the policy without rebooting:
 
 ```bash
 NODE_IP=10.0.0.197
 
-talosctl --talosconfig ./talos/talosconfig \
-  -e "$NODE_IP" -n "$NODE_IP" \
+talosctl -e "$NODE_IP" -n "$NODE_IP" \
   patch machineconfig --mode no-reboot \
   --patch '[{"op":"add","path":"/machine/kubelet/extraConfig","value":{"imageGCHighThresholdPercent":75,"imageGCLowThresholdPercent":70,"imageMaximumGCAge":"168h"}}]'
 ```
@@ -103,6 +102,5 @@ Do not trust recursive `talosctl usage /var` totals when `/var/lib/kubelet` cont
 ```bash
 talosctl -n <node-ip> usage -H -d 2 /var/lib/containerd
 talosctl -n <node-ip> usage -H -d 2 /var/mnt/local-path-provisioner
-talosctl -n <node-ip> usage -H -d 2 /var/lib/longhorn
 talosctl -n <node-ip> usage -H -d 2 /var/log
 ```

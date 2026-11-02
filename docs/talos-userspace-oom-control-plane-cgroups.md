@@ -3,12 +3,14 @@ title: Talos Userspace OOM and Control Plane Cgroups
 summary: Current operating guidance for Talos Userspace OOM and Control Plane Cgroups.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Talos Userspace OOM and Control Plane Cgroups
 
 Use this when `kubectl` cannot reach the API server but Talos is reachable, or when `talosctl get oomaction` shows the Talos OOM controller killing Kubernetes pod cgroups.
+
+Select the intended Talos context before running commands. On Iris, use the host configuration in [native operations](./iris-operations.md#shared-agent-cluster-access); do not assume a repository-local Talos credential file exists.
 
 ## Failure Boundary
 
@@ -27,21 +29,21 @@ Check whether the Kubernetes API is down but Talos is up:
 
 ```sh
 kubectl --kubeconfig ./kubeconfig get nodes
-talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 service kubelet status
-talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 get staticpodstatus -o yaml
+talosctl -e 10.0.0.197 -n 10.0.0.197 service kubelet status
+talosctl -e 10.0.0.197 -n 10.0.0.197 get staticpodstatus -o yaml
 ```
 
 Check for Talos OOM actions:
 
 ```sh
-talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 get oomaction -o yaml
-talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 read /proc/pressure/memory
+talosctl -e 10.0.0.197 -n 10.0.0.197 get oomaction -o yaml
+talosctl -e 10.0.0.197 -n 10.0.0.197 read /proc/pressure/memory
 ```
 
 Check the actual cgroup limits:
 
 ```sh
-talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 3 'kube-apiserver|kube-controller-manager|kube-scheduler'
+talosctl -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 3 'kube-apiserver|kube-controller-manager|kube-scheduler'
 ```
 
 Healthy static control-plane pods should show finite `memory.max` values, not `max`, for the main container.
@@ -57,15 +59,14 @@ Healthy static control-plane pods should show finite `memory.max` values, not `m
 2. If Talos OOM killed a control-plane static pod, add live resources to the machine config with a no-reboot patch. Example values used for this cluster:
 
    ```sh
-   talosctl --talosconfig ./talos/talosconfig \
-     -e 10.0.0.197 -n 10.0.0.197 patch machineconfig --mode no-reboot \
+   talosctl -e 10.0.0.197 -n 10.0.0.197 patch machineconfig --mode no-reboot \
      --patch '[{"op":"add","path":"/cluster/apiServer/resources","value":{"requests":{"cpu":"250m","memory":"1Gi"},"limits":{"memory":"4Gi"}}},{"op":"add","path":"/cluster/controllerManager/resources","value":{"requests":{"cpu":"100m","memory":"256Mi"},"limits":{"memory":"1Gi"}}},{"op":"add","path":"/cluster/scheduler/resources","value":{"requests":{"cpu":"50m","memory":"128Mi"},"limits":{"memory":"512Mi"}}}]'
    ```
 
-3. If Talos renders the static pod manifests but kubelet leaves a static pod stuck in `Pending`, restart kubelet:
+3. If Talos renders the replacement static-pod manifests but kubelet leaves a pod stuck in `Pending`, inspect the static-pod status, kubelet/CRI logs, and OOM actions first. A confirmed stale configuration error such as `config version mismatch` can require a targeted kubelet restart:
 
    ```sh
-   talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 service kubelet restart
+   talosctl -e 10.0.0.197 -n 10.0.0.197 service kubelet restart
    ```
 
 4. Verify API health and cgroup limits:
@@ -73,13 +74,13 @@ Healthy static control-plane pods should show finite `memory.max` values, not `m
    ```sh
    kubectl --kubeconfig ./kubeconfig get --raw='/readyz?verbose'
    kubectl --kubeconfig ./kubeconfig -n kube-system get pods -l tier=control-plane -o wide
-   talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 3 'kube-apiserver|kube-controller-manager|kube-scheduler'
+   talosctl -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 3 'kube-apiserver|kube-controller-manager|kube-scheduler'
    ```
 
 5. Watch for the OOM controller moving to other uncapped pods:
 
    ```sh
-   talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 get oomaction -o yaml | tail -120
+   talosctl -e 10.0.0.197 -n 10.0.0.197 get oomaction -o yaml | tail -120
    kubectl --kubeconfig ./kubeconfig get pods -A --sort-by=.metadata.namespace
    ```
 
@@ -113,7 +114,7 @@ Do not invent a cap with one of these:
 - A `machine.sysfs` write of `/sys/fs/cgroup/podruntime/etcd/memory.max` is not a supported control. Talos recreates that cgroup when the etcd service starts.
 
 ```sh
-talosctl --talosconfig ./talos/talosconfig -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 2 'podruntime/etcd'
+talosctl -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 2 'podruntime/etcd'
 ```
 
 For the current Talos configuration, expect `memory.max` to remain `max`; inspect live usage rather than comparing it to an old incident sample. If a later Talos release adds a real etcd memory limit, patch only `10.0.0.197` with `talosctl patch machineconfig --mode no-reboot`, confirm etcd stays healthy and `memory.max` is finite, and copy the non-secret setting into the secure source machine config.

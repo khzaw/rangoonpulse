@@ -3,7 +3,7 @@ title: Control Panel Pulse
 summary: Read-only node, power, storage, and placement telemetry in the operator cockpit.
 status: active
 owner: homelab
-last_reviewed: 2026-10-29
+last_reviewed: 2026-11-02
 ---
 
 # Control Panel Pulse
@@ -74,7 +74,7 @@ costs and coverage unchanged.
 
 See [power estimation](./power-estimation-dashboard.md#durable-monthly-homelab-totals)
 for weekly/month-start collection, transactional checkpoints, restart durability,
-explicit no-NAS-backup policy, and recovery limits.
+backup coverage, and recovery limits.
 
 ## Storage
 

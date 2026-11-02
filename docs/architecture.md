@@ -3,7 +3,7 @@ title: Repository Architecture Map
 summary: Current source-of-truth map for cluster configuration, workloads, platform services, and operator guidance.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Repository Architecture Map
@@ -42,9 +42,9 @@ Flux sources, reconciliation units, and post-build substitutions:
 
 The generated controller manifest is not part of the ordinary workload reconciliation path. Controller upgrades are controlled operator actions; application and infrastructure desired state remains GitOps-managed.
 
-### `talos/`
+### Talos Configuration
 
-Talos configuration templates and node-level patches. Talos lifecycle operations are separate from Flux reconciliation. Sensitive generated machine configurations are not committed.
+Talos machine configurations are local operator material, excluded from Git under `talos/`. This repository does not provide tracked machine templates or a complete cluster bootstrap. Talos lifecycle operations are separate from Flux reconciliation; see [Kubernetes upgrades](./kubernetes-upgrade.md).
 
 ### `native/iris/`
 

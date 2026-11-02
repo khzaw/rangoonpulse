@@ -3,7 +3,7 @@ title: 75 Soft
 summary: Private 75 Soft wellness journal deployment, SQLite persistence, backup, and tailnet access boundary.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # 75 Soft
@@ -45,7 +45,7 @@ Do not copy only the main SQLite file while the app is running. Use Litestream o
 
 ## Updating the image
 
-The upstream workflow publishes `latest` and immutable `sha-<commit>` tags. Because Git SHAs are not sortable by release time, this deployment does not use the timestamp-based Flux image policy used by Kaung's self-built apps.
+The upstream workflow publishes `latest` and immutable `sha-<commit>` tags. Git SHAs are not sortable by release time, so this deployment uses a manual immutable pin rather than the timestamp-based Flux image policy used by other self-built apps in this repository.
 
 After a successful upstream image workflow:
 

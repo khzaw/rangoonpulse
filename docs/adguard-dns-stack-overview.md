@@ -3,7 +3,7 @@ title: AdGuard DNS Stack: Router Setup and Architecture
 summary: Current operating guidance for AdGuard DNS Stack: Router Setup and Architecture.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # AdGuard DNS Stack: Router Setup and Architecture
@@ -209,15 +209,13 @@ Why this matters:
 - first-run wizard mode only listens on `:3000`,
 - without explicit probes, Kubernetes can report the pod `Running` while DNS and ingress are both broken.
 
-### 9) ExternalDNS v0.22 Requires An Explicit Annotation Prefix
+### 9) Keep ExternalDNS Annotation Ownership Aligned
 
-ExternalDNS v0.22.0 changed its default annotation prefix from
-`external-dns.alpha.kubernetes.io/` to `external-dns.kubernetes.io/` with no
-fallback. Rangoonpulse still declares hostnames with the legacy prefix. Without
-an explicit compatibility flag, the ingress and service sources produce an
-empty desired record set; because this deployment uses `--policy=sync`,
-ExternalDNS then deletes every record and ownership TXT record it previously
-managed.
+Hostnames use the `external-dns.alpha.kubernetes.io/` annotation prefix.
+`infrastructure/external-dns/helmrelease.yaml` selects that prefix explicitly.
+Removing it without migrating the annotations can produce an empty desired
+record set. Under `--policy=sync`, that risks deleting managed DNS records and
+their ownership TXT records.
 
 Expected GitOps state while the repository still has legacy annotations:
 

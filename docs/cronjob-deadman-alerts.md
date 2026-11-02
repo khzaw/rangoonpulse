@@ -3,7 +3,7 @@ title: CronJob Dead-Man's-Switch Alerts
 summary: PrometheusRule alerts that page on silent CronJob failure (staleness, failed runs, deletion, forgotten suspend) and the Alertmanager route that lets the warning-severity family reach Discord/Telegram.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # CronJob Dead-Man's-Switch Alerts
@@ -25,7 +25,6 @@ services and no new secrets.
 | `resource-advisor-report` | `monitoring` | `30 2 * * *` (daily) | 30h (108000s) |
 | `resource-advisor-apply-pr` | `monitoring` | `30 3 * * 1` (weekly Mon) | 8d (691200s) |
 | `truenas-management-plane-refresh` | `democratic-csi` | `0 4 * * 1` (weekly Mon) | 8d (691200s) |
-
 | `power-cost-ledger` | `default` | `15 0 1 * 1` (Mondays + month-start) | 8d (691200s) |
 
 All four use `concurrencyPolicy: Forbid`, `ttlSecondsAfterFinished: 21600` (6h), and
@@ -49,6 +48,7 @@ One rule per CronJob (same `alertname`, per-job threshold). Fires when the time 
 | `resource-advisor-report` | 30h | Daily schedule; 30h is just over one missed run plus margin. |
 | `resource-advisor-apply-pr` | 8d | Weekly schedule; 8d is just over one missed week. |
 | `truenas-management-plane-refresh` | 8d | Weekly schedule; 8d is just over one missed week. |
+| `power-cost-ledger` | 8d | Weekly plus month-start schedule; leaves recovery time before metrics retention expires. |
 
 Expression shape (per job):
 
@@ -128,8 +128,8 @@ A route placed before the final `receiver: "null"` entry sends the family to
       value: HomelabCronJob.*
 ```
 
-The `alertname=~HomelabCronJob.*` matcher scopes the override to this family only; other
-warning-severity alerts continue to be null-routed as before.
+The `alertname=~HomelabCronJob.*` matcher scopes this route to the CronJob family.
+Other warning families need their own explicit route or reach the null receiver.
 
 ## Controlpanel Interaction
 

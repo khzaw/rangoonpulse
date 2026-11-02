@@ -10,7 +10,7 @@
 
 Media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
 
-[Architecture](#architecture) · [Hardware](#hardware) · [Services](#services) · [Screenshots](#screenshots) · [Operations](#operations) · [Docs](docs/README.md)
+[Architecture](#architecture) · [Hardware](#hardware) · [Services](#services) · [Screenshots](#screenshots) · [Repository layout](#repository-layout) · [Docs](docs/README.md)
 
 ## Architecture
 
@@ -38,7 +38,7 @@ flowchart TB
     class exposure,shared sharePath
 ```
 
-The public routes normally bypass MetalLB and ingress-nginx. Most canonical `*.khzaw.dev` app hosts stay private; a share needs matching DNS, Tunnel, and exposure-control configuration. See [networking](docs/networking.md) and [public edge and exposure control](docs/public-edge-and-exposure-control.md).
+Public routes normally bypass MetalLB and ingress-nginx. Canonical app hosts stay private unless explicitly published; temporary shares have separate hostnames and expiry controls. See [networking](docs/networking.md) for routing details.
 
 Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate public upstreams so they do not depend on the LAN filtering path.
 
@@ -49,7 +49,7 @@ Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate pub
 | Primary server | Control plane and primary workloads | `amd64` | 6 CPU cores · 32 GB RAM · Intel iGPU for media |
 | Raspberry Pi | Utility workloads | `arm64` | 4 CPU cores · 8 GB RAM |
 
-TrueNAS provides shared storage. A Mac mini hosts native agent services and independent monitoring outside the Kubernetes cluster.
+TrueNAS provides shared storage. A Mac mini runs native services and independent monitoring outside the Kubernetes cluster.
 
 Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); the [architecture guide](docs/architecture.md) explains how the components fit together.
 
@@ -78,12 +78,12 @@ Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); th
 | **Two architectures** | An AMD64 primary node handles the heavier workloads; an ARM64 Raspberry Pi runs utility services. |
 | **Storage by workload** | TrueNAS provides shared files and media; node-local storage handles latency-sensitive databases and caches. |
 | **Resource tuning** | Resource Advisor uses Prometheus data to propose budgeted resource changes through pull requests. |
-| **Operator cockpit** | Exposure controls, telemetry, deploy actions, jobs, secrets, and tuning in one private control panel. |
+| **Control Panel** | A private interface for temporary shares, telemetry, deployments, scheduled jobs, secrets, and resource tuning. |
 | **Encrypted secrets** | SOPS + age protects Git-managed secrets; Flux decrypts them in the cluster. |
 
 ## Services
 
-This is the desired-state overview. [The Flux reconciliation tree](flux/kustomization.yaml) owns the active inventory; a leftover directory alone does not make a service deployed.
+The services below are declared in [the Flux reconciliation tree](flux/kustomization.yaml). Individual manifests contain their deployment settings and version pins.
 
 ### Platform and operations
 
@@ -100,7 +100,7 @@ This is the desired-state overview. [The Flux reconciliation tree](flux/kustomiz
 | **Networking** | ingress-nginx, MetalLB, cert-manager, ExternalDNS, Tailscale Operator and subnet/exit Connector |
 | **DNS and public edge** | Dual AdGuard Home, Cloudflare Tunnel, exposure-control |
 | **Observability** | Prometheus, Alertmanager, Grafana, node exporter, Metrics Server, Uptime Kuma |
-| **Operations** | Resource Advisor, operator cockpit, host telemetry, NAS power estimates, and independent cluster sentinel |
+| **Operations** | Resource Advisor, Control Panel, host telemetry, power estimates, and independent cluster health checks |
 | **Storage** | TrueNAS, democratic-csi, local-path provisioner |
 
 ### Media and library
@@ -132,21 +132,10 @@ This is the desired-state overview. [The Flux reconciliation tree](flux/kustomiz
 |---|---|
 | **Finance** | Actual Budget, Retirement |
 | **Study and notes** | Interview Prep, Obsidian LiveSync, Anki sync |
-| **RSS** | [Miniflux](docs/miniflux.md) at `rss.khzaw.dev` |
+| **RSS** | [Miniflux](docs/miniflux.md) |
 | **Personal tools** | 75 Soft, Reactive Resume, Vaultwarden, ChartDB, BentoPDF |
 | **Dashboards and utilities** | Dynacat, Speedtest Tracker, Kroki, Flux UI |
 | **Self-built sites** | Blog, MMCal, Rangoon Mapper, Erica Knight |
-
-### Operator surfaces
-
-| Host | Purpose |
-|---|---|
-| `rangoonpulse.khzaw.dev` | Dynacat Home, Health, and Media dashboard |
-| `controlpanel.khzaw.dev` | Exposure controls, Pulse telemetry, travel readiness, deploys, Transmission routing, updates, CronJobs, secrets, and tuning |
-| `grafana.khzaw.dev` | Metrics and operations dashboards |
-| `fluxui.khzaw.dev` | Flux sources, Kustomizations, HelmReleases, and reconciliation status |
-
-These hosts use the private LAN/Tailscale access path.
 
 ## GitOps and automation
 
@@ -167,13 +156,13 @@ flowchart LR
     class prometheus,advisor tuning
 ```
 
-Resource Advisor proposes resource changes through PRs. Git/CI checks render affected workloads and validate CPU headroom, rollout reserves, and scheduled-job allowances. HPA maximum replicas are checked separately. There is no live admission webhook. See [Resource Advisor](docs/resource-advisor.md) and [CPU headroom validation](docs/cpu-headroom-validation.md).
+Resource Advisor uses retained Prometheus metrics to propose resource changes through PRs. Git/CI checks render affected workloads and check CPU capacity, including room for rollouts and scheduled jobs. See [Resource Advisor](docs/resource-advisor.md) for the policy and its limits.
 
-Permanent desired state belongs in Git. Git-managed secrets stay SOPS-encrypted under `infrastructure/secrets/`; runtime-owned cockpit state stays outside Flux where controls need to be reversible. The two AdGuard instances use separate rollout units.
+Flux owns permanent desired state; the Control Panel owns temporary share and routing state. Secrets are encrypted with SOPS. The two AdGuard instances have independent storage and rollout boundaries so DNS updates can proceed one instance at a time.
 
 ## Screenshots
 
-Saved UI captures, not live status. The Dynacat views were captured on 27 October 2026; the other images are existing gallery captures, so their metrics, app versions, and library contents may differ from today's setup.
+Illustrative UI captures. Metrics, versions, and library contents vary over time; the service inventory above describes the repository's desired state.
 
 ### Dynacat dashboard
 
@@ -183,17 +172,6 @@ Saved UI captures, not live status. The Dynacat views were captured on 27 Octobe
 <summary>Dynacat service health</summary>
 
 ![Dynacat Health with service monitors and download-stack health](.github/screenshots/dynacat-health.jpg)
-
-</details>
-
-### Jellyfin
-
-![Jellyfin media library](.github/screenshots/jellyfin.webp)
-
-<details>
-<summary>More from Jellyfin</summary>
-
-![Jellyfin library detail view](.github/screenshots/jellyfin-2.webp)
 
 </details>
 
@@ -207,11 +185,9 @@ Saved UI captures, not live status. The Dynacat views were captured on 27 Octobe
 </details>
 
 <details>
-<summary>Grafana and Uptime Kuma</summary>
+<summary>Grafana</summary>
 
 ![Grafana Kubernetes resource dashboard](.github/screenshots/grafana.webp)
-
-![Uptime Kuma monitoring dashboard](.github/screenshots/uptime.webp)
 
 </details>
 
@@ -239,13 +215,13 @@ Saved UI captures, not live status. The Dynacat views were captured on 27 Octobe
 └── AGENTS.md                     Agent session entrypoint
 ```
 
-Talos node lifecycle is managed separately from Flux; generated machine configuration and local operator files are not tracked in this repository. See [Kubernetes upgrades](docs/kubernetes-upgrade.md).
+Talos node lifecycle is managed separately from Flux. Generated machine configuration and local operator files are excluded from Git.
 
-## Operations
+## Working with this repository
 
-Operational procedures live in the [docs index](docs/README.md), including [day-two commands](docs/ops-command-cheatsheet.md), [image promotion](docs/static-site-deployment.md), and [Kubernetes upgrades](docs/kubernetes-upgrade.md). [AGENTS.md](AGENTS.md) describes the repository workflow for coding agents.
+This repository configures a specific homelab. Its DNS, node identities, and storage settings need adapting for another environment.
 
-To validate the repository locally:
+The [operating reference](docs/README.md) explains component ownership, maintenance, and recovery. [AGENTS.md](AGENTS.md) is the entry point for coding agents. Local repository checks run with:
 
 ```bash
 make validate-all
@@ -262,6 +238,4 @@ make validate-all
 | [Resource Advisor](docs/resource-advisor.md) | Reporting, tuning policy, and apply-PR automation |
 | [CPU headroom](docs/cpu-headroom-validation.md) | Git/CI and live capacity preflights |
 | [Data protection](docs/data-protection.md) | Backup coverage, recovery, and gaps |
-| [Secrets](docs/secrets-management.md) | SOPS, Flux, cockpit editing, and key lifecycle |
-
-Docs describe the current implementation and operating contract. Superseded designs, completed plans, and incident chronology remain in Git history.
+| [Secrets](docs/secrets-management.md) | SOPS, Flux, Control Panel editing, and key lifecycle |

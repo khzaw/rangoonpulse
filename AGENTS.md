@@ -48,13 +48,13 @@ Use the smallest matching project-local skill:
 - `rangoonpulse-resource-advisor`: tuning automation and cockpit integration
 
 If no skill applies, use `docs/README.md` to find the owning current-state doc.
-Miniflux's RSS, shared PostgreSQL, and administrator bootstrap contract is in `docs/miniflux.md`.
 
 New apps must meet `docs/service-onboarding.md`: dashboard/monitor, update management, disabled share wiring, tuning/HPA policy, secrets inventory, and live verification. For existing services, keep the affected integrations consistent without expanding a narrow fix into unrelated onboarding work.
 
 ## Documentation Standard
 
-- Keep `README.md` a public-facing project overview with architecture, services, hardware, and screenshots. Host aliases, credential paths, agent access setup, and operator procedures belong in the owning docs or agent guidance.
+- Every tracked document is public, including agent guidance, skills, examples, backlogs, and screenshots. Keep personal preferences, conversation excerpts, workstation-specific notes, and credential values out of them.
+- Keep `README.md` a public-facing project overview with architecture, services, hardware, and screenshots. Focused docs own the technical operating contracts needed by maintainers and contextless agent sessions.
 - Docs describe the current implementation, operating contract, and non-obvious constraints that still apply.
 - Do not keep completed plans, migration checklists, incident timelines, superseded options, or retired-service notes in the current corpus.
 - Retain past rationale only when it is necessary to explain a present-day tradeoff. State the active constraint first and keep the history to the minimum needed.

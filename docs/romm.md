@@ -3,7 +3,7 @@ title: RomM
 summary: Private ROM library with shared PostgreSQL, expandable NAS storage, and app-owned database provisioning.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # RomM
@@ -83,8 +83,8 @@ the hook automatically. After a shared database restore/rebuild, force the RomM
 Helm release as above; a pod restart alone does not rerun Helm hooks.
 
 Provisioning restores the database/role structure, not lost metadata. Back up
-the `romm` database along with the NAS volume and encrypted secrets. The repo's
-centralized database backup plan remains unimplemented; NAS files alone do not
+the `romm` database along with the NAS volume and encrypted secrets. The repository
+defines no automated backup for the shared database; NAS files alone do not
 protect users, collections, or database metadata from primary-node disk loss.
 
 ## Storage
@@ -133,6 +133,6 @@ dig +short roms.khzaw.dev A
 curl --fail https://roms.khzaw.dev/api/heartbeat
 ```
 
-Also open the application in a browser to confirm that the setup/login screen
-and its assets load over HTTPS. An empty library is expected before the first
-ROM upload; runtime health alone does not verify game compatibility.
+Also open the application in a browser to verify login, assets, and library access
+over HTTPS. On a fresh installation, create the administrator through the setup
+wizard. Runtime health alone does not verify game compatibility.

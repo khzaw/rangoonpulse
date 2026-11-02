@@ -3,7 +3,7 @@ title: Node Power Estimation Dashboard
 summary: Current operating guidance for Node Power Estimation Dashboard.
 status: active
 owner: homelab
-last_reviewed: 2026-11-01
+last_reviewed: 2026-11-02
 ---
 
 # Node Power Estimation Dashboard
@@ -89,8 +89,7 @@ The existing `democratic-csi/truenas-pvc-dataset-exporter` serves an independent
 `/power` endpoint on the same port. Its Kubernetes-managed ServiceMonitor polls
 every **120 seconds**, with a **30-second** scrape timeout. PVC dataset collection
 remains on `/metrics`; neither collector depends on the other's success. Credentials
-come from the existing `democratic-csi/truenas-credentials` Secret, not a temporary
-1Password share or interactive browser session.
+come from the existing `democratic-csi/truenas-credentials` Secret.
 
 The NAS's supported reporting definitions are available, but its CPU/disk history
 queries currently return no data. The collector therefore uses the existing TrueNAS
@@ -143,8 +142,8 @@ Kustomize so source changes roll the Deployment without a manual process restart
 `homelab:truenas_power_input_watts` validates each scrape before deduplication:
 positive finite modeled watts, successful HTTP scrape and NAS collection, and a
 non-future sample at most **180 seconds** old. The canonical host remains `node="truenas"` for historical continuity.
-Grafana and Pulse display this host as `nas`; the selector value and stored series
-identity are unchanged, so existing history and cost enrollment are preserved.
+Grafana and Pulse display this host as `nas`; the selector and stored series use
+the canonical `truenas` identity to preserve history and cost enrollment.
 Missing or stale data contributes no watts or cost, never zero or an idle fallback.
 `TrueNASPowerSampleUnavailable` warns after ten minutes. Grafana shows NAS status,
 sample age, model components and the immutable cost-enrollment boundary.
@@ -152,10 +151,9 @@ sample age, model components and the immutable cost-enrollment boundary.
 Resume-after-boot is distinct from the firmware setting that automatically powers
 the NAS on after AC restoration; this integration does not change firmware or
 claim a physical power-cycle test. Ordinary outages remain explicit coverage gaps,
-not replay queues or extrapolated history. Monthly PostgreSQL checkpoints and
-previously recorded totals remain unchanged.
+not replay queues or extrapolated history. Monthly PostgreSQL checkpoints retain
+previously recorded totals.
 
-The canonical metric names and two-minute cadence remain unchanged.
 `homelab:cluster_estimated_power_watts` and the Control Room cluster panel remain
 Kubernetes-only. `homelab:estimated_power_watts` includes all modeled hosts.
 Grafana's host selector and per-host series include Iris and TrueNAS; All includes both.
@@ -219,9 +217,9 @@ estimated power results. External hosts need their own metric source; do not inv
   `IRIS_POWER_COST_START_SECONDS` in `flux/cluster-settings.yaml`. Its power/cost rules
   are gated at that time. The ledger includes Iris samples and expects its coverage
   only from enrollment, never retroactively. Preserve this timestamp after rollout.
-- Current verified tariff: `0.3116 SGD/kWh` (`31.16` cents/kWh, GST inclusive),
-  effective **1 October–31 December 2026**. SP's matching pre-GST rate is `28.59`
-  cents/kWh. The previous Q3 rate remains in the source history.
+- Tariff values, effective quarters, and official source links live in
+  `infrastructure/monitoring/power-tariffs.json`. Read that history and the live
+  tariff/expiry metrics rather than treating a rate copied into prose as current.
 
 ## Automatic Quarterly Tariffs
 
@@ -247,8 +245,8 @@ estimated power results. External hosts need their own metric source; do not inv
   contents/PR-write credential; PAT-created PRs trigger normal CI (unlike GITHUB_TOKEN).
   Git commits use the authenticated account's configured identity, without author overrides.
   Rotate this Actions copy alongside Resource Advisor and Dynacat.
-- **Auto-merge is initially disabled.** After approving a real automated tariff PR and
-  checking its rollout, set repository variable `POWER_TARIFF_AUTO_MERGE=true` if desired.
+- **Auto-merge is opt-in.** The workflow reads repository variable
+  `POWER_TARIFF_AUTO_MERGE=true`; inspect its current value when diagnosing behavior.
   It only requests auto-merge for a new consecutive quarter with a rate change of at
   most 15%. Repository auto-merge must also be enabled and required CI/branch rules
   must be configured; the workflow refuses auto-merge unless `validate` is a required
@@ -285,8 +283,8 @@ its enrollment, without rewriting old costs, checkpoints, or coverage. TrueNAS j
 own effective enrollment boundary. It lives in
 `postgres.power_estimation.monthly_cost` on the **existing**
 `media-postgres` server. No new database, server, exporter, or NAS copy is created.
-The local-path PostgreSQL PVC survives pod and Talos reboots. Loss of its disk is
-**not** covered by a separate backup, per the operator's explicit choice.
+The local-path PostgreSQL PVC survives pod and Talos reboots. The repository
+defines no separate backup for this ledger; disk loss loses its saved history.
 
 `default/power-cost-ledger` runs at **00:15 Singapore on Mondays and the first day
 of each month** (`15 0 1 * 1`, standard cron day-of-month/day-of-week OR semantics).
@@ -357,7 +355,7 @@ reader copy as `POWER_LEDGER_PASSWORD`. All are SOPS-managed. Rotate the reader 
 both namespace copies, reconcile secrets, run the media-postgres provisioning hook
 through a Helm reconcile/upgrade, and restart Grafana. Rotate the snapshot token
 with a Control Panel restart and the next fresh job. Do not reset the ledger when
-rotating credentials. Shared DB Deployment rendering is unchanged by the hook.
+rotating credentials. The provisioning hook runs independently of the shared database Deployment.
 
 ### Verification and recovery
 
@@ -369,8 +367,7 @@ curl -fsS https://controlpanel.khzaw.dev/api/power-cost-ledger
 
 SQL delivered inside Flux-substituted ConfigMaps must use named PL/pgSQL dollar
 quotes such as `$ledger$`: anonymous `$$` delimiters collapse to `$` during Flux
-substitution and cause `DO $` syntax errors. The initial manual run exposed this;
-its transaction rolled back without advancing the checkpoint. Validate the
+substitution and cause `DO $` syntax errors. Validate the
 **Flux-rendered** script as well as the raw SQL.
 
 The SQL regression test uses an isolated schema and rolls everything back. It
@@ -382,8 +379,8 @@ If collection is overdue, run it before Prometheus samples expire. If only the
 Pulse cache is missing, rerunning republishes the entire ledger even when the
 checkpoint has not advanced. Never reset the checkpoint alone or manually add
 previously collected samples: that would double-count. Restarts require no data
-repair; disk loss requires accepting loss of monthly history under the no-backup
-policy. The table and its roles are reprovisioned idempotently by the DB hook,
+repair; disk loss loses monthly history because the repository defines no backup.
+The table and its roles are reprovisioned idempotently by the DB hook,
 but reprovisioning cannot recover lost historical values.
 
 ## Verification

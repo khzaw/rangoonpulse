@@ -3,7 +3,7 @@ title: Live TV Services
 summary: Current Nodecast TV and Tunarr deployment, storage, hardware access, and exposure contracts.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Live TV Services
@@ -29,17 +29,15 @@ The local SQLite choice gives predictable latency but makes the service node-aff
 
 Tunarr's NFS-backed application state is relocatable, but active media processing still depends on compatible node hardware.
 
-## Dormant Source
+## Inventory
 
-`apps/ersatztv/` and `flux/kustomizations/ersatztv.yaml` remain in the tree, but ErsatzTV is not included by `flux/kustomization.yaml` and is not current desired state. Do not document or operate it as a live service.
-
-Resource Advisor still contains an ErsatzTV mapping. Treat it as dead policy until the dormant service is either deliberately restored or removed from code.
+Use `flux/kustomization.yaml` to determine which workloads are desired state. A source directory or advisor mapping alone does not register a service with Flux.
 
 ## Verification
 
 ```bash
-flux get kustomizations -n flux-system | grep -E 'nodecast|tunarr|ersatz'
-kubectl get pod,pvc,svc,ingress -n default | grep -E 'nodecast|tunarr|ersatz'
+flux get kustomizations -n flux-system | grep -E 'nodecast|tunarr'
+kubectl get pod,pvc,svc,ingress -n default | grep -E 'nodecast|tunarr'
 ```
 
-Current expected result: Nodecast TV and Tunarr are reconciled; ErsatzTV is absent from active Flux state.
+Verify both services' reconciliation, persistent mounts, and hardware-accelerated playback.

@@ -3,7 +3,7 @@ title: Service Onboarding
 summary: Required GitOps, dashboard, Control Panel, tuning, secrets, and live verification surfaces for every new application.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Service Onboarding
@@ -184,6 +184,6 @@ Reconcile every affected Flux component, including supporting surfaces such as `
 rollouts; refresh caches and scheduled reports when those hide newly deployed state.
 
 Close with concrete evidence for each required surface, the pushed revision, the intended access behavior, and
-the resource/HPA policy. Include the concise operator-learning summary required by the shared-worktree skill.
+the resource/HPA policy.
 Keep any real unsupported/inapplicable case explicit. A missing integration remains unfinished work until fixed
 or addressed by an explicit user instruction.

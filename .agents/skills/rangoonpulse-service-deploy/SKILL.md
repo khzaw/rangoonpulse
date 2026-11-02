@@ -93,5 +93,5 @@ and what has been verified; do not describe the missing surface as complete.
 ## Final Handoff
 
 Report the service URL/access model, pushed revision, resources/HPA, and concise live evidence for the required
-operator surfaces. Include the shared-worktree skill's operator-learning summary and any explicit, justified
-exception. The task is complete only when its app and required integrations work in the intended runtime.
+operator surfaces and any explicit, justified exception. The task is complete only when its app and required
+integrations work in the intended runtime.

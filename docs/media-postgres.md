@@ -3,7 +3,7 @@ title: Media PostgreSQL
 summary: Current shared TimescaleDB consumers, local storage, tuning rationale, secrets, and backup gap.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-02
 ---
 
 # Media PostgreSQL
@@ -20,8 +20,8 @@ last_reviewed: 2026-10-25
 Monthly homelab power costs (Kubernetes nodes plus Iris from enrollment) reuse the existing maintenance database `postgres`,
 adding only `power_estimation.monthly_cost`. A post-install/post-upgrade hook
 provisions limited writer/reader roles without changing the server Deployment.
-The weekly collector, read-only Grafana datasource, and explicit no-NAS-copy
-policy are covered in [power estimation](./power-estimation-dashboard.md#durable-monthly-homelab-totals).
+The weekly collector, read-only Grafana datasource, and backup limits
+are covered in [power estimation](./power-estimation-dashboard.md#durable-monthly-homelab-totals).
 
 Immich uses its own PostgreSQL and is not part of this service.
 
