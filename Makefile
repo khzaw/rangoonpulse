@@ -2,7 +2,7 @@
 .PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-retirement deploy-rangoon-mapper deploy-static-sites
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
-.PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell test-python
+.PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell check-rust build-exposure-cli test-python
 
 # Use this cluster's credentials when available; preserve explicit overrides and
 # kubectl's normal fallback on machines without the ignored local kubeconfig.
@@ -152,7 +152,15 @@ check-docs: ## Validate docs and skill structure
 	python3 -m unittest discover -s scripts/tests -p 'test_check_docs.py'
 	python3 scripts/check_docs.py
 
-check-node: ## Syntax-check exposure-control JavaScript
+build-exposure-cli: ## Build the native exposure CLI used by integration tests
+	cd apps/exposure-control/cli && cargo build --locked
+
+check-rust: ## Format, lint, and test the native exposure CLI
+	cd apps/exposure-control/cli && cargo fmt --all -- --check
+	cd apps/exposure-control/cli && cargo clippy --locked --all-targets -- -D warnings
+	cd apps/exposure-control/cli && cargo test --locked
+
+check-node: ## Check exposure-control JavaScript and API integration
 	npm run check --silent
 
 check-shell: ## Syntax-check shell scripts
@@ -168,4 +176,4 @@ test-python: ## Run Python unit tests
 	python3 -m unittest discover -s scripts/tests -p 'test_truenas*.py'
 	python3 scripts/update_power_tariff.py --check
 
-validate-all: check-docs test-python check-node check-shell validate-kustomize ## Run all repository checks safe for local/CI use
+validate-all: check-docs test-python check-rust check-node check-shell validate-kustomize ## Run all repository checks safe for local/CI use

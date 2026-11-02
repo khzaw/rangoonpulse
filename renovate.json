@@ -10,6 +10,9 @@
     "renovate"
   ],
   "enabledManagers": [
+    "cargo",
+    "dockerfile",
+    "rust-toolchain",
     "custom.regex",
     "flux",
     "github-actions",

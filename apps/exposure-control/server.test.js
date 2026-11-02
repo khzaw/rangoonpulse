@@ -13,6 +13,7 @@ const { createExposureClient } = require("./exposure-client.js");
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const SERVER_PATH = path.join(__dirname, "server.js");
 const TRAVEL_CONFIG_PATH = path.join(__dirname, "travel.json");
+const CLI_PATH = process.env.EXPOSURE_CLI_BIN || path.join(__dirname, "cli/target/debug/exposure" + (process.platform === "win32" ? ".exe" : ""));
 
 const servers = [];
 const children = [];
@@ -252,8 +253,8 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
     child.kill("SIGTERM");
     await closed;
   }
-  const cli = async (...args) => JSON.parse((await promisify(execFile)(process.execPath,
-    [path.join(__dirname, "cli.js"), ...args, "--json"],
+  const cli = async (...args) => JSON.parse((await promisify(execFile)(CLI_PATH,
+    [...args, "--json"],
     { env: { ...process.env, EXPOSURE_CONTROL_URL: `http://127.0.0.1:${port}` } })).stdout);
   const gui = createExposureClient({ request: async (...args) => {
     const response = await exposureRequest(port, ...args);
