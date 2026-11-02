@@ -17,26 +17,5 @@
     };
   }
 
-  function createHttpRequest({ baseUrl, fetchImpl = globalThis.fetch, timeoutMs = 10000 }) {
-    const base = new URL(baseUrl);
-    if (!["http:", "https:"].includes(base.protocol) || base.username || base.password ||
-        base.pathname !== "/" || base.search || base.hash) {
-      throw new Error("URL must be an http(s) origin without credentials, path, query, or fragment");
-    }
-    return async function request(path, method, body) {
-      const response = await fetchImpl(new URL(path, base), {
-        method, redirect: "error", signal: AbortSignal.timeout(timeoutMs),
-        headers: { accept: "application/json", ...(body === undefined ? {} : { "content-type": "application/json" }) },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      });
-      if (!response.headers.get("content-type")?.includes("application/json")) {
-        throw new Error("expected a JSON response from the private Control Panel API (HTTP " + response.status + ")");
-      }
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || "HTTP " + response.status);
-      return payload;
-    };
-  }
-
-  return { createExposureClient, createHttpRequest };
+  return { createExposureClient };
 });

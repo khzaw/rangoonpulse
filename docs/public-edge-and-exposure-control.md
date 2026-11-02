@@ -18,8 +18,8 @@ The public edge is split deliberately:
 - `apps/exposure-control/helmrelease.yaml`: control-plane runtime, persistence, ingress, and configuration
 - `apps/exposure-control/exposure-core.js`: share transitions, effective state, expiry, authentication policy, and audit events
 - `apps/exposure-control/server.js`: state persistence, HTTP APIs, expiry scheduling, auth-presence enforcement, rate limiting, and proxying
-- `apps/exposure-control/exposure-client.js`: shared browser/Node API client for the cockpit and CLI
-- `apps/exposure-control/cli.js`: local `exposure` command
+- `apps/exposure-control/exposure-client.js`: cockpit API client
+- `apps/exposure-control/cli/`: native Rust `exposure` command and its container build
 
 There is no `PublicExposure` CRD or separate exposure controller. Public routes and DNS are static GitOps inventory. Exposure-control owns runtime enabled/disabled state.
 
@@ -53,39 +53,41 @@ Authentication mode is per service/share. The backend fallback is Cloudflare Acc
 
 State lives at `/data/state.json`; the append-only audit stream is `/data/audit.json`. `GET /api/audit` returns the latest 100 entries newest first. Recognized share hosts proxy target application paths including `/api/*`, preserving request bodies and `Content-Length`. Exposure-control's own APIs are restricted to the control-panel host.
 
-The core has no HTTP, filesystem, or Kubernetes dependency. The server supplies persistence, audit delivery, hostname configuration, and a clock; the proxy, API, startup recovery, and periodic reconciler use the same core policy. Both user interfaces call the same private API through the shared client. The CLI never reads or writes the server's state files directly.
+The core has no HTTP, filesystem, or Kubernetes dependency. The server supplies persistence, audit delivery, hostname configuration, and a clock; the proxy, API, startup recovery, and periodic reconciler use the same core policy. The GUI and Rust CLI call the same private HTTP API. The CLI never reads or writes the server's state files directly.
 
 Enable requests accept numeric `hours` from `0.25` to `24` in 15-minute increments, or `null` for until disabled. Omitted duration and authentication use server/catalog defaults; invalid explicit values return `400` instead of being silently clamped or replaced. Existing valid GUI requests and persisted state retain their behavior.
 
 ## Command Line
 
-Any machine with `kubectl`, a working cluster connection, and permission to exec into the exposure-control pod can run the CLI without a repository checkout or local Node installation:
+The CLI is a compiled Rust binary. Any machine with `kubectl`, a working cluster connection, and permission to exec into the exposure-control pod can run it without a repository checkout, local Rust toolchain, or language runtime:
 
 ```bash
-kubectl -n default exec deployment/exposure-control -- node /app-files/cli.js --url http://127.0.0.1:8080 list
-kubectl -n default exec deployment/exposure-control -- node /app-files/cli.js --url http://127.0.0.1:8080 enable bookorbit
+kubectl -n default exec deployment/exposure-control -- exposure list
+kubectl -n default exec deployment/exposure-control -- exposure enable bookorbit
 ```
 
-The Git-managed ConfigMap mounts the CLI and shared client in the existing Node container. Each invocation runs the CLI in that pod and calls its loopback API, using the same core and persisted state as the GUI. No separate CLI workload or image is needed. This path requires a running exposure-control pod and Kubernetes `pods/exec` access; the command does not bypass the existing cluster permissions.
+An init container copies the binary from the pinned `ghcr.io/khzaw/exposure-cli` image into an ephemeral volume. The existing application container mounts it read-only at `/usr/local/bin/exposure`; its `EXPOSURE_CONTROL_URL` points to the loopback API. Each invocation uses the same core and persisted state as the GUI. There is no continuously running CLI sidecar. This path requires a running exposure-control pod and Kubernetes `pods/exec` access.
 
 For a shorter command in a POSIX shell, define a function:
 
 ```sh
 exposure() {
-  kubectl -n default exec deployment/exposure-control -- node /app-files/cli.js --url http://127.0.0.1:8080 "$@"
+  kubectl -n default exec deployment/exposure-control -- exposure "$@"
 }
 exposure list --active
 exposure enable bookorbit
 ```
 
-Alternatively, run locally with Node.js 24 or newer from the repository root:
+To build and install a local binary using the pinned Rustup toolchain:
 
 ```bash
-npm run --silent exposure -- list
-npm run --silent exposure -- show bookorbit --json
+cd apps/exposure-control/cli
+cargo install --locked --path .
+exposure list
+exposure show bookorbit --json
 ```
 
-To make `exposure` available on the current Node installation's command path, run `npm link --ignore-scripts --package-lock=false` from the repository root. This links the executable to the checkout; keep the checkout available and relink after changing Node installations. No dependencies or Kubernetes credentials are required.
+The project toolchain is pinned in `apps/exposure-control/cli/rust-toolchain.toml`; Rustup selects it when Cargo runs from the crate directory. A built binary does not need Rust or Node at runtime.
 
 ```bash
 exposure list --active
@@ -111,7 +113,13 @@ kubectl -n default port-forward service/exposure-control 8080:8080
 exposure --url http://127.0.0.1:8080 list
 ```
 
-The CLI can run locally or through `kubectl exec` in the existing pod. `kubectl run` and a separate in-cluster CLI workload are unnecessary. Both paths use the existing private control-host trust boundary, with no additional public operator endpoint.
+The CLI can run locally or through `kubectl exec` in the existing pod. Both paths use the existing private control-host trust boundary, with no additional public operator endpoint.
+
+## CLI Image Delivery
+
+`.github/workflows/exposure-cli.yaml` runs Rust tests and builds the CLI image natively for Linux AMD64 and ARM64, then publishes a combined `sha-<commit>` manifest to GHCR. The workflow runs for CLI/build changes on master, validates pull requests without publishing, and supports manual dispatch. Promote a successful build by pinning its tag and manifest digest in the HelmRelease's `cli` init container. Renovate owns Cargo dependencies, the Rust toolchain, and Dockerfile bases; the deployed CLI image pin is promoted explicitly through Git.
+
+The init container uses `default/ghcr-pull-secret` for registry access. The Node server image and ConfigMap-delivered GUI/core keep their existing ownership. `make validate-all` runs Rust formatting, Clippy, Rust tests, and the Rust CLI against a disposable Node backend to check GUI/CLI state, expiry, authentication, audit, and restart behavior. `EXPOSURE_CLI_BIN` can select a separately built native binary for that integration test.
 
 ## Operator Cockpit
 

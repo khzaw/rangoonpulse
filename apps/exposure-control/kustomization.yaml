@@ -10,7 +10,6 @@ configMapGenerator:
   - name: exposure-control-app-files
     files:
       - app.js
-      - cli.js
       - exposure-core.js
       - exposure-client.js
       - pulse.js

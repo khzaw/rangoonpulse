@@ -227,6 +227,8 @@ The [operating reference](docs/README.md) explains component ownership, maintena
 make validate-all
 ```
 
+Validation also builds and tests the native Rust exposure CLI. Rustup selects the toolchain pinned in `apps/exposure-control/cli/rust-toolchain.toml` when Cargo runs from that directory.
+
 ## Documentation
 
 | Guide | What it covers |

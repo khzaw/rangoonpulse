@@ -60,6 +60,12 @@
   ],
   "packageRules": [
     {
+      "description": "Promote tested Exposure CLI image digests explicitly through Git.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/khzaw/exposure-cli"],
+      "enabled": false
+    },
+    {
       "description": "Keep the intentionally pinned Flaresolverr fork manual.",
       "matchDatasources": [
         "docker"

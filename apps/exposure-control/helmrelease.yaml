@@ -21,6 +21,8 @@ spec:
   values:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       # app-template v5 defaults this to false for externally referenced
       # ServiceAccounts; the backend needs the in-cluster API token.
       automountServiceAccountToken: true
@@ -42,6 +44,28 @@ spec:
         pod:
           annotations:
             reloader.stakater.com/auto: "true"
+        initContainers:
+          cli:
+            image:
+              repository: ghcr.io/khzaw/exposure-cli
+              tag: "sha-09104f847fda518e555d23c66cadc9e29e6b91ab@sha256:78e650b8dd6efac753732bbef1e54639176cb302b29b16e2cf6b0f96a1f1209e"
+            command:
+              - /bin/cp
+              - /usr/local/bin/exposure
+              - /cli/exposure
+            resources:
+              requests:
+                cpu: "5m"
+                memory: "16Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
         containers:
           main:
             image:
@@ -57,6 +81,7 @@ spec:
                     name: power-ledger-db
                     key: snapshot-token
               APP_DIR: /app-files
+              EXPOSURE_CONTROL_URL: http://127.0.0.1:8080
               TZ: "${TIMEZONE}"
               PORT: "8080"
               DATA_DIR: /data
@@ -147,6 +172,18 @@ spec:
                   port: http
 
     persistence:
+      cli:
+        enabled: true
+        type: emptyDir
+        sizeLimit: 16Mi
+        advancedMounts:
+          main:
+            cli:
+              - path: /cli
+            main:
+              - path: /usr/local/bin/exposure
+                subPath: exposure
+                readOnly: true
       data:
         enabled: true
         type: persistentVolumeClaim

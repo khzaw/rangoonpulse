@@ -22,7 +22,7 @@ All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and incl
 - `bookorbit-secret`: BookOrbit application, saved client/indexer credential encryption key, and `media-postgres` database bootstrap
 - `dynacat-github`: authenticated GitHub release-widget reads
 - `exposure-control-github`: control-panel GitHub reads and actions
-- `ghcr-pull-secret`: Erica Knight, Rangoon Mapper, and Retirement private image pulls
+- `ghcr-pull-secret`: Erica Knight, Rangoon Mapper, Retirement, and Exposure CLI private image pulls
 - `homepage-widget-secrets`: Dynacat widgets
 - `immich-db-secret`: Immich PostgreSQL
 - `media-postgres-secret`: shared TimescaleDB administration and app-owned database provisioning hooks; application runtimes use their restricted roles
