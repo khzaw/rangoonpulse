@@ -30,6 +30,7 @@ If prose conflicts with manifests or code, treat the implementation as authorita
 - Escape runtime-literal placeholders as `$${VAR}` when Flux post-build substitution is active.
 - Never commit plaintext credentials. Git-managed secrets stay SOPS-encrypted under `infrastructure/secrets/`.
 - Before requesting a GitHub token, consult `docs/github-credentials.md` for existing credentials, required permissions, and reuse guidance.
+- On Iris, all trusted agents use `~/.kube/config` and `~/.talos/config` against the LAN endpoints. The ignored repository kubeconfig links to the host file; native launchd automation renews Kubernetes credentials. See `docs/iris-operations.md` before changing authentication.
 - Keep ingress, DNS ownership, and TLS configuration aligned for reachable services.
 - Do not couple redundant critical services into one rollout unit.
 - This is a shared worktree. Preserve unrelated edits and stage only the task's files or hunks.
