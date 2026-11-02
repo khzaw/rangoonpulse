@@ -7,4 +7,5 @@ resources:
   - namespace.yaml
   - rbac-patch-clusterrole.yaml
   - rbac-patch-clusterrolebinding.yaml
+  - agent-access-rbac.yaml
   - helmrelease.yaml

@@ -1,6 +1,6 @@
 ---
 title: Iris native macOS operations
-summary: Native launchd supervision, shared agent cluster access, Darwin telemetry, gateway checks, and an independent sentinel.
+summary: Native launchd supervision, Darwin telemetry, gateway checks, and an independent sentinel.
 status: active
 owner: homelab
 last_reviewed: 2026-11-02
@@ -146,62 +146,12 @@ ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes'
 ssh iris@iris.khzaw.dev 'curl -fsS http://10.0.0.66:9101/healthz/hermes-gateway'
 ```
 
-## Shared agent cluster access
+## Agent cluster access
 
-Trusted agents running as the macOS `iris` user share `~/.kube/config` and
-`~/.talos/config`. Kubernetes uses the primary node's LAN API endpoint from
-`flux/cluster-settings.yaml`. Agents run the local CLI against that endpoint. No Tailscale proxy,
-per-agent login, or shell-profile environment variable is required on the LAN.
-Agents running in containers or under another OS account need explicit access to
-the credentials and network. Homebrew tools must be on the agent's `PATH`.
-
-The host kubeconfig uses the existing Talos-issued Kubernetes administrator
-identity (`system:masters`). This is full trusted operator access, with no
-additional agent RBAC binding. `AGENTS.md` requires permanent changes through
-Git/Flux; Kubernetes administrator permissions do not enforce that workflow.
-The existing `os:admin` Talos credential remains independent of Kubernetes auth.
-
-Install or update only cluster access from the repository on Iris:
-
-```sh
-node --test native/iris/cluster-access.test.mjs
-node native/iris/install-cluster-access.mjs
-```
-
-The installer copies the renewal script beneath `~/.local/share/rangoonpulse/iris/`,
-records the primary-node endpoint in `~/.config/rangoonpulse/iris/cluster-access.json`,
-and installs the login LaunchAgent `dev.khzaw.iris.cluster-access`. It runs at login
-and every six hours, checks authenticated API readiness, and renews certificates
-within 30 days of expiry or after authentication failure. It uses the existing
-`~/.talos/config` to obtain fresh credentials directly from the primary node.
-Talos must remain reachable and its administrator certificate must remain valid;
-check that independent certificate with `talosctl config info` before its expiry.
-
-Fresh credentials must pass CA validation, certificate/key matching, certificate
-validity, API readiness, and node-list checks before an atomic replacement of the
-mode-0600 host kubeconfig. Renewal preserves unrelated contexts and the selected
-context. Failures retain the previous file and remove temporary credentials;
-child-process output and credential values are not logged. The ignored
-repository `kubeconfig` is a symlink to the host file, so Make targets and ordinary
-CLI commands use the same credentials. The installer does not restart agent or
-telemetry jobs. Like the telemetry LaunchAgents, renewal requires the Iris login
-session after a reboot.
-
-```sh
-# Ordinary agent commands use the host credentials without environment setup.
-kubectl auth whoami
-kubectl get nodes
-flux get kustomizations -A
-talosctl version --short
-
-# Exercise renewal manually; inspect the periodic job and its sanitized log.
-node ~/.local/share/rangoonpulse/iris/cluster-access.mjs --force
-launchctl print gui/$(id -u)/dev.khzaw.iris.cluster-access
-tail ~/Library/Logs/rangoonpulse/dev.khzaw.iris.cluster-access.log
-```
-
-The watchdog's independent health-check identity below remains separate. Its
-configuration does not consume the operator kubeconfig.
+Native agents use the same tailnet-authenticated kubeconfig and Git-managed RBAC
+profiles as agents on Linux VMs or VPS hosts. See [agent access](./agent-access.md)
+for enrollment, permission checks, and recovery boundaries. This requires no
+macOS-specific credential renewal job and does not change native process supervision.
 
 ## Outside-cluster sentinel and credentials
 
@@ -232,7 +182,7 @@ Credential ownership:
   therefore lives in this document and `docs/secrets-inventory.md`, not a misleading editable UI row.
   To revoke, remove the ClusterRoleBinding immediately; to rotate a compromised token, delete only
   this generated Secret, reconcile `monitoring`, then rerun the deployer. Keep the watchdog on
-  this health-only identity rather than the shared agent administrator kubeconfig.
+  this health-only identity rather than an operator kubeconfig.
   API CA replacement also requires redeployment.
 
 `smoke.mjs` sends clearly marked **TEST FIRING / TEST RESOLVED** messages to both destinations,

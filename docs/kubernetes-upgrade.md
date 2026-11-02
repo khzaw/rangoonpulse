@@ -19,9 +19,11 @@ for the installed Talos minor version, then check the latest patch release of
 each Kubernetes minor in the upgrade path. Upgrade one minor at a time and
 verify the cluster between steps.
 
-Use a checksum-verified `talosctl` matching the installed Talos release. Set
-`KUBECONFIG="$PWD/kubeconfig"` explicitly; a working Talos connection does not
-prove that the shell's default Kubernetes credentials are correct.
+Use a checksum-verified `talosctl` matching the installed Talos release. Select
+a private direct-LAN recovery kubeconfig explicitly. The normal agent auth proxy
+depends on a workload that can restart during an upgrade; see [agent access and
+recovery](./agent-access.md#talos-and-recovery). A working Talos connection does
+not prove that the shell's default Kubernetes credentials are correct.
 
 ## Preserve the recovery state
 
@@ -51,7 +53,7 @@ The node argument identifies the control plane used to orchestrate the upgrade;
 the command updates kubelets on both nodes.
 
 ```sh
-export KUBECONFIG="$PWD/kubeconfig"
+export KUBECONFIG="/private/path/to/recovery-kubeconfig"
 talosctl -n 10.0.0.197 upgrade-k8s --to <next-minor-patch> --dry-run > /private/path/dry-run.log 2>&1
 talosctl -n 10.0.0.197 upgrade-k8s --to <next-minor-patch> > /private/path/upgrade.log 2>&1
 ```

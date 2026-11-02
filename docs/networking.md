@@ -73,6 +73,13 @@ A working share requires agreement between the exposure-control catalog, Tunnel 
 
 LAN clients use the two AdGuard VIPs. Cluster and node DNS intentionally use public upstream resolution rather than depending on the LAN filtering path.
 
+## Kubernetes API Access
+
+External agent hosts use the existing Tailscale operator's authenticated API proxy,
+separately from application ingress. Tailnet device tags map to Git-managed
+Kubernetes RBAC profiles. Joining the tailnet alone does not grant cluster access.
+See [agent access](./agent-access.md) for enrollment and recovery.
+
 ## Mac Mini Edge
 
 `infrastructure/iris-edge/` exposes:

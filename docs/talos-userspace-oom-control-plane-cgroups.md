@@ -10,7 +10,7 @@ last_reviewed: 2026-11-02
 
 Use this when `kubectl` cannot reach the API server but Talos is reachable, or when `talosctl get oomaction` shows the Talos OOM controller killing Kubernetes pod cgroups.
 
-Select the intended Talos context before running commands. On Iris, use the host configuration in [native operations](./iris-operations.md#shared-agent-cluster-access); do not assume a repository-local Talos credential file exists.
+Select the intended Talos context and a private direct-LAN Kubernetes recovery kubeconfig before running commands. Set `KUBECONFIG` to that file for the commands below; the normal agent auth proxy may also be unavailable during an outage. See [agent access and recovery](./agent-access.md#talos-and-recovery). Do not assume a repository-local Talos credential file exists.
 
 ## Failure Boundary
 
@@ -28,7 +28,7 @@ If critical static pods such as `kube-apiserver`, `kube-controller-manager`, or 
 Check whether the Kubernetes API is down but Talos is up:
 
 ```sh
-kubectl --kubeconfig ./kubeconfig get nodes
+kubectl get nodes
 talosctl -e 10.0.0.197 -n 10.0.0.197 service kubelet status
 talosctl -e 10.0.0.197 -n 10.0.0.197 get staticpodstatus -o yaml
 ```
@@ -53,7 +53,7 @@ Healthy static control-plane pods should show finite `memory.max` values, not `m
 1. Confirm the kubeconfig certificate before regenerating anything:
 
    ```sh
-   yq -r '.users[0].user."client-certificate-data"' kubeconfig | base64 -d | openssl x509 -noout -dates
+   yq -r '.users[0].user."client-certificate-data"' "$KUBECONFIG" | base64 -d | openssl x509 -noout -dates
    ```
 
 2. If Talos OOM killed a control-plane static pod, add live resources to the machine config with a no-reboot patch. Example values used for this cluster:
@@ -72,8 +72,8 @@ Healthy static control-plane pods should show finite `memory.max` values, not `m
 4. Verify API health and cgroup limits:
 
    ```sh
-   kubectl --kubeconfig ./kubeconfig get --raw='/readyz?verbose'
-   kubectl --kubeconfig ./kubeconfig -n kube-system get pods -l tier=control-plane -o wide
+   kubectl get --raw='/readyz?verbose'
+   kubectl -n kube-system get pods -l tier=control-plane -o wide
    talosctl -e 10.0.0.197 -n 10.0.0.197 cgroups --preset memory | rg -C 3 'kube-apiserver|kube-controller-manager|kube-scheduler'
    ```
 
@@ -81,7 +81,7 @@ Healthy static control-plane pods should show finite `memory.max` values, not `m
 
    ```sh
    talosctl -e 10.0.0.197 -n 10.0.0.197 get oomaction -o yaml | tail -120
-   kubectl --kubeconfig ./kubeconfig get pods -A --sort-by=.metadata.namespace
+   kubectl get pods -A --sort-by=.metadata.namespace
    ```
 
 ## Alerting Expectations

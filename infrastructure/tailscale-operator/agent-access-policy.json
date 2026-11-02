@@ -1,0 +1,13 @@
+{
+  "tagOwners": {
+    "tag:homelab-agent-operator": ["autogroup:admin"],
+    "tag:homelab-agent-observer": ["autogroup:admin"]
+  },
+  "grants": [
+    {
+      "src": ["tag:homelab-agent-operator", "tag:homelab-agent-observer"],
+      "dst": ["tag:k8s-operator"],
+      "ip": ["tcp:443"]
+    }
+  ]
+}

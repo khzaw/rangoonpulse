@@ -36,7 +36,7 @@ Large node filesystems can retain substantial unused image history before percen
 
 ## Applying The Policy
 
-The full Talos machine configurations contain sensitive material and are intentionally ignored by Git. Update the secure source machine configurations with the YAML policy above whenever they are regenerated. Select the intended Talos context before running commands; on Iris, use the host configuration described in [native operations](./iris-operations.md#shared-agent-cluster-access).
+The full Talos machine configurations contain sensitive material and are intentionally ignored by Git. Update the secure source machine configurations with the YAML policy above whenever they are regenerated. Select the intended Talos context before running commands; [agent access and recovery](./agent-access.md#talos-and-recovery) explains the separate Talos credential boundary.
 
 For a live node whose `machine.kubelet.extraConfig` is currently empty, apply the policy without rebooting:
 

@@ -10,6 +10,7 @@ description: "Use for rangoonpulse private ingress, Tailscale, public-edge, expo
 Open the smallest relevant set:
 
 - `docs/networking.md`
+- `docs/agent-access.md` for external agent Kubernetes access, tailnet tags, and RBAC
 - `docs/lan-access.md`
 - `docs/public-edge-and-exposure-control.md`
 - `docs/share-host-authentication.md`

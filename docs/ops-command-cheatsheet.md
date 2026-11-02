@@ -10,6 +10,9 @@ last_reviewed: 2026-10-25
 
 Run commands from the repository root with the intended kubeconfig and Talos context already selected.
 
+External agents use [tailnet authentication and RBAC profiles](./agent-access.md).
+Select separate direct-LAN recovery credentials for node upgrades or API outages.
+
 Make automatically uses the repository's ignored `kubeconfig` when present, while preserving an explicit `KUBECONFIG`. Without that file, it leaves normal client configuration alone. Direct `kubectl` and `flux` commands need the same context selected explicitly; when using that local file:
 
 ```bash

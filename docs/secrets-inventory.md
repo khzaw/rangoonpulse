@@ -66,7 +66,7 @@ The native Iris watchdog holds a private installed copy of `alertmanager-receive
 
 ## `tailscale`
 
-- `operator-oauth`: Tailscale Operator OAuth credentials
+- `operator-oauth`: Tailscale Operator OAuth credentials; also used by the operator-run agent access policy updater when provider policy-file permissions allow it
 
 ## Maintenance
 
