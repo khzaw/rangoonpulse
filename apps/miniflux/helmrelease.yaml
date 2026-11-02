@@ -46,7 +46,7 @@ spec:
           main:
             image:
               repository: ghcr.io/miniflux/miniflux
-              tag: "2.3.4"
+              tag: "2.3.5"
             env:
               TZ: "${TIMEZONE}"
               BASE_URL: https://rss.${BASE_DOMAIN}
