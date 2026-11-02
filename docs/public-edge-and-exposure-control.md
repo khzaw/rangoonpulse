@@ -71,7 +71,8 @@ To make `exposure` available on the current Node installation's command path, ru
 ```bash
 exposure list --active
 exposure show bookorbit
-exposure enable bookorbit --for 2h --auth none
+exposure enable bookorbit
+exposure enable bookorbit --for 2h
 exposure enable immich --until-disabled --auth cloudflare-access
 exposure disable bookorbit
 exposure disable-all --yes
@@ -79,7 +80,7 @@ exposure audit bookorbit --limit 20
 exposure list --json
 ```
 
-`enable` without flags uses the server's one-hour default and the catalog/server authentication default. `--for` accepts minutes or hours, such as `15m`, `90m`, or `2h`; it cannot be combined with `--until-disabled`. `list --active` uses effective enabled state, including immediate expiry enforcement. `audit [service]` filters the latest 100 server events and displays up to `--limit` entries (default 20). JSON output preserves the API's `services`, `service`, or `entries` envelope, including `disabled` for disable-all. Exit codes are `0` for success, `1` for API/connection failures, and `2` for command usage errors.
+The CLI defaults to `authMode: none` and indefinite duration: `exposure enable bookorbit` enables the share until disabled, and `exposure enable bookorbit --for 2h` adds a two-hour expiry with no authentication. These defaults are sent explicitly to the shared API. Use `--auth cloudflare-access` to require Access. `--for` accepts minutes or hours, such as `15m`, `90m`, or `2h`; it cannot be combined with `--until-disabled`. `list --active` uses effective enabled state, including immediate expiry enforcement. `audit [service]` filters the latest 100 server events and displays up to `--limit` entries (default 20). JSON output preserves the API's `services`, `service`, or `entries` envelope, including `disabled` for disable-all. Exit codes are `0` for success, `1` for API/connection failures, and `2` for command usage errors.
 
 The default origin is `https://controlpanel.khzaw.dev`, reachable over LAN or Tailscale. Override it with `EXPOSURE_CONTROL_URL` or `--url` (which takes precedence). The URL must be an HTTP(S) origin with no embedded credentials, path, query, or fragment. Requests have a ten-second timeout, refuse redirects, and require JSON responses so a login page cannot be mistaken for success.
 

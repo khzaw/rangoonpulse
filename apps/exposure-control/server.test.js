@@ -268,7 +268,12 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
   assert.equal((await exposureRequest(port, "/api/services", "GET", undefined, "share-books.example.test")).json().upstream, true);
   await gui.disable("books");
   assert.equal((await cli("show", "books")).service.enabled, false);
-  await cli("enable", "books", "--until-disabled");
+  const cliDefault = await cli("enable", "books");
+  assert.equal(cliDefault.service.expiresAt, null);
+  assert.equal(cliDefault.service.authMode, "none");
+  assert.equal(cliDefault.service.enabled, true);
+  assert.deepEqual((await gui.list()).services.find((service) => service.id === "books"), cliDefault.service);
+  await cli("enable", "books", "--until-disabled", "--auth", "cloudflare-access");
   assert.equal((await cli("show", "books")).service.authMode, "cloudflare-access");
   assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test")).status, 403);
   assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test",

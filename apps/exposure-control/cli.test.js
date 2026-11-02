@@ -44,8 +44,12 @@ test("help and invalid commands never send requests", async () => {
   }
 });
 
-test("enable honors explicit flags and lets the server supply omitted defaults", async () => {
-  for (const [flags, expected] of [[[], {}], [["--for", "90m", "--auth", "none"], { hours: 1.5, authMode: "none" }],
+test("enable defaults to indefinite and no auth while honoring explicit flags", async () => {
+  for (const [flags, expected] of [[[], { hours: null, authMode: "none" }],
+    [["--for", "2h"], { hours: 2, authMode: "none" }],
+    [["--auth", "cloudflare-access"], { hours: null, authMode: "cloudflare-access" }],
+    [["--until-disabled"], { hours: null, authMode: "none" }],
+    [["--for", "90m", "--auth", "none"], { hours: 1.5, authMode: "none" }],
     [["--until-disabled", "--auth", "cloudflare-access"], { hours: null, authMode: "cloudflare-access" }]]) {
     const result = await run(["enable", "books", ...flags, "--json"], () => ({ service: { id: "books", enabled: true } }));
     assert.equal(result.code, 0);

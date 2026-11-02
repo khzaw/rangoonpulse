@@ -7,7 +7,7 @@ const HELP = `Usage: exposure <command> [service] [options]
 Commands:
   list                         List configured shares
   show <service>               Inspect one share
-  enable <service>             Enable with the server's default duration and auth
+  enable <service>             Enable indefinitely with no auth unless overridden
   disable <service>            Disable one share
   disable-all --yes            Disable every share
   audit [service]              Show recent audit events (newest first)
@@ -15,7 +15,7 @@ Commands:
 Options:
   --for <duration>             Enable for 15m to 24h, in 15-minute increments
   --until-disabled             Enable without expiry
-  --auth <mode>                none or cloudflare-access
+  --auth <mode>                none (default) or cloudflare-access
   --active                     List only enabled shares
   --limit <count>              Show 1 to 100 audit events (default: 20)
   --json                       Print machine-readable JSON
@@ -24,7 +24,8 @@ Options:
 
 Default API: https://controlpanel.khzaw.dev (LAN or Tailscale required)
 Examples:
-  exposure enable bookorbit --for 2h --auth none
+  exposure enable bookorbit
+  exposure enable bookorbit --for 2h
   exposure enable immich --until-disabled --auth cloudflare-access
   exposure list --active --json
 `;
@@ -72,7 +73,7 @@ function parseCommand(argv) {
   if (values.auth !== undefined && !["none", "cloudflare-access"].includes(values.auth)) {
     throw new UsageError("--auth must be none or cloudflare-access");
   }
-  const options = {};
+  const options = { hours: null, authMode: "none" };
   if (values.for !== undefined) options.hours = durationHours(values.for);
   if (values["until-disabled"]) options.hours = null;
   if (values.auth !== undefined) options.authMode = values.auth;
