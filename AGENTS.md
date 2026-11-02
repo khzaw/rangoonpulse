@@ -54,6 +54,7 @@ New apps must meet `docs/service-onboarding.md`: dashboard/monitor, update manag
 
 ## Documentation Standard
 
+- Keep `README.md` a public-facing project overview with architecture, services, hardware, and screenshots. Host aliases, credential paths, agent access setup, and operator procedures belong in the owning docs or agent guidance.
 - Docs describe the current implementation, operating contract, and non-obvious constraints that still apply.
 - Do not keep completed plans, migration checklists, incident timelines, superseded options, or retired-service notes in the current corpus.
 - Retain past rationale only when it is necessary to explain a present-day tradeoff. State the active constraint first and keep the history to the minimum needed.

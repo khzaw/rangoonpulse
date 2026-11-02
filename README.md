@@ -20,7 +20,7 @@ Private ingress, permanent public sites, and temporary shares follow three disti
 flowchart TB
     accTitle: Homelab access paths
     accDescr: Private clients use MetalLB and ingress-nginx, while public sites and temporary shares use Cloudflare Tunnel.
-    private["LAN / Tailscale clients"] --> vip["MetalLB ingress VIP<br/>10.0.0.231"]
+    private["LAN / Tailscale clients"] --> vip["MetalLB ingress VIP"]
     vip --> nginx["ingress-nginx<br/>Private host routing + TLS"]
     nginx --> apps["Private app Services"]
 
@@ -40,18 +40,18 @@ flowchart TB
 
 The public routes normally bypass MetalLB and ingress-nginx. Most canonical `*.khzaw.dev` app hosts stay private; a share needs matching DNS, Tunnel, and exposure-control configuration. See [networking](docs/networking.md) and [public edge and exposure control](docs/public-edge-and-exposure-control.md).
 
-Dual AdGuard Home instances serve LAN DNS at `10.0.0.233` and `10.0.0.234`. Cluster and node DNS use separate public upstreams so they do not depend on the LAN filtering path.
+Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate public upstreams so they do not depend on the LAN filtering path.
 
 ### Hardware
 
-| Node | Role | Architecture | Hardware | Address |
-|---|---|---|---|---|
-| `talos-7nf-osf` | Control plane and primary workloads | `amd64` | 6 CPU cores · 32 GB RAM · Intel iGPU for media | `10.0.0.197` |
-| `talos-uua-g6r` | Utility workloads | `arm64` | Raspberry Pi · 4 CPU cores · 8 GB RAM | `10.0.0.38` |
+| Machine | Role | Architecture | Hardware |
+|---|---|---|---|
+| Primary server | Control plane and primary workloads | `amd64` | 6 CPU cores · 32 GB RAM · Intel iGPU for media |
+| Raspberry Pi | Utility workloads | `arm64` | 4 CPU cores · 8 GB RAM |
 
-TrueNAS at `10.0.0.210` provides shared storage. The Mac mini at `10.0.0.66` runs OpenClaw and Hermes as native macOS processes, with Kubernetes proxying their HTTPS hosts through the dedicated edge VIP `10.0.0.235`. Iris SSH uses that same VIP through a separate LoadBalancer Service.
+TrueNAS provides shared storage. A Mac mini hosts native agent services and independent monitoring outside the Kubernetes cluster.
 
-Node names, addresses, and other shared constants live in [cluster settings](flux/cluster-settings.yaml). Query Kubernetes for live health and versions rather than relying on a README status snapshot.
+Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); the [architecture guide](docs/architecture.md) explains how the components fit together.
 
 ### Storage
 
@@ -100,7 +100,7 @@ This is the desired-state overview. [The Flux reconciliation tree](flux/kustomiz
 | **Networking** | ingress-nginx, MetalLB, cert-manager, ExternalDNS, Tailscale Operator and subnet/exit Connector |
 | **DNS and public edge** | Dual AdGuard Home, Cloudflare Tunnel, exposure-control |
 | **Observability** | Prometheus, Alertmanager, Grafana, node exporter, Metrics Server, Uptime Kuma |
-| **Operations** | Resource Advisor, operator cockpit, native Iris telemetry, TrueNAS power estimates, and independent cluster sentinel |
+| **Operations** | Resource Advisor, operator cockpit, host telemetry, NAS power estimates, and independent cluster sentinel |
 | **Storage** | TrueNAS, democratic-csi, local-path provisioner |
 
 ### Media and library
@@ -125,8 +125,6 @@ This is the desired-state overview. [The Flux reconciliation tree](flux/kustomiz
 | **Subtitles** | Bazarr, Subarr |
 | **Playback analytics** | Tracerr / Tracearr |
 | **TV and devices** | Nodecast TV, Tunarr, iSponsorBlockTV |
-
-Transmission's optional VPN sidecar still contains placeholder network material; direct mode is the safe default. See [the routing contract](docs/transmission-optional-vpn.md).
 
 ### Personal apps and tools
 
@@ -237,7 +235,7 @@ Saved UI captures, not live status. The Dynacat views were captured on 27 Octobe
 ├── docs/                         Current operating guidance
 ├── .agents/skills/               Repository procedures and safety gates
 ├── scripts/                      Validation and operator tooling
-├── native/iris/                  Native macOS telemetry and cluster sentinel
+├── native/                       Native host integrations
 └── AGENTS.md                     Agent session entrypoint
 ```
 
@@ -245,53 +243,13 @@ Talos node lifecycle is managed separately from Flux; generated machine configur
 
 ## Operations
 
-Start with [AGENTS.md](AGENTS.md) and the [docs index](docs/README.md). Shared settings belong in [cluster settings](flux/cluster-settings.yaml); literal runtime placeholders use `$${VAR}` when Flux substitution is active.
+Operational procedures live in the [docs index](docs/README.md), including [day-two commands](docs/ops-command-cheatsheet.md), [image promotion](docs/static-site-deployment.md), and [Kubernetes upgrades](docs/kubernetes-upgrade.md). [AGENTS.md](AGENTS.md) describes the repository workflow for coding agents.
 
-### Common commands
+To validate the repository locally:
 
 ```bash
-# Validate the repository
 make validate-all
-
-# Flux status
-flux get sources all -A
-flux get kustomizations -A
-flux get helmreleases -A
-
-# Reconcile one component
-flux reconcile kustomization <name> -n flux-system --with-source
-
-# Cluster status
-kubectl get nodes -o wide
-kubectl get pods -A
-kubectl get events -A --sort-by=.lastTimestamp
-kubectl top nodes
 ```
-
-See the [operations cheatsheet](docs/ops-command-cheatsheet.md) for day-two commands.
-
-### Self-built image promotion
-
-Blog, MMCal, Erica Knight, Interview Prep, Retirement, and Rangoon Mapper each have an independent Flux image-promotion flow. Normal promotion happens asynchronously after the source repository publishes an image. For immediate promotion:
-
-```bash
-make deploy-blog
-make deploy-mmcal
-make deploy-ericaknight
-make deploy-itvp
-make deploy-retirement
-make deploy-rangoon-mapper
-```
-
-Image automation can commit to remote `master`; fetch and fast-forward after running a deploy target.
-
-### Operating constraints
-
-- Keep TrueNAS Tailscale **Accept Routes** disabled to avoid asymmetric NFS/API routing.
-- ExternalDNS uses explicit hostname annotations and the legacy annotation-prefix compatibility flag; migrate annotations atomically before removing it.
-- The generated Flux controller manifest is outside ordinary root reconciliation and requires a controlled apply during controller upgrades.
-- Capacity snapshots live only on the runtime `capacity-state` branch, which must never be merged into `master`.
-- New services include the integrations in [service onboarding](docs/service-onboarding.md).
 
 ## Documentation
 
@@ -305,6 +263,5 @@ Image automation can commit to remote `master`; fetch and fast-forward after run
 | [CPU headroom](docs/cpu-headroom-validation.md) | Git/CI and live capacity preflights |
 | [Data protection](docs/data-protection.md) | Backup coverage, recovery, and gaps |
 | [Secrets](docs/secrets-management.md) | SOPS, Flux, cockpit editing, and key lifecycle |
-| [Iris operations](docs/iris-operations.md) | Native macOS processes, readiness, and independent monitoring |
 
 Docs describe the current implementation and operating contract. Superseded designs, completed plans, and incident chronology remain in Git history.
