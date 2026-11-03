@@ -39,11 +39,12 @@ jobs:
           version: v1.37.2
 
       - name: Validate repository
-        run: make validate-all
+        run: |
+          python -m pip install PyYAML==6.0.3
+          make validate-all
 
       - name: Test power and tariff PromQL
         run: |
-          python -m pip install PyYAML==6.0.3
           curl --fail --silent --show-error --location --retry 3 \
             https://github.com/prometheus/prometheus/releases/download/v3.15.0/prometheus-3.15.0.linux-amd64.tar.gz \
             | tar -xz -C "$RUNNER_TEMP" prometheus-3.15.0.linux-amd64/promtool
@@ -76,7 +77,6 @@ jobs:
         env:
           CAPACITY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          python -m pip install PyYAML==6.0.3
           base="$CAPACITY_BASE"
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
             base="HEAD^"
