@@ -122,6 +122,21 @@ spec:
         main:
           containers:
             main:
+              # -e fails on server errors without a shell/grep pipeline.
+              # Keep the chart's probe timings and failure thresholds.
+              probes:
+                liveness:
+                  spec:
+                    exec:
+                      command: [valkey-cli, -e, PING]
+                readiness:
+                  spec:
+                    exec:
+                      command: [valkey-cli, -e, PING]
+                startup:
+                  spec:
+                    exec:
+                      command: [valkey-cli, -e, PING]
               resources:
                 requests:
                   cpu: "50m"
