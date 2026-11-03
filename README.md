@@ -236,6 +236,7 @@ Validation also builds and tests the native Rust exposure CLI. Rustup selects th
 | [Docs index](docs/README.md) | All current operating guidance |
 | [Architecture](docs/architecture.md) | Sources of truth and cross-cutting configuration |
 | [Networking](docs/networking.md) | Private ingress, public Tunnel, DNS, and edge exceptions |
+| [Exposure CLI](docs/exposure-cli.md) | CLI commands, defaults, and kubectl usage without a checkout |
 | [AdGuard DNS](docs/adguard-dns-stack-overview.md) | Dual DNS architecture and rollout safety |
 | [Resource Advisor](docs/resource-advisor.md) | Reporting, tuning policy, and apply-PR automation |
 | [CPU headroom](docs/cpu-headroom-validation.md) | Git/CI and live capacity preflights |

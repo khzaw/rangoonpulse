@@ -24,6 +24,7 @@ All repository documentation is public. These guides retain technical context ne
 - [`adguard-dns-stack-overview.md`](./adguard-dns-stack-overview.md): dual AdGuard architecture and rollout safety
 - [`dns-reliability.md`](./dns-reliability.md): cluster DNS separation and Flux timeout diagnosis
 - [`public-edge-and-exposure-control.md`](./public-edge-and-exposure-control.md): permanent-public and temporary-share routing
+- [`exposure-cli.md`](./exposure-cli.md): native CLI usage, kubectl quick start, share settings, JSON output, and troubleshooting
 - [`share-host-authentication.md`](./share-host-authentication.md): share-host authentication trust boundary
 - [`travel-center.md`](./travel-center.md): remote-readiness probes and limitations
 - [`router-dns-rebind-private-a-records.md`](./router-dns-rebind-private-a-records.md): private DNS and rebind protection
