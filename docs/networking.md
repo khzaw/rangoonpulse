@@ -3,7 +3,7 @@ title: Networking and Access Topology
 summary: Current private ingress, public Tunnel, temporary-share, DNS, and dedicated-edge paths.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-03
 ---
 
 # Networking and Access Topology
@@ -35,6 +35,12 @@ LAN or Tailscale client
 ```
 
 Tailscale remote access uses `infrastructure/tailscale-subnet-router/connector.yaml`. The Connector is also an exit node. Keep the narrow `/32` advertisements unless broad LAN routing is an explicit design change.
+
+MetalLB uses native speakers for Layer 2 announcements. Both `speaker.frr.enabled`
+and `frrk8s.enabled` are explicitly disabled in `infrastructure/metallb/helmrelease.yaml`;
+this topology needs no FRR routing pods. `infrastructure/metallb-config/` owns the
+address pool and L2 advertisement. Introducing BGP requires reviewing the backend
+choice as well as adding peer and advertisement configuration.
 
 ### Permanently Public Sites
 

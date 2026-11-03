@@ -38,8 +38,8 @@ spec:
               tag: pr-1300
             env:
               TZ: "${TIMEZONE}"
-              LOG_LEVEL: "debug"
-              LOG_HTML: "true"
+              LOG_LEVEL: "info"
+              LOG_HTML: "false"
             resources:
               requests:
                 cpu: "84m"

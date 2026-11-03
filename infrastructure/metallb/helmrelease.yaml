@@ -31,6 +31,8 @@ spec:
           cpu: 200m
           memory: 256Mi
     speaker:
+      frr:
+        enabled: false
       resources:
         requests:
           cpu: 20m
@@ -38,50 +40,6 @@ spec:
         limits:
           cpu: 200m
           memory: 256Mi
-    frr-k8s:
-      frrk8s:
-        livenessProbe:
-          failureThreshold: 12
-          timeoutSeconds: 5
-        readinessProbe:
-          failureThreshold: 6
-          timeoutSeconds: 5
-        resources:
-          requests:
-            cpu: 20m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
-        frr:
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
-        reloader:
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 100m
-              memory: 128Mi
-        frrMetrics:
-          resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 256Mi
-        frrStatus:
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 100m
-              memory: 128Mi
+    # Layer 2 announcements use native speakers; no BGP routing daemon is needed.
+    frrk8s:
+      enabled: false
