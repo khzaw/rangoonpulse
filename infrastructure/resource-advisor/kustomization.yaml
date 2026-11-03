@@ -20,6 +20,7 @@ configMapGenerator:
   - name: resource-advisor-script
     files:
       - advisor.py
+      - restart_policy.py
       - capacity.py
       - capacity_snapshot.py
       - exporter.py

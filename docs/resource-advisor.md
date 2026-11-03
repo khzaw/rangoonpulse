@@ -3,7 +3,7 @@ title: Resource Advisor
 summary: Current reporting, recommendation, apply-PR, exporter, and control-panel contract.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-03
 ---
 
 # Resource Advisor
@@ -46,12 +46,20 @@ Inspect `advisor.py` and the job environment for exact policy. Current defaults 
 - A maximum 25% adjustment step; deadband of 10%, 25m CPU, and 64Mi memory.
 - Apply minimum total savings of 50m CPU or 256Mi memory across replicas; minimum growth of 25m CPU or 128Mi memory, including limit growth.
 - No automatic limit downsizing; mixed proposals preserve current shrinking request dimensions while keeping eligible growth.
-- Restart activity prevents memory downscaling; CPU throttling guards prevent artificially low observed usage from looking safe to downsize.
+- Unexplained restart activity prevents memory downscaling in the report and all reductions in the apply planner. Missing restart telemetry also blocks reductions, without bypassing upsize maturity. CPU throttling guards prevent artificially low observed usage from looking safe to downsize.
 - Service profiles preserve interactive request floors for bursty workloads. Critical/manual services can exclude downsizing; RomM is upsize-only until representative scans establish a floor.
 
 BentoPDF uses an absolute HPA CPU target of `35m`, so request tuning does not alter its scaling threshold. Percentage targets and automatic request tuning must be designed together for other autoscaled services.
 
 Prometheus must preserve the analysis window: its node-local TSDB, retention duration/size, and WAL compression are declared in `infrastructure/monitoring/helmrelease.yaml`. Retention size can prune history early; missing history must remain visible as immature data.
+
+### Confirmed Node Reboots
+
+`restart_policy.py` can exempt a single restart per current pod/container only when all contributing historical restart series match live pod UIDs. The node must be ready, its exporter history must show a changed boot time, and the container must have existed before that boot and become ready within ten minutes. Its restart counter must be zero immediately before the boot, have no observed resets, and match the single live restart. Multiple restarts, retired pods, missing or conflicting evidence remain guarded.
+
+A successful `Completed/0` termination must occur from two minutes before the boot through recovery. The specific runtime lost-status marker `Unknown/255` must occur after boot and share an exact termination timestamp across at least three independent controller owners on that node. Other unknown reasons, OOMs, and ordinary error exits never qualify, including crashes during recovery.
+
+Raw `restarts_window` remains unchanged. Each row's `restart_assessment` records the decision and, for exemptions, pod identity, boot evidence, and the live snapshot. The Tuning details show the assessment separately from historical and live counts. Before selecting a reduction, the planner rechecks pod identities, readiness, node boot IDs, restart counts, and container timestamps; changes defer it until a fresh report. Reboot exemptions do not bypass the 14-day maturity window, service floors, or capacity policy.
 
 ## Node Capacity And Headroom
 

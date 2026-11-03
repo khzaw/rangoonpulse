@@ -12,6 +12,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from restart_policy import RestartClassifier, evidence_unchanged
+
 
 APP_TEMPLATE_RELEASE_FILE_MAP = {
     "adguard": "apps/adguard/primary/helmrelease.yaml",
@@ -580,7 +582,7 @@ class PromClient:
     def __init__(self, base_url: str) -> None:
         self.base = base_url.rstrip("/")
 
-    def query_scalar(self, query: str) -> float | None:
+    def query_vector(self, query: str) -> list[dict] | None:
         encoded = urllib.parse.urlencode({"query": query})
         url = f"{self.base}/api/v1/query?{encoded}"
         try:
@@ -598,7 +600,13 @@ class PromClient:
             log(f"Prometheus returned non-success: {payload}")
             return None
 
-        results = payload.get("data", {}).get("result", [])
+        data = payload.get("data", {})
+        if data.get("resultType") != "vector" or not isinstance(data.get("result"), list):
+            return None
+        return data["result"]
+
+    def query_scalar(self, query: str) -> float | None:
+        results = self.query_vector(query)
         if not results:
             return None
 
@@ -607,9 +615,12 @@ class PromClient:
             value = item.get("value", [])
             if len(value) >= 2:
                 try:
-                    values.append(float(value[1]))
-                except ValueError:
-                    continue
+                    parsed = float(value[1])
+                    if not math.isfinite(parsed):
+                        return None
+                    values.append(parsed)
+                except (TypeError, ValueError):
+                    return None
 
         if not values:
             return None
@@ -1066,9 +1077,12 @@ def build_report() -> tuple[dict, str]:
 
     coverage_days = estimate_coverage_days(prom)
 
+    nodes = kube.list_nodes()
+    restart_classifier = RestartClassifier(prom, nodes, kube.list_pods(), metrics_window)
+
     alloc_cpu_m = 0.0
     alloc_mem_mi = 0.0
-    for node in kube.list_nodes():
+    for node in nodes:
         alloc = node.get("status", {}).get("allocatable", {})
         alloc_cpu_m += parse_cpu_to_m(alloc.get("cpu"))
         alloc_mem_mi += parse_mem_to_mi(alloc.get("memory"))
@@ -1134,7 +1148,16 @@ def build_report() -> tuple[dict, str]:
 
                     cpu_p95_cores = prom.query_scalar(cpu_query)
                     mem_p95_bytes = prom.query_scalar(mem_query)
-                    restart_lookback = prom.query_scalar(restart_query) or 0.0
+                    restart_lookback = prom.query_scalar(restart_query)
+                    restart_assessment = restart_classifier.assess(
+                        namespace, workload_name, kind, container_name, pod_regex, restart_lookback,
+                    )
+                    restart_notes = {
+                        "guarded": ["restart_guard"],
+                        "unavailable": ["restart_metrics_unavailable"],
+                        "node_reboot": ["node_reboot_restarts_excluded"],
+                    }.get(restart_assessment["status"], [])
+                    reported_restarts = round(restart_lookback, 2) if restart_lookback is not None else None
                     cpu_throttled_periods = prom.query_scalar(throttled_periods_query) or 0.0
                     cpu_periods = prom.query_scalar(cpu_periods_query) or 0.0
                     cpu_throttle_ratio = cpu_throttled_periods / cpu_periods if cpu_periods > 0.0 else 0.0
@@ -1158,7 +1181,8 @@ def build_report() -> tuple[dict, str]:
                                 "release": release,
                                 "replicas": replicas,
                                 "container": container_name,
-                                "restarts_window": round(restart_lookback, 2),
+                                "restarts_window": reported_restarts,
+                                "restart_assessment": restart_assessment,
                                 "cpu_p95_m": None,
                                 "mem_p95_mi": None,
                                 "cpu_throttle_ratio": round(cpu_throttle_ratio, 3),
@@ -1172,7 +1196,7 @@ def build_report() -> tuple[dict, str]:
                                     "limits_memory": 0.0,
                                 },
                                 "action": "no-change",
-                                "notes": ["awaiting_metrics"],
+                                "notes": ["awaiting_metrics", *restart_notes],
                             }
                         )
                         continue
@@ -1187,7 +1211,7 @@ def build_report() -> tuple[dict, str]:
                     target_lim_cpu = max(target_req_cpu * 2.0, cpu_p95_m * (1.0 + limit_buffer_percent / 100.0))
                     target_lim_mem = max(target_req_mem * 1.5, mem_p95_mi * (1.0 + limit_buffer_percent / 100.0))
 
-                    notes: list[str] = []
+                    notes: list[str] = list(restart_notes)
                     cpu_throttle_guard = (
                         cur_lim_cpu > 0.0
                         and cpu_throttle_ratio >= cpu_throttle_ratio_upsize_threshold
@@ -1205,12 +1229,11 @@ def build_report() -> tuple[dict, str]:
                     rec_lim_cpu = recommend(cur_lim_cpu, target_lim_cpu, max_step_percent)
                     rec_lim_mem = recommend(cur_lim_mem, target_lim_mem, max_step_percent)
 
-                    if restart_lookback > 0:
+                    if restart_assessment["status"] in ("guarded", "unavailable"):
                         if rec_req_mem < cur_req_mem:
                             rec_req_mem = cur_req_mem
                         if rec_lim_mem < cur_lim_mem:
                             rec_lim_mem = cur_lim_mem
-                        notes.append("restart_guard")
 
                     rec_req_cpu, rec_req_mem, rec_lim_cpu, rec_lim_mem = apply_service_tuning_policy(
                         release,
@@ -1354,7 +1377,8 @@ def build_report() -> tuple[dict, str]:
                             "release": release,
                             "replicas": replicas,
                             "container": container_name,
-                            "restarts_window": round(restart_lookback, 2),
+                            "restarts_window": reported_restarts,
+                            "restart_assessment": restart_assessment,
                             "cpu_p95_m": round(cpu_p95_m, 1),
                             "mem_p95_mi": round(mem_p95_mi, 1),
                             "cpu_throttle_ratio": round(cpu_throttle_ratio, 3),
@@ -1393,7 +1417,7 @@ def build_report() -> tuple[dict, str]:
     recommendations.sort(
         key=lambda item: (
             item.get("action") != "upsize",
-            -(item.get("restarts_window", 0.0)),
+            -(item.get("restarts_window") or 0.0),
             -max(
                 abs(item.get("delta_percent", {}).get("requests_memory", 0.0)),
                 abs(item.get("delta_percent", {}).get("limits_memory", 0.0)),
@@ -1894,6 +1918,16 @@ def build_apply_plan(report: dict) -> tuple[dict, str]:
         if "restart_guard" in notes:
             skipped.append({"reason": "restart_guard_blocks_downsize", "release": release, "container": container})
             continue
+        if "restart_metrics_unavailable" in notes:
+            skipped.append({"reason": "restart_metrics_unavailable", "release": release, "container": container})
+            continue
+        assessment = rec.get("restart_assessment") or {}
+        if "node_reboot_restarts_excluded" in notes or assessment.get("status") == "node_reboot":
+            if not evidence_unchanged(
+                assessment, nodes, pods, rec.get("namespace"), rec.get("workload"), rec.get("kind"), container,
+            ):
+                skipped.append({"reason": "restart_evidence_changed", "release": release, "container": container})
+                continue
         if "downscale_excluded" in notes and release in downscale_exclude:
             skipped.append({"reason": "downscale_excluded", "release": release, "container": container})
             continue

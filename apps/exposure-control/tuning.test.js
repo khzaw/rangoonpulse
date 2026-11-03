@@ -258,6 +258,10 @@ test('rendered evidence distinguishes zero from absent metrics and history from 
   assert.match(html, /8 · 14d/);
   assert.match(html, /Current live restarts/);
   assert.match(html, /0 · 1 matched pod/);
+  data.report.recommendations[0].restart_assessment = { status: 'node_reboot', reason: 'confirmed_node_reboot', excluded_restarts: 1 };
+  const reboot = tuning.renderRow(tuning.buildModel(data).rows[0], tuning.buildModel(data));
+  assert.match(reboot, /confirmed node reboot · 1 reboot restart\(s\) excluded/);
+  assert.match(reboot, /8 · 14d/, 'keep raw history visible alongside the exemption');
   assert.match(html, /Apply preflight/);
   assert.match(html, /100m/);
   assert.doesNotMatch(html, /750m|75m/);

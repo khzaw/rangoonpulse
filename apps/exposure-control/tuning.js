@@ -21,6 +21,8 @@
     upsize_below_apply_floor: 'Increase is below the minimum PR change size.',
     downsize_below_apply_floor: 'Reduction is below the minimum PR change size.',
     restart_guard_blocks_downsize: 'Restart activity prevents automatic reductions.',
+    restart_metrics_unavailable: 'Restart history is unavailable; reductions are deferred.',
+    restart_evidence_changed: 'Live restart evidence changed; refresh the report before reducing resources.',
     max_changes_reached: 'This run has reached its change limit.',
     node_capacity_block: 'Would exceed node capacity with current placement.',
     downsize_with_mature_data: 'Enough history supports a reduction.',
@@ -207,6 +209,8 @@
       field('Observed CPU p95', escape(measured(report.cpu_p95_m, 'm'))) +
       field('Observed memory p95', escape(measured(report.mem_p95_mi, 'Mi'))) +
       field('Historical restarts', escape(measured(report.restarts_window)) + ' · ' + escape(model.data.report?.metricsWindow || 'unknown window')) +
+      field('Restart assessment', report.restart_assessment?.status ? escape(humanize(report.restart_assessment.reason)) +
+        ' · ' + escape(measured(report.restart_assessment.excluded_restarts)) + ' reboot restart(s) excluded' : 'Not recorded') +
       field('Current live restarts', escape(measured(report.current_restarts)) + ' · ' + escape(measured(report.matched_pods)) + ' matched pod(s)') +
       field('Replicas', escape(measured(source.replicas))) +
       field('Notes', row.notes.length ? row.notes.map((note) => escape(humanize(note))).join(' · ') : 'None reported') +
