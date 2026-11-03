@@ -55,7 +55,7 @@ Prometheus must preserve the analysis window: its node-local TSDB, retention dur
 
 ### Confirmed Node Reboots
 
-`restart_policy.py` can exempt a single restart per current pod/container only when all contributing historical restart series match live pod UIDs. The node must be ready, its exporter history must show a changed boot time, and the container must have existed before that boot and become ready within ten minutes. Its restart counter must be zero immediately before the boot, have no observed resets, and match the single live restart. Multiple restarts, retired pods, missing or conflicting evidence remain guarded.
+`restart_policy.py` can exempt a single restart per current pod/container only when all contributing historical restart series match live pod UIDs. The node must be ready and its exporter history must show a changed boot time. The container must have existed before that boot, restarted within ten minutes, and be running and ready at report time. Its restart counter must be zero immediately before the boot, have no observed resets, and match the single live restart. Multiple restarts, retired pods, missing or conflicting evidence remain guarded.
 
 A successful `Completed/0` termination must occur from two minutes before the boot through recovery. The specific runtime lost-status marker `Unknown/255` must occur after boot and share an exact termination timestamp across at least three independent controller owners on that node. Other unknown reasons, OOMs, and ordinary error exits never qualify, including crashes during recovery.
 
