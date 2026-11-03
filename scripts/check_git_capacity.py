@@ -61,14 +61,26 @@ def merge(a, b):
 
 def chart_inputs(release, objects):
     spec = release['spec']
-    if spec.get('postRenderers') or spec.get('chartRef'):
-        raise ValueError('Capacity rendering requires explicit support for postRenderers/chartRef; provide rendered workloads for review')
+    if spec.get('chartRef'):
+        raise ValueError('Capacity rendering requires explicit support for chartRef; provide rendered workloads for review')
     chart = spec['chart']['spec']
     ref = chart['sourceRef']
     source = objects[(ref['kind'], ref.get('namespace', release['metadata'].get('namespace', 'default')), ref['name'])]
     values = {}
     for ref in spec.get('valuesFrom', []):
         if ref.get('kind', 'Secret') != 'ConfigMap' or ref.get('targetPath'):
+            # In this audited chart version, these two scalar credentials only
+            # populate the driver Secret and its checksum. They cannot control
+            # workload capacity. Never generalize this to arbitrary Secret values.
+            if (ref.get('kind', 'Secret') == 'Secret'
+                    and chart['chart'] == 'democratic-csi'
+                    and chart.get('version') == '0.15.1'
+                    and source['spec'].get('url', '').rstrip('/') == 'https://democratic-csi.github.io/charts'
+                    and ref.get('targetPath') in {
+                        'driver.config.httpConnection.username',
+                        'driver.config.httpConnection.password',
+                    }):
+                continue
             raise ValueError('Capacity rendering cannot resolve Secret valuesFrom or targetPath; use Git-managed ConfigMap values')
         key = ('ConfigMap', release['metadata'].get('namespace', 'default'), ref['name'])
         obj = objects.get(key)
@@ -80,6 +92,33 @@ def chart_inputs(release, objects):
         import yaml
         values = merge(values, yaml.safe_load(text) or {})
     return chart, source['spec'], merge(values, spec.get('values', {}))
+
+
+def post_render(raw, renderers):
+    """Apply Flux's inline Kustomize patches/images before inspecting capacity."""
+    for renderer in renderers:
+        if set(renderer) != {'kustomize'} or set(renderer['kustomize']) - {'patches', 'images'}:
+            raise ValueError('Unsupported Helm postRenderer; only inline Kustomize patches/images are supported')
+        settings = renderer['kustomize']
+        for patch in settings.get('patches', []):
+            if not patch.get('patch') or set(patch) - {'patch', 'target'}:
+                raise ValueError('Helm postRenderer patches must be inline')
+        # Helm hooks are not passed through Flux post-renderers.
+        objects = load_yaml(raw)
+        hooks = [o for o in objects if o.get('metadata', {}).get('annotations', {}).get('helm.sh/hook')]
+        resources = [o for o in objects if o not in hooks]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'resources.yaml').write_text('\n---\n'.join(json.dumps(o) for o in resources))
+            (root / 'kustomization.yaml').write_text(json.dumps({
+                'apiVersion': 'kustomize.config.k8s.io/v1beta1',
+                'kind': 'Kustomization',
+                'resources': ['resources.yaml'],
+                **settings,
+            }))
+            raw = run('kubectl', 'kustomize', folder)
+        raw += '\n---\n' + '\n---\n'.join(json.dumps(o) for o in hooks)
+    return raw
 
 
 def render_release(release, objects):
@@ -98,7 +137,8 @@ def render_release(release, objects):
         config = Path(folder) / 'repositories.yaml'
         config.write_text('repositories: []\n')
         args.extend(['--repository-config', str(config), '--repository-cache', folder])
-        objects = load_yaml(run(*args, input=json.dumps(values).encode()))
+        raw = run(*args, input=json.dumps(values).encode())
+        objects = load_yaml(post_render(raw, spec.get('postRenderers', [])))
     candidates = [obj for obj in objects if obj['kind'] in WORKLOADS or (
         obj['kind'] not in {'PersistentVolumeClaim', 'HorizontalPodAutoscaler', 'VerticalPodAutoscaler'}
         and obj.get('spec', {}).get('resources')

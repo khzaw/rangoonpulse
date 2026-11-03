@@ -3,7 +3,7 @@ title: CPU Headroom Validation
 summary: Git and CI capacity checks for resource edits, new workloads, and replica scaling without live admission enforcement.
 status: active
 owner: homelab
-last_reviewed: 2026-10-31
+last_reviewed: 2026-11-04
 ---
 
 # CPU Headroom Validation
@@ -34,7 +34,14 @@ validate their capacity separately before switching modes or changing their reso
 CI compares a PR to its base, or a master push to its previous commit. Changed
 workloads are checked together, so two services cannot independently spend the
 same snapshot headroom. Unmerged or unfinished downsizes cannot pay for growth.
-Unsupported Helm post-renderers, chartRef, and Secret-backed values fail validation.
+Inline Kustomize post-renderer patches and image substitutions are applied in order
+before comparing workloads; Helm hooks remain unpatched, matching Flux. Other
+post-renderers and chartRef fail validation. Secret-backed values also fail except
+for the audited `democratic-csi` chart `0.15.1` from its official chart repository:
+`driver.config.httpConnection.username` and `.password` only populate the driver
+Secret and its checksum, so the capacity render omits those credentials. Other
+paths, chart versions, and sources still fail closed. Re-audit the chart templates
+before extending that exception.
 Operator CRs with resource fields may pass only when their entire rendered objects
 are identical in both revisions. New or changed operator objects, including
 replica, placement, or resource-field removal, fail validation; add explicit

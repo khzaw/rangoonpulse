@@ -3,7 +3,7 @@ title: TrueNAS Networking and CSI Recovery
 summary: Current asymmetric-routing constraint, NFS settings, management-plane refresh, and diagnostic split.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-04
 ---
 
 # TrueNAS Networking and CSI Recovery
@@ -17,6 +17,25 @@ last_reviewed: 2026-10-25
 - Monitoring alerts cover TrueNAS and CSI management failures.
 
 Accepting Tailscale routes on the NAS can send replies for cluster-originated NFS/API traffic through the wrong interface. The resulting asymmetric path looks like a storage outage even when the NAS and datasets are healthy.
+
+## Node Health Checks
+
+The HDD registrar uses its built-in `/healthz` endpoint on `127.0.0.1:9809`.
+The node pods use host networking, so the endpoint binds only to loopback and
+the kubelet probe explicitly targets that address. Reserve a distinct port for
+each driver running on the same node.
+
+The HTTP check verifies that the registration socket exists and answers the
+registrar RPC. It runs every ten seconds with the existing one-second timeout
+and three-failure threshold. The chart's deprecated
+`--mode=kubelet-registration-probe` only exits successfully and incurs a fresh
+process launch on each check. The CSI driver's separate liveness check remains
+enabled.
+
+The HDD cleanup container sleeps continuously; its chart-provided `preStop`
+socket cleanup is preserved. Helm post-renderers own these two overrides because
+chart `0.15.1` hardcodes the probe and idle loop. On chart upgrades, render and
+verify both overrides, the cleanup hook, loopback listeners, and node registration.
 
 ## Diagnose By Failure Boundary
 
