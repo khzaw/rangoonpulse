@@ -3,7 +3,7 @@ title: AdGuard DNS Stack: Router Setup and Architecture
 summary: Current operating guidance for AdGuard DNS Stack: Router Setup and Architecture.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-03
 ---
 
 # AdGuard DNS Stack: Router Setup and Architecture
@@ -110,6 +110,27 @@ Startup enforces DNS keys in
 - `dns.upstream_timeout: 3s`
 - `http.address: 0.0.0.0:80`
 - `dhcp.enabled: false` (router remains DHCP authority)
+
+### LG webOS tracking policy
+
+Both instances subscribe to [HaGeZi's LG webOS tracker list](https://github.com/hagezi/dns-blocklists#native).
+Startup ensures that its `adblock/native.lgwebos.txt` subscription is enabled,
+preserving existing filter subscriptions, their IDs, allowlists, and custom rules.
+AdGuard downloads and refreshes the list using its normal filter-update mechanism.
+A new subscription uses reserved filter ID `2026110301`; startup rejects a
+collision with a different subscription without replacing the original config.
+
+The list targets LG advertising, content-recognition, and telemetry endpoints,
+including regional advertising CNAME targets. It does not blanket-block LG service,
+account, content-store, or firmware-update domains. Other enabled lists still
+apply, and upstream list contents can change. After a policy change, check both
+blocked tracker names and allowed service names on each resolver independently.
+DNS resolution checks do not replace testing playback and app updates on the TV.
+
+This is domain-based filtering for all clients using these resolvers. Router DNS
+forwarding can hide the originating device behind the router IP, so TV-specific
+rules require direct client DNS or another source-preserving DNS path. DNS logs
+show lookups and filtering decisions, not transmitted payloads or cached-IP traffic.
 
 ### 3) Do Not Store AdGuard State Behind `subPath` Mounts
 AdGuard writes both runtime config and state into its data directory. In this cluster, mounting the PVC once at a neutral path

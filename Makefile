@@ -169,6 +169,7 @@ check-shell: ## Syntax-check shell scripts
 	bash -n apps/exposure-control/secret-commit-job.sh
 
 test-python: ## Run Python unit tests
+	python3 -m unittest scripts/tests/test_adguard_filters.py
 	python3 -m unittest discover -s infrastructure/resource-advisor/tests -p 'test_*.py'
 	python3 -m unittest scripts/tests/test_check_git_capacity.py
 	python3 -m unittest scripts/tests/test_agent_access_policy.py

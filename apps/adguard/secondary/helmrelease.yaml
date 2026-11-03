@@ -135,6 +135,64 @@ spec:
                   mv "$TMP" "$CFG"
                 fi
 
+                # Keep the LG telemetry subscription enabled without replacing runtime filters.
+                LG_FILTER_URL="https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.lgwebos.txt"
+                TMP="$(mktemp "$DATA/conf/.lg-filter.XXXXXX")"
+                trap 'rm -f "$TMP"' EXIT
+                awk -v url="$LG_FILTER_URL" '
+                  function flush_filter() {
+                    if (is_lg) {
+                      sub(/enabled: false/, "enabled: true", entry)
+                      found = 1
+                    }
+                    printf "%s", entry
+                    entry = ""
+                    is_lg = 0
+                  }
+                  function ensure_filter() {
+                    if (!found) {
+                      if (id_taken) {
+                        print "LG tracker filter ID is already in use" > "/dev/stderr"
+                        exit 1
+                      }
+                      print "  - enabled: true"
+                      print "    url: " url
+                      print "    name: HaGeZi LG webOS Tracker"
+                      print "    id: 2026110301"
+                      found = 1
+                    }
+                  }
+                  /^filters:/ {
+                    print "filters:"
+                    in_filters = 1
+                    seen_filters = 1
+                    next
+                  }
+                  in_filters && /^  - / { flush_filter() }
+                  in_filters && /^[^[:space:]]/ {
+                    flush_filter()
+                    ensure_filter()
+                    in_filters = 0
+                  }
+                  in_filters {
+                    entry = entry $0 "\n"
+                    if ($1 == "url:" && ($2 == url || $2 == "\"" url "\"")) {
+                      is_lg = 1
+                    }
+                    if ($1 == "id:" && $2 == "2026110301") {
+                      id_taken = 1
+                    }
+                    next
+                  }
+                  { print }
+                  END {
+                    if (in_filters) { flush_filter(); ensure_filter() }
+                    if (!seen_filters) { print "filters:"; ensure_filter() }
+                  }
+                ' "$CFG" > "$TMP"
+                mv "$TMP" "$CFG"
+                trap - EXIT
+
                 exec /opt/adguardhome/AdGuardHome \
                   --no-check-update \
                   -c "$CFG" \
