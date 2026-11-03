@@ -20,7 +20,8 @@ Accepting Tailscale routes on the NAS can send replies for cluster-originated NF
 
 ## Node Health Checks
 
-The HDD registrar uses its built-in `/healthz` endpoint on `127.0.0.1:9809`.
+The registrars use their built-in `/healthz` endpoint on `127.0.0.1:9809` (HDD)
+and `127.0.0.1:9810` (NVMe).
 The node pods use host networking, so the endpoint binds only to loopback and
 the kubelet probe explicitly targets that address. Reserve a distinct port for
 each driver running on the same node.
@@ -32,7 +33,7 @@ and three-failure threshold. The chart's deprecated
 process launch on each check. The CSI driver's separate liveness check remains
 enabled.
 
-The HDD cleanup container sleeps continuously; its chart-provided `preStop`
+Each cleanup container sleeps continuously; its chart-provided `preStop`
 socket cleanup is preserved. Helm post-renderers own these two overrides because
 chart `0.15.1` hardcodes the probe and idle loop. On chart upgrades, render and
 verify both overrides, the cleanup hook, loopback listeners, and node registration.

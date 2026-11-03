@@ -85,6 +85,8 @@ spec:
           limits:
             memory: 1Gi
       driverRegistrar:
+        extraArgs:
+          - --http-endpoint=127.0.0.1:9810
         resources:
           requests:
             cpu: 20m
@@ -140,6 +142,38 @@ spec:
           shareMaprootGroup: ''
           shareMapallUser: root
           shareMapallGroup: root
+
+  # Chart 0.15.1 hardcodes an obsolete exec probe and a two-second sleep loop.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: DaemonSet
+              name: democratic-csi-nvme-node
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: democratic-csi-nvme-node
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: driver-registrar
+                        livenessProbe:
+                          exec: null
+                          httpGet:
+                            host: 127.0.0.1
+                            port: 9810
+                            path: /healthz
+                          periodSeconds: 10
+                          timeoutSeconds: 1
+                          failureThreshold: 3
+                      - name: cleanup
+                        command: ["sleep"]
+                        args: ["infinity"]
 
   valuesFrom:
   - kind: Secret
