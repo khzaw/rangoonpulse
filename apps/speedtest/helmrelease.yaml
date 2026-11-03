@@ -71,6 +71,9 @@ spec:
                 value: 6 */6 * * *
               - name: DISPLAY_TIMEZONE
                 value: "${TIMEZONE}"
+              # Retain image defaults and local overrides; add ephemeral bytecode caching.
+              - name: PHP_INI_SCAN_DIR
+                value: ":/config/php:/run/php-ini"
             resources:
               requests:
                 cpu: "52m"
@@ -106,7 +109,27 @@ spec:
                   timeoutSeconds: 5
                   failureThreshold: 3
 
+    configMaps:
+      runtime-init:
+        data:
+          10-opcache-file-cache.sh: |
+            #!/bin/sh
+            set -eu
+            # CLI OPcache otherwise recompiles Laravel on every cron invocation.
+            # Keep bytecode off the PVC so image/container replacement starts clean.
+            mkdir -p /run/php-opcache /run/php-ini
+            chown abc:abc /run/php-opcache
+            chmod 0700 /run/php-opcache
+            printf '%s\n' 'opcache.file_cache=/run/php-opcache' > /run/php-ini/opcache-file-cache.ini
+
     persistence:
+      runtime-init:
+        type: configMap
+        identifier: runtime-init
+        defaultMode: 0555
+        globalMounts:
+          - path: /custom-cont-init.d
+            readOnly: true
       config:
         enabled: true
         type: persistentVolumeClaim

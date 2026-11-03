@@ -70,6 +70,7 @@ All repository documentation is public. These guides retain technical context ne
 
 ## Service Contracts
 
+- [`speedtest.md`](./speedtest.md): scheduled tests, ephemeral PHP bytecode cache, and runtime verification
 - [`study-services-livesync-anki-bookorbit.md`](./study-services-livesync-anki-bookorbit.md): Obsidian LiveSync, Anki, BookOrbit, and shared book storage
 - [`reactive-resume.md`](./reactive-resume.md): Reactive Resume and printer sidecar
 - [`bentopdf.md`](./bentopdf.md): private browser PDF tools, HPA, and operator integrations
