@@ -29,7 +29,7 @@ spec:
           main:
             image:
               repository: lscr.io/linuxserver/bazarr
-              tag: v1.6.2-ls370
+              tag: v1.6.2-ls371
             env:
               TZ: "${TIMEZONE}"
               PUID: "1000"
