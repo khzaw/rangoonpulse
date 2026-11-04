@@ -18,7 +18,7 @@ last_reviewed: 2026-11-04
 
 Accepting Tailscale routes on the NAS can send replies for cluster-originated NFS/API traffic through the wrong interface. The resulting asymmetric path looks like a storage outage even when the NAS and datasets are healthy.
 
-## Node Health Checks
+## CSI Health Checks
 
 The registrars use their built-in `/healthz` endpoint on `127.0.0.1:9809` (HDD)
 and `127.0.0.1:9810` (NVMe).
@@ -30,13 +30,57 @@ The HTTP check verifies that the registration socket exists and answers the
 registrar RPC. It runs every ten seconds with the existing one-second timeout
 and three-failure threshold. The chart's deprecated
 `--mode=kubelet-registration-probe` only exits successfully and incurs a fresh
-process launch on each check. The CSI driver's separate liveness check remains
-enabled.
+process launch on each check. The CSI driver has a separate liveness check.
+
+The HDD controller and node drivers use the standard Kubernetes CSI
+`livenessprobe` helper. Its `/healthz` handler connects to
+`/csi-data/csi.sock.internal` and calls CSI `Identity.Probe`; it does not cache
+health between requests. The HTTP liveness probe belongs to `csi-driver`, so
+three failed checks restart the driver. Helper process exits are independently
+restarted by the pod restart policy. Initial delay is 10 seconds, cadence 60
+seconds, timeout 15 seconds, and failure threshold three. The helper's connection
+and RPC share a 15-second deadline. It reconnects on each check, including after
+the driver replaces its socket.
+
+Reserve these host-network loopback listeners across both releases:
+
+| Release | Registrar | Controller helper | Node helper |
+| --- | --- | --- | --- |
+| HDD | `9809` | `9811` | `9812` |
+| NVMe | `9810` | `9813` (reserved) | `9814` (reserved) |
+
+NVMe currently retains the chart's driver exec probe. Helper endpoints bind
+explicitly to `127.0.0.1`, and driver HTTP probes target loopback. Controllers with
+helpers use `Recreate` so old and new pods cannot share the same health endpoint
+or collide on its port. Controller replacement briefly pauses management RPCs;
+existing NFS mounts remain independent. Keep one controller replica per release.
+
+The helper is pinned to a multi-architecture image digest; the driver is pinned
+to its existing `next` digest so a health-check rollout cannot silently upgrade
+it. Each helper requests 5m CPU and 32Mi memory, with 100m/64Mi limits. It runs as
+root only to connect to the driver's mode-0600 internal socket, with a read-only
+socket mount/root filesystem, no capabilities, no privilege escalation, and
+RuntimeDefault seccomp.
+
+CSI semantics are `ready=true` or omitted readiness → HTTP 200, and
+`ready=false`, RPC error, missing socket, or timeout → failure. The installed
+Node exec probe mishandles the protobuf readiness wrapper; use the CSI semantics
+when verifying a replacement. The helper's exact pinned binary must pass isolated
+true/false/omitted/error/timeout and socket-reconnection fixtures and real-socket
+checks on both architectures. This driver currently reports ready once its RPC
+server responds; it is not an NFS or TrueNAS API end-to-end test. Keep storage
+operation and management-plane monitoring enabled.
 
 Each cleanup container sleeps continuously; its chart-provided `preStop`
-socket cleanup is preserved. Helm post-renderers own these two overrides because
-chart `0.15.1` hardcodes the probe and idle loop. On chart upgrades, render and
-verify both overrides, the cleanup hook, loopback listeners, and node registration.
+socket cleanup is preserved. Chart `0.15.1` supports controller `extraContainers`
+but hardcodes probes/cleanup and lacks node `extraContainers`; narrow inline
+post-renderers supply those overrides and the controller rollout strategy.
+On chart upgrades, render and verify probes, socket mounts, cleanup hooks,
+loopback port uniqueness, deployment strategy, and node registration. Roll out
+HDD and NVMe separately, verifying existing reads, disposable provisioning/mounts,
+and fresh volume-stat metrics between releases. Compare equal steady-state
+cAdvisor windows with `metrics_path="/metrics/cadvisor"`, including every CSI pod
+container and the helpers' resident memory; do not infer savings from requests.
 
 ## Diagnose By Failure Boundary
 
