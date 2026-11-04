@@ -50,6 +50,18 @@ The scanner uses the Flux artifact-storage backend with `FluxStorage=true`, enab
 
 Before a cache-rebuilding upgrade, capture the six selected policy image references, scan results, Git image tags, and original suspension states. Temporarily suspend the owning `image-automation` Kustomization first, then each ImageUpdateAutomation, and verify no writer reconciliation is still running. Leave repository/policy reconciliation enabled so the new scanner can rebuild. This prevents registry discoveries during the rebuild from immediately promoting application images.
 
+Use `flux suspend`, which records the suspension under Flux CLI field ownership. Ordinary `kubectl patch` ownership can be removed by the parent Kustomization's server-side apply, silently resuming both the child Kustomization and its writers. After confirming the namespace contains exactly the six expected writers:
+
+```bash
+flux suspend kustomization image-automation -n flux-system
+flux suspend image update --all -n flux-system
+flux reconcile kustomization flux-system -n flux-system
+kubectl get kustomization image-automation -n flux-system -o jsonpath='{.spec.suspend}{"\n"}'
+kubectl get imageupdateautomations -n flux-system -o custom-columns=NAME:.metadata.name,SUSPENDED:.spec.suspend
+```
+
+Require the child and all six writers to remain suspended after this parent reconciliation and immediately before applying the scanner change. Restore with `flux resume` only for objects that were originally active.
+
 Require fresh successful scans for all six repositories and Ready policies after rollout. Compare their selected tags with the captured references and Git before restoring writers; investigate any change rather than treating a successful scan as proof of an unchanged promotion. Restore only suspensions introduced by the maintenance, reconcile each restored writer, and require Ready/up-to-date conditions. Restore and reconcile the owning Kustomization too. Check the intervals, update paths, and Git branch/commit settings remain unchanged.
 
 Measure scanner CPU with `rate(container_cpu_usage_seconds_total{namespace="flux-system",container="manager",pod=~"image-reflector-controller-.*",metrics_path="/metrics/cadvisor"}[15m])` after startup and rescanning settle. Compare equally sized baseline and post-upgrade windows on the same node. Do not sum the duplicate `/metrics/resource` series into this measurement, or translate reduced CPU time into measured electricity savings.
