@@ -141,6 +141,14 @@ class PostRendererTests(unittest.TestCase):
         self.assertEqual(rendered[0]['spec']['template']['spec']['containers'][0]['image'], 'example:v2')
         self.assertEqual(rendered[1], hook)
 
+    def test_null_annotations_pass_through_post_renderer(self):
+        self.workload['metadata']['annotations'] = None
+        rendered = check_git_capacity.load_yaml(check_git_capacity.post_render(
+            json.dumps(self.workload), [self.renderer]))
+
+        self.assertEqual(len(rendered), 1)
+        self.assertEqual(rendered[0]['spec']['template']['spec']['containers'][0]['resources']['requests']['cpu'], '200m')
+
     def test_unsupported_renderers_and_file_patches_fail_closed(self):
         for renderer in [
             {'exec': {}}, {'kustomize': {'resources': ['https://example.test']}},

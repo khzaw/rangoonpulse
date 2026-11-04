@@ -105,7 +105,7 @@ def post_render(raw, renderers):
                 raise ValueError('Helm postRenderer patches must be inline')
         # Helm hooks are not passed through Flux post-renderers.
         objects = load_yaml(raw)
-        hooks = [o for o in objects if o.get('metadata', {}).get('annotations', {}).get('helm.sh/hook')]
+        hooks = [o for o in objects if (o.get('metadata', {}).get('annotations') or {}).get('helm.sh/hook')]
         resources = [o for o in objects if o not in hooks]
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
