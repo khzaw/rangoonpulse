@@ -74,14 +74,16 @@ network maintenance. Follow [the access boundary](./agent-access.md#talos-and-re
    file, and server-side dry-run the bundle and exact live patch. Older field
    ownership can retain an executable probe when server-side apply adds HTTP;
    use an exact whole-probe replacement for that transition and verify the full
-   bundle again after staging it. The Flux-only
-   Git capacity render does not discover this bootstrap file. Validate the repo,
+   bundle again after staging it. The Flux-only Git capacity render does not
+   discover this bootstrap file. Validate the repo,
    publish, and verify the immutable remote artifact matches the reviewed file.
 4. Save the current secure machine configs for recovery. Temporarily set the
    DaemonSet to `OnDelete` and stage only the intended template fields with a
    guarded JSON patch as a controlled operator action. Confirm existing pod UIDs
-   remain unchanged and the full bundle passes server-side dry run without
-   forcing conflicts. Do not apply the entire bundle to perform a narrow update.
+   remain unchanged. For the complete no-force server-side dry run while paused,
+   use a temporary validation copy differing only in `updateStrategy: OnDelete`;
+   the canonical `RollingUpdate` value conflicts with this deliberate temporary
+   ownership change. Do not apply the entire bundle to perform a narrow update.
 5. Change only the CNI URL with
    `talosctl patch machineconfig --mode=no-reboot`, one node at a time. Verify
    each persisted configuration and the control plane's stored CNI manifest,
@@ -89,7 +91,9 @@ network maintenance. Follow [the access boundary](./agent-access.md#talos-and-re
    be unchanged. Then replace the primary node's Canal pod first,
    verify health and networking, then replace the utility node's pod. Never
    replace both together. Restore the original `RollingUpdate` strategy with
-   `maxUnavailable: 1` and `maxSurge: 0` after both pass.
+   `maxUnavailable: 1` and `maxSurge: 0` after both pass. Then require the exact
+   canonical bundle to pass server-side dry run without forcing conflicts, with
+   no differences from the final live DaemonSet spec.
 6. Verify both nodes and Canal pods, liveness/readiness, new pod sandboxes on both
    architectures, bidirectional pod traffic, Kubernetes Service access, internal
    and external DNS, HTTPS endpoints, storage attachments and PVC identities.
