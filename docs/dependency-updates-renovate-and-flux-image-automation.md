@@ -3,7 +3,7 @@ title: Dependency Updates
 summary: Current Renovate, Flux image automation, ownership boundaries, cadence, and verification.
 status: active
 owner: homelab
-last_reviewed: 2026-10-31
+last_reviewed: 2026-11-04
 ---
 
 # Dependency Updates
@@ -43,6 +43,16 @@ Current independently owned flows:
 Each app has its own ImageRepository, ImagePolicy, and ImageUpdateAutomation writer. Interview Prep currently scans and writes every three hours; the other five use six hours.
 
 There is no shared `image-update-automation.yaml`. Inspect the per-app objects.
+
+### Scanner Storage And Upgrades
+
+The scanner uses the Flux artifact-storage backend with `FluxStorage=true`, enabled explicitly on image-reflector-controller `v1.2.5`. Controller and CRD ownership is documented in [Flux controller maintenance](./flux-web-ui.md#flux-controller-manifest). The `/data` emptyDir is a derived tag cache, not application storage. A restart or backend switch rebuilds it by rescanning the registries; neither action changes the declared three/six-hour intervals or per-app writer ownership.
+
+Before a cache-rebuilding upgrade, capture the six selected policy image references, scan results, Git image tags, and original suspension states. Temporarily suspend the owning `image-automation` Kustomization first, then each ImageUpdateAutomation, and verify no writer reconciliation is still running. Leave repository/policy reconciliation enabled so the new scanner can rebuild. This prevents registry discoveries during the rebuild from immediately promoting application images.
+
+Require fresh successful scans for all six repositories and Ready policies after rollout. Compare their selected tags with the captured references and Git before restoring writers; investigate any change rather than treating a successful scan as proof of an unchanged promotion. Restore only suspensions introduced by the maintenance, reconcile each restored writer, and require Ready/up-to-date conditions. Restore and reconcile the owning Kustomization too. Check the intervals, update paths, and Git branch/commit settings remain unchanged.
+
+Measure scanner CPU with `rate(container_cpu_usage_seconds_total{namespace="flux-system",container="manager",pod=~"image-reflector-controller-.*",metrics_path="/metrics/cadvisor"}[15m])` after startup and rescanning settle. Compare equally sized baseline and post-upgrade windows on the same node. Do not sum the duplicate `/metrics/resource` series into this measurement, or translate reduced CPU time into measured electricity savings.
 
 ## Ownership Decision
 
