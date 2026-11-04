@@ -1,9 +1,9 @@
 ---
 title: Prometheus Storage
-summary: Current local-path TSDB sizing, retention, node-affinity, and recovery constraints.
+summary: Current TSDB sizing, retention, metric ingestion policy, node affinity, and recovery constraints.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-04
 ---
 
 # Prometheus Storage
@@ -19,6 +19,22 @@ Prometheus stores its TSDB on a 12Gi `local-path` PVC on the primary node. Curre
 This local-path choice avoids NFS latency and locking behavior on the write-heavy TSDB. It also makes Prometheus node-affined and exposes the metrics history to primary-node disk loss.
 
 Resource Advisor depends on the 14-day metrics window. Losing the TSDB does not prevent the cluster from running, but it removes tuning continuity and recent operational history.
+
+## Metric Ingestion
+
+The monitoring HelmRelease appends an API-server `ServiceMonitor` filter through its inline post-renderer. This preserves the chart's existing histogram bucket thinning. It excludes only the `_bucket` series for these unused diagnostic distributions:
+
+- `apiserver_request_body_size_bytes`
+- `apiserver_watch_list_duration_seconds`
+- `apiserver_watch_cache_read_wait_seconds`
+- `apiserver_watch_events_sizes`
+- `apiserver_response_sizes`
+
+Their `_count` and `_sum` series remain available for rates and averages. Request latency, availability/SLO, error, etcd, kubelet, resource, and Resource Advisor inputs remain collected. Scrape cadence and retention are unchanged.
+
+Before extending the filter, audit the exact chart's rendered rules and dashboards, loaded Prometheus rules, saved Grafana dashboards/alerts, and repository consumers. Restore a distribution's buckets before adding a quantile query for it. A chart change must still render the targeted monitor and preserve its upstream relabel rules.
+
+Verify the loaded filter, successful scrapes, and `scrape_samples_post_metric_relabeling` after a change. Existing samples expire normally; fewer incoming series do not immediately reclaim the TSDB's head memory or disk blocks.
 
 ## Backup Status
 

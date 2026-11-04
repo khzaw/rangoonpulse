@@ -24,6 +24,24 @@ spec:
     crds: CreateReplace
     remediation:
       retries: 3
+  postRenderers:
+    - kustomize:
+        patches:
+          # Append to the chart's bucket thinning instead of replacing it.
+          # These diagnostic distributions have no dashboard/rule consumers;
+          # retain their counts/sums and all request latency, SLO and error data.
+          - target:
+              group: monitoring.coreos.com
+              version: v1
+              kind: ServiceMonitor
+              name: kube-prometheus-stack-apiserver
+            patch: |-
+              - op: add
+                path: /spec/endpoints/0/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: apiserver_(request_body_size_bytes|watch_list_duration_seconds|watch_cache_read_wait_seconds|watch_events_sizes|response_sizes)_bucket
   values:
     alertmanager:
       enabled: true
