@@ -3,7 +3,7 @@ title: Kubernetes Upgrades on Talos
 summary: Safe Kubernetes-only upgrades, recovery data, bootstrap ownership, and per-node verification.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-04
 ---
 
 # Kubernetes upgrades on Talos
@@ -77,6 +77,11 @@ downgrades are not the normal recovery path.
 
 Talos reapplies bootstrap manifests during `upgrade-k8s`. Review the dry run:
 it can update CoreDNS and kube-proxy and reapply the custom Canal manifests.
+The canonical Canal bundle is `infrastructure/canal/bootstrap.yaml`, outside the
+Flux reconciliation graph. Both secure machine configs must use its reviewed,
+immutable Git commit URL; see [Canal ownership and maintenance](./canal.md).
+Check the stored Talos CNI manifest before the upgrade so it cannot restore an
+older Flannel image or liveness probe.
 The secure machine config must retain an ARM64-compatible Canal source. Inspect every init-container image, especially `pod2daemon-flexvol`; an amd64-only image causes `exec format error` and prevents pod networking on the utility node. Verify image manifests and sandbox creation on both architectures rather than copying an old init-container index or tag.
 
 Talos' default CoreDNS ConfigMap overwrites this repo's explicit upstream DNS

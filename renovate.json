@@ -60,6 +60,13 @@
   ],
   "packageRules": [
     {
+      "description": "Promote the Talos-owned Canal bootstrap manually after CNI compatibility and staged rollout checks.",
+      "matchFileNames": [
+        "infrastructure/canal/bootstrap.yaml"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Promote tested Exposure CLI image digests explicitly through Git.",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/khzaw/exposure-cli"],
