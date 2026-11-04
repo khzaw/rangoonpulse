@@ -32,7 +32,7 @@ and three-failure threshold. The chart's deprecated
 `--mode=kubelet-registration-probe` only exits successfully and incurs a fresh
 process launch on each check. The CSI driver has a separate liveness check.
 
-The HDD controller and node drivers use the standard Kubernetes CSI
+The HDD and NVMe controller and node drivers use the standard Kubernetes CSI
 `livenessprobe` helper. Its `/healthz` handler connects to
 `/csi-data/csi.sock.internal` and calls CSI `Identity.Probe`; it does not cache
 health between requests. The HTTP liveness probe belongs to `csi-driver`, so
@@ -47,14 +47,13 @@ Reserve these host-network loopback listeners across both releases:
 | Release | Registrar | Controller helper | Node helper |
 | --- | --- | --- | --- |
 | HDD | `9809` | `9811` | `9812` |
-| NVMe | `9810` | `9813` (reserved) | `9814` (reserved) |
+| NVMe | `9810` | `9813` | `9814` |
 
-NVMe currently retains the chart's driver exec probe. Helper endpoints bind
-explicitly to `127.0.0.1`, and driver HTTP probes target loopback. Controllers with
-helpers use `Recreate` so old and new pods cannot share the same health endpoint
+Helper endpoints bind explicitly to `127.0.0.1`, and driver HTTP probes target
+loopback. Controllers use `Recreate` so old and new pods cannot share the same health endpoint
 or collide on its port. Controller replacement briefly pauses management RPCs;
 existing NFS mounts remain independent. Keep one controller replica per release.
-The HDD controller is placed on the primary node explicitly so replacement does
+Both controllers are placed on the primary node explicitly so replacement does
 not shift management work between architectures.
 
 The helper is pinned to a multi-architecture image digest; the driver is pinned

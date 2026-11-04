@@ -21,8 +21,37 @@ spec:
 
     controller:
       enabled: true
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      extraContainers:
+        - name: liveness-probe
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.20.0@sha256:19f2cf2f40e1987c7943945deca5f65cd4e4bf5cc0657fc78a5df131861578e8
+          args:
+            - --csi-address=/csi-data/csi.sock.internal
+            - --http-endpoint=127.0.0.1:9813
+            - --probe-timeout=15s
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            # The driver's internal socket is root-owned mode 0600.
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi-data
+              readOnly: true
       externalAttacher:
         resources:
           requests:
@@ -57,7 +86,8 @@ spec:
             memory: 128Mi
       driver:
         image:
-          tag: next
+          # Preserve the installed multi-architecture build across pod replacement.
+          tag: next@sha256:0f308ae601474cb9633f90dc96f59dbd23440b0ed0e77d70e224465246a12dfa
         resources:
           requests:
             cpu: 50m
@@ -77,7 +107,8 @@ spec:
             memory: 64Mi
       driver:
         image:
-          tag: next
+          # Preserve the installed multi-architecture build across pod replacement.
+          tag: next@sha256:0f308ae601474cb9633f90dc96f59dbd23440b0ed0e77d70e224465246a12dfa
         resources:
           requests:
             cpu: 50m
@@ -143,10 +174,48 @@ spec:
           shareMapallUser: root
           shareMapallGroup: root
 
-  # Chart 0.15.1 hardcodes an obsolete exec probe and a two-second sleep loop.
+  # Chart 0.15.1 hardcodes probes/cleanup and has no node extraContainers value.
   postRenderers:
     - kustomize:
         patches:
+          # Preserve an explicit null through rendering so Helm removes the API's
+          # default rollingUpdate field. Fixed loopback listeners cannot overlap.
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: democratic-csi-nvme-controller
+            patch: |
+              - op: add
+                path: /spec/strategy
+                value:
+                  type: Recreate
+                  rollingUpdate: null
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: democratic-csi-nvme-controller
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: democratic-csi-nvme-controller
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: csi-driver
+                        livenessProbe:
+                          exec: null
+                          httpGet:
+                            host: 127.0.0.1
+                            port: 9813
+                            path: /healthz
+                          initialDelaySeconds: 10
+                          periodSeconds: 60
+                          timeoutSeconds: 15
+                          failureThreshold: 3
           - target:
               group: apps
               version: v1
@@ -161,6 +230,43 @@ spec:
                 template:
                   spec:
                     containers:
+                      - name: liveness-probe
+                        image: registry.k8s.io/sig-storage/livenessprobe:v2.20.0@sha256:19f2cf2f40e1987c7943945deca5f65cd4e4bf5cc0657fc78a5df131861578e8
+                        args:
+                          - --csi-address=/csi-data/csi.sock.internal
+                          - --http-endpoint=127.0.0.1:9814
+                          - --probe-timeout=15s
+                        resources:
+                          requests:
+                            cpu: 5m
+                            memory: 32Mi
+                          limits:
+                            cpu: 100m
+                            memory: 64Mi
+                        securityContext:
+                          # The driver's internal socket is root-owned mode 0600.
+                          runAsUser: 0
+                          allowPrivilegeEscalation: false
+                          readOnlyRootFilesystem: true
+                          capabilities:
+                            drop: [ALL]
+                          seccompProfile:
+                            type: RuntimeDefault
+                        volumeMounts:
+                          - name: socket-dir
+                            mountPath: /csi-data
+                            readOnly: true
+                      - name: csi-driver
+                        livenessProbe:
+                          exec: null
+                          httpGet:
+                            host: 127.0.0.1
+                            port: 9814
+                            path: /healthz
+                          initialDelaySeconds: 10
+                          periodSeconds: 60
+                          timeoutSeconds: 15
+                          failureThreshold: 3
                       - name: driver-registrar
                         livenessProbe:
                           exec: null
