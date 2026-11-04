@@ -54,6 +54,8 @@ explicitly to `127.0.0.1`, and driver HTTP probes target loopback. Controllers w
 helpers use `Recreate` so old and new pods cannot share the same health endpoint
 or collide on its port. Controller replacement briefly pauses management RPCs;
 existing NFS mounts remain independent. Keep one controller replica per release.
+The HDD controller is placed on the primary node explicitly so replacement does
+not shift management work between architectures.
 
 The helper is pinned to a multi-architecture image digest; the driver is pinned
 to its existing `next` digest so a health-check rollout cannot silently upgrade

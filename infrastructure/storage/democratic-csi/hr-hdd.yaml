@@ -21,6 +21,8 @@ spec:
 
     controller:
       enabled: true
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       extraContainers:
