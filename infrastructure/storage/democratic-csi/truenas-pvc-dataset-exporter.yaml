@@ -64,6 +64,8 @@ spec:
               value: "9118"
             - name: TRUENAS_API_BASE
               value: http://${NAS_IP}/api/v2.0
+            - name: TRUENAS_NETDATA_BASE
+              value: http://${NAS_IP}:6999
             - name: TRUENAS_USERNAME
               valueFrom:
                 secretKeyRef:

@@ -3,7 +3,7 @@ title: Node Power Estimation Dashboard
 summary: Current operating guidance for Node Power Estimation Dashboard.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-04
 ---
 
 # Node Power Estimation Dashboard
@@ -91,20 +91,44 @@ every **120 seconds**, with a **30-second** scrape timeout. PVC dataset collecti
 remains on `/metrics`; neither collector depends on the other's success. Credentials
 come from the existing `democratic-csi/truenas-credentials` Secret.
 
-The NAS's supported reporting definitions are available, but its CPU/disk history
-queries currently return no data. The collector therefore uses the existing TrueNAS
-REST file API to stream `/proc/stat` and `/proc/diskstats`, plus `/disk` inventory.
-`core.download` invokes `filesystem.get` with `buffered: false`: tiny telemetry
-files stream through middleware job pipes without a NAS sampler or ramfs copy.
-This is five NAS HTTP requests batched into **one short-lived Python worker per
-poll inside the existing Kubernetes pod**. A hard **25-second** whole-poll deadline
-covers interpreter startup, DNS, headers, redirects, framing and bodies; socket
-inactivity is bounded to three seconds. The parent kills and reaps an overdue
-worker before releasing sample state. Batching avoids repeated cold imports under
-the existing 100m CPU cap without increasing CPU or RAM limits. JSON is capped at
-1 MiB per response, each counter file at 128 KiB, and worker output at 2 MiB.
-No worker or extra resident process runs on the NAS. Credentials, one-off download URLs and disk serials are never
-logged, exported as labels, or saved by the collector.
+Disk activity reuses the existing NAS Netdata service on port 6999. One filtered
+`/api/v1/allmetrics` request uses `data=raw`, `names=no`, and source timestamps to
+read `netdata_Disk_Busy_Time_total`. TrueNAS 25.04.2.6's installed disk plugin reads
+Linux `/proc/diskstats` field 13 (busy milliseconds) and declares an incremental
+dimension. Netdata 1.37.1's raw export preserves that counter; its default
+`netdata_Disk_Busy_Time_Milliseconds_average` is a **rate in milliseconds per
+second**, not a busy fraction or a reset-detectable counter. The collector uses
+counter differences divided by differences in source timestamps, in milliseconds.
+The exact middleware disk identifiers join inventory to raw chart and dimension
+IDs; duplicate, missing or mismatched identities fail closed. No serials become
+power metric labels.
+
+CPU and boot identity still come from `/proc/stat`, via the supported REST file
+API (`core.download` / `filesystem.get`, `buffered: false`). The installed Netdata
+CPU helper sums all CPU fields, including guest ticks already counted in user/nice,
+and its absolute dimension quantizes the percentage. It cannot preserve this
+model's guest-safe calculation over the polling interval. Do not substitute the
+aggregate CPU percentage without rechecking the installed implementation. The
+collector reads `/disk` inventory each poll to validate model and standby policy;
+it does not download `/proc/diskstats`.
+
+These are **four NAS HTTP requests and one middleware download job per poll**,
+batched into one short-lived Python worker inside the existing Kubernetes pod.
+A hard **25-second** whole-poll deadline covers interpreter startup, DNS, headers,
+redirects, framing and bodies; socket inactivity is bounded to three seconds.
+The parent kills and reaps an overdue worker before releasing sample state.
+Inventory JSON is capped at 1 MiB, CPU and Netdata responses at 128 KiB each, and
+worker output at 2 MiB. Credentials are sent only to middleware, never Netdata or
+the temporary download URL. Cross-origin redirects are refused. Credentials,
+download URLs and disk serials are never logged, exported or persisted.
+
+Netdata must supply all modeled drives with non-future samples no older than
+**five seconds** (the installed plugin updates every second). Each source timestamp
+must advance, even if the counter remains unchanged on an idle disk. The emitted
+power timestamp is the oldest disk source timestamp, not the HTTP fetch time.
+A dedicated `server=rangoonpulse-power` cursor leaves the existing 60-second
+Prometheus Netdata scrape's averaging window untouched. There is no new NAS
+service, cluster workload, resident sampler, or resource-limit increase.
 
 The model deliberately uses rounded engineering allowances, not a hardware sensor:
 
@@ -117,7 +141,8 @@ The model deliberately uses rounded engineering allowances, not a hardware senso
 - `ST8000NT001`: **8 W idle / 10 W active**.
 - `ST8000VN002`: **4 W idle / 6 W active**.
 - Each drive interpolates between its idle and active allowance using the change
-  in Linux disk busy milliseconds divided by elapsed milliseconds, clamped to 1.
+  in Linux disk busy milliseconds divided by Netdata source elapsed milliseconds,
+  clamped to 1.
   HDD standby must remain `ALWAYS ON` for this spinning-drive model.
 
 This configuration has a **32–48 W modeled envelope**, not measured minimum/maximum
@@ -133,8 +158,9 @@ Update the profile when hardware or standby policy changes; an unexpected disk
 inventory produces unavailable telemetry instead of silently inventing a new model.
 
 Startup performs no NAS calls. A new process, NAS boot identity, changed disk
-identity, counter reset, failed request, or interval longer than five minutes
-requires a new baseline. Two successful polls then resume estimation automatically.
+identity, counter reset, failed request, stale/missing Netdata sample, or interval
+longer than five minutes requires a new baseline. Two valid advancing snapshots
+resume estimation automatically; a boot/identity change or long gap can supply the first baseline.
 A nonblocking lock prevents overlapping scrapes from racing counter state. Health
 probes remain independent of NAS availability. The source ConfigMap is hashed by
 Kustomize so source changes roll the Deployment without a manual process restart.
@@ -176,7 +202,19 @@ failures include child output, exit status, and the last readiness error; tempor
 logs and processes are cleaned up on success or failure. Slow-response checks
 require the worker to reach the HTTP fixture before accepting a bounded failure,
 with a separate deterministic check for killing and reaping overdue workers.
-These tests use simulated NAS responses and do not require a live NAS or cluster.
+Fixtures also check raw disk units, exact disk identities, timestamps, frozen data,
+missing/duplicate/invalid samples, reset recovery, guest/iowait CPU accounting,
+authentication separation and independent PVC/power failures. They use simulated
+NAS responses and do not require a live NAS or cluster.
+
+When changing telemetry sources or upgrading TrueNAS, inspect the **installed**
+CPU/disk plugins and helpers, not only upstream master or metric names. Compare
+both models against shared real CPU/inventory snapshots and near-simultaneous
+kernel/Netdata disk samples over complete 120-second intervals. Account for the
+one-second Netdata collection phase when comparing disk watts. Preserve the
+32–48 W model, failure fixtures, recording rules, and enrollment boundaries.
+Measure request/job counts separately from the combined PVC/power pod's CPU:
+its total consumption is not the recoverable cost of the power collector.
 
 ## Live Utility-Node Power Health
 

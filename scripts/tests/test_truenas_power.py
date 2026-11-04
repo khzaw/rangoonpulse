@@ -4,9 +4,12 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
+import urllib.error
 import threading
 import time
 import unittest
+import urllib.parse
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from unittest import mock
@@ -41,12 +44,13 @@ class API:
         self.active = False
         self.fail = False
         self.boot = 1700000000
+        self.clock = Clock()
         self.models = ["ST8000VN004-3CP101", "ST8000NT001-3LZ101", "ST8000VN002-2ZM188"]
 
     def snapshot(self, deadline):
         return {"inventory": self.get("/disk", deadline),
                 "cpu": self.read_file("/proc/stat", deadline),
-                "disks": self.read_file("/proc/diskstats", deadline)}
+                "disks": self.read_disks(deadline)}
 
     def get(self, path, deadline):
         if self.fail:
@@ -59,10 +63,17 @@ class API:
         if self.fail:
             raise TimeoutError("NAS offline")
         if path == "/proc/stat":
-            return ("cpu  130 0 60 1210 0 0 0 0 0 0\n" if self.active else
-                    "cpu  100 0 50 850 0 0 0 0 0 0\n") + f"btime {self.boot}\n"
-        return "\n".join(f"8 {i*16} sd{chr(97+i)} 1 0 2 3 4 0 5 6 0 {61000 if self.active and i == 0 else 1000} 1000"
-                         for i in range(len(self.models)))
+            generation = int(self.active)
+            return (f"cpu  {100+30*generation} 0 {50+10*generation} {850+360*generation} 0 0 0 0 0 0\n"
+                    f"btime {self.boot}\n")
+        raise ValueError("Unexpected raw file read")
+
+    def read_disks(self, deadline):
+        return "\n".join(
+            f'netdata_Disk_Busy_Time_total{{chart="truenas_disk_stats.busy.drive-{i}",'
+            f'family="disk.busy",dimension="drive-{i}.busy"}} '
+            f'{1000+60000*int(self.active) if i == 0 else 1000} {int(self.clock.time()*1000)}'
+            for i in range(len(self.models)))
 
 
 class PowerTests(unittest.TestCase):
@@ -116,7 +127,7 @@ class PowerTests(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
-    def assert_slow_response_bounded(self, framing):
+    def assert_slow_response_bounded(self, framing, netdata=False):
         module = self.load()
         entered, release = threading.Event(), threading.Event()
 
@@ -145,12 +156,13 @@ class PowerTests(unittest.TestCase):
             worker = threading.Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
-                client = module.ApiClient(f"http://127.0.0.1:{server.server_port}/api/v2.0", "fixture", "fixture")
+                client = module.ApiClient(f"http://127.0.0.1:{server.server_port}/api/v2.0", "fixture", "fixture",
+                                          f"http://127.0.0.1:{server.server_port}")
                 started = time.monotonic()
                 # Either the worker notices its deadline or its supervisor
                 # kills it; both must be bounded after reaching the fixture.
                 with self.assertRaises((TimeoutError, ValueError)):
-                    client.get("/slow", started + 2)
+                    (client.read_disks(started + 2) if netdata else client.get("/slow", started + 2))
                 elapsed = time.monotonic() - started
                 self.assertTrue(entered.is_set(), "Worker timed out before reaching the slow HTTP fixture")
                 self.assertGreater(elapsed, 1, "Request failed before exercising the slow-response deadline")
@@ -167,6 +179,30 @@ class PowerTests(unittest.TestCase):
 
     def test_slow_trickle_cannot_hold_a_collection_lock_forever(self):
         self.assert_slow_response_bounded("body")
+
+    def test_netdata_slow_response_is_also_bounded(self):
+        self.assert_slow_response_bounded("headers", netdata=True)
+
+    def test_oversized_netdata_payload_is_rejected(self):
+        module = self.load()
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"x" * 131073)
+            def log_message(self, *args):
+                pass
+        with fixture.LoopbackHTTPServer(("127.0.0.1", 0), Handler) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                base = f"http://127.0.0.1:{server.server_port}"
+                client = module.ApiClient(base+"/api/v2.0", "fixture", "fixture", base)
+                with self.assertRaises(ValueError):
+                    client.read_disks(time.monotonic()+3)
+            finally:
+                server.shutdown()
+                worker.join(2)
 
     def test_overdue_worker_is_killed_and_reaped(self):
         module = self.load()
@@ -208,8 +244,8 @@ class PowerTests(unittest.TestCase):
                     generation = state["generation"]
                     self.respond(f"cpu {generation*10} 0 0 {generation*90} 0 0 0 0\nbtime 1700000000\n".encode())
                 else:
-                    self.respond("\n".join(f"8 {i*16} sd{chr(97+i)} 1 0 2 3 4 0 5 6 0 {state['generation']*100} 1000"
-                                           for i in range(3)).encode())
+                    api_fixture.clock.now = time.time()
+                    self.respond(api_fixture.read_disks(0).encode())
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 number = 1 if body["args"] == ["/proc/stat"] else 2
@@ -241,7 +277,8 @@ class PowerTests(unittest.TestCase):
 
     def test_invalid_first_snapshot_cannot_poison_a_later_interval(self):
         module = self.load()
-        api, clock = API(), Clock()
+        api = API()
+        clock = api.clock
         original = api.read_file
         api.read_file = lambda path, deadline: original(path, deadline).replace("cpu  100", "cpu  -100")
         collector = module.PowerCollector(api=api, clock=clock)
@@ -255,16 +292,18 @@ class PowerTests(unittest.TestCase):
         for failure in ("negative_cpu", "reset_disk", "standby"):
             with self.subTest(failure=failure):
                 module = self.load()
-                api, clock = API(), Clock()
+                api = API()
+                clock = api.clock
                 collector = module.PowerCollector(api=api, clock=clock)
                 collector.collect()
                 clock.advance(120)
                 api.active = True
                 original_read, original_get = api.read_file, api.get
+                original_disks = api.read_disks
                 if failure == "negative_cpu":
                     api.read_file = lambda path, deadline, original_read=original_read: original_read(path, deadline).replace("cpu  130", "cpu  -130")
                 elif failure == "reset_disk":
-                    api.read_file = lambda path, deadline, original_read=original_read: original_read(path, deadline).replace("61000", "10")
+                    api.read_disks = lambda deadline: original_disks(deadline).replace("61000", "10")
                 else:
                     def inventory(path, deadline, original_get=original_get):
                         items = original_get(path, deadline)
@@ -272,6 +311,148 @@ class PowerTests(unittest.TestCase):
                         return items
                     api.get = inventory
                 self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+
+    def test_netdata_failures_clear_baseline_and_recover_without_replaying_watts(self):
+        changes = {
+            "missing": lambda s, now: "",
+            "one_disk_missing": lambda s, now: "\n".join(s.splitlines()[1:]),
+            "wrong_identity": lambda s, now: s.replace("drive-0", "replacement-0"),
+            "wrong_dimension": lambda s, now: s.replace('dimension="drive-0', 'dimension="wrong-0'),
+            "duplicate": lambda s, now: s+"\n"+s.splitlines()[0],
+            "nan": lambda s, now: s.replace("61000", "NaN"),
+            "infinite": lambda s, now: s.replace("61000", "+Inf"),
+            "negative": lambda s, now: s.replace("61000", "-1"),
+            "reset": lambda s, now: s.replace("61000", "10"),
+            "timestamp_missing": lambda s, now: s.replace(" "+str(int(now*1000)), ""),
+            "stale": lambda s, now: s.replace(str(int(now*1000)), str(int((now-6)*1000))),
+            "future": lambda s, now: s.replace(str(int(now*1000)), str(int((now+1)*1000))),
+            "averaged": lambda s, now: s.replace("netdata_Disk_Busy_Time_total", "netdata_Disk_Busy_Time_Milliseconds_average"),
+        }
+        for name, corrupt in changes.items():
+            with self.subTest(failure=name):
+                api = API()
+                collector = self.load().PowerCollector(api, clock=api.clock)
+                collector.collect()
+                api.active = 1
+                api.clock.advance(120)
+                original = api.read_disks
+                api.read_disks = lambda deadline: corrupt(original(deadline), api.clock.time())
+                self.assertEqual(collector.collect(), 'truenas_power_scrape_success{host="truenas"} 0\n')
+                self.assertIsNone(collector.previous)
+                api.read_disks = original
+                self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+                api.active = 2
+                api.clock.advance(120)
+                self.assertIn('truenas_estimated_power_watts{host="truenas"} 34.0', collector.collect())
+
+    def test_frozen_source_timestamp_fails_even_with_a_fresh_http_response(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock)
+        snapshot = api.read_disks(0)
+        api.read_disks = lambda deadline: snapshot
+        collector.collect()
+        api.clock.advance(1)  # Not yet stale, but the source has not advanced.
+        api.active = 1
+        self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+        self.assertIsNone(collector.previous)
+
+    def test_disk_rate_uses_source_interval_and_output_uses_oldest_timestamp(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock)
+        collector.collect()
+        api.clock.advance(120)
+        api.active = 1
+        original = api.read_disks
+        api.read_disks = lambda deadline: original(deadline).replace(
+            str(int(api.clock.time()*1000)), str(int((api.clock.time()-4)*1000)))
+        result = collector.collect()
+        expected = 33 + 2*60000/(116*1000)
+        self.assertIn(f'truenas_estimated_power_watts{{host="truenas"}} {expected}', result)
+        self.assertIn(f'truenas_power_sample_timestamp_seconds{{host="truenas"}} {api.clock.time()-4}', result)
+
+    def test_busy_above_one_is_clamped_and_idle_is_a_valid_counter(self):
+        for busy, watts in ((1000, 33.0), (1000000, 35.0)):
+            with self.subTest(busy=busy):
+                api = API()
+                collector = self.load().PowerCollector(api, clock=api.clock)
+                collector.collect()
+                api.clock.advance(120)
+                api.active = 1
+                original = api.read_disks
+                api.read_disks = lambda deadline: original(deadline).replace("61000", str(busy))
+                self.assertIn(f'truenas_estimated_power_watts{{host="truenas"}} {watts}', collector.collect())
+
+    def test_cpu_keeps_iowait_and_duplicate_guest_counters_out_of_active_fraction(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock)
+        api.read_file = lambda path, deadline: "cpu 100 0 50 850 0 0 0 0 50 0\nbtime 1700000000\n"
+        collector.collect()
+        api.clock.advance(120)
+        # 40 active ticks / 400 total. Guest grew by 20 ticks already in user;
+        # iowait grew by 100 ticks and is not active time.
+        api.read_file = lambda path, deadline: "cpu 130 0 60 1110 100 0 0 0 70 0\nbtime 1700000000\n"
+        self.assertIn('truenas_power_cpu_utilization_ratio{host="truenas"} 0.1', collector.collect())
+
+    def test_identity_replacement_requires_baseline_and_duplicates_fail_closed(self):
+        for change in ("replacement", "duplicate", "missing"):
+            with self.subTest(change=change):
+                api = API()
+                collector = self.load().PowerCollector(api, clock=api.clock)
+                collector.collect()
+                api.clock.advance(120)
+                api.active = 1
+                original_get, original_disks = api.get, api.read_disks
+                def get(path, deadline):
+                    inventory = original_get(path, deadline)
+                    inventory[0]["identifier"] = {"replacement": "new-0", "duplicate": "drive-1", "missing": ""}[change]
+                    return inventory
+                api.get = get
+                if change == "replacement":
+                    api.read_disks = lambda deadline: original_disks(deadline).replace("drive-0", "new-0")
+                self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+                api.clock.advance(120)
+                api.active = 2
+                result = collector.collect()
+                self.assertEqual('truenas_power_scrape_success{host="truenas"} 1' in result, change == "replacement")
+
+    def test_power_and_pvc_http_failures_are_independent(self):
+        spec = importlib.util.spec_from_file_location("exporter_fixture", fixture.EXPORTER)
+        module = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(sys.modules, {"power": self.load()}):
+            spec.loader.exec_module(module)
+        pv = {"metadata": {"name": "pv-fixture"}, "spec": {
+            "csi": {"driver": "org.democratic-csi.nfs", "volumeAttributes": {"share": "/mnt/tank/fixture"}},
+            "claimRef": {"namespace": "default", "name": "fixture"}, "storageClassName": "truenas-nfs"}}
+        module._kube_get = mock.Mock(return_value={"items": [pv]})
+        module._truenas_get = mock.Mock(return_value=[{"name": "tank/fixture", "usedbydataset": 10, "available": 90}])
+        api = API()
+        module.POWER = self.load().PowerCollector(api, clock=api.clock)
+        module.Handler.log_message = lambda *args: None
+        with fixture.LoopbackHTTPServer(("127.0.0.1", 0), module.Handler) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            base = f"http://127.0.0.1:{server.server_port}"
+            def get(path):
+                with fixture.HTTP.open(base+path, timeout=2) as response:
+                    return response.read().decode()
+            try:
+                api.fail = True
+                self.assertNotIn("truenas_estimated_power_watts{", get("/power"))
+                self.assertIn('persistentvolumeclaim="fixture"', get("/metrics"))
+                self.assertEqual(get("/healthz"), "ok\n")
+                api.fail = False
+                get("/power")
+                api.clock.advance(120)
+                api.active = 1
+                module._truenas_get.side_effect = TimeoutError
+                with self.assertRaises(urllib.error.HTTPError) as failure:
+                    get("/metrics")
+                failure.exception.close()
+                self.assertIn('truenas_power_scrape_success{host="truenas"} 1', get("/power"))
+                self.assertEqual(get("/healthz"), "ok\n")
+            finally:
+                server.shutdown()
+                worker.join(2)
 
     def test_invalid_model_constants_are_rejected(self):
         module = self.load()
@@ -301,7 +482,7 @@ class PowerTests(unittest.TestCase):
             release.set()
             worker.join(3)
 
-    def test_builtin_file_api_uses_unbuffered_download_and_bounds(self):
+    def test_poll_uses_one_cpu_download_and_raw_netdata_without_credentials(self):
         module = self.load()
         self.assertTrue(hasattr(module, "ApiClient"), "Add bounded read-only TrueNAS API transport")
         requests = []
@@ -325,6 +506,10 @@ class PowerTests(unittest.TestCase):
                 self.end_headers()
                 if self.path.endswith("/disk"):
                     self.wfile.write(json.dumps(api_fixture.get("/disk", 0)).encode())
+                elif self.path.startswith("/api/v1/allmetrics?"):
+                    requests.append(dict(query=urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query),
+                                         auth=self.headers.get("Authorization")))
+                    self.wfile.write(api_fixture.read_disks(0).encode())
                 else:
                     self.wfile.write(api_fixture.read_file(requests[-1]["args"][0], 0).encode())
 
@@ -335,7 +520,8 @@ class PowerTests(unittest.TestCase):
             worker = threading.Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
-                client = module.ApiClient(f"http://127.0.0.1:{server.server_port}/api/v2.0", "fixture", "fixture")
+                client = module.ApiClient(f"http://127.0.0.1:{server.server_port}/api/v2.0", "fixture", "fixture",
+                                          f"http://127.0.0.1:{server.server_port}")
                 self.assertTrue(client.read_file("/proc/stat", time.monotonic()+3).startswith("cpu "))
                 self.assertEqual(requests, [{"method": "filesystem.get", "args": ["/proc/stat"], "filename": "telemetry.txt", "buffered": False}])
                 with self.assertRaises(ValueError):
@@ -350,7 +536,16 @@ class PowerTests(unittest.TestCase):
                     self.assertEqual(workers.call_count, 1)
                 self.assertEqual(len(snapshot["inventory"]), 3)
                 self.assertTrue(snapshot["cpu"].startswith("cpu "))
-                self.assertIn("sda", snapshot["disks"])
+                self.assertIn("truenas_disk_stats.busy.drive-0", snapshot["disks"])
+                self.assertEqual(requests[-1]["auth"], None)
+                self.assertEqual(requests[-1]["query"], {k: [v] for k, v in {
+                    "format": "prometheus", "data": "raw", "timestamps": "yes", "names": "no",
+                    "help": "no", "types": "no", "filter": "truenas_disk_stats.busy.*",
+                    "server": "rangoonpulse-power",
+                }.items()})
+                self.assertEqual(len([r for r in requests if "method" in r]), 2)
+                with self.assertRaises(ValueError):
+                    client.read_file("/proc/diskstats", time.monotonic()+3)
             finally:
                 server.shutdown()
                 worker.join(2)
@@ -359,7 +554,8 @@ class PowerTests(unittest.TestCase):
         for change in ("boot", "gap"):
             with self.subTest(change=change):
                 module = self.load()
-                api, clock = API(), Clock()
+                api = API()
+                clock = api.clock
                 collector = module.PowerCollector(api=api, clock=clock)
                 collector.collect()
                 clock.advance(301 if change == "gap" else 120)
@@ -370,7 +566,8 @@ class PowerTests(unittest.TestCase):
 
     def test_missing_drive_does_not_silently_reduce_the_baseline(self):
         module = self.load()
-        api, clock = API(), Clock()
+        api = API()
+        clock = api.clock
         collector = module.PowerCollector(api=api, clock=clock)
         collector.collect()
         clock.advance(120)
@@ -380,7 +577,8 @@ class PowerTests(unittest.TestCase):
 
     def test_offline_start_and_reconnect_need_fresh_counters(self):
         module = self.load()
-        api, clock = API(), Clock()
+        api = API()
+        clock = api.clock
         collector = module.PowerCollector(api=api, clock=clock)
         api.fail = True
         self.assertEqual(collector.collect(), 'truenas_power_scrape_success{host="truenas"} 0\n')
@@ -396,7 +594,8 @@ class PowerTests(unittest.TestCase):
 
     def test_warm_start_then_live_cpu_and_disk_model(self):
         module = self.load()
-        api, clock = API(), Clock()
+        api = API()
+        clock = api.clock
         collector = module.PowerCollector(api=api, clock=clock)
         first = collector.collect()
         self.assertIn('truenas_power_scrape_success{host="truenas"} 0', first)

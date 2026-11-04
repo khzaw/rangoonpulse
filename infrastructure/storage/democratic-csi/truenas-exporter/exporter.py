@@ -15,7 +15,8 @@ TRUENAS_API_BASE = os.environ.get("TRUENAS_API_BASE", "http://10.0.0.210/api/v2.
 TRUENAS_USERNAME = os.environ["TRUENAS_USERNAME"]
 TRUENAS_PASSWORD = os.environ["TRUENAS_PASSWORD"]
 POWER = PowerCollector(
-    ApiClient(TRUENAS_API_BASE, TRUENAS_USERNAME, TRUENAS_PASSWORD),
+    ApiClient(TRUENAS_API_BASE, TRUENAS_USERNAME, TRUENAS_PASSWORD,
+              os.environ.get("TRUENAS_NETDATA_BASE", "http://10.0.0.210:6999")),
     platform_watts=float(os.environ.get("TRUENAS_PLATFORM_IDLE_WATTS", "12")),
     cpu_watts=float(os.environ.get("TRUENAS_CPU_DYNAMIC_WATTS", "10")),
 )

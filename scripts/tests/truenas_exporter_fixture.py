@@ -43,6 +43,7 @@ def exporter_process(api_base):
         ready = Path(directory) / "ready.json"
         env = fixture_environment()
         env["TRUENAS_API_BASE"] = api_base
+        env["TRUENAS_NETDATA_BASE"] = api_base.removesuffix("/api/v2.0")
         output_path = Path(directory) / "output.log"
         with output_path.open("wb") as output:
             process = subprocess.Popen(

@@ -3,6 +3,7 @@
 import base64
 import json
 import math
+import re
 import subprocess
 import sys
 import threading
@@ -13,29 +14,62 @@ import urllib.request
 # Rounded engineering allowances, not measured wall watts. See the power docs.
 DRIVES = {"ST8000VN004": (8.0, 10.0), "ST8000NT001": (8.0, 10.0), "ST8000VN002": (4.0, 6.0)}
 
+# Raw incremental values are Linux busy milliseconds, not Netdata's ms/s
+# averages. names=no preserves the exact middleware disk identifier.
+NETDATA_QUERY = urllib.parse.urlencode({
+    "format": "prometheus", "data": "raw", "timestamps": "yes", "names": "no",
+    "help": "no", "types": "no", "filter": "truenas_disk_stats.busy.*",
+    # Netdata tracks an averaging cursor per server. Never move the existing
+    # Prometheus scrape's cursor, even though this reader only uses raw values.
+    "server": "rangoonpulse-power",
+})
+BUSY_SAMPLE = re.compile(
+    r'netdata_Disk_Busy_Time_total\{chart="truenas_disk_stats\.busy\.([^"\\]+)",'
+    r'family="disk\.busy",dimension="([^"\\]+)\.busy"\} ([0-9]+) ([0-9]+)'
+)
+
+
+def disk_samples(text, identities, now):
+    samples = {}
+    for line in text.splitlines():
+        if not line.startswith("netdata_Disk_Busy_Time_total{"):
+            continue
+        match = BUSY_SAMPLE.fullmatch(line)
+        if not match:
+            raise ValueError("Invalid Netdata busy sample")
+        identity, dimension, value, timestamp = match.groups()
+        if identity != dimension or identity in samples:
+            raise ValueError("Ambiguous Netdata disk identity")
+        samples[identity] = (int(value), int(timestamp) / 1000)
+    selected = {name: samples[identity] for name, identity, _ in identities}
+    if any(not 0 <= now - timestamp <= 5 for _, timestamp in selected.values()):
+        raise ValueError("Netdata busy sample is stale or future dated")
+    return selected
+
 
 def metric(name, value):
     return f'{name}{{host="truenas"}} {value}\n'
 
 
 class ApiClient:
-    """Reuse the NAS middleware's supported file API; no NAS script or daemon.
+    """Reuse middleware CPU/inventory and Netdata disk telemetry.
 
     Non-buffered downloads stream tiny proc files, not a ramfs copy. One-off
     download URLs and credentials never enter logs, metrics or persistent state.
     """
 
-    def __init__(self, base, username, password):
+    def __init__(self, base, username, password, netdata_base="http://10.0.0.210:6999"):
         self.base = base.rstrip("/")
+        self.netdata_base = netdata_base.rstrip("/")
         parts = urllib.parse.urlsplit(self.base)
         self.origin = urllib.parse.urlunsplit((parts.scheme, parts.netloc, "", "", ""))
         self.auth = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
-        origin = self.origin
 
         class SameOriginRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
                 destination = urllib.parse.urlsplit(newurl)
-                if f"{destination.scheme}://{destination.netloc}" != origin:
+                source = urllib.parse.urlsplit(req.full_url)
+                if (destination.scheme, destination.netloc) != (source.scheme, source.netloc):
                     raise ValueError("Refusing a cross-origin telemetry redirect")
                 return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -49,7 +83,8 @@ class ApiClient:
     def snapshot(self, deadline):
         # One interpreter per poll, not one cold import per HTTP request. This
         # preserves the existing 100m CPU cap without weakening cancellation.
-        payload = {"base": self.base, "auth": self.auth, "operation": "snapshot", "deadline": deadline}
+        payload = {"base": self.base, "netdata_base": self.netdata_base, "auth": self.auth,
+                   "operation": "snapshot", "deadline": deadline}
         return json.loads(self._isolated(payload, deadline, 2097152))
 
     def _isolated(self, payload, deadline, limit):
@@ -97,7 +132,7 @@ class ApiClient:
         return json.loads(self._request(self.base + path, deadline))
 
     def read_file(self, path, deadline):
-        if path not in ("/proc/stat", "/proc/diskstats"):
+        if path != "/proc/stat":
             raise ValueError("Not a permitted telemetry source")
         result = json.loads(self._request(self.base + "/core/download", deadline, {
             "method": "filesystem.get", "args": [path], "filename": "telemetry.txt", "buffered": False,
@@ -108,6 +143,10 @@ class ApiClient:
         if url.scheme or url.netloc or not url.path.startswith("/_download/") or not url.path[len("/_download/"):].isdigit():
             raise ValueError("Telemetry download must stay on the NAS origin")
         return self._request(self.origin + result[1], deadline, limit=131072, authenticated=False).decode()
+
+    def read_disks(self, deadline):
+        return self._request(self.netdata_base + "/api/v1/allmetrics?" + NETDATA_QUERY,
+                             deadline, limit=131072, authenticated=False).decode()
 
 
 class DirectApiClient(ApiClient):
@@ -147,13 +186,17 @@ class PowerCollector:
         cpu_lines = [line.split() for line in cpu_text.splitlines()]
         cpu = next([int(x) for x in line[1:9]] for line in cpu_lines if line[0] == "cpu")
         boot = next(int(line[1]) for line in cpu_lines if line[0] == "btime")
-        disks = {line[2]: int(line[12]) for line in map(str.split, disk_text.splitlines())}
         drives = [(item["name"], item["model"].split("-", 1)[0]) for item in inventory if item.get("rotationrate")]
         if sorted(model for _, model in drives) != sorted(DRIVES):
             raise ValueError("Drive inventory does not match the power model")
         identities = sorted((item["name"], item.get("identifier"), item["model"])
                             for item in inventory if item.get("rotationrate"))
-        if len(cpu) != 8 or min(cpu) < 0 or boot <= 0 or any(disks[name] < 0 for name, _ in drives):
+        if (len({name for name, _, _ in identities}) != len(DRIVES)
+                or len({identity for _, identity, _ in identities}) != len(DRIVES)
+                or any(not identity for _, identity, _ in identities)):
+            raise ValueError("Missing or duplicate disk identity")
+        disks = disk_samples(disk_text, identities, self.clock.time())
+        if len(cpu) != 8 or min(cpu) < 0 or boot <= 0:
             raise ValueError("Invalid initial kernel counters")
         if any(item.get("hddstandby") != "ALWAYS ON" for item in inventory if item.get("rotationrate")):
             raise ValueError("The spinning-drive model requires disabled standby")
@@ -167,16 +210,18 @@ class PowerCollector:
         delta = [value - old for value, old in zip(cpu, previous[1])]
         if len(cpu) != 8 or min(cpu) < 0 or min(delta) < 0 or sum(delta) <= 0:
             raise ValueError("CPU counters are invalid or reset")
-        if any(disks[name] < previous[3][name] for name, _ in drives):
-            raise ValueError("Disk counters reset")
+        if any(disks[name][0] < previous[3][name][0]
+               or not 0 < disks[name][1] - previous[3][name][1] <= 300 for name, _ in drives):
+            raise ValueError("Disk counters reset or source timestamp did not advance")
         cpu_ratio = (sum(delta) - delta[3] - delta[4]) / sum(delta)
         disk_watts = sum(DRIVES[model][0] + (DRIVES[model][1] - DRIVES[model][0]) *
-                         min(1, (disks[name] - previous[3][name]) / (elapsed * 1000))
+                         min(1, (disks[name][0] - previous[3][name][0]) /
+                             ((disks[name][1] - previous[3][name][1]) * 1000))
                          for name, model in drives)
         dynamic_cpu = self.cpu_watts * cpu_ratio
         return "".join(metric(name, value) for name, value in (
             ("truenas_power_scrape_success", 1),
-            ("truenas_power_sample_timestamp_seconds", self.clock.time()),
+            ("truenas_power_sample_timestamp_seconds", min(timestamp for _, timestamp in disks.values())),
             ("truenas_power_cpu_utilization_ratio", cpu_ratio),
             ("truenas_power_platform_watts", self.platform_watts),
             ("truenas_power_cpu_dynamic_watts", dynamic_cpu),
@@ -189,13 +234,13 @@ if __name__ == "__main__":
     try:
         params = json.loads(sys.stdin.buffer.read(131073))
         operation = params.pop("operation", "request")
-        client = DirectApiClient(params.pop("base"), "", "")
+        client = DirectApiClient(params.pop("base"), "", "", params.pop("netdata_base", ""))
         client.auth = params.pop("auth")
         if operation == "snapshot":
             deadline = params["deadline"]
             result = {"inventory": client.get("/disk", deadline),
                       "cpu": client.read_file("/proc/stat", deadline),
-                      "disks": client.read_file("/proc/diskstats", deadline)}
+                      "disks": client.read_disks(deadline)}
             sys.stdout.buffer.write(json.dumps(result).encode())
         else:
             sys.stdout.buffer.write(client._fetch(**params))
