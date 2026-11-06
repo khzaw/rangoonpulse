@@ -3,7 +3,7 @@ title: Cluster DNS Reliability
 summary: Current separation between LAN DNS and cluster/node DNS, plus Flux timeout diagnostics.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-06
 ---
 
 # Cluster DNS Reliability
@@ -26,6 +26,11 @@ This separation keeps Flux, image pulls, and cluster controllers independent fro
 - ExternalDNS record management: `infrastructure/external-dns/`
 
 The DNS reliability component includes CoreDNS configuration, controller Pod monitoring, and alerts for lookup failure and latency.
+
+The GitRepository error-counter alert requires errors to continue across 5m
+lookback windows for 10m. An isolated recovered error ages out before notification.
+Sustained Flux readiness failures are covered separately by the
+[Flux reconciliation alerts](./flux-reconciliation-alerts.md).
 
 CoreDNS currently forwards to `1.1.1.1`, `1.0.0.1`, and `8.8.8.8`, with upstream health checks, random selection, and short connection expiry. Node-level Talos nameservers are a separate setting; changing this ConfigMap does not update them.
 

@@ -39,13 +39,15 @@ spec:
             description: "CoreDNS detected upstream health check failures in the last 15 minutes."
 
         - alert: FluxSourceGitRepositoryReconcileErrors
-          expr: increase(controller_runtime_reconcile_errors_total{namespace="flux-system", pod=~"source-controller-.*", controller="gitrepository"}[15m]) > 0
+          # A single error leaves a counter increase visible for the lookback.
+          # Keep that shorter than `for` so recovered one-off errors cannot fire.
+          expr: increase(controller_runtime_reconcile_errors_total{namespace="flux-system", pod=~"source-controller-.*", controller="gitrepository"}[5m]) > 0
           for: 10m
           labels:
             severity: warning
           annotations:
             summary: "Flux source-controller has GitRepository reconcile errors"
-            description: "source-controller reported GitRepository reconcile errors in the last 15 minutes, often caused by DNS/network issues."
+            description: "source-controller has continued reporting GitRepository reconcile errors across 5-minute windows for over 10 minutes. Inspect source conditions and controller logs to distinguish DNS/network failures from SSH authentication or repository-access errors."
 
         - alert: FluxSourceControllerUnavailable
           expr: sum(up{namespace="flux-system", pod=~"source-controller-.*"}) < 1

@@ -17,10 +17,40 @@ spec:
     - name: homelab-flux-reconciliation.rules
       interval: 2m
       rules:
+        # Only a healthy HTTP repository can explain a stale daily index. Missing
+        # source telemetry, fetch failures, suspended sources, and OCI references
+        # must keep the ordinary readiness alert.
+        - record: homelab:flux_chart_index_wait:info
+          expr: >
+            max by (kind, exported_namespace, name, reason, revision, source_name) (
+              flux_resource_info{kind="HelmChart", exported_namespace="flux-system", ready="False", suspended="False", reason="InvalidChartReference", revision!=""}
+              and on (source_name)
+              label_replace(
+                flux_resource_info{kind="HelmRepository", exported_namespace="flux-system", ready="True", suspended="False", url=~"https?://.+"},
+                "source_name", "$1", "name", "(.+)"
+              )
+            )
+
         - alert: FluxResourceNotReady
           expr: >
             max by (kind, exported_namespace, name, reason, revision) (
-              flux_resource_info{ready="False", suspended="False"}
+              (
+                flux_resource_info{ready="False", suspended="False"}
+                unless on (kind, exported_namespace, name)
+                homelab:flux_chart_index_wait:info
+              )
+              unless on (kind, exported_namespace, name)
+              (
+                label_join(
+                  flux_resource_info{kind="HelmRelease", reason="SourceNotReady", revision!=""},
+                  "helm_chart", "-", "exported_namespace", "name"
+                )
+                and on (helm_chart)
+                label_replace(
+                  homelab:flux_chart_index_wait:info,
+                  "helm_chart", "$1", "name", "(.+)"
+                )
+              )
             ) == 1
           for: 15m
           labels:
@@ -28,6 +58,18 @@ spec:
           annotations:
             summary: "Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is not ready"
             description: "{{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} has reported Ready=False for over 15m (reason: {{ $labels.reason }}, revision: {{ $labels.revision }}). A HelmRelease that rolled back keeps serving the previous release, so the app may look healthy while the upgrade is stuck. Inspect with `flux get {{ $labels.kind | toLower }} {{ $labels.name }} -n {{ $labels.exported_namespace }}` or at fluxui.khzaw.dev, then `flux reconcile ... --force` or fix the manifest."
+
+        # Daily source polling deliberately trades update latency for less work.
+        # Allow one 24h index refresh plus margin; report the chart once rather
+        # than also notifying for its generated HelmRelease's SourceNotReady.
+        - alert: FluxChartVersionUnavailable
+          expr: homelab:flux_chart_index_wait:info == 1
+          for: 26h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux HelmChart {{ $labels.exported_namespace }}/{{ $labels.name }} is still unavailable after a daily index refresh window"
+            description: "HelmChart {{ $labels.exported_namespace }}/{{ $labels.name }} has reported InvalidChartReference for over 26h from source {{ $labels.source_name }}. The normal 24h repository index refresh window has passed. Check the requested chart name/version, source health, and publication status. The previous release may still be serving; chart availability does not prove the desired upgrade deployed."
 
         - alert: FluxResourceReconcileStuck
           expr: >
