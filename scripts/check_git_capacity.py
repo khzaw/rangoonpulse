@@ -157,6 +157,13 @@ def release_intent(release, objects):
     return spec, inputs, {k: source.get(k) for k in ('url', 'type', 'secretRef')}
 
 
+def operator_intent(obj):
+    """Ignore object metadata; identity is checked by the rendered resource key."""
+    if obj is None:
+        return None
+    return {key: value for key, value in obj.items() if key != 'metadata'}
+
+
 def changed_workloads(before, after):
     old_workloads = {k: o for k, o in before.items() if o['kind'] in WORKLOADS}
     new_workloads = {k: o for k, o in after.items() if o['kind'] in WORKLOADS}
@@ -171,9 +178,9 @@ def changed_workloads(before, after):
         old_rendered = {capacity.key(o): o for o in render_release(old, before)} if old else {}
         for rendered_key in old_rendered.keys() | new_rendered.keys():
             if rendered_key[0] not in WORKLOADS:
-                # An unrelated edit must not require modelling an unchanged
-                # operator workload. Any change to that object still fails closed.
-                if old_rendered.get(rendered_key) != new_rendered.get(rendered_key):
+                # Chart-version labels do not change the generated workload.
+                # Spec/API changes and additions/removals still fail closed.
+                if operator_intent(old_rendered.get(rendered_key)) != operator_intent(new_rendered.get(rendered_key)):
                     raise ValueError(f'{rendered_key[0]} changed operator-managed resources; render its generated workload explicitly before changing CPU')
                 continue
             if rendered_key in new_rendered:

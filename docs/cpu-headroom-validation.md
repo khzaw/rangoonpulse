@@ -3,7 +3,7 @@ title: CPU Headroom Validation
 summary: Git and CI capacity checks for resource edits, new workloads, and replica scaling without live admission enforcement.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-09
 ---
 
 # CPU Headroom Validation
@@ -42,11 +42,13 @@ for the audited `democratic-csi` chart `0.15.1` from its official chart reposito
 Secret and its checksum, so the capacity render omits those credentials. Other
 paths, chart versions, and sources still fail closed. Re-audit the chart templates
 before extending that exception.
-Operator CRs with resource fields may pass only when their entire rendered objects
-are identical in both revisions. New or changed operator objects, including
-replica, placement, or resource-field removal, fail validation; add explicit
-rendering support before changing those inputs. This allows a Grafana credential
-change without bypassing checks on Prometheus or Alertmanager resource changes.
+Operator CRs with resource fields may pass when their rendered objects are
+identical apart from top-level metadata. Chart-version label changes are ignored;
+resource identity (kind, namespace, and name) is still compared. New, removed, or
+renamed operator objects and API/spec changes, including replica, placement, or
+resource-field removal, fail validation; add explicit rendering support before
+changing those inputs. This allows chart metadata or Grafana credential changes
+without bypassing checks on Prometheus or Alertmanager resource changes.
 
 ## Snapshot publication
 
