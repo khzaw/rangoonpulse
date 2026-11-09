@@ -91,6 +91,64 @@ class CsiCredentialTests(unittest.TestCase):
                     check_git_capacity.chart_inputs(release, objects)
 
 
+class OperatorWorkloadTests(unittest.TestCase):
+    def setUp(self):
+        self.release = {
+            'kind': 'HelmRelease',
+            'metadata': {'name': 'monitoring', 'namespace': 'monitoring'},
+            'spec': {'chart': {'spec': {'version': '92.x'}}},
+        }
+        self.next_release = copy.deepcopy(self.release)
+        self.next_release['spec']['chart']['spec']['version'] = '93.x'
+        self.workload = {
+            'apiVersion': 'monitoring.coreos.com/v1', 'kind': 'Alertmanager',
+            'metadata': {'name': 'monitoring', 'namespace': 'monitoring',
+                         'labels': {'chart': 'kube-prometheus-stack-92.22.0'}},
+            'spec': {'replicas': 1, 'nodeSelector': {'kubernetes.io/hostname': 'primary'},
+                     'resources': {'requests': {'cpu': '20m', 'memory': '64Mi'}}},
+        }
+
+    def changes(self, old, new):
+        key = ('HelmRelease', 'monitoring', 'monitoring')
+        with patch.object(check_git_capacity, 'render_release', side_effect=[new, old]):
+            return check_git_capacity.changed_workloads(
+                {key: self.release}, {key: self.next_release})
+
+    def test_chart_metadata_changes_do_not_require_operator_workload_rendering(self):
+        for kind in ('Alertmanager', 'Prometheus'):
+            with self.subTest(kind=kind):
+                old = copy.deepcopy(self.workload)
+                old['kind'] = kind
+                new = copy.deepcopy(old)
+                new['metadata']['labels']['chart'] = 'kube-prometheus-stack-93.1.0'
+                new['metadata']['labels']['app.kubernetes.io/version'] = '93.1.0'
+                self.assertEqual(self.changes([old], [new]), [])
+
+    def test_operator_spec_and_api_changes_still_fail_closed(self):
+        mutations = {
+            'cpu': lambda o: o['spec']['resources']['requests'].update(cpu='200m'),
+            'memory': lambda o: o['spec']['resources']['requests'].update(memory='128Mi'),
+            'replicas': lambda o: o['spec'].update(replicas=2),
+            'placement': lambda o: o['spec']['nodeSelector'].update({'kubernetes.io/hostname': 'utility'}),
+            'sidecar': lambda o: o['spec'].update(containers=[{'name': 'extra', 'image': 'example:v1'}]),
+            'api': lambda o: o.update(apiVersion='monitoring.coreos.com/v2'),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(change=name):
+                new = copy.deepcopy(self.workload)
+                mutate(new)
+                with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
+                    self.changes([self.workload], [new])
+
+    def test_operator_workload_additions_removals_and_renames_fail_closed(self):
+        renamed = copy.deepcopy(self.workload)
+        renamed['metadata']['name'] = 'renamed'
+        for old, new in (([], [self.workload]), ([self.workload], []), ([self.workload], [renamed])):
+            with self.subTest(old=old, new=new):
+                with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
+                    self.changes(old, new)
+
+
 class PostRendererTests(unittest.TestCase):
     def setUp(self):
         self.workload = {
