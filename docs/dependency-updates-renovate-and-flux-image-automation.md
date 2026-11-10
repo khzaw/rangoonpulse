@@ -23,6 +23,7 @@ Do not infer Renovate failure from the control panel update count. The control p
 
 ## Versioning Constraints
 
+- `kube-prometheus-stack` is held at chart `92.22.0`, which supplies Prometheus Operator/config-reloader `v0.94.2`. The `v0.95.1` image indexes advertise only `amd64`; the operator on the ARM64 utility node cannot pull them. Renovate is disabled for this chart so it cannot reintroduce the incompatible upgrade. Before removing the hold, verify both upstream image indexes provide working `linux/amd64` and `linux/arm64` images, review the chart/CRD changes, and verify the operator and monitoring rollouts. Keep placement and resource reservations unchanged unless separately validated.
 - LinuxServer build suffixes must remain orderable. Jellyfin accepts stable two- or three-component app versions, numeric Ubuntu base versions, and LinuxServer rebuild numbers; base transitions are reviewable updates rather than compatibility locks.
 - Jackett tracks `linuxserver/docker-jackett` packaging releases through an inline custom-manager hint, converting their tags to the image's three-component app version. Packaging releases follow the multiarch image push; upstream `Jackett/Jackett` releases can precede publication and must not drive deployments. Its Docker datasource is disabled because the registry's large history makes lookup incomplete.
 - Keep the intentionally pinned Flaresolverr image exception and the separate AdGuard rollout branches. Check `renovate.json` and inline hints before changing a tag representation or release source.
