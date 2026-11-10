@@ -223,6 +223,85 @@ spec:
                 - name: Grafana
                   link: https://grafana.${BASE_DOMAIN}
             endpoints:
+              - name: AdGuard Primary DNS
+                group: DNS
+                url: ${ADGUARD_PRIMARY_IP}
+                interval: 60s
+                client:
+                  timeout: 5s
+                dns:
+                  query-name: gatus.${BASE_DOMAIN}
+                  query-type: A
+                conditions:
+                  - '[DNS_RCODE] == NOERROR'
+                  - '[BODY] == ${INGRESS_VIP}'
+              - name: AdGuard Secondary DNS
+                group: DNS
+                url: ${ADGUARD_SECONDARY_IP}
+                interval: 60s
+                client:
+                  timeout: 5s
+                dns:
+                  query-name: gatus.${BASE_DOMAIN}
+                  query-type: A
+                conditions:
+                  - '[DNS_RCODE] == NOERROR'
+                  - '[BODY] == ${INGRESS_VIP}'
+              - name: CoreDNS
+                group: DNS
+                url: kube-dns.kube-system.svc.cluster.local
+                interval: 60s
+                client:
+                  timeout: 5s
+                dns:
+                  query-name: gatus.${BASE_DOMAIN}
+                  query-type: A
+                conditions:
+                  - '[DNS_RCODE] == NOERROR'
+                  - '[BODY] == ${INGRESS_VIP}'
+              - name: Immich PostgreSQL
+                group: Data services
+                url: tcp://immich-postgres.default.svc.cluster.local:5432
+                interval: 60s
+                client:
+                  timeout: 5s
+                conditions:
+                  - '[CONNECTED] == true'
+              - name: Immich Valkey
+                group: Data services
+                url: tcp://immich-valkey.default.svc.cluster.local:6379
+                interval: 60s
+                client:
+                  timeout: 5s
+                conditions:
+                  - '[CONNECTED] == true'
+                  - '[BODY] == pat(*PONG*)'
+                body: "PING\r\n"
+              - name: Shared PostgreSQL
+                group: Data services
+                url: tcp://media-postgres.default.svc.cluster.local:5432
+                interval: 60s
+                client:
+                  timeout: 5s
+                conditions:
+                  - '[CONNECTED] == true'
+              - name: Vaultwarden PostgreSQL
+                group: Data services
+                url: tcp://vaultwarden-postgres.default.svc.cluster.local:5432
+                interval: 60s
+                client:
+                  timeout: 5s
+                conditions:
+                  - '[CONNECTED] == true'
+              - name: Flaresolverr
+                group: Downloads
+                url: http://flaresolverr.default.svc.cluster.local:8191/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == ok'
               - name: SABnzbd
                 group: Downloads
                 url: https://sabnzbd.${BASE_DOMAIN}/login/
@@ -241,6 +320,15 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Transmission VPN UI
+                group: Downloads
+                url: https://torrent-vpn.${BASE_DOMAIN}/api/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - has([BODY].vpnStatus) == true
               - name: AdGuard Primary
                 group: Infrastructure
                 url: https://adguard.${BASE_DOMAIN}
@@ -286,6 +374,22 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: TrueNAS
+                group: Infrastructure
+                url: https://nas.${BASE_DOMAIN}/ui/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: TrueNAS NFS
+                group: Infrastructure
+                url: tcp://${NAS_IP}:2049
+                interval: 60s
+                client:
+                  timeout: 5s
+                conditions:
+                  - '[CONNECTED] == true'
               - name: Audiobookshelf
                 group: Media and library
                 url: https://audiobookshelf.${BASE_DOMAIN}
@@ -313,6 +417,15 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Immich Machine Learning
+                group: Media and library
+                url: http://immich-machine-learning.default.svc.cluster.local:3003/ping
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY] == pong'
               - name: Jellyfin
                 group: Media and library
                 url: https://jellyfin.${BASE_DOMAIN}/web/
@@ -322,6 +435,14 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: RomM
+                group: Media and library
+                url: https://roms.${BASE_DOMAIN}/api/heartbeat
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
               - name: Seerr
                 group: Media and library
                 url: https://seerr.${BASE_DOMAIN}/login
@@ -331,6 +452,15 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Shelfmark
+                group: Media and library
+                url: https://shelfmark.${BASE_DOMAIN}/api/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == ok'
               - name: Tracerr
                 group: Media and library
                 url: https://tracerr.${BASE_DOMAIN}
@@ -349,6 +479,23 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Jackett
+                group: Media automation
+                url: https://jackett.${BASE_DOMAIN}/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == OK'
+              - name: Profilarr
+                group: Media automation
+                url: https://profilarr.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
               - name: Prowlarr
                 group: Media automation
                 url: https://prowlarr.${BASE_DOMAIN}/login?returnUrl=%2F
@@ -376,6 +523,23 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Subarr
+                group: Media automation
+                url: https://subarr.${BASE_DOMAIN}/api/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == ok'
+              - name: autobrr
+                group: Media automation
+                url: https://autobrr.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
               - name: Hermes Dashboard
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9119/api/health
@@ -384,6 +548,7 @@ spec:
                   timeout: 10s
                 conditions:
                   - '[STATUS] == 200'
+                  - '[BODY].ok == true'
               - name: Hermes Gateway
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes-gateway
@@ -401,6 +566,7 @@ spec:
                   timeout: 10s
                 conditions:
                   - '[STATUS] == 200'
+                  - '[BODY].ok == true'
               - name: Hermes Readiness
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes
@@ -418,6 +584,7 @@ spec:
                   timeout: 10s
                 conditions:
                   - '[STATUS] == 200'
+                  - '[BODY].ok == true'
               - name: Iris Gateway
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:18789/healthz
@@ -435,6 +602,73 @@ spec:
                   timeout: 10s
                 conditions:
                   - '[STATUS] == 200'
+                  - '[BODY].ok == true'
+              - name: Iris SSH
+                group: "OpenClaw & Hermes"
+                url: tcp://${IRIS_MAC_MINI_IP}:22
+                interval: 60s
+                client:
+                  timeout: 5s
+                conditions:
+                  - '[CONNECTED] == true'
+              - name: Alertmanager
+                group: Operations
+                url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/ready
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Control Panel
+                group: Operations
+                url: https://controlpanel.${BASE_DOMAIN}/healthz
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].ok == true'
+              - name: Dynacat
+                group: Operations
+                url: https://rangoonpulse.${BASE_DOMAIN}/api/healthz
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Flux UI
+                group: Operations
+                url: https://fluxui.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Prometheus
+                group: Operations
+                url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/ready
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Resource Advisor
+                group: Operations
+                url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: 75 Soft
+                group: Personal apps
+                url: https://seventyfivesoft.${ERICAKNIGHT_DOMAIN}/healthz
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == ok'
               - name: Actual Budget
                 group: Personal apps
                 url: https://actual.${BASE_DOMAIN}
@@ -444,6 +678,56 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Anki
+                group: Personal apps
+                url: https://anki.${BASE_DOMAIN}/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Interview Prep
+                group: Personal apps
+                url: https://itvp.${BASE_DOMAIN}/api/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == ok'
+              - name: Miniflux
+                group: Personal apps
+                url: https://rss.${BASE_DOMAIN}/healthcheck
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Obsidian LiveSync
+                group: Personal apps
+                url: https://livesync.${BASE_DOMAIN}/_up
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == ok'
+              - name: Reactive Resume
+                group: Personal apps
+                url: https://build-resume.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Retirement
+                group: Personal apps
+                url: https://retirement.${BASE_DOMAIN}/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
               - name: Vaultwarden
                 group: Personal apps
                 url: https://passwords.${BASE_DOMAIN}
@@ -453,6 +737,103 @@ spec:
                 conditions:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
+              - name: Blog
+                group: Public sites
+                url: https://blog.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Blog Apex
+                group: Public sites
+                url: https://${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Erica Knight
+                group: Public sites
+                url: https://${ERICAKNIGHT_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Erica Knight WWW
+                group: Public sites
+                url: https://www.${ERICAKNIGHT_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: MMCal
+                group: Public sites
+                url: https://mmcal.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Rangoon Mapper
+                group: Public sites
+                url: https://rangoonmapper.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Nodecast TV
+                group: TV
+                url: https://tv.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Tunarr
+                group: TV
+                url: https://tunarr.${BASE_DOMAIN}/web
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: iSponsorBlockTV
+                group: TV
+                url: https://sponsorblocktv.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: BentoPDF
+                group: Tools
+                url: https://bento.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: ChartDB
+                group: Tools
+                url: https://chartsdb.${BASE_DOMAIN}/
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Kroki
+                group: Tools
+                url: https://diagrams.${BASE_DOMAIN}/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].status == pass'
     persistence:
       config:
         enabled: true

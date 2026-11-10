@@ -15,25 +15,52 @@ Dynacat, the Control Panel, and Grafana.
 
 ## Checks
 
-The 26 checks poll every 60 seconds. They retain the service HTTPS paths,
-accepted status ranges, TLS verification, redirect following, and 48-second
-service / 10-second native-service timeouts. These are HTTP availability checks,
-not ICMP probes, so no raw-socket capability is needed.
+The 70 checks poll every 60 seconds: 61 HTTP, three DNS, and six TCP checks.
+The inline configuration is the authoritative endpoint inventory. Coverage spans
+all current application backends, the six permanent-public Tunnel hostnames,
+DNS resolution, selected data services, and native-host access.
 
-- Downloads: SABnzbd and Transmission.
-- Infrastructure: both independent AdGuard instances, Grafana, router, and Speedtest Tracker.
-- Media and library: Audiobookshelf, BookOrbit, Immich, Jellyfin, Seerr, and Tracerr.
-- Media automation: Bazarr, Prowlarr, Radarr, and Sonarr.
-- OpenClaw & Hermes: Iris gateway, API readiness, and HTTPS edge; Hermes gateway,
-  readiness, dashboard, and HTTPS edge.
-- Personal apps: Actual Budget and Vaultwarden.
+- App checks use private HTTPS health/login/dashboard paths, retaining ingress,
+  DNS, and TLS coverage. Internal services without a canonical hostname use their
+  cluster-local health endpoints. Public-site checks traverse Cloudflare and
+  include the blog apex and Erica Knight WWW redirect as distinct edge routes.
+- The **OpenClaw & Hermes** group keeps gateway, cached readiness, dashboard,
+  and HTTPS edge checks separate. All seven HTTP checks require JSON `ok: true`
+  and HTTP 200; an additional TCP check covers Iris SSH.
+- **DNS** queries both AdGuard VIPs independently and the CoreDNS Service. Each
+  resolver must return `${INGRESS_VIP}` for `gatus.${BASE_DOMAIN}` with `NOERROR`.
+  The AdGuard web checks remain separate from DNS functionality.
+- **Data services** checks the shared, Immich, and Vaultwarden PostgreSQL
+  listeners and requires an actual `PONG` response from Immich Valkey. Immich's
+  machine-learning `/ping` check requires `pong`.
+- **Infrastructure** includes TrueNAS's HTTPS UI and its independent NFS TCP
+  listener. **Operations** includes Dynacat, Control Panel, Flux UI, Resource
+  Advisor, Prometheus readiness, and Alertmanager readiness.
 
-Login/dashboard paths intentionally test the actual application page. In
-particular, Speedtest uses `/admin/login`, which also exercises its session and
-database path. Do not replace these with shallow health endpoints without
-considering the lost coverage. Native gateway, readiness, dashboard, and edge
-checks test distinct boundaries and must remain separate. The three JSON checks
-require `ok: true` as well as HTTP 200.
+Keep known endpoint semantics when changing targets:
+
+- Anki and Jackett use `/health`. Anki's root `404` is expected; Jackett's web
+  login redirects through a cookie test that a stateless client can fail.
+- LiveSync uses CouchDB's unauthenticated `/_up` response. Health endpoints with
+  a structured status field assert its healthy value instead of accepting any
+  HTTP 200 JSON body.
+- Transmission VPN UI checks its diagnostics API and response shape. Direct
+  mode is valid, so a disabled VPN is not a failed UI check.
+- Speedtest uses `/admin/login`, exercising page rendering, sessions, and the
+  database. Preserve the existing final login/dashboard paths for other apps.
+- Gatus's own health is monitored externally by Dynacat and its Prometheus
+  scrape. A self-check inside Gatus cannot report when Gatus itself is down.
+
+The existing service HTTP checks retain their 48-second timeouts. New HTTP
+checks use ten seconds; native HTTP and TCP checks use ten and five seconds
+respectively. No ICMP/raw-socket capability, application credentials, or new
+workload is needed for these checks.
+
+A PostgreSQL or NFS TCP check proves listener reachability, not successful
+queries, authenticated sessions, mounted-file operations, or data integrity.
+Gatus depends on the cluster and shared PostgreSQL for its own operation;
+independent Iris monitoring and the existing Prometheus alerts remain necessary
+for failures that take Gatus's runtime or storage down.
 
 Gatus records each failed evaluation immediately. No Gatus notification provider
 is configured; existing Prometheus/Alertmanager native-host alerts retain their

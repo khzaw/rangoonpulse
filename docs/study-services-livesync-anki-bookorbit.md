@@ -25,7 +25,7 @@ The hostname serves CouchDB for Obsidian LiveSync clients. Treat the database as
 - persistence: `truenas-nfs`
 - credentials: SOPS-managed
 
-This is an Anki sync endpoint, not a web application. A browser request to `/` returning `404` is expected and is not a health failure. Validate with the Anki sync protocol or client login path.
+This is an Anki sync endpoint, not a web application. A browser request to `/` returning `404` is expected and is not a health failure. Gatus checks `/health` for HTTP 200. Validate actual synchronization with the Anki sync protocol or client login path.
 
 ## BookOrbit
 

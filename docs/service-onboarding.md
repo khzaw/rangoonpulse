@@ -39,6 +39,14 @@ Use **Dynacat at `https://rangoonpulse.khzaw.dev`**. Add a bookmark in the appro
 relevant Health page. Give the bookmark the canonical HTTPS URL; use a cluster-local service health URL for the
 monitor where supported. Add an upstream release watcher when an appropriate release source exists.
 
+Register each new service in `apps/gatus/helmrelease.yaml` as part of the same
+change. Prefer the canonical HTTPS health path for app access checks and use
+cluster-local targets for internal dependencies. Verify status/body assertions
+and protocol-specific checks against the actual service; authentication, an
+expected root-page 404, and intentionally disabled modes need explicit handling.
+Keep separate failure boundaries distinct and update or remove monitors when
+retiring a service. See [Gatus](./gatus.md) for the current check contract.
+
 Render the embedded configuration and inspect the live configured pages after rollout. A successful
 `/api/healthz` response alone is insufficient: Dynacat can expose it during initial setup as well. Open the new
 bookmark, confirm the monitor result, and check the app itself.
