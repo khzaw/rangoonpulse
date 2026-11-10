@@ -92,7 +92,9 @@ additional administrator credential.
 
 cert-manager owns `default/Certificate/gatus-tls` and its `gatus-tls` Secret,
 issued by `letsencrypt-prod` for `gatus.khzaw.dev`. This is managed TLS material,
-separate from the editable SOPS credential inventory.
+separate from the editable SOPS credential inventory. The Secrets page inventories
+Git-managed credentials; inspect generated TLS metadata through cert-manager's
+Kubernetes objects instead.
 
 ## Verification
 
