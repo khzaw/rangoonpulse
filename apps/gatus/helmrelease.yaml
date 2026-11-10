@@ -377,7 +377,7 @@ spec:
                   - '[STATUS] >= 200'
                   - '[STATUS] < 300'
               - name: Hermes Dashboard
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9119/api/health
                 interval: 60s
                 client:
@@ -385,7 +385,7 @@ spec:
                 conditions:
                   - '[STATUS] == 200'
               - name: Hermes Gateway
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes-gateway
                 interval: 60s
                 client:
@@ -394,7 +394,7 @@ spec:
                   - '[STATUS] == 200'
                   - '[BODY].ok == true'
               - name: Hermes HTTPS Edge
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: https://athena.${BASE_DOMAIN}/api/health
                 interval: 60s
                 client:
@@ -402,7 +402,7 @@ spec:
                 conditions:
                   - '[STATUS] == 200'
               - name: Hermes Readiness
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes
                 interval: 60s
                 client:
@@ -411,7 +411,7 @@ spec:
                   - '[STATUS] == 200'
                   - '[BODY].ok == true'
               - name: Iris API Readiness
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
                 interval: 60s
                 client:
@@ -419,7 +419,7 @@ spec:
                 conditions:
                   - '[STATUS] == 200'
               - name: Iris Gateway
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:18789/healthz
                 interval: 60s
                 client:
@@ -428,7 +428,7 @@ spec:
                   - '[STATUS] == 200'
                   - '[BODY].ok == true'
               - name: Iris HTTPS Edge
-                group: Native services
+                group: "OpenClaw & Hermes"
                 url: https://iris.${BASE_DOMAIN}/healthz
                 interval: 60s
                 client:

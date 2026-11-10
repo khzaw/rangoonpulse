@@ -24,7 +24,7 @@ not ICMP probes, so no raw-socket capability is needed.
 - Infrastructure: both independent AdGuard instances, Grafana, router, and Speedtest Tracker.
 - Media and library: Audiobookshelf, BookOrbit, Immich, Jellyfin, Seerr, and Tracerr.
 - Media automation: Bazarr, Prowlarr, Radarr, and Sonarr.
-- Native services: Iris gateway, API readiness, and HTTPS edge; Hermes gateway,
+- OpenClaw & Hermes: Iris gateway, API readiness, and HTTPS edge; Hermes gateway,
   readiness, dashboard, and HTTPS edge.
 - Personal apps: Actual Budget and Vaultwarden.
 
