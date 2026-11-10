@@ -18,7 +18,7 @@ Current roles:
 - Transmission peer-to-peer VIP: `${TRANSMISSION_P2P_VIP}`
 - Mac mini edge VIP: `${IRIS_VIP}`
 - AdGuard DNS VIPs: `${ADGUARD_PRIMARY_IP}` and `${ADGUARD_SECONDARY_IP}`
-- Tailscale Connector routes: router, both nodes, NAS, shared ingress VIP, and Mac mini edge VIP as `/32` routes
+- Tailscale Connector routes: router, both nodes, NAS, shared ingress VIP, Mac mini edge VIP, and both AdGuard DNS VIPs as `/32` routes
 
 ## Three Access Paths
 

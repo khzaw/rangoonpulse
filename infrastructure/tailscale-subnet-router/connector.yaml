@@ -15,3 +15,5 @@ spec:
       - ${NAS_IP}/32
       - ${INGRESS_VIP}/32
       - ${IRIS_VIP}/32
+      - ${ADGUARD_PRIMARY_IP}/32
+      - ${ADGUARD_SECONDARY_IP}/32

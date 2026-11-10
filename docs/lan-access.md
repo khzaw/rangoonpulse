@@ -12,7 +12,7 @@ last_reviewed: 2026-10-25
 
 Private `*.khzaw.dev` services resolve to the shared ingress VIP and are reachable from the LAN or through the Tailscale subnet router. Tailscale clients use the same destination IPs as LAN clients; there is no separate Tailscale ingress proxy.
 
-The active Connector is `infrastructure/tailscale-subnet-router/connector.yaml`. It advertises narrow `/32` routes for the router, both Talos nodes, NAS, shared ingress VIP, and Mac mini edge VIP, and also acts as an exit node.
+The active Connector is `infrastructure/tailscale-subnet-router/connector.yaml`. It advertises narrow `/32` routes for the router, both Talos nodes, NAS, shared ingress VIP, Mac mini edge VIP, and both AdGuard DNS VIPs, and also acts as an exit node.
 
 ## LAN Devices Behind Ingress
 
@@ -36,6 +36,17 @@ OpenClaw and Hermes authentication are host-side concerns. A successful ingress 
 ## DNS
 
 LAN clients should use the two AdGuard LoadBalancer IPs published by the router's DHCP configuration. Private records may be rejected by client/router DNS-rebind protection; prefer a scoped `khzaw.dev` exception over disabling rebind protection globally.
+
+Remote Tailscale clients can reach AdGuard at `${ADGUARD_PRIMARY_IP}` and
+`${ADGUARD_SECONDARY_IP}` through the Connector's `/32` routes. The routes must
+be approved in the tailnet and network policy must allow TCP/UDP port `53`.
+Advertising these routes provides reachability; selecting AdGuard as a tailnet
+nameserver and enabling client DNS settings are separate configuration steps.
+With AdGuard configured as the tailnet's global nameservers and DNS override
+enabled, clients can opt in or out using **Use Tailscale DNS Settings** while
+remaining connected to the tailnet. Without an exit node, opting out uses the
+client's local network DNS. Exit-node DNS is a separate policy; enable **Use with
+exit node** on the nameservers when AdGuard should also serve exit-node clients.
 
 Permanent-public Tunnel hostnames are different: they should resolve to Cloudflare edge addresses, not RFC1918 addresses.
 
