@@ -56,10 +56,10 @@
     "description": "Audiobookshelf"
   },
   {
-    "id": "uptime",
-    "name": "Uptime Kuma",
-    "target": "http://uptime-kuma.default.svc.cluster.local:3001",
-    "description": "Uptime-kuma"
+    "id": "gatus",
+    "name": "Gatus",
+    "target": "http://gatus.default.svc.cluster.local:8080",
+    "description": "Service health and uptime history"
   },
   {
     "id": "fluxui",

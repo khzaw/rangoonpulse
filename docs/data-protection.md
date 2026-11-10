@@ -30,9 +30,8 @@ The repository does not define centralized backup software, offsite replication,
 Important persistent systems without repository-defined automated backups include:
 
 - Interview Prep SQLite
-- Uptime Kuma SQLite
 - Vaultwarden application data and dedicated PostgreSQL
-- media-postgres and its application databases
+- media-postgres and its application databases, including Gatus history
 - Immich PostgreSQL and local machine-learning/cache state
 - Prometheus TSDB and Grafana state
 - exposure-control runtime state

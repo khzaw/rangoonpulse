@@ -118,7 +118,7 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}audiobookshelf.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}uptime.${BASE_DOMAIN}
+              - hostname: ${SHARE_HOST_PREFIX}gatus.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}fluxui.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080

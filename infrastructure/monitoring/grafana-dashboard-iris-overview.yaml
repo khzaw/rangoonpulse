@@ -19,7 +19,7 @@ data:
       "tags": ["iris", "macos", "homelab"],
       "time": {"from": "now-24h", "to": "now"},
       "templating": {"list": [{"name": "datasource", "type": "datasource", "query": "prometheus", "current": {"text": "Prometheus", "value": "prometheus"}, "refresh": 1}]},
-      "links": [{"title": "Iris Gateway", "url": "https://iris.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Hermes", "url": "https://athena.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Uptime Kuma", "url": "https://uptime.${BASE_DOMAIN}", "targetBlank": true}],
+      "links": [{"title": "Iris Gateway", "url": "https://iris.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Hermes", "url": "https://athena.${BASE_DOMAIN}", "targetBlank": true}, {"title": "Gatus", "url": "https://gatus.${BASE_DOMAIN}", "targetBlank": true}],
       "panels": [
         {
           "id": 1, "type": "stat", "title": "Host exporter", "datasource": {"uid": "$datasource"},

@@ -196,10 +196,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-uptime-cname
+  name: share-gatus-cname
   namespace: public-edge
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}uptime.${BASE_DOMAIN}
+    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}gatus.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName

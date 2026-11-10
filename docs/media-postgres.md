@@ -16,6 +16,7 @@ last_reviewed: 2026-11-02
 - BookOrbit: `bookorbit`
 - RomM: `romm`, provisioned by its own pre-install/pre-upgrade hook; see [RomM](./romm.md)
 - Miniflux: `miniflux`, provisioned by its own pre-install/pre-upgrade hook; see [Miniflux](./miniflux.md)
+- Gatus: `gatus`, provisioned by its own pre-install/pre-upgrade hook; see [Gatus](./gatus.md)
 
 Monthly homelab power costs (Kubernetes nodes plus Iris from enrollment) reuse the existing maintenance database `postgres`,
 adding only `power_estimation.monthly_cost`. A post-install/post-upgrade hook
@@ -51,6 +52,7 @@ All database credentials are SOPS-managed:
 - `bookorbit-secret`
 - `romm-secret`, consumed by RomM and its database-provisioning hook
 - `miniflux-secret`, consumed by Miniflux and its database-provisioning hook
+- `gatus-secret`, consumed by Gatus and its database-provisioning hook
 
 Initialization creates roles and databases on first boot only. Keep init configuration and Secret values aligned when rebuilding storage.
 
@@ -59,6 +61,9 @@ RomM's hook creates or updates its role/database against both existing and newly
 Miniflux uses the same app-owned hook pattern without changing this release.
 Its five-connection runtime pool and eight-connection role limit bound its share
 of the existing connection budget.
+
+Gatus also provisions its own restricted role without rolling the shared database.
+A 16-connection role limit bounds its ten concurrent endpoint evaluations and dashboard queries.
 
 ## Backup Status
 

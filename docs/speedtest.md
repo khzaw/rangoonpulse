@@ -38,7 +38,7 @@ needed. Do not persist this cache across application versions.
 
 - Render the pinned chart before interpreting probes: the current `spec`-only
   probe entries are disabled by app-template's default `enabled: false`. They
-  do not generate kubelet HTTP traffic. Uptime Kuma monitors the private HTTPS
+  do not generate kubelet HTTP traffic. Gatus monitors the private HTTPS
   service separately.
 - Confirm `/api/healthcheck` and `/admin/login` respond through the running app,
   the result count/history survive rollout, and the next scheduled result appears.

@@ -194,10 +194,10 @@ test("classifies an update discovered after Renovate ran even when the dependenc
 test("classifies an update published after Renovate ran as new since run", () => {
   const result = classifyImageUpdate(
     {
-      name: "uptime-kuma",
-      imageRepo: "docker.io/louislam/uptime-kuma",
-      currentVersion: "2.4.0",
-      latestVersion: "2.5.0",
+      name: "gatus",
+      imageRepo: "ghcr.io/twin/gatus",
+      currentVersion: "5.37.0",
+      latestVersion: "5.38.0",
       status: "update",
     },
     { lastRun, detectedDependencies: [] },

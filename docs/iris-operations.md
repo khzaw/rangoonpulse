@@ -22,13 +22,12 @@ Kubernetes-only power, readiness, and capacity remain separate.
 
 - Grafana: <https://grafana.khzaw.dev/d/iris-overview> (Darwin-specific metrics, OpenClaw readiness,
   Hermes gateway/dashboard APIs, component readiness, active agents and platform connections).
-  Header buttons link to Iris Gateway, [Hermes / Athena](https://athena.khzaw.dev), and Uptime Kuma.
+  Header buttons link to Iris Gateway, [Hermes / Athena](https://athena.khzaw.dev), and Gatus.
 - Dynacat: Home → Ops → Iris / Hermes (Athena) / Iris Overview; Health → Iris Gateway /
   Iris API Readiness / Hermes Gateway / Hermes Dashboard / Hermes Readiness.
-- Uptime Kuma monitors and status-page membership are runtime-owned. Inspect current
-  entries through its authenticated UI; do not copy numeric monitor IDs or notification
-  status into this guide. Monitor the gateway, cached readiness relays, and HTTPS edge
-  separately using the endpoint contracts below. Configure through the UI, not live SQLite edits.
+- Gatus monitors are Git-owned in `apps/gatus/helmrelease.yaml`. The gateway,
+  cached readiness relays, dashboards, and HTTPS edges remain separate checks.
+  Change their endpoints and JSON conditions in Git; see [Gatus](./gatus.md).
 - Prometheus blackbox probes the direct SSH listener on `10.0.0.66:22` and the
   Hermes gateway relay, dashboard health, combined readiness relay, and HTTPS edge.
   HTTP probes require status 200 and JSON `ok: true`. Targets are declared in
@@ -222,6 +221,6 @@ The fixtures include real discovery's `service="iris-node"` label, healthy telem
 missing host/watchdog data, stopped agents, low/critical APFS space, Hermes component failures
 despite healthy processes/HTTP APIs, and independent Athena HTTPS-path failure.
 
-Verify launchd restart behavior for the three managed telemetry jobs, process/readiness samples, both cluster probes, private scrape targets, Darwin/APFS dashboard metrics, and actual Dynacat/Kuma entries. Confirm the restricted identity can read readiness but cannot list nodes or Secrets. Check native credential/state files are mode 0600.
+Verify launchd restart behavior for the three managed telemetry jobs, process/readiness samples, both cluster probes, private scrape targets, Darwin/APFS dashboard metrics, and actual Dynacat/Gatus entries. Confirm the restricted identity can read readiness but cannot list nodes or Secrets. Check native credential/state files are mode 0600.
 
 The installer retries launchd's asynchronous `bootout`/`bootstrap` race for up to ten seconds. A transient code 5 after successful unload is not by itself a reason to add sudo or alter existing agent jobs.

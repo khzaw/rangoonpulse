@@ -99,7 +99,7 @@ The services below are declared in [the Flux reconciliation tree](flux/kustomiza
 | **Delivery** | Flux CD, Helm, Flux Operator UI, image automation, Renovate |
 | **Networking** | ingress-nginx, MetalLB, cert-manager, ExternalDNS, Tailscale Operator and subnet/exit Connector |
 | **DNS and public edge** | Dual AdGuard Home, Cloudflare Tunnel, exposure-control |
-| **Observability** | Prometheus, Alertmanager, Grafana, node exporter, Metrics Server, Uptime Kuma |
+| **Observability** | Prometheus, Alertmanager, Grafana, node exporter, Metrics Server, [Gatus](docs/gatus.md) |
 | **Operations** | Resource Advisor, Control Panel, host telemetry, power estimates, and independent cluster health checks |
 | **Storage** | TrueNAS, democratic-csi, local-path provisioner |
 

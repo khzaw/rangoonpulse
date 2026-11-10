@@ -75,7 +75,7 @@ template: |
 Secret references must remain `$${SOME_API_KEY}` in the HelmRelease. Flux turns them into `${SOME_API_KEY}` for
 Dynacat to expand from the shared Secret. Do not substitute real API keys into Git or validation output.
 
-Existing integrations include Uptime Kuma's `/api/status-page/heartbeat/<slug>` endpoint and Jellyfin's `/Sessions`
+Existing integrations include Gatus's `/api/v1/endpoints/statuses?page=1&pageSize=1` endpoint and Jellyfin's `/Sessions`
 endpoint for Now Playing. These remain custom API widgets.
 
 A widget credential can fail independently of dashboard health. Verify the shared Jellyfin key against the actual `/Sessions`, `/Items/Counts`, and `/Users` operations; renew it through the encrypted-secret workflow when needed.

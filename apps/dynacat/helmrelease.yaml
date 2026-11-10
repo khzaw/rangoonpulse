@@ -358,9 +358,9 @@ spec:
                               - title: autobrr
                                 url: https://autobrr.${BASE_DOMAIN}
                                 icon: mdi:autorenew
-                              - title: Uptime Kuma
-                                url: https://uptime.${BASE_DOMAIN}
-                                icon: di:uptime-kuma
+                              - title: Gatus
+                                url: https://gatus.${BASE_DOMAIN}
+                                icon: di:gatus
                               - title: Iris
                                 url: https://iris.${BASE_DOMAIN}
                                 icon: mdi:robot-outline
@@ -595,37 +595,27 @@ spec:
                                 </div>
                               </div>`}}
                           - type: custom-api
-                            title: Uptime Kuma
+                            title: Gatus
                             cache: 1m
                             update-interval: 1m
-                            url: http://uptime-kuma.default.svc.cluster.local:3001/api/status-page/heartbeat/rangoonpulse
+                            url: http://gatus.default.svc.cluster.local:8080/api/v1/endpoints/statuses?page=1&pageSize=1
                             template: |
-                              {{`{{ $ids := .JSON.Array "heartbeatList.@keys" }}
-                              {{ $total := len $ids }}
-                              {{ if eq $total 0 }}
-                              <div class="size-h5">No status page monitors.</div>
-                              <div class="size-h6">Create and publish a status page with slug <span class="color-highlight">rangoonpulse</span>.</div>
+                              {{`{{ $endpoints := .JSON.Array "" }}
+                              {{ if eq (len $endpoints) 0 }}
+                              <div class="size-h5">No checks available.</div>
                               {{ else }}
+                              {{ $up := 0.0 }}
                               {{ $down := 0.0 }}
-                              {{ range $ids }}
-                              {{ $id := .String "" }}
-                              {{ $s := $.JSON.Int (printf "heartbeatList.%s.0.status" $id) }}
-                              {{ if ne $s 1 }}{{ $down = add $down 1 }}{{ end }}
+                              {{ $pending := 0.0 }}
+                              {{ range $endpoints }}
+                              {{ if eq (len (.Array "results")) 0 }}
+                              {{ $pending = add $pending 1 }}
+                              {{ else if .Bool "results.0.success" }}
+                              {{ $up = add $up 1 }}
+                              {{ else }}
+                              {{ $down = add $down 1 }}
                               {{ end }}
-                              {{ $totalF := $total | toFloat }}
-                              {{ $up := sub $totalF $down }}
-
-                              {{ $uptimes := .JSON.Array "uptimeList.@values" }}
-                              {{ $sum := 0.0 }}
-                              {{ $count := 0.0 }}
-                              {{ range $uptimes }}
-                              {{ $sum = add $sum (.Float "") }}
-                              {{ $count = add $count 1 }}
                               {{ end }}
-                              {{ $avg := 0.0 }}
-                              {{ if gt $count 0.0 }}{{ $avg = div $sum $count }}{{ end }}
-                              {{ $avgPct := mul $avg 100 }}
-
                               <div class="flex justify-between text-center">
                                 <div>
                                   <div class="color-highlight size-h3">{{ $up | toInt | formatNumber }}</div>
@@ -636,10 +626,11 @@ spec:
                                   <div class="size-h6">DOWN</div>
                                 </div>
                                 <div>
-                                  <div class="size-h3">{{ printf "%.2f%%" $avgPct }}</div>
-                                  <div class="size-h6">24H</div>
+                                  <div class="size-h3">{{ $pending | toInt | formatNumber }}</div>
+                                  <div class="size-h6">PENDING</div>
                                 </div>
                               </div>
+                              <a class="size-h6" href="https://gatus.${BASE_DOMAIN}">View service health</a>
                               {{ end }}`}}
 
                       - type: releases
@@ -662,7 +653,7 @@ spec:
                           - actualbudget/actual
                           - alam00000/bentopdf
                           - dani-garcia/vaultwarden
-                          - louislam/uptime-kuma
+                          - TwiN/gatus
                           - Panonim/dynacat
                           - controlplaneio-fluxcd/flux-operator
                           # Iris stays native macOS; these are release notices, not container updates.
@@ -753,6 +744,10 @@ spec:
                         update-interval: 1m
                         style: compact
                         sites:
+                          - title: Gatus
+                            url: https://gatus.${BASE_DOMAIN}
+                            check-url: http://gatus.default.svc.cluster.local:8080/health
+                            icon: di:gatus
                           - title: Dynacat
                             url: https://rangoonpulse.${BASE_DOMAIN}
                             check-url: http://dynacat.default.svc.cluster.local:8080/api/healthz

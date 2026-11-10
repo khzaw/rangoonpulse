@@ -49,7 +49,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "bookorbit": "apps/bookorbit/helmrelease.yaml",
     "transmission": "apps/transmission/helmrelease.yaml",
     "tunarr": "apps/tunarr/helmrelease.yaml",
-    "uptime-kuma": "apps/uptime-kuma/helmrelease.yaml",
+    "gatus": "apps/gatus/helmrelease.yaml",
     "vaultwarden": "apps/vaultwarden/helmrelease.yaml",
 }
 

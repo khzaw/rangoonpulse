@@ -46,6 +46,7 @@ resources:
   - ./kustomizations/infra-storage-media.yaml
   - ./kustomizations/local-storage.yaml
   - ./kustomizations/uptime-kuma.yaml
+  - ./kustomizations/gatus.yaml
   - ./kustomizations/audiobookshelf.yaml
   - ./kustomizations/shelfmark.yaml
   - ./kustomizations/chartsdb.yaml

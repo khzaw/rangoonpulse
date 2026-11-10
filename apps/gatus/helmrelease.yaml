@@ -1,0 +1,464 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gatus
+  namespace: default
+spec:
+  interval: 24h
+  timeout: 10m
+  dependsOn:
+    - name: media-postgres
+  chart:
+    spec:
+      chart: app-template
+      version: 5.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      nodeSelector:
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      dnsConfig:
+        options:
+          - name: ndots
+            value: '1'
+          - name: timeout
+            value: '1'
+          - name: attempts
+            value: '2'
+    controllers:
+      main:
+        forceRename: gatus
+        # One poller and schema owner; scaling would duplicate checks.
+        replicas: 1
+        strategy: Recreate
+        containers:
+          main:
+            image:
+              repository: ghcr.io/twin/gatus
+              tag: v5.38.0
+            env:
+              TZ: ${TIMEZONE}
+              GATUS_CONFIG_PATH: /config/config.yaml
+              GATUS_DATABASE_URL:
+                valueFrom:
+                  secretKeyRef:
+                    name: gatus-secret
+                    key: DATABASE_URL
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                cpu: 300m
+                memory: 256Mi
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 5
+                  failureThreshold: 60
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  timeoutSeconds: 5
+                  periodSeconds: 10
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  timeoutSeconds: 5
+                  periodSeconds: 30
+      database:
+        type: job
+        serviceAccount:
+          name: default
+        annotations:
+          helm.sh/hook: pre-install,pre-upgrade
+          helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+        job:
+          backoffLimit: 3
+          activeDeadlineSeconds: 300
+        containers:
+          main:
+            image:
+              repository: postgres
+              tag: 18.6-alpine
+            command:
+              - sh
+              - -c
+            args:
+              - |
+                set -eu
+                psql -X -w -q -v ON_ERROR_STOP=1 -v ECHO=none <<'SQL'
+                \getenv gatus_password GATUS_DB_PASSWORD
+                SELECT pg_advisory_lock(1195463763, 1);
+                SELECT 'CREATE ROLE gatus LOGIN'
+                WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'gatus')
+                \gexec
+                ALTER ROLE gatus WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 16 PASSWORD :'gatus_password';
+                SELECT 'CREATE DATABASE gatus OWNER gatus'
+                WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'gatus')
+                \gexec
+                ALTER DATABASE gatus OWNER TO gatus;
+                REVOKE ALL ON DATABASE gatus FROM PUBLIC;
+                SELECT pg_advisory_unlock(1195463763, 1);
+                SQL
+                echo "Gatus database and role are ready."
+            env:
+              PGHOST: media-postgres.default.svc.cluster.local
+              PGPORT: '5432'
+              PGDATABASE: postgres
+              PGUSER: postgres
+              PGCONNECT_TIMEOUT: '10'
+              PGPASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: media-postgres-secret
+                    key: POSTGRES_PASSWORD
+              GATUS_DB_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: gatus-secret
+                    key: POSTGRES_PASSWORD
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                  - ALL
+            resources:
+              requests:
+                cpu: 25m
+                memory: 32Mi
+              limits:
+                cpu: 250m
+                memory: 128Mi
+    service:
+      main:
+        controller: main
+        ports:
+          http:
+            port: 8080
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: gatus.${BASE_DOMAIN}
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+          nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+        hosts:
+          - host: gatus.${BASE_DOMAIN}
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: gatus-tls
+            hosts:
+              - gatus.${BASE_DOMAIN}
+    configMaps:
+      config:
+        enabled: true
+        data:
+          config.yaml: |
+            metrics: true
+            concurrency: 10
+            storage:
+              type: postgres
+              path: $${GATUS_DATABASE_URL}
+              caching: true
+              maximum-number-of-results: 1440
+              maximum-number-of-events: 100
+            ui:
+              title: Rangoonpulse | Gatus
+              header: Rangoonpulse
+              description: Service availability across the homelab.
+              dashboard-heading: Service health
+              dashboard-subheading: Private HTTPS, infrastructure, and native service checks · every 60 seconds
+              dark-mode: true
+              default-sort-by: group
+              buttons:
+                - name: Dashboard
+                  link: https://rangoonpulse.${BASE_DOMAIN}
+                - name: Control Panel
+                  link: https://controlpanel.${BASE_DOMAIN}
+                - name: Grafana
+                  link: https://grafana.${BASE_DOMAIN}
+            endpoints:
+              - name: SABnzbd
+                group: Downloads
+                url: https://sabnzbd.${BASE_DOMAIN}/login/
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Transmission
+                group: Downloads
+                url: https://torrent.${BASE_DOMAIN}/transmission/web/
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: AdGuard Primary
+                group: Infrastructure
+                url: https://adguard.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: AdGuard Secondary
+                group: Infrastructure
+                url: https://adguard2.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Grafana
+                group: Infrastructure
+                url: https://grafana.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Router
+                group: Infrastructure
+                url: https://router.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Speedtest Tracker
+                group: Infrastructure
+                url: https://speedtest.${BASE_DOMAIN}/admin/login
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Audiobookshelf
+                group: Media and library
+                url: https://audiobookshelf.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: BookOrbit
+                group: Media and library
+                url: https://bookorbit.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Immich
+                group: Media and library
+                url: https://photos.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Jellyfin
+                group: Media and library
+                url: https://jellyfin.${BASE_DOMAIN}/web/
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Seerr
+                group: Media and library
+                url: https://seerr.${BASE_DOMAIN}/login
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Tracerr
+                group: Media and library
+                url: https://tracerr.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Bazarr
+                group: Media automation
+                url: https://bazarr.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Prowlarr
+                group: Media automation
+                url: https://prowlarr.${BASE_DOMAIN}/login?returnUrl=%2F
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Radarr
+                group: Media automation
+                url: https://radarr.${BASE_DOMAIN}/login?returnUrl=%2F
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Sonarr
+                group: Media automation
+                url: https://sonarr.${BASE_DOMAIN}/login?returnUrl=%2F
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Hermes Dashboard
+                group: Native services
+                url: http://${IRIS_MAC_MINI_IP}:9119/api/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Hermes Gateway
+                group: Native services
+                url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes-gateway
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].ok == true'
+              - name: Hermes HTTPS Edge
+                group: Native services
+                url: https://athena.${BASE_DOMAIN}/api/health
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Hermes Readiness
+                group: Native services
+                url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].ok == true'
+              - name: Iris API Readiness
+                group: Native services
+                url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Iris Gateway
+                group: Native services
+                url: http://${IRIS_MAC_MINI_IP}:18789/healthz
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+                  - '[BODY].ok == true'
+              - name: Iris HTTPS Edge
+                group: Native services
+                url: https://iris.${BASE_DOMAIN}/healthz
+                interval: 60s
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Actual Budget
+                group: Personal apps
+                url: https://actual.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+              - name: Vaultwarden
+                group: Personal apps
+                url: https://passwords.${BASE_DOMAIN}
+                interval: 60s
+                client:
+                  timeout: 48s
+                conditions:
+                  - '[STATUS] >= 200'
+                  - '[STATUS] < 300'
+    persistence:
+      config:
+        enabled: true
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /config/config.yaml
+            subPath: config.yaml
+            readOnly: true
