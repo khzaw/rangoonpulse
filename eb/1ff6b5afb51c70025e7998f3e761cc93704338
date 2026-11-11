@@ -1,0 +1,27 @@
+native/iris/alerts.test.yaml
+  s_d3740e19c5133a::t_8d6ebd9ab01177 171-172,174-183,185-194,196-205,207-216,218-229,231-238,240-242,244-245,247-253,255-258,260-262,264-266,268-279,281-284,286-288,290-292,294-305,307-310,312-314,316-318,320-331,333-336,338-510
+  s_d3740e19c5133a::t_f6bb19dea95fb6 68,112
+  s_d3740e19c5133a::t_de6c12e86afd92 173,184,195,206,217,230,243,254,267,280,293,306,319,332
+  s_d3740e19c5133a::t_35a10d642fc406 239,246,259,263,285,289,311,315,337
+infrastructure/monitoring/prometheusrule-iris.yaml
+  s_d3740e19c5133a::t_61abb41f54616d 47-55,57,59-60,63,66-74,76,78-79,82
+  s_d3740e19c5133a::t_ccac969203de44 64,83
+docs/iris-operations.md
+  s_d3740e19c5133a::t_f6bb19dea95fb6 6,36,39-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb1ff6b5afb51c70025e7998f3e761cc93704338",
+  "prompts": {},
+  "sessions": {
+    "s_d3740e19c5133a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1cb42-c3b9-7ba2-84f7-cf49cbbb8da0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Kaung Htet <kayhzaw@gmail.com>"
+    }
+  }
+}
