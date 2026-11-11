@@ -3,7 +3,7 @@ title: Iris native macOS operations
 summary: Native launchd supervision, Darwin telemetry, gateway checks, and an independent sentinel.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-11
 ---
 
 # Iris native macOS operations
@@ -33,11 +33,21 @@ Kubernetes-only power, readiness, and capacity remain separate.
   HTTP probes require status 200 and JSON `ok: true`. Targets are declared in
   `infrastructure/monitoring/helmrelease-blackbox-exporter.yaml`.
 - `Iris.*` critical and warning alerts reuse the existing Telegram/Discord Alertmanager route.
-  Host metrics unavailable: 3m; agent process/readiness down: 3m; APFS Data free space:
+  Host metrics unavailable: 3m; agent health failure: 3m; APFS Data free space:
   below 10% for 10m / below 5% for 5m; native telemetry stale/missing: 3m after a 180s stale threshold.
   Host unavailable means exporter/network/power loss, not a definitive diagnosis of which one.
-  `IrisHermesUnhealthy` alerts after 3m of failed Hermes gateway/dashboard/status/component readiness
-  or any Hermes blackbox target failure, through the same existing critical notification route.
+  `IrisOpenClawUnhealthy` covers only OpenClaw's launchd gateway, native readiness and
+  blackbox health/readiness checks. `IrisHermesUnhealthy` covers only Hermes's launchd
+  gateway/dashboard, native gateway/dashboard/status/component readiness and Hermes
+  blackbox targets. Each rule aggregates failing checks into one stable alert with
+  `host="iris"` and its `agent` label; target, launchd and scrape labels cannot create
+  extra incidents. A failure moving between checks does not reset the 3m pending timer.
+  After firing, the alert stays open until no check has failed for 3m
+  (`keep_firing_for`), so brief recovery during an upgrade does not emit a resolution.
+  Alertmanager groups the distinct alert names separately and sends one service's
+  recovery independently of the other. Existing 30s notification grouping wait,
+  5m group update interval and 4h reminders for prolonged outages still apply.
+  Missing telemetry remains covered by `IrisWatchdogStale` and `IrisHostUnavailable`.
 
 OpenClaw `/readyz` rejects unattributed remote requests with HTTP 403. **Do not relax
 `gateway.trustedProxies` to make monitoring work.** The native watchdog checks readiness over

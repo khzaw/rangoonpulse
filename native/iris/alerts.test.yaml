@@ -65,7 +65,7 @@ tests:
       - series: 'node_filesystem_size_bytes{job="iris-node",mountpoint="/System/Volumes/Data"}'
         values: '100+0x20'
     promql_expr_test:
-      - expr: 'count(ALERTS{alertname="IrisAgentDown",alertstate="firing",launchd_service="ai.hermes.gateway"})'
+      - expr: 'count(ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris"})'
         eval_time: 5m
         exp_samples:
           - labels: '{}'
@@ -109,7 +109,7 @@ tests:
       - series: 'probe_success{target="iris-hermes-https"}'
         values: '0+0x10'
     promql_expr_test:
-      - expr: 'count(ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",target="iris-hermes-https"})'
+      - expr: 'count(ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris"})'
         eval_time: 5m
         exp_samples:
           - labels: '{}'
@@ -168,3 +168,343 @@ tests:
       - expr: 'ALERTS{alertname="IrisPowerSampleUnavailable",alertstate="firing"}'
         eval_time: 10m
         exp_samples: []
+
+  # Service incidents aggregate all checks and retain identity through restart/recovery.
+  - name: Only openclaw - ai.openclaw.gateway fails (iris_launchd_service_up)
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.openclaw.gateway"}
+      values: 0+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+  - name: Only openclaw - iris_openclaw_ready fails
+    interval: 1m
+    input_series:
+    - series: iris_openclaw_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+  - name: Only openclaw - iris-gateway fails (probe_success)
+    interval: 1m
+    input_series:
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-gateway"}
+      values: 0+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+  - name: Only openclaw - iris-readiness fails (probe_success)
+    interval: 1m
+    input_series:
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-readiness"}
+      values: 0+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - ai.hermes.gateway fails (iris_launchd_service_up)
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.hermes.gateway"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - dev.khzaw.hermes.dashboard fails (iris_launchd_service_up)
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="dev.khzaw.hermes.dashboard"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris_hermes_ready fails
+    interval: 1m
+    input_series:
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris_hermes_gateway_up fails
+    interval: 1m
+    input_series:
+    - series: iris_hermes_gateway_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris_hermes_dashboard_up fails
+    interval: 1m
+    input_series:
+    - series: iris_hermes_dashboard_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris_hermes_status_up fails
+    interval: 1m
+    input_series:
+    - series: iris_hermes_status_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris-hermes-gateway fails (probe_success)
+    interval: 1m
+    input_series:
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-gateway"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris-hermes-dashboard fails (probe_success)
+    interval: 1m
+    input_series:
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-dashboard"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris-hermes-readiness fails (probe_success)
+    interval: 1m
+    input_series:
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-readiness"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Only hermes - iris-hermes-https fails (probe_success)
+    interval: 1m
+    input_series:
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-https"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: 'Both services: many failed checks produce exactly two stable alerts'
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.openclaw.gateway"}
+      values: 0+0x20
+    - series: iris_openclaw_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-gateway"}
+      values: 0+0x20
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-readiness"}
+      values: 0+0x20
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.hermes.gateway"}
+      values: 0+0x20
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="dev.khzaw.hermes.dashboard"}
+      values: 0+0x20
+    - series: iris_hermes_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: iris_hermes_gateway_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: iris_hermes_dashboard_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: iris_hermes_status_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x20
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-gateway"}
+      values: 0+0x20
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-dashboard"}
+      values: 0+0x20
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-readiness"}
+      values: 0+0x20
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-https"}
+      values: 0+0x20
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 5m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+  - name: Brief restart below the failure threshold never fires
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.openclaw.gateway"}
+      values: 0+0x1 1+0x18
+    - series: iris_openclaw_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 0+0x1 1+0x18
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-gateway"}
+      values: 0+0x1 1+0x18
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-readiness"}
+      values: 0+0x1 1+0x18
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 1m
+      exp_samples: []
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 3m
+      exp_samples: []
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 6m
+      exp_samples: []
+  - name: Failure moves from process to readiness without resetting pending or firing identity
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.openclaw.gateway"}
+      values: 0+0x1 1+0x18
+    - series: iris_openclaw_ready{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring"}
+      values: 1+0x1 0+0x4 1+0x13
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 2m
+      exp_samples: []
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 3m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 7m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 9m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples: []
+  - name: Brief recovery stays firing and restarts the recovery grace
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.hermes.gateway"}
+      values: 0+0x4 1+0x15
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-https"}
+      values: 1+0x6 0+0x2 1+0x10
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 3m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 6m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 8m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 12m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 13m
+      exp_samples: []
+  - name: Each service resolves independently only after its final failed check recovers
+    interval: 1m
+    input_series:
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.openclaw.gateway"}
+      values: 0+0x4 1+0x15
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-readiness"}
+      values: 0+0x7 1+0x12
+    - series: iris_launchd_service_up{job="iris-node",host="iris",instance="mac:9100",service="iris-node",endpoint="metrics",namespace="monitoring",launchd_service="ai.hermes.gateway"}
+      values: 0+0x9 1+0x10
+    - series: probe_success{job="blackbox-exporter",instance="mac:9101",namespace="monitoring",target="iris-hermes-https"}
+      values: 0+0x11 1+0x8
+    promql_expr_test:
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 3m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 7m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 10m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisOpenClawUnhealthy",alertstate="firing",agent="openclaw",host="iris",severity="critical"}
+        value: 1
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 11m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 14m
+      exp_samples:
+      - labels: ALERTS{alertname="IrisHermesUnhealthy",alertstate="firing",agent="hermes",host="iris",severity="critical"}
+        value: 1
+    - expr: ALERTS{alertname=~"Iris(OpenClaw|Hermes)Unhealthy",alertstate="firing"}
+      eval_time: 15m
+      exp_samples: []

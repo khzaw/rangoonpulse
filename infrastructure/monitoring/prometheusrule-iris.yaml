@@ -44,22 +44,43 @@ spec:
             severity: critical
           annotations:
             summary: Iris APFS data volume has less than 5% free
-        - alert: IrisAgentDown
-          expr: iris_launchd_service_up{job="iris-node"} == 0 or iris_openclaw_ready{job="iris-node"} == 0 or probe_success{target=~"iris-gateway|iris-readiness"} == 0
+        # Aggregate failed checks before alerting: discovery/target labels must
+        # not create separate incidents or change identity during recovery.
+        - alert: IrisOpenClawUnhealthy
+          expr: |
+            max(
+              (iris_launchd_service_up{job="iris-node",launchd_service="ai.openclaw.gateway"} == 0)
+              or (iris_openclaw_ready{job="iris-node"} == 0)
+              or (probe_success{target=~"iris-gateway|iris-readiness"} == 0)
+            ) == 0
           for: 3m
+          keep_firing_for: 3m
           labels:
+            host: iris
+            agent: openclaw
             severity: critical
           annotations:
-            summary: An Iris agent process or OpenClaw readiness check is down
-            description: Check ai.openclaw.gateway, ai.hermes.gateway and dev.khzaw.hermes.dashboard on Iris. Remote readiness is a sanitized loopback check, not a relaxed OpenClaw proxy policy.
+            summary: OpenClaw health on Iris
+            description: Checks cover OpenClaw's gateway process, local readiness and remote health. Recovery requires 3 minutes without a failing check. Inspect the Iris Overview dashboard for individual checks.
         - alert: IrisHermesUnhealthy
-          expr: iris_hermes_ready{job="iris-node"} == 0 or iris_hermes_gateway_up{job="iris-node"} == 0 or iris_hermes_dashboard_up{job="iris-node"} == 0 or iris_hermes_status_up{job="iris-node"} == 0 or probe_success{target=~"iris-hermes-.*"} == 0
+          expr: |
+            max(
+              (iris_launchd_service_up{job="iris-node",launchd_service=~"ai.hermes.gateway|dev.khzaw.hermes.dashboard"} == 0)
+              or (iris_hermes_ready{job="iris-node"} == 0)
+              or (iris_hermes_gateway_up{job="iris-node"} == 0)
+              or (iris_hermes_dashboard_up{job="iris-node"} == 0)
+              or (iris_hermes_status_up{job="iris-node"} == 0)
+              or (probe_success{target=~"iris-hermes-.*"} == 0)
+            ) == 0
           for: 3m
+          keep_firing_for: 3m
           labels:
+            host: iris
+            agent: hermes
             severity: critical
           annotations:
-            summary: Hermes gateway, dashboard or component health is failing
-            description: Check Athena /api/health and /api/status, the loopback gateway /health on port 8642, and Hermes gateway/dashboard/storage/platform component metrics. A running launchd process alone is not readiness; no inference request is sent by these probes.
+            summary: Hermes health on Iris
+            description: Checks cover Hermes's gateway, dashboard, component readiness and HTTPS access. Recovery requires 3 minutes without a failing check. Inspect the Iris Overview dashboard for individual checks.
         - alert: IrisWatchdogStale
           expr: (time() - iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"} > 180) or absent(iris_watchdog_last_cycle_timestamp_seconds{job="iris-node"}) or absent(iris_openclaw_ready{job="iris-node"}) or absent(iris_hermes_ready{job="iris-node"}) or absent(iris_hermes_gateway_up{job="iris-node"}) or absent(iris_hermes_dashboard_up{job="iris-node"}) or absent(iris_hermes_status_up{job="iris-node"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.openclaw.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="ai.hermes.gateway"}) or absent(iris_launchd_service_up{job="iris-node",launchd_service="dev.khzaw.hermes.dashboard"}) or node_textfile_scrape_error{job="iris-node"} != 0
           for: 3m
