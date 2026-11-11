@@ -34,8 +34,8 @@ spec:
               TZ: "${TIMEZONE}"
               PUID: "1000"
               GUID: "1000"
-              # Queue background jobs instead of overlapping library scans on a shared CPU.
-              DYNACONF_GENERAL__CONCURRENT_JOBS: "1"
+              # Bound background-job concurrency on the shared CPU.
+              DYNACONF_GENERAL__CONCURRENT_JOBS: "2"
             resources:
               requests:
                 cpu: "50m"

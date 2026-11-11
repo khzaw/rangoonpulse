@@ -14,12 +14,12 @@ The subtitle service at `bazarr.khzaw.dev` is declared in
 
 ## Background work
 
-The HelmRelease sets `DYNACONF_GENERAL__CONCURRENT_JOBS=1`. Bazarr's Dynaconf loader
+The HelmRelease sets `DYNACONF_GENERAL__CONCURRENT_JOBS=2`. Bazarr's Dynaconf loader
 applies this nested environment override to `general.concurrent_jobs` at startup.
 Git owns this setting; an application-side edit is not durable across restarts.
 
-One queued job runs at a time, preventing scheduled episode and movie scans from
-competing within the container's CPU budget. All scheduled jobs remain enabled;
+At most two queued jobs run at a time, bounding competition within the container's
+CPU budget. All scheduled jobs remain enabled;
 background batches can take longer. This bounds concurrent work rather than
 reducing the total amount of work or guaranteeing lower idle memory.
 
