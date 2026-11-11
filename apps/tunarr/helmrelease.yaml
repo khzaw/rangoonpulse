@@ -44,6 +44,10 @@ spec:
               # Force the modern Intel driver
               LIBVA_DRIVER_NAME: "iHD"
               LIBVA_DRIVERS_PATH: "/usr/local/lib/x86_64-linux-gnu/dri"
+              # Bound embedded search indexing without disabling library search.
+              TUNARR_SEARCH_MAX_MEMORY: "512Mb"
+              TUNARR_SEARCH_MAX_INDEXING_THREADS: "1"
+              TUNARR_SEARCH_REDUCE_INDEXER_MEMORY_USAGE: "true"
             resources:
               requests:
                 cpu: "50m"
