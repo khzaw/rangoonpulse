@@ -1,4 +1,4 @@
-FROM rust:1.99.1-alpine AS builder
+FROM rust:1.100.0-alpine AS builder
 RUN apk add --no-cache build-base
 WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
