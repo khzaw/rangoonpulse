@@ -60,14 +60,6 @@
   ],
   "packageRules": [
     {
-      "description": "Hold the monitoring chart until Prometheus Operator and config-reloader image indexes support ARM64 again; verify before removing this hold.",
-      "matchManagers": ["flux"],
-      "matchDatasources": ["helm"],
-      "matchPackageNames": ["kube-prometheus-stack"],
-      "matchFileNames": ["infrastructure/monitoring/helmrelease.yaml"],
-      "enabled": false
-    },
-    {
       "description": "Promote the Talos-owned Canal bootstrap manually after CNI compatibility and staged rollout checks.",
       "matchFileNames": [
         "infrastructure/canal/bootstrap.yaml"

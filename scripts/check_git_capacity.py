@@ -164,6 +164,24 @@ def operator_intent(obj):
     return {key: value for key, value in obj.items() if key != 'metadata'}
 
 
+def alertmanager_image_only_change(old, new):
+    """Recognize version updates with an unchanged, explicit CPU reservation."""
+    intents = []
+    for obj in (old, new):
+        if not obj or (obj.get('apiVersion'), obj.get('kind')) != ('monitoring.coreos.com/v1', 'Alertmanager'):
+            return False
+        spec = obj.get('spec', {})
+        if not spec.get('resources', {}).get('requests', {}).get('cpu'):
+            return False
+        if not all(isinstance(spec.get(field), str) and spec[field] for field in ('image', 'version')):
+            return False
+        intent = copy.deepcopy(operator_intent(obj))
+        for field in ('image', 'version'):
+            del intent['spec'][field]
+        intents.append(intent)
+    return intents[0] == intents[1]
+
+
 def changed_workloads(before, after):
     old_workloads = {k: o for k, o in before.items() if o['kind'] in WORKLOADS}
     new_workloads = {k: o for k, o in after.items() if o['kind'] in WORKLOADS}
@@ -179,8 +197,11 @@ def changed_workloads(before, after):
         for rendered_key in old_rendered.keys() | new_rendered.keys():
             if rendered_key[0] not in WORKLOADS:
                 # Chart-version labels do not change the generated workload.
-                # Spec/API changes and additions/removals still fail closed.
-                if operator_intent(old_rendered.get(rendered_key)) != operator_intent(new_rendered.get(rendered_key)):
+                # Alertmanager image/version updates retain its explicit CPU.
+                # Other spec/API changes and additions/removals fail closed.
+                old_operator, new_operator = old_rendered.get(rendered_key), new_rendered.get(rendered_key)
+                if (operator_intent(old_operator) != operator_intent(new_operator)
+                        and not alertmanager_image_only_change(old_operator, new_operator)):
                     raise ValueError(f'{rendered_key[0]} changed operator-managed resources; render its generated workload explicitly before changing CPU')
                 continue
             if rendered_key in new_rendered:

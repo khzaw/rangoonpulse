@@ -140,6 +140,37 @@ class OperatorWorkloadTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
                     self.changes([self.workload], [new])
 
+    def test_alertmanager_image_update_preserves_explicit_capacity(self):
+        old = copy.deepcopy(self.workload)
+        old['spec'].update(image='quay.io/prometheus/alertmanager:v0.34.2', version='v0.34.2')
+        new = copy.deepcopy(old)
+        new['spec'].update(image='quay.io/prometheus/alertmanager:v0.35.0', version='v0.35.0')
+        self.assertEqual(self.changes([old], [new]), [])
+        self.assertEqual(old['spec']['version'], 'v0.34.2')
+
+        mutations = {
+            'cpu': lambda o: o['spec']['resources']['requests'].update(cpu='200m'),
+            'implicit_cpu': lambda o: o['spec']['resources']['requests'].pop('cpu'),
+            'replicas': lambda o: o['spec'].update(replicas=2),
+            'placement': lambda o: o['spec'].update(nodeSelector={}),
+            'sidecar': lambda o: o['spec'].update(containers=[{'name': 'extra', 'image': 'example:v1'}]),
+            'storage': lambda o: o['spec'].update(storage={'emptyDir': {}}),
+            'api': lambda o: o.update(apiVersion='monitoring.coreos.com/v2'),
+            'unknown_operator': lambda o: o.update(kind='UnknownOperator'),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(change=name):
+                changed = copy.deepcopy(new)
+                mutate(changed)
+                with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
+                    self.changes([old], [changed])
+        implicit = copy.deepcopy(old)
+        implicit['spec']['resources']['requests'].pop('cpu')
+        next_implicit = copy.deepcopy(new)
+        next_implicit['spec']['resources']['requests'].pop('cpu')
+        with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
+            self.changes([implicit], [next_implicit])
+
     def test_operator_workload_additions_removals_and_renames_fail_closed(self):
         renamed = copy.deepcopy(self.workload)
         renamed['metadata']['name'] = 'renamed'

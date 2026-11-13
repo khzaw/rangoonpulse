@@ -3,7 +3,7 @@ title: CPU Headroom Validation
 summary: Git and CI capacity checks for resource edits, new workloads, and replica scaling without live admission enforcement.
 status: active
 owner: homelab
-last_reviewed: 2026-11-09
+last_reviewed: 2026-11-13
 ---
 
 # CPU Headroom Validation
@@ -43,12 +43,16 @@ Secret and its checksum, so the capacity render omits those credentials. Other
 paths, chart versions, and sources still fail closed. Re-audit the chart templates
 before extending that exception.
 Operator CRs with resource fields may pass when their rendered objects are
-identical apart from top-level metadata. Chart-version label changes are ignored;
-resource identity (kind, namespace, and name) is still compared. New, removed, or
-renamed operator objects and API/spec changes, including replica, placement, or
+identical apart from top-level metadata. An `Alertmanager` in
+`monitoring.coreos.com/v1` may also change only its explicit `image` and `version`
+when both revisions declare the main container's CPU request and every other
+spec field is unchanged. Chart-version label changes are ignored; resource
+identity (kind, namespace, and name) is still compared. New, removed, or renamed
+operator objects and other API/spec changes, including replica, placement, or
 resource-field removal, fail validation; add explicit rendering support before
-changing those inputs. This allows chart metadata or Grafana credential changes
-without bypassing checks on Prometheus or Alertmanager resource changes.
+changing those inputs. This allows image and chart metadata updates without
+bypassing checks on Prometheus or Alertmanager resource changes. Check the
+operator-generated StatefulSets and live capacity before rollout.
 
 ## Snapshot publication
 
