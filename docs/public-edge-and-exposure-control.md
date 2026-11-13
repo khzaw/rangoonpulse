@@ -3,7 +3,7 @@ title: Public Edge and Exposure Control
 summary: Current permanent-public and temporary-share routing, ownership, state, and emergency controls.
 status: active
 owner: homelab
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-13
 ---
 
 # Public Edge and Exposure Control
@@ -71,7 +71,13 @@ The init container uses `default/ghcr-pull-secret` for registry access. The Node
 
 ## Operator Cockpit
 
-The private cockpit combines shares, Transmission mode, image/chart updates, deploy requests, managed Jobs, Secrets, travel checks, [Pulse telemetry](./controlpanel-pulse.md), and [Tuning](./resource-advisor.md). Resource Advisor remains a separate backend: `GET /api/tuning` proxies its report and preflight.
+The private [Control Panel](https://controlpanel.khzaw.dev/) combines shares, Transmission mode, image/chart updates, deploy requests, managed Jobs, Secrets, travel checks, [Pulse telemetry](./controlpanel-pulse.md), and [Tuning](./resource-advisor.md). Resource Advisor remains a separate backend: `GET /api/tuning` proxies its report and preflight.
+
+The default route is Overview. The navigation groups Monitor (Overview, Pulse), Manage (Updates, Deployments, Jobs, Tuning), and Access (Shares, Travel, Secrets). Desktop uses a fixed rail; narrow screens use a modal menu with Escape dismissal and focus restoration. Theme selection stays in the navigation. Existing hash routes remain stable, including `#audit` and `#transmission`; the audit route opens its Activity disclosure.
+
+Updates separates image and chart inventories into keyboard-accessible tabs. Shares supports text search and an Active filter without replacing in-progress share forms. Disable all shares lives on Shares and Travel. Job schedules and history, overview freshness, and tuning schedule evidence are expandable. Jobs, deployments, and secret inventories load on demand, including when selected during initial loading.
+
+UI sources are `index.html`, `styles.css`, `app.js`, and the focused Pulse/Tuning modules under `apps/exposure-control/`. Run `make validate-all`; verify all nine routes in both themes at desktop and phone widths, keyboard tab navigation, mobile menu dismissal, share filtering, and legacy deep links. UI review must not enable shares, deploy sites, run jobs, or modify secrets merely to exercise controls.
 
 Update comparisons are best-effort registry evidence, not dependency ownership or rollout proof. Deploy acknowledgments mean reconciliation was requested; readiness comes from the latest Flux snapshot. Missing snapshots remain unavailable rather than showing a false healthy/zero state. Pending writes remain visible during refresh, and reduced motion retains a static activity cue.
 

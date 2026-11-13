@@ -30,19 +30,30 @@
 
   </head>
   <body>
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="crumbs">
-          <span class="brand-mark">rp</span>
-          <span>/</span>
-          <span>rangoonpulse</span>
-          <span class="env-pill">production</span>
+    <a class="skip-link" href="#mainContent">Skip to content</a>
+    <dialog id="navigation" class="sidebar" aria-label="Navigation">
+      <nav class="section-nav" aria-label="Main navigation">
+        <div class="sidebar-brand">
+          <a href="#overview" class="brand-link" aria-label="rangoonpulse overview"><span class="brand-mark">rp</span><span>rangoonpulse<span class="brand-caption">Control panel</span></span></a>
+          <button id="navCloseBtn" class="icon-button" type="button" aria-label="Close navigation">×</button>
         </div>
-        <div class="top-actions">
-          <div id="controlActivity" class="control-activity" role="status" aria-live="polite" hidden>
-            <canvas id="controlActivityOrb" class="control-activity-orb" aria-hidden="true"></canvas>
-            <span id="controlActivityLabel">Syncing control plane</span>
-          </div>
+        <div class="nav-group"><div class="nav-group-label">Monitor</div>
+          <a class="nav-pill" data-page-link data-page-title="Overview" href="#overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></a>
+          <a class="nav-pill" data-page-link data-page-title="Pulse" href="#pulse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h5l3-8 4 16 3-8h5"/></svg><span>Pulse</span></a>
+        </div>
+        <div class="nav-group"><div class="nav-group-label">Manage</div>
+          <a class="nav-pill" data-page-link data-page-title="Updates" href="#updates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-2l2 2M4 17l2 2a7 7 0 0 0 12-2"/></svg><span>Updates</span><span class="nav-count" data-nav-count="updates" hidden></span></a>
+          <a class="nav-pill" data-page-link data-page-title="Deployments" href="#deploy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg><span>Deployments</span></a>
+          <a class="nav-pill" data-page-link data-page-title="Jobs" href="#jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-12 4 5 3-5 2v-5Z"/></svg><span>Jobs</span></a>
+          <a class="nav-pill" data-page-link data-page-title="Tuning" href="#tuning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h8m4 0h4M4 17h2m4 0h10"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Tuning</span></a>
+        </div>
+        <div class="nav-group"><div class="nav-group-label">Access</div>
+          <a class="nav-pill" data-page-link data-page-title="Shares" href="#exposure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg><span>Shares</span><span class="nav-count" data-nav-count="exposure" hidden></span></a>
+          <a class="nav-pill" data-page-link data-page-title="Travel" href="#travel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/></svg><span>Travel</span></a>
+          <a class="nav-pill" data-page-link data-page-title="Secrets" href="#secrets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg><span>Secrets</span></a>
+        </div>
+        <div class="sidebar-footer">
+          <div id="navHealth" class="nav-health" aria-live="polite"></div>
           <div class="theme-switcher seg-switch" role="group" aria-label="Theme mode">
             <span class="seg-thumb" aria-hidden="true"></span>
             <button type="button" data-theme-mode="system">
@@ -58,29 +69,30 @@
               <span>Dark</span>
             </button>
           </div>
-          <button id="emergencyBtn" class="danger danger-ghost" type="button">Disable all exposures</button>
+        </div>
+      </nav>
+    </dialog>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="crumbs">
+          <button id="navMenuBtn" class="icon-button" type="button" aria-label="Open navigation" aria-controls="navigation" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+          <span class="crumb-root">Control panel</span><span class="crumb-divider" aria-hidden="true">/</span><span id="currentPageName">Overview</span>
+        </div>
+        <div class="top-actions">
+          <div id="controlActivity" class="control-activity" role="status" aria-live="polite" hidden>
+            <canvas id="controlActivityOrb" class="control-activity-orb" aria-hidden="true"></canvas>
+            <span id="controlActivityLabel">Syncing…</span>
+          </div>
+          <span class="private-label">Private workspace</span>
         </div>
       </div>
     </header>
-    <main>
-      <nav class="section-nav" aria-label="Section navigation">
-        <a class="nav-pill" data-page-link href="#overview">overview</a>
-        <a class="nav-pill" data-page-link href="#pulse">pulse</a>
-        <a class="nav-pill" data-page-link href="#updates">updates</a>
-        <a class="nav-pill" data-page-link href="#deploy">deploy sites</a>
-        <a class="nav-pill" data-page-link href="#travel">travel</a>
-        <a class="nav-pill" data-page-link href="#exposure">exposure control</a>
-        <a class="nav-pill" data-page-link href="#tuning">tuning</a>
-        <a class="nav-pill" data-page-link href="#jobs">jobs</a>
-        <a class="nav-pill" data-page-link href="#secrets">secrets</a>
-        <div id="navHealth" class="nav-health" aria-live="polite"></div>
-      </nav>
-
+    <main id="mainContent" tabindex="-1">
       <section id="overview" class="section" data-page-section>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Overview</h2>
-            <p class="section-copy">What needs your attention, and what’s running quietly.</p>
+            <h1 class="section-heading">Overview</h1>
+            <p class="section-copy">Your homelab at a glance.</p>
           </div>
           <div class="section-bar-actions">
             <div id="loadState" class="result-count">loading…</div>
@@ -89,26 +101,27 @@
         </div>
         <div id="overviewStrip" class="overview-strip overview-priorities"></div>
         <div id="overviewPosture" class="overview-posture"></div>
+
+        <div class="content-block">
+          <div id="overviewDigest" class="overview-digest"></div>
+        </div>
         <details class="overview-timestamps">
-          <summary>Snapshot details</summary>
+          <summary>Data freshness</summary>
           <div class="overview-meta-row">
             <div id="overviewMeta" class="overview-meta-cluster"></div>
             <div id="overviewDetail" class="result-count"></div>
           </div>
         </details>
-        <div class="content-block">
-          <div id="overviewDigest" class="overview-digest"></div>
-        </div>
       </section>
 
       <section id="pulse" class="section pulse-page" data-page-section hidden>
         <div class="section-bar pulse-heading">
           <div>
-            <div class="pulse-kicker">01 / cluster telemetry</div>
-            <h1 class="section-heading">pulse</h1>
-            <p class="section-copy">Live usage, capacity, and placement across the cluster.</p>
+
+            <h1 class="section-heading">Pulse</h1>
+            <p class="section-copy">Usage, power, and capacity.</p>
           </div>
-          <div id="pulseStatus" class="pulse-status" role="status">Waiting for telemetry</div>
+          <div id="pulseStatus" class="pulse-status" role="status">Loading…</div>
         </div>
         <div id="pulseStrip" class="overview-strip pulse-strip"></div>
         <div id="nodeTwins" class="pulse-block"></div>
@@ -120,19 +133,25 @@
         <div class="pulse-footer"><span>rangoonpulse / live telemetry</span><span>60 s refresh · Asia/Singapore</span></div>
       </section>
 
-      <section id="exposure" class="section" data-page-section>
+      <section id="exposure" class="section" data-page-section hidden>
         <div class="panel-actions">
           <div>
-            <h2 class="section-heading">Exposure control</h2>
-            <p class="section-copy">Public exposure control on __SHARE_HOST_PREFIX__&lt;id&gt;.__PUBLIC_DOMAIN__. Default expiry is __DEFAULT_EXPIRY_HOURS__h; choose Until turned off when needed.</p>
+            <h1 class="section-heading">Shares</h1>
+            <p class="section-copy">Temporary public links. Default: __DEFAULT_EXPIRY_HOURS__h.</p>
           </div>
           <div class="section-bar-actions">
             <div id="exposureMeta" class="section-detail"></div>
             <button id="exposureRefreshBtn" type="button">Refresh</button>
+            <button id="emergencyBtn" class="danger danger-ghost" type="button">Disable all shares</button>
           </div>
         </div>
+        <div class="toolbar shares-toolbar">
+          <label class="search-shell"><span class="sr-only">Search services</span><input id="sharesSearch" type="search" placeholder="Search services…" autocomplete="off" /></label>
+          <div class="view-switch" role="group" aria-label="Filter shares"><button type="button" data-share-view="all" aria-pressed="true">All services</button><button type="button" data-share-view="active" aria-pressed="false">Active</button></div>
+          <span id="sharesCount" class="result-count" role="status"></span>
+        </div>
         <div class="table-shell">
-          <table>
+          <table class="shares-table" aria-label="Service shares">
             <thead>
               <tr>
                 <th>service</th>
@@ -153,41 +172,37 @@
           <div id="transmissionPanel" class="subsection-bar">
             <div>
               <div class="subsection-label">transmission</div>
-              <p class="section-copy">Route Transmission directly or through the Gluetun VPN sidecar.</p>
+
             </div>
             <div id="vpnSectionMeta" class="section-detail"></div>
           </div>
           <div class="vpn-card">
             <div class="vpn-row">
               <div>
-                <div class="vpn-title">Transmission Egress</div>
+                <div class="vpn-title">Download route</div>
                 <div id="vpnMeta" class="vpn-meta">loading…</div>
                 <div class="vpn-meta">
-                  Gluetun WebUI:
-                  <a href="__TRANSMISSION_VPN_WEBUI_URL__" target="_blank" rel="noreferrer">open dashboard</a>
+
+                  <a href="__TRANSMISSION_VPN_WEBUI_URL__" target="_blank" rel="noreferrer">VPN dashboard ↗</a>
                 </div>
               </div>
               <div class="controls">
                 <div class="vpn-toggle">
-                  <span class="vpn-toggle-label" data-vpn-label="direct">Route Direct</span>
+                  <span class="vpn-toggle-label" data-vpn-label="direct">Direct</span>
                   <button id="vpnSwitch" class="toggle-switch" type="button" role="switch" aria-checked="false" aria-label="Route Transmission via VPN">
                     <span class="toggle-knob" aria-hidden="true"></span>
                   </button>
-                  <span class="vpn-toggle-label" data-vpn-label="vpn">Route via VPN</span>
+                  <span class="vpn-toggle-label" data-vpn-label="vpn">VPN</span>
                 </div>
               </div>
             </div>
             <div id="vpnMsg" class="msg"></div>
           </div>
         </div>
-        <div class="content-block" style="padding-top:0">
-          <div id="auditPanel" class="subsection-bar">
-            <div>
-              <div class="subsection-label">audit</div>
-              <p class="section-copy">Recent exposure and transmission control actions.</p>
-            </div>
-            <div id="auditMeta" class="section-detail"></div>
-          </div>
+        <details id="auditDisclosure" class="panel-disclosure">
+          <summary>Activity <span id="auditMeta" class="section-detail"></span></summary>
+          <div class="content-block">
+          <div id="auditPanel"></div>
           <div class="audit-scroll">
             <table>
               <thead>
@@ -202,21 +217,22 @@
             </table>
           </div>
         </div>
+        </details>
       </section>
 
-      <section id="deploy" class="section" data-page-section>
+      <section id="deploy" class="section" data-page-section hidden>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Deploy sites</h2>
-            <p class="section-copy">Bring a site up to its latest published image.</p>
+            <h1 class="section-heading">Deployments</h1>
+            <p class="section-copy">Deploy the latest published images.</p>
           </div>
           <div id="siteDeploySummary" class="section-detail">loads when opened</div>
         </div>
         <div id="siteDeployOverviewStrip" class="overview-strip site-deploy-strip"></div>
         <div class="toolbar site-deploy-toolbar">
           <div>
-            <h3 class="section-heading">Your sites</h3>
-            <p class="section-copy">Scan for a published image and reconcile through Flux. Readiness reflects the latest controller snapshot.</p>
+            <h3 class="section-heading">Sites</h3>
+
           </div>
           <div class="site-deploy-toolbar-actions">
             <button id="siteDeployRefreshBtn" type="button">Refresh</button>
@@ -229,10 +245,10 @@
         </div>
       </section>
 
-      <section id="updates" class="section" data-page-section>
+      <section id="updates" class="section" data-page-section hidden>
         <div class="updates-toolbar">
           <div>
-            <h2 class="section-heading">Updates</h2>
+            <h1 class="section-heading">Updates</h1>
             <div id="renovateMeta" class="updates-meta">loading…</div>
           </div>
           <div class="updates-toolbar-actions">
@@ -243,21 +259,26 @@
         <div class="content-block">
           <div id="renovateMsg" class="msg"></div>
         </div>
+        <div class="inventory-tabs" role="tablist" aria-label="Update type">
+          <button id="imagesTab" type="button" role="tab" aria-selected="true" aria-controls="imagesPanel" data-update-tab="images">Container images <span id="imagesTabCount"></span></button>
+          <button id="chartsTab" type="button" role="tab" aria-selected="false" aria-controls="chartsPanel" tabindex="-1" data-update-tab="charts">Helm charts <span id="chartsTabCount"></span></button>
+        </div>
+        <div id="imagesPanel" role="tabpanel" aria-labelledby="imagesTab">
         <div class="updates-toolbar">
           <div>
-            <h3 class="section-heading">Container images</h3>
+            <h3 class="sr-only">Container images</h3>
             <div id="updatesMeta" class="updates-meta">no check yet</div>
           </div>
           <div class="updates-toolbar-actions">
             <label class="search-shell updates-search" for="updatesSearchInput">
-              <span class="input-prefix">filter</span>
-              <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="service or image" />
+              <span class="sr-only">Search images</span>
+              <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="Search images…" />
             </label>
             <label class="toggle-filter">
               <input id="updatesOnlyAvailable" type="checkbox" />
-              <span>updatable only</span>
+              <span>Updates only</span>
             </label>
-            <button id="updatesRefreshBtn" type="button">Check Now</button>
+            <button id="updatesRefreshBtn" type="button">Check now</button>
           </div>
         </div>
         <div class="updates-scroll">
@@ -277,12 +298,14 @@
         <div class="content-block">
           <div id="updatesMsg" class="msg"></div>
         </div>
-        <div class="updates-toolbar" style="padding-top:24px">
+        </div>
+        <div id="chartsPanel" role="tabpanel" aria-labelledby="chartsTab" hidden>
+        <div class="updates-toolbar">
           <div>
-            <h3 class="section-heading">Helm charts</h3>
+            <h3 class="sr-only">Helm charts</h3>
             <div id="helmUpdatesMeta" class="updates-meta">no check yet</div>
           </div>
-          <button id="helmUpdatesRefreshBtn" type="button">Check Now</button>
+          <button id="helmUpdatesRefreshBtn" type="button">Check now</button>
         </div>
         <div class="updates-scroll">
           <table class="helm-updates-table" role="table" aria-label="Helm chart updates">
@@ -302,13 +325,14 @@
         <div class="content-block">
           <div id="helmUpdatesMsg" class="msg"></div>
         </div>
+        </div>
       </section>
 
-      <section id="travel" class="section" data-page-section>
+      <section id="travel" class="section" data-page-section hidden>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Travel</h2>
-            <p class="section-copy">Remote-life readiness across the Tailscale connector, key hostnames, public-share posture, and Transmission routing.</p>
+            <h1 class="section-heading">Travel</h1>
+            <p class="section-copy">Remote access and readiness.</p>
           </div>
           <div id="travelSummary" class="section-detail section-detail-prose">loading…</div>
         </div>
@@ -321,8 +345,8 @@
         </div>
         <div class="section-bar">
           <div>
-            <h3 class="section-heading">bundles</h3>
-            <p class="section-copy">Curated links grouped by how you actually use the homelab while away.</p>
+            <h3 class="section-heading">Quick links</h3>
+
           </div>
           <div id="travelBundlesMeta" class="section-detail"></div>
         </div>
@@ -331,8 +355,8 @@
         </div>
         <div class="section-bar">
           <div>
-            <h3 class="section-heading">actions</h3>
-            <p class="section-copy">Cluster-side actions you can still take while the client-side Tailscale path stays manual.</p>
+            <h3 class="section-heading">Controls</h3>
+
           </div>
           <div id="travelActionState" class="section-detail"></div>
         </div>
@@ -344,15 +368,15 @@
             </div>
             <div class="travel-action-group">
               <button id="travelDisableSharesBtn" class="danger" type="button">Disable all shares</button>
-              <a id="travelExposureLink" class="top-button" href="#exposure">open exposure control</a>
+              <a id="travelExposureLink" class="top-button" href="#exposure">Manage shares</a>
             </div>
           </div>
           <div id="travelMsg" class="msg"></div>
         </div>
         <div class="section-bar">
           <div>
-            <h3 class="section-heading">posture</h3>
-            <p class="section-copy">Current public-share surface and the practical caveats to keep in mind when you are remote.</p>
+            <h3 class="section-heading">Access details</h3>
+
           </div>
           <div id="travelNotesMeta" class="section-detail"></div>
         </div>
@@ -363,28 +387,28 @@
               <div id="travelShares" class="travel-shares"></div>
             </article>
             <article class="support-card travel-support-card">
-              <div class="support-card-title">travel notes</div>
+              <div class="support-card-title">Notes</div>
               <div id="travelNotes" class="travel-notes"></div>
             </article>
           </div>
         </div>
       </section>
 
-      <section id="tuning" class="section" data-page-section>
+      <section id="tuning" class="section" data-page-section hidden>
         <div class="tuning-heading">
-          <h2 class="section-heading">Tuning</h2>
-          <span class="tuning-subtle">Resource advisor · read-only preview</span>
+          <h1 class="section-heading">Tuning</h1>
+          <span class="tuning-subtle">PR preview · read-only</span>
         </div>
-        <div id="tuningSummary" class="tuning-summary"><p>Loading tuning evidence…</p></div>
+        <div id="tuningSummary" class="tuning-summary"><p>Loading…</p></div>
         <div class="tuning-ledger-tools">
           <div class="tuning-views" role="group" aria-label="Tuning selection filters">
-            <button type="button" data-tuning-view="selected" aria-pressed="true">Proposed PR changes</button>
+            <button type="button" data-tuning-view="selected" aria-pressed="true">Proposed</button>
             <button type="button" data-tuning-view="deferred" aria-pressed="false">Deferred</button>
             <button type="button" data-tuning-view="unchanged" aria-pressed="false">No change</button>
-            <button type="button" data-tuning-view="all" aria-pressed="false">All workloads</button>
+            <button type="button" data-tuning-view="all" aria-pressed="false">All</button>
           </div>
           <div class="tuning-filters">
-            <input id="searchInput" type="search" aria-label="Search tuning workloads" placeholder="Search workload, container, reason…" />
+            <input id="searchInput" type="search" aria-label="Search tuning workloads" placeholder="Search workloads…" />
             <select id="tuningAction" aria-label="Tuning action filter">
               <option value="all">All actions</option>
               <option value="upsize">Increase</option>
@@ -392,20 +416,20 @@
               <option value="no-change">No change</option>
             </select>
             <select id="noteFilter" aria-label="Tuning note filter"><option value="all">All notes</option></select>
-            <span id="tuningCount" class="tuning-subtle" role="status">Loading containers…</span>
+            <span id="tuningCount" class="tuning-subtle" role="status">Loading…</span>
           </div>
         </div>
         <div class="tuning-ledger" role="region" aria-label="Resource change ledger">
           <div class="tuning-ledger-head" aria-hidden="true"><span>Workload / container</span><span>Selection / reason</span><span>CPU request</span><span>Memory request</span><span>Evidence</span></div>
           <div id="tuningRows"></div>
-          <p id="tuningEmpty" class="tuning-empty" hidden>No changes selected. Choose All workloads to inspect the report.</p>
+          <p id="tuningEmpty" class="tuning-empty" hidden>No matches. Try another filter.</p>
         </div>
         <details class="tuning-disclosure">
           <summary>Capacity and policy</summary>
           <div id="tuningDiagnostics" class="tuning-disclosure-body"></div>
         </details>
         <details class="tuning-disclosure">
-          <summary>Diagnostics and raw output</summary>
+          <summary>Reports and logs</summary>
           <div class="tuning-disclosure-body">
             <p class="report-links">Download:
               <a href="/api/tuning/latest.json" target="_blank" rel="noopener noreferrer">Report JSON</a>
@@ -421,13 +445,13 @@
         </details>
       </section>
 
-      <section id="jobs" class="section" data-page-section>
+      <section id="jobs" class="section" data-page-section hidden>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Jobs</h2>
-            <p class="section-copy">Managed Kubernetes CronJobs with operator-facing configuration, manual runs, and recent logs.</p>
+            <h1 class="section-heading">Jobs</h1>
+            <p class="section-copy">Schedules and recent runs.</p>
           </div>
-          <div id="jobsSummary" class="section-detail">loading…</div>
+          <div class="section-bar-actions"><div id="jobsSummary" class="section-detail">Loading…</div><button id="jobsRefreshBtn" type="button">Refresh</button></div>
         </div>
         <div class="content-block">
           <div id="jobsOverviewStrip" class="overview-strip jobs-strip"></div>
@@ -436,20 +460,15 @@
             <div id="jobsOverviewDetail" class="result-count"></div>
           </div>
         </div>
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <button id="jobsRefreshBtn" type="button">Refresh</button>
-          </div>
-          <div id="jobsMsg" class="msg"></div>
-        </div>
+        <div class="content-block"><div id="jobsMsg" class="msg" role="status"></div></div>
         <div id="jobsList" class="jobs-list"></div>
       </section>
 
-      <section id="secrets" class="section" data-page-section>
+      <section id="secrets" class="section" data-page-section hidden>
         <div class="section-bar">
           <div>
-            <h2 class="section-heading">Secrets</h2>
-            <p class="section-copy">GitOps-managed SOPS Secret keys from infrastructure/secrets, committed back to master and reconciled through Flux.</p>
+            <h1 class="section-heading">Secrets</h1>
+            <p class="section-copy">Encrypted in Git. Changes deploy through Flux.</p>
           </div>
           <div id="secretsSummary" class="section-detail">loading…</div>
         </div>
@@ -457,14 +476,14 @@
           <aside class="secrets-list-panel">
             <div class="toolbar secrets-toolbar">
               <label class="search-shell">
-                <span class="input-prefix">&gt;</span>
-                <input id="secretsSearchInput" type="search" placeholder="Filter secrets..." />
+                <span class="sr-only">Search secrets</span>
+                <input id="secretsSearchInput" type="search" aria-label="Search secrets" placeholder="Search secrets…" />
               </label>
               <select id="secretsNamespaceFilter" class="control-select" aria-label="Filter secrets by namespace"></select>
               <button id="secretsRefreshBtn" type="button">Refresh</button>
             </div>
             <div class="new-secret-row">
-              <input id="newSecretName" class="secret-name-input" type="text" placeholder="new-secret-name" />
+              <input id="newSecretName" class="secret-name-input" type="text" aria-label="New secret name" placeholder="New secret name" />
               <button id="newSecretBtn" type="button">New</button>
             </div>
             <div id="secretsList" class="secrets-list"></div>
@@ -473,12 +492,12 @@
             <div class="secret-editor-head">
               <div>
                 <div id="secretEditorTitle" class="secret-editor-title">Select a secret</div>
-                <div id="secretEditorMeta" class="secret-editor-meta">Values stay hidden until a Secret is opened.</div>
+                <div id="secretEditorMeta" class="secret-editor-meta">Choose a secret to edit.</div>
               </div>
               <div class="secret-editor-actions">
                 <button id="secretAddKeyBtn" type="button" disabled>Add key</button>
                 <button id="secretSaveBtn" type="button" disabled>Commit</button>
-                <button id="secretDeleteBtn" class="danger" type="button" disabled>Delete Secret</button>
+                <button id="secretDeleteBtn" class="danger" type="button" disabled>Delete</button>
               </div>
             </div>
             <div id="secretKeyRows" class="secret-key-rows">

@@ -152,7 +152,7 @@
     return Object.hasOwn(labels, status) ? labels[status] : 'Recorded result: ' + humanize(status);
   }
 
-  function renderSummary(model) {
+  function renderSummary(model, scheduleOpen = false) {
     const { data, previewAvailable, counts } = model;
     const apply = data.applyPreflight || {};
     const report = data.report || {};
@@ -170,19 +170,19 @@
       (number(last.prCount) === null ? '' : ' · ' + escape(last.prCount) + ' PR(s) reported') +
       list(last.execution?.pull_requests).map(prLink).filter(Boolean).map((link) => ' · ' + link).join('') : 'No recorded execution';
     return '<div class="tuning-decision"><div><h3>' + (previewAvailable
-      ? counts.selected + ' change' + (counts.selected === 1 ? '' : 's') + ' would be proposed'
-      : 'Preview unavailable') + '</h3><p class="tuning-subtle">Preview only. The scheduled job opens PRs; browsing applies nothing.</p>' +
+      ? counts.selected + ' change' + (counts.selected === 1 ? '' : 's') + ' proposed'
+      : 'Preview unavailable') + '</h3><p class="tuning-subtle">Scheduled changes open PRs for review.</p>' +
       (!previewAvailable ? '<p class="tuning-warning">Selection cannot be confirmed. ' + escape(data.fetch?.detail || 'Report or preflight evidence is unavailable or inconsistent.') + '</p>' : '') +
       '</div><div class="tuning-impact">' + impact('CPU', model.cpuDelta, 'm', 'cpu_m') + impact('Memory', model.memoryDelta, 'Mi', 'memory_mi') + '</div></div>' +
-      '<p class="tuning-subtle tuning-scope">Selected-change impact on whole-cluster requests: reservations, not usage savings.</p>' +
+      '<p class="tuning-subtle tuning-scope">Request changes, not measured savings.</p>' +
       '<div class="tuning-checks"><span><strong>Hard node fit</strong> <span class="' + (fit === false ? 'tuning-warning' : '') + '">' +
       (fit === true ? 'Passes' : fit === false ? 'Blocked' : 'Unknown') + '</span></span><span><strong>Advisory pressure</strong> CPU ' + pressure('cpu') +
-      ' · memory ' + pressure('memory') + '. Ordering signal, not a blocking gate.</span></div>' +
-      '<div class="tuning-run-lines"><p><strong>Next PR run</strong> ' + escape(schedule.suspended === true ? 'Suspended' : dateText(schedule.nextRunAt, timeZone)) +
-      '</p><p><strong>Last actual run</strong> ' + lastRun + '</p><p class="tuning-subtle">Recorded PR results do not confirm merge or deployment.</p></div>' +
+      ' · memory ' + pressure('memory') + '. Non-blocking.</span></div>' +
+      '<details class="tuning-run-lines"' + (scheduleOpen ? ' open' : '') + '><summary>Schedule &amp; data</summary><p><strong>Next PR run</strong> ' + escape(schedule.suspended === true ? 'Suspended' : dateText(schedule.nextRunAt, timeZone)) +
+      '</p><p><strong>Last actual run</strong> ' + lastRun + '</p><p class="tuning-subtle">PR results do not confirm deployment.</p>' +
       '<p class="tuning-freshness">Report ' + escape(dateText(data.fetch?.lastRunAt, timeZone)) + ' · ' + escape(measured(report.metricsCoverageDaysEstimate, 'days')) +
       ' coverage / ' + escape(report.metricsWindow || 'unknown window') + ' · ' + escape(measured(report.summary?.containers_with_metrics)) + '/' +
-      escape(measured(report.summary?.containers_analyzed)) + ' containers with metrics · Preview ' + escape(dateText(apply.builtAt, timeZone)) + '</p>';
+      escape(measured(report.summary?.containers_analyzed)) + ' containers with metrics · Preview ' + escape(dateText(apply.builtAt, timeZone)) + '</p></details>';
   }
 
   function renderRow(row, model, open = false) {
@@ -243,7 +243,7 @@
     const actionEl = get('tuningAction');
     const searchEl = get('searchInput');
     const buttons = Array.from(root.querySelectorAll('[data-tuning-view]'));
-    const viewLabels = { selected: 'Proposed PR changes', deferred: 'Deferred', unchanged: 'No change', all: 'All workloads' };
+    const viewLabels = { selected: 'Proposed', deferred: 'Deferred', unchanged: 'No change', all: 'All' };
     const openRows = new Set();
     let view = 'selected';
     let model = buildModel(null);
@@ -268,13 +268,13 @@
         button.innerHTML = escape(viewLabels[key]) + ' <span aria-hidden="true">' +
           (key === 'selected' && !model.previewAvailable ? '—' : model.counts[key]) + '</span>';
       });
-      get('tuningCount').textContent = rows.length + ' of ' + model.counts[view] + ' containers in this view';
+      get('tuningCount').textContent = rows.length + ' / ' + model.counts[view] + ' containers';
       const empty = get('tuningEmpty');
       empty.hidden = rows.length !== 0;
-      empty.textContent = !model.reportAvailable ? 'Report unavailable. Previous rows have been cleared; your filters are preserved.'
-        : !model.previewAvailable && view === 'selected' ? 'Preview unavailable. Choose All workloads to inspect report advice; nothing is confirmed for a PR.'
-        : view === 'selected' && !model.counts.selected ? 'No changes selected. Choose Deferred for reasons, or All workloads to inspect every container, including those awaiting metrics.'
-        : 'No rows match these filters. Try All workloads, all actions, all notes, or clear the search.';
+      empty.textContent = !model.reportAvailable ? 'Report unavailable. Try refreshing.'
+        : !model.previewAvailable && view === 'selected' ? 'Preview unavailable. Choose All to see report advice.'
+        : view === 'selected' && !model.counts.selected ? 'No changes selected. See Deferred or All.'
+        : 'No matches. Try another filter.';
     }
 
     buttons.forEach((button) => button.addEventListener('click', () => { view = button.dataset.tuningView; renderRows(); }));
@@ -290,7 +290,9 @@
         noteEl.innerHTML = '<option value="all">All notes</option>' + notes.sort().map((note) =>
           '<option value="' + escape(note) + '">' + escape(humanize(note)) + '</option>').join('');
         noteEl.value = selectedNote;
-        get('tuningSummary').innerHTML = renderSummary(model);
+        const summary = get('tuningSummary');
+        const scheduleOpen = summary.querySelector('.tuning-run-lines')?.open || false;
+        summary.innerHTML = renderSummary(model, scheduleOpen);
         get('tuningDiagnostics').innerHTML = renderDiagnostics(model);
         get('tuningRawReport').textContent = payload?.runtime?.latestMarkdown || 'Report output unavailable.';
         get('tuningRawExecution').textContent = payload?.lastApply?.markdown || 'Execution output unavailable.';

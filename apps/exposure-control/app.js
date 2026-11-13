@@ -82,6 +82,66 @@
       const pageSections = Array.from(document.querySelectorAll('[data-page-section]'));
       const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
 
+      const navigation = document.getElementById('navigation');
+      const navMenuBtn = document.getElementById('navMenuBtn');
+      const mobileNavigation = window.matchMedia('(max-width: 980px)');
+      const sharesSearch = document.getElementById('sharesSearch');
+      const shareViewButtons = Array.from(document.querySelectorAll('[data-share-view]'));
+      let shareView = 'all';
+
+      // Native modal semantics provide focus containment, Escape, and restoration.
+      function syncNavigation() {
+        navigation.close();
+        if (!mobileNavigation.matches) navigation.setAttribute('open', '');
+        navMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+      navMenuBtn.onclick = () => {
+        navigation.showModal();
+        navMenuBtn.setAttribute('aria-expanded', 'true');
+        navigation.querySelector('[aria-current="page"]')?.focus();
+      };
+      document.getElementById('navCloseBtn').onclick = () => navigation.close();
+      navigation.addEventListener('close', () => navMenuBtn.setAttribute('aria-expanded', 'false'));
+      navigation.addEventListener('click', (event) => {
+        if (event.target !== navigation || !mobileNavigation.matches) return;
+        const bounds = navigation.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) navigation.close();
+      });
+      mobileNavigation.addEventListener('change', syncNavigation);
+      syncNavigation();
+      document.querySelector('.skip-link').onclick = (event) => {
+        event.preventDefault();
+        document.getElementById('mainContent').focus();
+      };
+      document.querySelector('.brand-link').onclick = (event) => {
+        event.preventDefault();
+        setActivePage('overview', { focus: true });
+      };
+
+      const updateTabs = Array.from(document.querySelectorAll('[data-update-tab]'));
+      function selectUpdateTab(tab) {
+        updateTabs.forEach((button) => {
+          const selected = button === tab;
+          button.setAttribute('aria-selected', String(selected));
+          button.tabIndex = selected ? 0 : -1;
+          document.getElementById(button.getAttribute('aria-controls')).hidden = !selected;
+        });
+      }
+      updateTabs.forEach((tab, index) => {
+        tab.onclick = () => selectUpdateTab(tab);
+        tab.onkeydown = (event) => {
+          let next;
+          if (event.key === 'ArrowRight') next = (index + 1) % updateTabs.length;
+          if (event.key === 'ArrowLeft') next = (index + updateTabs.length - 1) % updateTabs.length;
+          if (event.key === 'Home') next = 0;
+          if (event.key === 'End') next = updateTabs.length - 1;
+          if (next === undefined) return;
+          event.preventDefault();
+          selectUpdateTab(updateTabs[next]);
+          updateTabs[next].focus();
+        };
+      });
+
       let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
       let transmissionVpnState = null;
@@ -111,7 +171,7 @@
         selectedSecret: null,
         metrics: {},
       };
-      let activePage = normalizePage(window.location.hash || '#updates');
+      let activePage = normalizePage(window.location.hash || '#overview');
       let hasLoadedDashboard = false;
       const themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
@@ -249,7 +309,19 @@
         pageLinks.forEach((link) => {
           const target = normalizePage(link.getAttribute('href'));
           link.classList.toggle('active', target === nextPage);
+          if (target === nextPage) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
         });
+        const title = pageLinks.find((link) => link.classList.contains('active'))?.dataset.pageTitle || 'Overview';
+        document.getElementById('currentPageName').textContent = title;
+        document.title = title + ' · rangoonpulse';
+        if (mobileNavigation.matches && navigation.open) navigation.close();
+        if (requestedPage === 'audit') document.getElementById('auditDisclosure').open = true;
+        if (options?.focus) {
+          const heading = document.getElementById(nextPage).querySelector('h1');
+          heading?.setAttribute('tabindex', '-1');
+          heading?.focus({ preventScroll: true });
+        }
         const nextHash = '#' + nextPage;
         if (replace) {
           history.replaceState(null, '', nextHash);
@@ -577,7 +649,7 @@
         renovateLinksEl.innerHTML = '';
 
         if (!renovate || !renovate.configured) {
-          renovateMetaEl.textContent = renovate && renovate.error ? renovate.error : 'Renovate is not configured.';
+          renovateMetaEl.textContent = renovate && renovate.error ? 'Renovate unavailable' : 'Renovate not configured';
           renovateRunBtn.disabled = true;
           return;
         }
@@ -717,23 +789,23 @@
 
         overviewDigestEl.innerHTML =
           '<article class="support-card digest-card">' +
-            '<div class="digest-head"><div class="support-card-title">Pending updates</div><a class="digest-link" href="#updates">View updates</a></div>' +
-            list(pending.slice(0, 6), dashboardState.updates && dashboardState.helmUpdates ? 'No updates in the latest reports.' : 'Update reports are unavailable.') +
+            '<div class="digest-head"><div class="support-card-title">Pending updates</div><a class="digest-link" href="#updates">View all ↗</a></div>' +
+            list(pending.slice(0, 6), dashboardState.updates && dashboardState.helmUpdates ? 'Up to date.' : 'Reports unavailable.') +
           '</article>' +
           '<article class="support-card digest-card' + (activeServices.length ? ' is-hot' : '') + '">' +
-            '<div class="digest-head"><div class="support-card-title">Public shares</div><a class="digest-link" href="#exposure">Manage shares</a></div>' +
+            '<div class="digest-head"><div class="support-card-title">Public shares</div><a class="digest-link" href="#exposure">Manage ↗</a></div>' +
             list(activeServices.map((svc) => ({
               name: svc.publicHost || svc.name || svc.id,
               href: svc.publicUrl,
               detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
-            })), 'Nothing is public right now.') +
+            })), 'No active shares.') +
           '</article>' +
           '<article class="support-card digest-card">' +
-            '<div class="digest-head"><div class="support-card-title">Recent activity</div><a class="digest-link" href="#audit">View log</a></div>' +
+            '<div class="digest-head"><div class="support-card-title">Recent activity</div><a class="digest-link" href="#audit">View log ↗</a></div>' +
             list(audit.map((entry) => ({
               name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
               detail: fmtDateTime(entry.ts),
-            })), 'No control actions recorded yet.') +
+            })), 'No recent activity.') +
           '</article>';
       }
 
@@ -745,10 +817,13 @@
           return '<div class="nav-health-row' + (tone ? ' ' + tone : '') + '"><span>' + label + '</span><span>' + escapeHtml(String(value)) + '</span></div>';
         }
         el.innerHTML =
-          row('public', state.shares, state.shares > 0 ? 'active' : '') +
-          row('updates', state.updates, state.updates > 0 ? 'warning' : '') +
-          row('route', state.route, state.route === 'vpn' ? 'warning' : '') +
-          row('travel', state.travel, state.travel === 'ready' ? '' : state.travel === 'degraded' ? 'warning' : 'danger');
+          row('Transmission', state.route, state.route === 'unknown' ? 'warning' : '') +
+          row('Remote access', state.travel, state.travel === 'ready' ? '' : 'warning');
+        for (const [page, count] of [['exposure', state.shares], ['updates', state.updates]]) {
+          const badge = document.querySelector('[data-nav-count="' + page + '"]');
+          badge.textContent = String(count);
+          badge.hidden = !count;
+        }
       }
 
       function renderOverview() {
@@ -776,16 +851,16 @@
         const updateCount = updatesAvailable + helmUpdatesAvailable;
         const reportsAvailable = Boolean(updates && helmUpdates);
         const updateDetail = reportsAvailable
-          ? updatesAvailable + ' image' + (updatesAvailable === 1 ? '' : 's') + ' and ' + helmUpdatesAvailable + ' chart' + (helmUpdatesAvailable === 1 ? '' : 's') + ' in the latest reports'
-          : 'Some update reports are unavailable';
+          ? updatesAvailable + ' image' + (updatesAvailable === 1 ? '' : 's') + ' · ' + helmUpdatesAvailable + ' chart' + (helmUpdatesAvailable === 1 ? '' : 's')
+          : 'Report incomplete';
         overviewStripEl.innerHTML =
-          overviewSegment('Updates to review', reportsAvailable ? String(updateCount) : (updateCount ? updateCount + '+' : '—'), updateDetail, {
+          overviewSegment('Updates', reportsAvailable ? String(updateCount) : (updateCount ? updateCount + '+' : '—'), updateDetail, {
             href: '#updates', tone: updateCount || !reportsAvailable ? 'warning' : 'status',
           }) +
-          overviewSegment('Public shares', String(activeExposures), activeExposures ? 'Check access and expiry for active shares' : 'All share links are closed', {
+          overviewSegment('Active shares', String(activeExposures), activeExposures ? 'Public links open' : 'All links private', {
             href: '#exposure', tone: activeExposures > 0 ? 'warning' : 'status',
           }) +
-          overviewSegment('Resource plan', hasApplyPreview ? String(selectedNow) : '—', hasApplyPreview ? 'Selected in the current apply preview' : 'Advisor snapshot unavailable', {
+          overviewSegment('Resource changes', hasApplyPreview ? String(selectedNow) : '—', hasApplyPreview ? 'Proposed PR changes' : 'Preview unavailable', {
             href: '#tuning', tone: hardFitOk ? 'status' : 'warning',
           });
 
@@ -796,7 +871,7 @@
           posture('Travel', travelState, '#travel', travelTone(travelState), travelHeadline) +
           posture('Transmission', runningMode, '#transmission', runningMode === 'unknown' ? 'warning' : 'status', 'Desired route: ' + desiredMode) +
           posture('Advisor', fetchState === 'live' ? 'Connected' : 'Unavailable', '#tuning', fetchState === 'live' ? 'status' : 'warning', fetchDetail) +
-          '<a class="posture-item posture-telemetry" href="#pulse"><span class="posture-label">CPU, memory & storage</span><span class="posture-value">Open Pulse</span></a>';
+          '<a class="posture-item posture-telemetry" href="#pulse"><span class="posture-value">Cluster telemetry ↗</span></a>';
 
         const meta = [];
         if (tuning && tuning.fetch) {
@@ -816,7 +891,7 @@
           route: desiredMode,
           travel: travelState,
         });
-        exposureMetaEl.textContent = activeExposures + ' active exposure' + (activeExposures === 1 ? '' : 's');
+        exposureMetaEl.textContent = activeExposures + ' active share' + (activeExposures === 1 ? '' : 's');
         vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
         auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';
       }
@@ -846,11 +921,11 @@
             barPct: summary.total ? Number(summary.found || 0) / Number(summary.total || 1) * 100 : 0,
             tone: Number(summary.found || 0) === Number(summary.total || 0) ? 'status' : 'danger',
           }) +
-          overviewSegment('active runs', String(running), 'currently running pods from managed CronJobs', {
+          overviewSegment('active runs', String(running), 'Running now', {
             eyebrow: 'runtime',
             tone: running ? 'warning' : 'status',
           }) +
-          overviewSegment('suspended', String(suspended), 'CronJobs paused from schedule', {
+          overviewSegment('suspended', String(suspended), 'Paused schedules', {
             eyebrow: 'configuration',
             barPct: items.length ? suspended / items.length * 100 : 0,
             tone: suspended ? 'warning' : 'status',
@@ -863,7 +938,7 @@
         jobsOverviewMetaEl.innerHTML =
           '<span>checked ' + fmtDateTime(data.checkedAt) + '</span>' +
           '<span>' + String(totalRuns) + ' run log tail' + (totalRuns === 1 ? '' : 's') + '</span>';
-        jobsOverviewDetailEl.textContent = items.length ? 'managed CronJob inventory loaded' : 'no managed jobs configured';
+        jobsOverviewDetailEl.textContent = items.length ? '' : 'no managed jobs configured';
 
         if (!items.length) {
           jobsListEl.innerHTML = '<div class="empty-state">No managed jobs configured.</div>';
@@ -892,20 +967,20 @@
           return (
             '<article class="job-card" data-job-card="' + escapeHtml(job.id) + '">' +
               '<div class="job-card-head">' +
-                '<div><div class="job-title">' + escapeHtml(job.title || job.id) + '</div><div class="job-meta">' + escapeHtml(job.namespace || '') + '/' + escapeHtml(job.cronJob || '') + ' · ' + escapeHtml(job.repoPath || '') + '</div></div>' +
+                '<div><div class="job-title">' + escapeHtml(job.title || job.id) + '</div><div class="job-meta">' + escapeHtml(job.namespace || '') + '/' + escapeHtml(job.cronJob || '') + '</div></div>' +
                 '<div class="job-status-cluster">' +
-                  '<span class="stat-pill ' + (job.found ? 'ok' : 'excluded') + '"><strong>' + (job.found ? 'found' : 'missing') + '</strong></span>' +
+                  (!job.found ? '<span class="stat-pill excluded"><strong>Missing</strong></span>' : '') +
                   '<span class="stat-pill ' + (status.suspend ? 'guarded' : 'ok') + '"><strong>' + (status.suspend ? 'suspended' : 'scheduled') + '</strong></span>' +
                 '</div>' +
               '</div>' +
-              '<p class="support-copy">' + escapeHtml(job.description || '') + '</p>' +
+              '<div class="job-brief"><span class="job-schedule">' + escapeHtml(status.schedule || 'No schedule') + ' <span class="muted">' + escapeHtml(status.timeZone || '') + '</span></span><span class="muted">' + (latest ? escapeHtml(latest.status || 'Unknown') + ' · ' + fmtDateTime(latest.startedAt) : 'No recent runs') + '</span><button type="button" data-job-run="' + escapeHtml(job.id) + '">Run now</button></div>' +
+              '<details class="job-details"><summary>Schedule &amp; history</summary>' +
               '<div class="job-config-grid">' +
                 '<label><span>schedule</span><input class="job-input" data-job-schedule="' + escapeHtml(job.id) + '" type="text" value="' + scheduleValue + '" /></label>' +
                 '<label><span>timezone</span><input class="job-input" data-job-timezone="' + escapeHtml(job.id) + '" type="text" value="' + timeZoneValue + '" /></label>' +
                 '<label class="job-checkbox"><input data-job-suspend="' + escapeHtml(job.id) + '" type="checkbox" ' + (status.suspend ? 'checked' : '') + ' /><span>suspend</span></label>' +
                 '<div class="job-actions">' +
                   '<button type="button" data-job-save="' + escapeHtml(job.id) + '">Save config</button>' +
-                  '<button type="button" data-job-run="' + escapeHtml(job.id) + '">Run now</button>' +
                 '</div>' +
               '</div>' +
               '<div class="job-runtime-line">' +
@@ -914,7 +989,7 @@
                 '<span>policy ' + escapeHtml(status.concurrencyPolicy || 'Allow') + '</span>' +
               '</div>' +
               '<div class="table-shell job-runs-shell"><table><thead><tr><th>run</th><th>status</th><th>started</th><th>completed</th><th>duration</th><th>logs</th></tr></thead><tbody>' + runRows + '</tbody></table></div>' +
-              '<div class="terminal-shell job-log-shell"><pre data-job-log-output="' + escapeHtml(job.id) + '">' + logText + '</pre></div>' +
+              '<div class="terminal-shell job-log-shell"><pre data-job-log-output="' + escapeHtml(job.id) + '">' + logText + '</pre></div></details>' +
             '</article>'
           );
         }).join('');
@@ -924,12 +999,12 @@
         const force = Boolean(options && options.force);
         if (force) {
           setBtnLoading(jobsRefreshBtn, true);
-          setJobsMsg('Refreshing managed jobs...');
+          setJobsMsg('Refreshing…');
         }
         try {
           const payload = await request('/api/jobs', 'GET');
           renderJobs(payload);
-          if (force) setJobsMsg('Managed jobs refreshed.');
+          if (force) setJobsMsg('Refreshed.');
         } catch (err) {
           jobsSummaryEl.textContent = 'Managed jobs unavailable';
           jobsListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
@@ -1021,10 +1096,10 @@
         const errorCount = items.filter((item) => item && item.errors && item.errors.length).length;
         siteDeploySummaryEl.textContent = String(items.length) + ' target' + (items.length === 1 ? '' : 's') + ' · ' + String(readyCount) + ' ready';
         siteDeployOverviewStripEl.innerHTML =
-          overviewSegment('targets', String(items.length), 'Flux image-automated sites', { eyebrow: 'static deploys' }) +
-          overviewSegment('ready', String(readyCount), 'kustomization and helm ready', { eyebrow: 'runtime state', barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
-          overviewSegment('errors', String(errorCount), errorCount ? 'some Flux objects unavailable' : 'inventory clean', { eyebrow: 'api inventory' }) +
-          overviewSegment('checked', fmtTime(data.checkedAt), 'latest control-panel snapshot', { eyebrow: 'snapshot' });
+          overviewSegment('targets', String(items.length), 'Tracked sites', { eyebrow: 'static deploys' }) +
+          overviewSegment('ready', String(readyCount), 'Flux ready', { eyebrow: 'runtime state', barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
+          overviewSegment('errors', String(errorCount), errorCount ? 'Check required' : 'None reported', { eyebrow: 'api inventory' }) +
+          overviewSegment('checked', fmtTime(data.checkedAt), 'Last refresh', { eyebrow: 'snapshot' });
 
         if (!items.length) {
           siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
@@ -1231,7 +1306,7 @@
             eyebrow: transmission.placeholderConfig ? 'placeholder vpn config' : 'download path',
             tone: transmission.rolloutPending ? 'warning' : transmission.desiredMode === 'vpn' ? 'warning' : 'status',
           }) +
-          overviewSegment('public shares', String(activeShareCount), activeShareCount ? 'disable if not needed' : 'private-only posture', {
+          overviewSegment('public shares', String(activeShareCount), activeShareCount ? 'disable if not needed' : 'All links private', {
             eyebrow: 'share hosts',
             tone: activeShareCount > 0 ? 'warning' : 'status',
           });
@@ -1250,14 +1325,13 @@
                   '<a href="' + escapeHtml(target.url || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(target.name || target.id || 'target') + '</a>' +
                   travelTargetMark(target.state) +
                 '</div>' +
-                '<div class="travel-target-meta">' + escapeHtml(String(target.access || 'tailnet-private').replace(/-/g, ' ')) + ' · ' + escapeHtml(target.detail || 'no probe detail') + '</div>' +
+                (target.state !== 'ready' ? '<div class="travel-target-meta">' + escapeHtml(target.detail || 'Probe unavailable') + '</div>' : '') +
               '</li>'
             ).join('')
             : '<li class="travel-target-item travel-target-empty"><span class="muted">no targets in this bundle.</span></li>';
           return (
             '<article class="support-card travel-card">' +
               '<div class="travel-card-head"><div class="support-card-title">' + escapeHtml(bundle.name || bundle.id || 'bundle') + '</div>' + travelStatusPill(bundle.state) + '</div>' +
-              '<p class="support-copy">' + escapeHtml(bundle.description || 'No description.') + '</p>' +
               '<ul class="travel-target-list">' + items + '</ul>' +
             '</article>'
           );
@@ -1332,6 +1406,29 @@
         tuningView.render(tuning);
       }
 
+      function shareMatches(query, view, service) {
+        const text = [service.name, service.id, service.publicHost].join(' ').toLowerCase();
+        return (view !== 'active' || Boolean(service.enabled)) && text.includes(query.trim().toLowerCase());
+      }
+
+      function filterShares() {
+        let visible = 0;
+        const services = dashboardState.services || [];
+        rowsEl.querySelectorAll('[data-service-id]').forEach((row) => {
+          const service = services.find((item) => item.id === row.dataset.serviceId);
+          row.hidden = !service || !shareMatches(sharesSearch.value, shareView, service);
+          if (!row.hidden) visible += 1;
+        });
+        const empty = rowsEl.querySelector('[data-share-empty]');
+        if (empty) empty.hidden = visible > 0;
+        document.getElementById('sharesCount').textContent = visible + ' / ' + services.length;
+        shareViewButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.shareView === shareView)));
+      }
+      sharesSearch.addEventListener('input', filterShares);
+      shareViewButtons.forEach((button) => {
+        button.onclick = () => { shareView = button.dataset.shareView; filterShares(); };
+      });
+
       function renderRows(services) {
         rowsEl.innerHTML = '';
         if (!services.length) {
@@ -1340,12 +1437,14 @@
           td.colSpan = 6;
           td.className = 'empty-state';
           td.textContent = 'No services configured.';
+          document.getElementById('sharesCount').textContent = '0 / 0';
           tr.appendChild(td);
           rowsEl.appendChild(tr);
           return;
         }
         services.forEach((svc) => {
           const tr = document.createElement('tr');
+          tr.dataset.serviceId = svc.id;
           if (svc.enabled) tr.classList.add('is-enabled');
           const expiry = fmtExpiry(svc.expiresAt, svc.enabled);
 
@@ -1361,7 +1460,7 @@
           const statusTd = document.createElement('td');
           const statusBadge = document.createElement('span');
           statusBadge.className = 'exposure-state ' + (svc.enabled ? 'on' : 'off');
-          statusBadge.textContent = svc.enabled ? 'public' : 'off';
+          statusBadge.textContent = svc.enabled ? 'Public' : 'Private';
           statusTd.appendChild(statusBadge);
 
           const authTd = document.createElement('td');
@@ -1476,8 +1575,16 @@
           renderIdleControls();
           controlsTd.appendChild(controls);
           tr.appendChild(controlsTd);
+          [serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd].forEach((cell, index) => {
+            cell.dataset.label = ['Service', 'Status', 'Auth', 'Public link', 'Expires', 'Actions'][index];
+          });
           rowsEl.appendChild(tr);
         });
+        const emptyRow = document.createElement('tr');
+        emptyRow.dataset.shareEmpty = '';
+        emptyRow.innerHTML = '<td colspan="6" class="empty-state">No matching services.</td>';
+        rowsEl.appendChild(emptyRow);
+        filterShares();
         tickExpiryCountdowns();
       }
 
@@ -1515,6 +1622,7 @@
 
       function renderUpdates(payload) {
         const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        document.getElementById('imagesTabCount').textContent = items.filter((item) => item.status === 'update').length || '';
         const visibleItems = filteredUpdateItems(items);
         const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
         const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
@@ -1533,9 +1641,9 @@
             const tr = document.createElement('tr');
             tr.className = 'update-row';
             tr.setAttribute('role', 'row');
-            const nsPrefix = item.namespace ? item.namespace + '/' : '';
             const imageLabel = item.imageRepo || item.image || '—';
             const imageDetail = [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ');
+            const visibleDetail = !['update', 'current'].includes(item.status) ? item.detail || '' : '';
             const imageTitle = [imageLabel, imageDetail].filter(Boolean).join('\n');
             const workflow = policy.classifyImageUpdate(item, dashboardState.renovate, payload && payload.checkedAt);
             const statusLabel = item.status === 'update' ? workflow.label : String(item.statusText || 'unknown').toLowerCase();
@@ -1554,10 +1662,10 @@
               }
             }
             tr.innerHTML =
-              '<td class="updates-service-cell" data-label="Service" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
+              '<td class="updates-service-cell" data-label="Service" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
               '<td class="updates-version-cell" data-label="Version" role="cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
               '<td class="updates-status-cell" data-label="Status" role="cell"><span class="update-chip ' + (item.status || 'unknown') + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
-              '<td class="updates-context-cell" data-label="Image" role="cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(imageDetail) + '</div></td>' +
+              '<td class="updates-context-cell" data-label="Image" role="cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(visibleDetail) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
@@ -1568,7 +1676,8 @@
         const staleText = payload && payload.stale ? ' · stale cache' : '';
         const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
         const filterText = items.length && visibleItems.length !== items.length ? ' · showing ' + visibleItems.length + '/' + items.length : '';
-        updatesMetaEl.textContent = 'checked ' + checkedAt + ' · next ' + nextCheckAt + ' · ' + source + staleText + refreshingText + filterText;
+        updatesMetaEl.textContent = 'Checked ' + checkedAt + staleText + refreshingText + filterText;
+        updatesMetaEl.title = 'Next check: ' + nextCheckAt + ' · ' + source;
       }
 
       async function loadUpdates(options) {
@@ -1592,7 +1701,7 @@
               setMsg('Image update check started.');
             }
           } else {
-            setUpdatesMsg('Update report loaded.');
+            setUpdatesMsg('');
             if (force) {
               setLoadState('Image updates checked at ' + fmtTime(new Date()));
               setMsg('Image update check complete.');
@@ -1611,6 +1720,7 @@
 
       function renderHelmUpdates(payload) {
         const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        document.getElementById('chartsTabCount').textContent = items.filter((item) => item.status === 'update').length || '';
         const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
         const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
         helmUpdatesRowsEl.innerHTML = '';
@@ -1623,7 +1733,6 @@
             const tr = document.createElement('tr');
             tr.className = 'update-row';
             tr.setAttribute('role', 'row');
-            const nsPrefix = item.namespace ? item.namespace + '/' : '';
             const matchingPr = findMatchingRenovatePr(item, 'helm');
             let actionHtml = '<span class="updates-action-note">—</span>';
             if (matchingPr) {
@@ -1638,7 +1747,7 @@
               }
             }
             tr.innerHTML =
-              '<td class="updates-service-cell" data-label="Release" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(nsPrefix + (item.id || '')) + '</div></td>' +
+              '<td class="updates-service-cell" data-label="Release" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center helm-current-cell" data-label="Current" role="cell">' + escapeHtml(item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center helm-latest-cell" data-label="Latest" role="cell">' + escapeHtml(item.latestVersion || '—') + '</td>' +
               '<td class="updates-cell-center updates-status-cell" data-label="Status" role="cell"><span class="update-chip ' + attrText(item.status || 'unknown') + '">' + escapeHtml(String(item.statusText || 'unknown').toLowerCase()) + '</span></td>' +
@@ -1652,7 +1761,8 @@
         const source = payload && payload.source ? payload.source : 'unknown';
         const staleText = payload && payload.stale ? ' · stale cache' : '';
         const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
-        helmUpdatesMetaEl.textContent = 'checked ' + checkedAt + ' · next ' + nextCheckAt + ' · ' + source + staleText + refreshingText;
+        helmUpdatesMetaEl.textContent = 'Checked ' + checkedAt + staleText + refreshingText;
+        helmUpdatesMetaEl.title = 'Next check: ' + nextCheckAt + ' · ' + source;
       }
 
       async function loadHelmUpdates(options) {
@@ -1670,7 +1780,7 @@
           if (payload.stale) {
             setHelmUpdatesMsg('Showing cached data while background refresh runs.');
           } else {
-            setHelmUpdatesMsg('Helm chart report loaded.');
+            setHelmUpdatesMsg('');
           }
         } catch (err) {
           setHelmUpdatesMsg(err.message, true);
@@ -2218,11 +2328,11 @@
         if (activePage === 'pulse') void loadPulse();
         const silent = Boolean(options && options.silent);
         if (!silent) {
-          setLoadState('Refreshing dashboard...');
+          setLoadState('Refreshing…');
           setMsg('Refreshing...');
-          setVpnMsg('Refreshing Transmission VPN status...');
-          setUpdatesMsg('Loading cached update report...');
-          setTravelMsg('Refreshing travel readiness...');
+          setVpnMsg('Refreshing…');
+          setUpdatesMsg('Loading…');
+          setTravelMsg('Loading…');
           setBtnLoading(refreshAllBtn, true);
           overviewStripEl.innerHTML = skeletonOverviewStrip(3);
           travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
@@ -2282,7 +2392,7 @@
           if (updatesData.status === 'fulfilled') {
             dashboardState.updates = updatesData.value;
             renderUpdates(dashboardState.updates);
-            if (!silent) setUpdatesMsg('Update report loaded.');
+            if (!silent) setUpdatesMsg('');
           } else {
             dashboardState.updates = null;
             renderUpdates({ items: [] });
@@ -2291,7 +2401,7 @@
           if (helmUpdatesData.status === 'fulfilled') {
             dashboardState.helmUpdates = helmUpdatesData.value;
             renderHelmUpdates(dashboardState.helmUpdates);
-            if (!silent) setHelmUpdatesMsg('Helm chart report loaded.');
+            if (!silent) setHelmUpdatesMsg('');
           } else {
             dashboardState.helmUpdates = null;
             renderHelmUpdates({ items: [] });
@@ -2324,7 +2434,7 @@
               if (jobsData && !silent) setJobsMsg(jobsData.reason.message, true);
             }
           } else if (!dashboardState.jobs) {
-            jobsSummaryEl.textContent = 'Managed job inventory loads only when this page is opened.';
+            jobsSummaryEl.textContent = 'Loading…';
             jobsOverviewStripEl.innerHTML = '';
             jobsOverviewMetaEl.innerHTML = '';
             jobsOverviewDetailEl.textContent = 'open jobs to load cron state';
@@ -2342,7 +2452,7 @@
               if (siteDeployData && !silent) setSiteDeployMsg(siteDeployData.reason.message, true);
             }
           } else if (!dashboardState.siteDeployments) {
-            siteDeploySummaryEl.textContent = 'Site deploy inventory loads only when this page is opened.';
+            siteDeploySummaryEl.textContent = 'Loading…';
             siteDeployOverviewStripEl.innerHTML = '';
             siteDeployListEl.innerHTML = '<div class="empty-state">Open deploy sites to load static-site targets.</div>';
           }
@@ -2361,8 +2471,11 @@
 
           renderOverview();
           hasLoadedDashboard = true;
+          if (activePage === 'jobs' && !includeJobs && !dashboardState.jobs) void loadJobs();
+          if (activePage === 'deploy' && !includeSiteDeployments && !dashboardState.siteDeployments) void loadSiteDeployments();
+          if (activePage === 'secrets' && !includeSecrets && !dashboardState.secrets) void loadSecrets();
           setLoadState((silent ? 'Last refresh ' : 'Updated ') + fmtTime(new Date()));
-          if (!silent) setMsg('Exposure state updated.');
+          if (!silent) setMsg('');
         } catch (err) {
           setLoadState(err.message, true);
           if (!silent) setMsg(err.message, true);
@@ -2574,12 +2687,12 @@
           const target = normalizePage(link.getAttribute('href'));
           if (!target) return;
           event.preventDefault();
-          setActivePage(target);
+          setActivePage(target, { focus: true });
         });
       });
 
       window.addEventListener('hashchange', () => {
-        setActivePage(window.location.hash, { replace: true });
+        setActivePage(window.location.hash, { replace: true, focus: true });
       });
 
       let pulseResizeTimer;
@@ -2598,5 +2711,5 @@
       setInterval(tickExpiryCountdowns, 1000);
       renderPulseStrip();
       applyThemeMode(storedThemeMode());
-      setActivePage(window.location.hash || '#updates', { replace: true });
+      setActivePage(window.location.hash || '#overview', { replace: true });
       loadDashboard();

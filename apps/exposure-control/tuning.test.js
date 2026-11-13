@@ -185,7 +185,7 @@ test('successful empty-selection plans still show a zero-change preview, includi
     assert.equal(model.cpuDelta, 0);
     assert.equal(model.memoryDelta, 0);
     const html = tuning.renderSummary(model);
-    assert.match(html, /0 changes would be proposed/);
+    assert.match(html, /0 changes proposed/);
     assert.match(html, /Passes/);
     assert.doesNotMatch(html, /Preview unavailable/);
   }
@@ -228,13 +228,13 @@ test('the decision summary separates reservations, node fit, pressure, schedule,
   data.lastApply = { runAt: '2026-09-27T19:30:00Z', status: 'created_or_updated', prCount: 1,
     execution: { pull_requests: [{ release: 'reader', status: 'created', pr_url: 'https://github.com/example/cluster/pull/42' }] } };
   const html = tuning.renderSummary(tuning.buildModel(data));
-  assert.match(html, /1 change would be proposed/);
+  assert.match(html, /1 change proposed/);
   assert.match(html, /\+64 Mi/);
-  assert.match(html, /reservations, not usage savings/);
+  assert.match(html, /Request changes, not measured savings/);
   assert.match(html, /Hard node fit/);
   assert.match(html, /Passes/);
   assert.match(html, /Advisory pressure/);
-  assert.match(html, /not a blocking gate/);
+  assert.match(html, /Non-blocking/);
   assert.match(html, /Asia\/Singapore/);
   assert.match(html, /Oct 5, 2026/);
   assert.match(html, /03:30/);
@@ -243,7 +243,7 @@ test('the decision summary separates reservations, node fit, pressure, schedule,
   assert.doesNotMatch(html, /UTC/, 'use one schedule timezone for every timestamp');
   assert.match(html, /PRs created or updated/);
   assert.match(html, /href="https:\/\/github.com\/example\/cluster\/pull\/42"/);
-  assert.match(html, /not confirm merge or deployment/);
+  assert.match(html, /not confirm deployment/);
   assert.doesNotMatch(html, /75m|savings of/);
 });
 
@@ -343,6 +343,7 @@ function viewHarness() {
     },
   });
   ids.tuningRows.querySelectorAll = () => rows;
+  ids.tuningSummary.querySelector = () => null;
   const buttons = ['selected', 'deferred', 'unchanged', 'all'].map(view => element({ tuningView: view }));
   const root = { ownerDocument: document, querySelector: id => ids[id.slice(1)], querySelectorAll: () => buttons };
   return { root, ids, buttons, rows: () => rows, document };
@@ -391,7 +392,7 @@ test('an empty proposed view points to other workloads without resetting filters
   const data = snapshot(); data.applyPreflight.selected = []; data.applyPreflight.selectedCount = 0;
   tuning.createView(h.root).render(data);
   assert.equal(h.rows().length, 0);
-  assert.match(h.ids.tuningEmpty.textContent, /Deferred.*All workloads/);
+  assert.match(h.ids.tuningEmpty.textContent, /Deferred.*All/);
 });
 
 test('dashboard refresh clears failed tuning even when an unrelated service API fails', async () => {
