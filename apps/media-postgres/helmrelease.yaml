@@ -32,7 +32,7 @@ spec:
           main:
             image:
               repository: timescale/timescaledb
-              tag: 2.31.0-pg16
+              tag: 2.32.0-pg16
             command:
               - sh
               - -c
@@ -108,7 +108,7 @@ spec:
           main:
             image:
               repository: timescale/timescaledb
-              tag: 2.31.0-pg16
+              tag: 2.32.0-pg16
             command: [psql, -X, -w, -q, -f, /scripts/bootstrap.sql]
             env:
               PGHOST: media-postgres.default.svc.cluster.local
