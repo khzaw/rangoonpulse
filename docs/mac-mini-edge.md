@@ -3,7 +3,7 @@ title: Mac Mini Dedicated Edge
 summary: Current Iris OpenClaw, Athena Hermes, SSH, DNS ownership, and host-authentication boundary.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-14
 ---
 
 # Mac Mini Dedicated Edge
@@ -37,6 +37,24 @@ A working TLS/ingress path does not prove application authentication is correct.
 3. Ingress host routing and Endpoint target
 4. Mac mini process/listener
 5. application token, pairing, and origin policy
+
+## OpenClaw Proxy Attribution
+
+The host-side `gateway.trustedProxies` must contain both exact cluster node
+addresses (`PRIMARY_NODE_IP` and `UTILITY_NODE_IP` in `flux/cluster-settings.yaml`).
+Ingress traffic to the external Mac mini endpoint is source-NATed to the node
+running ingress-nginx, so trusting only one node breaks access when the controller
+moves. Keep this list aligned with node address changes; do not trust the entire
+LAN or pod CIDR.
+
+Keep ingress-nginx's `use-forwarded-headers` and `compute-full-forwarded-for`
+disabled so it overwrites `X-Forwarded-For` and `X-Real-IP` with the observed client
+address. Proxy trust supplies client attribution; OpenClaw token authentication,
+device pairing, and allowed origins still apply.
+
+An HTTP `403` with `proxy_attribution_required` indicates the request reached
+OpenClaw but failed this attribution check. Compare the source in the native
+gateway log with the trusted proxy list and the controller's current node.
 
 ## Verification
 
