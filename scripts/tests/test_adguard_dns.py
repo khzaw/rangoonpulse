@@ -1,4 +1,4 @@
-"""Check primary upstream normalization preserves unrelated persistent config."""
+"""Check DNS policy normalization preserves unrelated persistent config."""
 
 import os
 from pathlib import Path
@@ -20,10 +20,15 @@ def startup(instance):
 
 
 class AdGuardDNSTests(unittest.TestCase):
-    def normalize(self, config):
-        script = startup("primary")
+    def normalize(self, config, instance="primary"):
+        script = startup(instance)
         subprocess.run(["sh", "-n"], input=script, text=True, check=True)
-        block = script.split("# Keep primary Cloudflare upstreams", 1)[1]
+        marker = (
+            "# Keep primary Cloudflare upstreams"
+            if instance == "primary"
+            else "# Keep secondary private DNS"
+        )
+        block = script.split(marker, 1)[1]
         block = block.split("\n", 1)[1].split("# Keep DHCP disabled", 1)[0]
         with tempfile.TemporaryDirectory() as directory:
             conf = Path(directory) / "conf"
@@ -74,6 +79,12 @@ clients:
         self.assertEqual(yaml.safe_load(result), expected)
         self.assertEqual(self.normalize(result), result)
 
+        secondary_expected = yaml.safe_load(config)
+        secondary_expected["dns"]["ratelimit"] = 0
+        secondary_result = self.normalize(config, "secondary")
+        self.assertEqual(yaml.safe_load(secondary_result), secondary_expected)
+        self.assertEqual(self.normalize(secondary_result, "secondary"), secondary_result)
+
     def test_quoted_addresses_explicit_udp_and_ports(self):
         for upstream in ("1.0.0.3", '"1.1.1.3:53"', "'udp://1.1.1.1:53'", "tcp://1.0.0.1:53"):
             with self.subTest(upstream=upstream):
@@ -91,12 +102,13 @@ clients:
 
     def test_rate_limit_is_inserted_without_changing_empty_or_missing_upstreams(self):
         for config in ("dns:\n  upstream_dns: []\nfilters: []\n", "dns:\n  port: 53\n"):
-            with self.subTest(config=config):
-                expected = yaml.safe_load(config)
-                expected["dns"]["ratelimit"] = 0
-                result = self.normalize(config)
-                self.assertEqual(yaml.safe_load(result), expected)
-                self.assertEqual(self.normalize(result), result)
+            for instance in ("primary", "secondary"):
+                with self.subTest(config=config, instance=instance):
+                    expected = yaml.safe_load(config)
+                    expected["dns"]["ratelimit"] = 0
+                    result = self.normalize(config, instance)
+                    self.assertEqual(yaml.safe_load(result), expected)
+                    self.assertEqual(self.normalize(result, instance), result)
 
     def test_seeded_transport_is_instance_specific(self):
         for instance in ("primary", "secondary"):
@@ -111,7 +123,7 @@ clients:
                     upstreams = [f"https://{address}/dns-query" for address in upstreams]
                 dns = yaml.safe_load(path.read_text())["dns"]
                 self.assertEqual(dns["upstream_dns"], upstreams)
-                self.assertEqual(dns.get("ratelimit", 20), 0 if instance == "primary" else 20)
+                self.assertEqual(dns["ratelimit"], 0)
 
 
 if __name__ == "__main__":

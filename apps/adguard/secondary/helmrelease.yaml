@@ -58,6 +58,7 @@ spec:
                     '  bind_hosts:' \
                     '    - 0.0.0.0' \
                     '  port: 53' \
+                    '  ratelimit: 0' \
                     '  upstream_dns:' \
                     '    - 1.1.1.1' \
                     '    - 1.0.0.1' \
@@ -91,6 +92,18 @@ spec:
                   sed -i -E 's/^  cache_optimistic:.*/  cache_optimistic: true/' "$CFG"
                   sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
                 fi
+
+                # Keep secondary private DNS free of shared-client UDP burst limits.
+                TMP="$(mktemp "$DATA/conf/.dns-ratelimit.XXXXXX")"
+                trap 'rm -f "$TMP"' EXIT
+                awk '
+                  /^dns:/ { in_dns = 1; print; print "  ratelimit: 0"; next }
+                  in_dns && /^[^[:space:]]/ { in_dns = 0 }
+                  in_dns && /^  ratelimit:/ { next }
+                  { print }
+                ' "$CFG" > "$TMP"
+                mv "$TMP" "$CFG"
+                trap - EXIT
 
                 # Keep DHCP disabled in the Kubernetes deployment model (router handles DHCP).
                 if [ -f "$CFG" ]; then

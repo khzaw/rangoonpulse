@@ -108,6 +108,7 @@ Startup enforces DNS keys in
 - `dns.cache_ttl_max: 3600`
 - `dns.cache_optimistic: true`
 - `dns.upstream_timeout: 3s`
+- `dns.ratelimit: 0` (private DNS must handle shared-client bursts)
 - `http.address: 0.0.0.0:80`
 - `dhcp.enabled: false` (router remains DHCP authority)
 
@@ -126,19 +127,34 @@ starts with `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query`.
 IP-literal HTTPS upstreams avoid a bootstrap DNS dependency and retain certificate
 verification. The secondary keeps its independent plain Cloudflare upstreams.
 
-The primary also enforces `dns.ratelimit: 0`. Its DNS listener is private to the
+### Private DNS burst policy
+
+Both instances enforce `dns.ratelimit: 0`. Their DNS listeners are private to the
 LAN and tailnet. AdGuard's default 20-query-per-second UDP limit groups IPv4
 clients by `/24`; LAN clients share a bucket, and subnet-router SNAT also groups
 remote clients together. Bursts can therefore silently lose queries even when
-upstream resolution works. The primary has no shared client rate limit; the
-secondary retains its runtime policy. Reassess rate limiting before exposing DNS
-to untrusted networks.
+upstream resolution works. Reassess rate limiting before exposing DNS to
+untrusted networks.
 
 When diagnosing timeouts, compare A, AAAA, and HTTPS records from the affected pod
 and its node's host network over UDP, TCP, and HTTPS. An AdGuard log reporting an
 `HTTPS` question identifies DNS record type 65, not the upstream transport.
 Fresh direct upstream probes and recent forwarding logs are needed because
 optimistic cached answers can hide an upstream failure.
+
+### Remote DNS redundancy
+
+The AdGuard instances have separate nodes, storage, and rollout boundaries.
+Remote clients reach both DNS VIPs through the same single-replica
+`infrastructure/tailscale-subnet-router/connector.yaml` Connector. Resolver
+redundancy therefore does not cover a failure of that shared routing path.
+LAN-only DNS checks cannot verify tailnet failover; include the subnet router
+and client-side Tailscale DNS forwarding when testing remote availability.
+
+Highly available subnet routing requires multiple routers on separate nodes,
+advertising and receiving approval for the same exact route prefixes. Retain
+the narrow DNS `/32` routes and verify each surviving route and resolver from a
+tailnet client during controlled failure tests.
 
 ### LG webOS tracking policy
 
