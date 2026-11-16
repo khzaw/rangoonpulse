@@ -1,0 +1,19 @@
+---
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: homelab-dns-backup
+spec:
+  tailscale:
+    acceptRoutes: false
+  statefulSet:
+    pod:
+      nodeSelector:
+        kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 256Mi

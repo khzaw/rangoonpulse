@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_capacity
+import tailscale_capacity
 
 capacity = check_capacity.capacity
 WORKLOADS = capacity.CONTROLLERS | {'Pod', 'CronJob'}
@@ -189,6 +190,8 @@ def alertmanager_image_only_change(old, new):
 def changed_workloads(before, after):
     old_workloads = {k: o for k, o in before.items() if o['kind'] in WORKLOADS}
     new_workloads = {k: o for k, o in after.items() if o['kind'] in WORKLOADS}
+    old_workloads.update({capacity.key(o): o for o in tailscale_capacity.render(before)})
+    new_workloads.update({capacity.key(o): o for o in tailscale_capacity.render(after)})
     for key, obj in after.items():
         if obj['kind'] != 'HelmRelease' or obj.get('spec', {}).get('suspend'):
             continue
@@ -229,6 +232,7 @@ def check_batch(objects, state):
     current = {capacity.key(o): o for o in state if o['kind'] != 'Node'}
     failed = False
     for obj in objects:
+        obj = tailscale_capacity.resolve(obj, state)
         old = current.get(capacity.key(obj))
         if old and capacity.terminal(old):
             old = None

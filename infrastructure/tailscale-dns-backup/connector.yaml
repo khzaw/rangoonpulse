@@ -1,0 +1,12 @@
+---
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: homelab-dns-backup
+spec:
+  hostname: homelab-dns-backup
+  proxyClass: homelab-dns-backup
+  subnetRouter:
+    advertiseRoutes:
+      - ${ADGUARD_PRIMARY_IP}/32
+      - ${ADGUARD_SECONDARY_IP}/32

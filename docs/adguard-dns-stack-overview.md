@@ -145,16 +145,18 @@ optimistic cached answers can hide an upstream failure.
 ### Remote DNS redundancy
 
 The AdGuard instances have separate nodes, storage, and rollout boundaries.
-Remote clients reach both DNS VIPs through the same single-replica
-`infrastructure/tailscale-subnet-router/connector.yaml` Connector. Resolver
-redundancy therefore does not cover a failure of that shared routing path.
-LAN-only DNS checks cannot verify tailnet failover; include the subnet router
-and client-side Tailscale DNS forwarding when testing remote availability.
+Remote clients have two independent paths to both DNS VIPs: the existing
+`infrastructure/tailscale-subnet-router/` Connector and the DNS-only
+`infrastructure/tailscale-dns-backup/` Connector on the primary node. Both
+advertise and require approval for the same exact DNS `/32` prefixes. Their
+rollouts are separate. Home networking, power, and Internet connectivity remain
+shared dependencies.
 
-Highly available subnet routing requires multiple routers on separate nodes,
-advertising and receiving approval for the same exact route prefixes. Retain
-the narrow DNS `/32` routes and verify each surviving route and resolver from a
-tailnet client during controlled failure tests.
+LAN-only DNS checks cannot verify tailnet failover. During controlled failure
+tests, use a client accepting subnet routes and Tailscale DNS, verify AdGuard
+logs show the surviving router's pod address, and query through the client's
+`100.100.100.100` forwarder. Test each router and each resolver independently;
+restore client preferences and router state after testing.
 
 ### LG webOS tracking policy
 

@@ -29,6 +29,7 @@ resources:
   - ./kustomizations/metallb-config.yaml
   - ./kustomizations/tailscale-operator.yaml
   - ./kustomizations/tailscale-subnet-router.yaml
+  - ./kustomizations/tailscale-dns-backup.yaml
   - ./kustomizations/reloader.yaml
 
   - ./kustomizations/cert-manager.yaml

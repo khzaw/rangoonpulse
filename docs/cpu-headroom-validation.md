@@ -3,7 +3,7 @@ title: CPU Headroom Validation
 summary: Git and CI capacity checks for resource edits, new workloads, and replica scaling without live admission enforcement.
 status: active
 owner: homelab
-last_reviewed: 2026-11-13
+last_reviewed: 2026-11-16
 ---
 
 # CPU Headroom Validation
@@ -27,6 +27,7 @@ Helm releases with their pinned chart versions. It compares actual workload CPU,
 replicas, placement, and surge settings. Image-only and CPU-neutral changes do not
 need spare reservation budget. Chart defaults are included; HelmRelease values
 alone are not an acceptable substitute for rendering.
+The inventory also includes the separately published Flux bootstrap controllers.
 Optional ConfigMap values absent from Git use the HelmRelease's inline defaults,
 as Transmission does in direct mode. CI cannot see runtime-owned overrides;
 validate their capacity separately before switching modes or changing their resources.
@@ -54,6 +55,16 @@ changing those inputs. This allows image and chart metadata updates without
 bypassing checks on Prometheus or Alertmanager resource changes. Check the
 operator-generated StatefulSets and live capacity before rollout.
 
+Tailscale default-tailnet subnet-router Connectors have an audited CPU and
+scheduling projection for operator `1.104.7`, including their Git-managed
+ProxyClasses, init-container peak, replicas, and default resources. Operator
+version changes require re-auditing that projection. Before delivery, compare a
+full generated StatefulSet render with the projection and run the live preflight;
+after delivery, verify the actual generated resources and node placement.
+Snapshot Connector parent labels map projected workloads to existing StatefulSets
+so updates do not count the same router twice. Older snapshots without these
+labels must be refreshed before modifying an existing Connector.
+
 ## Snapshot publication
 
 `monitoring/resource-advisor-capacity-snapshot` runs every 15 minutes. It reads
@@ -64,6 +75,8 @@ requests, placement, replica/rollout settings, identities, and lifecycle state t
 CPU already includes init containers, restartable sidecars, limit-defaulted
 requests, Pod-level requests, and overhead. Environment, images, volumes,
 application configuration, and credentials are excluded.
+StatefulSet labels are restricted to the three Tailscale parent-resource identity
+fields needed to recognize operator-generated Connector workloads.
 
 The publisher reuses `monitoring/resource-advisor-github` (contents write); CI
 reads the public branch without cluster or GitHub write credentials. The branch

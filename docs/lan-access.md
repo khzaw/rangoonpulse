@@ -3,7 +3,7 @@ title: LAN and Tailscale Access
 summary: Current private access contract for ingress services, LAN-device proxies, and the Mac mini edge.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-16
 ---
 
 # LAN and Tailscale Access
@@ -13,6 +13,12 @@ last_reviewed: 2026-10-25
 Private `*.khzaw.dev` services resolve to the shared ingress VIP and are reachable from the LAN or through the Tailscale subnet router. Tailscale clients use the same destination IPs as LAN clients; there is no separate Tailscale ingress proxy.
 
 The active Connector is `infrastructure/tailscale-subnet-router/connector.yaml`. It advertises narrow `/32` routes for the router, both Talos nodes, NAS, shared ingress VIP, Mac mini edge VIP, and both AdGuard DNS VIPs, and also acts as an exit node.
+
+`infrastructure/tailscale-dns-backup/` provides an independent Connector on the
+primary node, advertising only the two AdGuard DNS `/32` routes. Its ProxyClass
+disables accepting subnet routes and reserves 100m CPU and 128Mi memory, with a
+256Mi memory limit. It has its own Flux rollout boundary. General LAN routing
+and exit-node service remain on the original Connector.
 
 ## LAN Devices Behind Ingress
 
@@ -39,7 +45,10 @@ LAN clients should use the two AdGuard LoadBalancer IPs published by the router'
 
 Remote Tailscale clients can reach AdGuard at `${ADGUARD_PRIMARY_IP}` and
 `${ADGUARD_SECONDARY_IP}` through the Connector's `/32` routes. The routes must
-be approved in the tailnet and network policy must allow TCP/UDP port `53`.
+be approved on both Connectors in the tailnet and network policy must allow
+TCP/UDP port `53`. Both routers must advertise the same exact DNS `/32` prefixes
+for automatic route failover. Keep route acceptance disabled on the backup so
+it reaches the LAN directly rather than through its peer.
 Advertising these routes provides reachability; selecting AdGuard as a tailnet
 nameserver and enabling client DNS settings are separate configuration steps.
 With AdGuard configured as the tailnet's global nameservers and DNS override
@@ -54,6 +63,7 @@ Permanent-public Tunnel hostnames are different: they should resolve to Cloudfla
 
 ```bash
 kubectl get connector homelab-subnet-router -o yaml
+kubectl get connector homelab-dns-backup -o yaml
 kubectl get svc,endpoints,ingress -n default
 kubectl get svc -n ingress-nginx
 
