@@ -126,6 +126,14 @@ starts with `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query`.
 IP-literal HTTPS upstreams avoid a bootstrap DNS dependency and retain certificate
 verification. The secondary keeps its independent plain Cloudflare upstreams.
 
+The primary also enforces `dns.ratelimit: 0`. Its DNS listener is private to the
+LAN and tailnet. AdGuard's default 20-query-per-second UDP limit groups IPv4
+clients by `/24`; LAN clients share a bucket, and subnet-router SNAT also groups
+remote clients together. Bursts can therefore silently lose queries even when
+upstream resolution works. The primary has no shared client rate limit; the
+secondary retains its runtime policy. Reassess rate limiting before exposing DNS
+to untrusted networks.
+
 When diagnosing timeouts, compare A, AAAA, and HTTPS records from the affected pod
 and its node's host network over UDP, TCP, and HTTPS. An AdGuard log reporting an
 `HTTPS` question identifies DNS record type 65, not the upstream transport.

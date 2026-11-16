@@ -42,6 +42,7 @@ class AdGuardDNSTests(unittest.TestCase):
 
     def test_preserves_resolver_variants_and_other_runtime_settings(self):
         config = """dns:
+  ratelimit: 20
   upstream_dns:
     - 1.1.1.2
     - 1.1.1.1
@@ -63,6 +64,7 @@ clients:
         - 1.1.1.1
 """
         expected = yaml.safe_load(config)
+        expected["dns"]["ratelimit"] = 0
         expected["dns"]["upstream_dns"][:3] = [
             "https://1.1.1.2/dns-query",
             "https://1.1.1.1/dns-query",
@@ -87,10 +89,14 @@ clients:
                     [f"https://{address}/dns-query"],
                 )
 
-    def test_empty_or_missing_upstreams_are_preserved(self):
+    def test_rate_limit_is_inserted_without_changing_empty_or_missing_upstreams(self):
         for config in ("dns:\n  upstream_dns: []\nfilters: []\n", "dns:\n  port: 53\n"):
             with self.subTest(config=config):
-                self.assertEqual(self.normalize(config), config)
+                expected = yaml.safe_load(config)
+                expected["dns"]["ratelimit"] = 0
+                result = self.normalize(config)
+                self.assertEqual(yaml.safe_load(result), expected)
+                self.assertEqual(self.normalize(result), result)
 
     def test_seeded_transport_is_instance_specific(self):
         for instance in ("primary", "secondary"):
@@ -103,7 +109,9 @@ clients:
                 upstreams = ["1.1.1.1", "1.0.0.1"]
                 if instance == "primary":
                     upstreams = [f"https://{address}/dns-query" for address in upstreams]
-                self.assertEqual(yaml.safe_load(path.read_text())["dns"]["upstream_dns"], upstreams)
+                dns = yaml.safe_load(path.read_text())["dns"]
+                self.assertEqual(dns["upstream_dns"], upstreams)
+                self.assertEqual(dns.get("ratelimit", 20), 0 if instance == "primary" else 20)
 
 
 if __name__ == "__main__":

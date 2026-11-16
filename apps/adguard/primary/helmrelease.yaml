@@ -58,6 +58,7 @@ spec:
                     '  bind_hosts:' \
                     '    - 0.0.0.0' \
                     '  port: 53' \
+                    '  ratelimit: 0' \
                     '  upstream_dns:' \
                     '    - https://1.1.1.1/dns-query' \
                     '    - https://1.0.0.1/dns-query' \
@@ -92,13 +93,14 @@ spec:
                   sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
                 fi
 
-                # Keep primary Cloudflare upstreams on HTTPS over the unreliable plain-DNS path.
+                # Keep primary Cloudflare upstreams on HTTPS and disable shared-client rate limiting.
                 # Preserve resolver variants, custom upstreams, and all other runtime settings.
                 TMP="$(mktemp "$DATA/conf/.dns-upstreams.XXXXXX")"
                 trap 'rm -f "$TMP"' EXIT
                 awk '
-                  /^dns:/ { in_dns = 1 }
+                  /^dns:/ { in_dns = 1; print; print "  ratelimit: 0"; next }
                   in_dns && /^[^[:space:]]/ && !/^dns:/ { in_dns = 0 }
+                  in_dns && /^  ratelimit:/ { next }
                   in_dns && /^  upstream_dns:/ { in_upstreams = 1; print; next }
                   in_upstreams && (/^  [^[:space:]]/ || /^[^[:space:]]/) { in_upstreams = 0 }
                   in_dns && in_upstreams && /^    - / {
