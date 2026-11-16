@@ -146,7 +146,7 @@ optimistic cached answers can hide an upstream failure.
 
 The AdGuard instances have separate nodes, storage, and rollout boundaries.
 Remote clients have two independent paths to both DNS VIPs: the existing
-`infrastructure/tailscale-subnet-router/` Connector and the DNS-only
+`infrastructure/tailscale-subnet-router/` Connector pinned to the Pi and the DNS-only
 `infrastructure/tailscale-dns-backup/` Connector on the primary node. Both
 advertise and require approval for the same exact DNS `/32` prefixes. Their
 rollouts are separate. Home networking, power, and Internet connectivity remain

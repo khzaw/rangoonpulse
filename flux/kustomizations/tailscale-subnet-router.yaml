@@ -9,6 +9,7 @@ spec:
   interval: 24h
   path: ./infrastructure/tailscale-subnet-router
   prune: true
+  wait: true
   sourceRef: { kind: GitRepository, name: flux-system }
   postBuild:
     substituteFrom:
@@ -17,3 +18,14 @@ spec:
   timeout: 5m
   dependsOn:
     - name: tailscale-operator
+  healthCheckExprs:
+    - apiVersion: tailscale.com/v1alpha1
+      kind: ProxyClass
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(c, c.type == 'ProxyClassReady' && c.status == 'True' && c.observedGeneration == metadata.generation)
+    - apiVersion: tailscale.com/v1alpha1
+      kind: Connector
+      current: >-
+        has(status.conditions) &&
+        status.conditions.exists(c, c.type == 'ConnectorReady' && c.status == 'True' && c.observedGeneration == metadata.generation)

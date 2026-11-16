@@ -7,6 +7,7 @@ metadata:
 spec:
   exitNode: true
   hostname: homelab-subnet-router
+  proxyClass: homelab-subnet-router-pi
   subnetRouter:
     advertiseRoutes:
       - ${ROUTER_IP}/32

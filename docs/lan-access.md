@@ -13,6 +13,9 @@ last_reviewed: 2026-11-16
 Private `*.khzaw.dev` services resolve to the shared ingress VIP and are reachable from the LAN or through the Tailscale subnet router. Tailscale clients use the same destination IPs as LAN clients; there is no separate Tailscale ingress proxy.
 
 The active Connector is `infrastructure/tailscale-subnet-router/connector.yaml`. It advertises narrow `/32` routes for the router, both Talos nodes, NAS, shared ingress VIP, Mac mini edge VIP, and both AdGuard DNS VIPs, and also acts as an exit node.
+Its ProxyClass pins it to the utility (Pi) node, disables accepting subnet
+routes, and reserves 100m CPU and 128Mi memory. Keep this placement independent
+of the DNS backup; neither router should route these LAN addresses through its peer.
 
 `infrastructure/tailscale-dns-backup/` provides an independent Connector on the
 primary node, advertising only the two AdGuard DNS `/32` routes. Its ProxyClass

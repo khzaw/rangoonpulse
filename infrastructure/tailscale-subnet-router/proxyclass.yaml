@@ -1,0 +1,17 @@
+---
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: homelab-subnet-router-pi
+spec:
+  tailscale:
+    acceptRoutes: false
+  statefulSet:
+    pod:
+      nodeSelector:
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
