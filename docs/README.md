@@ -45,7 +45,7 @@ All repository documentation is public. These guides retain technical context ne
 - [`prometheus-storage.md`](./prometheus-storage.md): Prometheus TSDB storage and recovery
 - [`storage-cleanup.md`](./storage-cleanup.md): destructive storage cleanup safety
 - [`data-protection.md`](./data-protection.md): repository-defined data-protection coverage and gaps
-- [`truenas-networking-and-csi.md`](./truenas-networking-and-csi.md): TrueNAS routing and CSI recovery
+- [`truenas-networking-and-csi.md`](./truenas-networking-and-csi.md): TrueNAS console policy, routing, and CSI recovery
 
 ## Monitoring And Operations Surfaces
 

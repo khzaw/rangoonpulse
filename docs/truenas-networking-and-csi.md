@@ -1,9 +1,9 @@
 ---
 title: TrueNAS Networking and CSI Recovery
-summary: Current asymmetric-routing constraint, NFS settings, management-plane refresh, and diagnostic split.
+summary: TrueNAS console policy, asymmetric-routing constraint, NFS settings, management-plane refresh, and diagnostic split.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-16
 ---
 
 # TrueNAS Networking and CSI Recovery
@@ -17,6 +17,40 @@ last_reviewed: 2026-11-04
 - Monitoring alerts cover TrueNAS and CSI management failures.
 
 Accepting Tailscale routes on the NAS can send replies for cluster-originated NFS/API traffic through the wrong interface. The resulting asymmetric path looks like a storage outage even when the NAS and datasets are healthy.
+
+## Local Console
+
+The NAS uses a standard login prompt on its local console with
+`system.advanced.consolemenu=false`. This avoids keeping the Python console menu
+resident on the low-memory host. Local shell access remains available after
+authentication; retain a local administrator account with a usable password and
+shell for recovery.
+
+This is a persistent appliance setting in the TrueNAS configuration database,
+managed through the TrueNAS UI or middleware API rather than Flux. In
+**System > Advanced > Console**, clear **Show Text Console without Password
+Prompt**. The equivalent command below runs on the NAS over SSH; changing the
+setting automatically restarts the local console session:
+
+```bash
+sudo midclt call system.advanced.update '{"consolemenu": false}' >/dev/null
+```
+
+Verify the saved setting is `False`, `getty@tty1.service` is active, and its
+running process is `agetty` at the idle login prompt:
+
+```bash
+sudo midclt call system.advanced.config | python3 -c 'import json, sys; print(json.load(sys.stdin)["consolemenu"])'
+systemctl is-active getty@tty1.service
+pid=$(systemctl show getty@tty1.service --property=MainPID --value)
+ps -p "$pid" -o comm=
+systemctl show getty@tty1.service --property=MemoryCurrent
+```
+
+The unit's configured `ExecStart` can still show `/usr/bin/cli --menu --pager`:
+the launcher replaces itself with `agetty` when the menu is disabled. Inspect
+the running process rather than changing or disabling the systemd unit. To
+restore the automatic menu, set `consolemenu` to `true` through the same API.
 
 ## CSI Health Checks
 
