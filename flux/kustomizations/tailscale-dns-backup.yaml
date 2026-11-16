@@ -21,10 +21,10 @@ spec:
     - apiVersion: tailscale.com/v1alpha1
       kind: ProxyClass
       current: >-
-        has(status) && has(status.conditions) &&
+        has(status.conditions) &&
         status.conditions.exists(c, c.type == 'ProxyClassReady' && c.status == 'True' && c.observedGeneration == metadata.generation)
     - apiVersion: tailscale.com/v1alpha1
       kind: Connector
       current: >-
-        has(status) && has(status.conditions) &&
+        has(status.conditions) &&
         status.conditions.exists(c, c.type == 'ConnectorReady' && c.status == 'True' && c.observedGeneration == metadata.generation)
