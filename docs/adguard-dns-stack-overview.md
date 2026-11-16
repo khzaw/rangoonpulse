@@ -3,7 +3,7 @@ title: AdGuard DNS Stack: Router Setup and Architecture
 summary: Current operating guidance for AdGuard DNS Stack: Router Setup and Architecture.
 status: active
 owner: homelab
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-16
 ---
 
 # AdGuard DNS Stack: Router Setup and Architecture
@@ -111,6 +111,27 @@ Startup enforces DNS keys in
 - `http.address: 0.0.0.0:80`
 - `dhcp.enabled: false` (router remains DHCP authority)
 
+### Primary upstream transport
+
+The primary uses Cloudflare DNS-over-HTTPS on TCP `443`. Its node's external
+network path can lose plain UDP/TCP `53` requests even when LAN gateway probes
+succeed. Persistent HTTPS connections make DNS forwarding more resilient to that
+loss; this does not establish that the underlying network path is loss-free.
+
+Primary startup converts plain Cloudflare upstream entries (`1.1.1.1` /
+`1.0.0.1`, including their `.2` and `.3` filtering variants) to the corresponding
+`https://<IP>/dns-query` endpoints. Existing resolver choices, custom upstreams,
+bootstrap settings, filters, and user rules are preserved. New primary state
+starts with `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query`.
+IP-literal HTTPS upstreams avoid a bootstrap DNS dependency and retain certificate
+verification. The secondary keeps its independent plain Cloudflare upstreams.
+
+When diagnosing timeouts, compare A, AAAA, and HTTPS records from the affected pod
+and its node's host network over UDP, TCP, and HTTPS. An AdGuard log reporting an
+`HTTPS` question identifies DNS record type 65, not the upstream transport.
+Fresh direct upstream probes and recent forwarding logs are needed because
+optimistic cached answers can hide an upstream failure.
+
 ### LG webOS tracking policy
 
 Both instances subscribe to [HaGeZi's LG webOS tracker list](https://github.com/hagezi/dns-blocklists#native).
@@ -179,7 +200,8 @@ AdGuard.
 Current seeded baseline:
 - web UI on `0.0.0.0:80`
 - DNS on `0.0.0.0:53`
-- upstreams `1.1.1.1` and `1.0.0.1`
+- primary upstreams `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query`;
+  secondary upstreams `1.1.1.1` and `1.0.0.1`
 - query log and statistics enabled
 - DHCP disabled
 

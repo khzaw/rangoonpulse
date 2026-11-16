@@ -59,8 +59,8 @@ spec:
                     '    - 0.0.0.0' \
                     '  port: 53' \
                     '  upstream_dns:' \
-                    '    - 1.1.1.1' \
-                    '    - 1.0.0.1' \
+                    '    - https://1.1.1.1/dns-query' \
+                    '    - https://1.0.0.1/dns-query' \
                     '  upstream_mode: fastest_addr' \
                     '  fastest_timeout: 1s' \
                     '  cache_size: 16777216' \
@@ -91,6 +91,30 @@ spec:
                   sed -i -E 's/^  cache_optimistic:.*/  cache_optimistic: true/' "$CFG"
                   sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
                 fi
+
+                # Keep primary Cloudflare upstreams on HTTPS over the unreliable plain-DNS path.
+                # Preserve resolver variants, custom upstreams, and all other runtime settings.
+                TMP="$(mktemp "$DATA/conf/.dns-upstreams.XXXXXX")"
+                trap 'rm -f "$TMP"' EXIT
+                awk '
+                  /^dns:/ { in_dns = 1 }
+                  in_dns && /^[^[:space:]]/ && !/^dns:/ { in_dns = 0 }
+                  in_dns && /^  upstream_dns:/ { in_upstreams = 1; print; next }
+                  in_upstreams && (/^  [^[:space:]]/ || /^[^[:space:]]/) { in_upstreams = 0 }
+                  in_dns && in_upstreams && /^    - / {
+                    upstream = $2
+                    gsub(/["\047]/, "", upstream)
+                    sub(/^(udp|tcp):\/\//, "", upstream)
+                    sub(/:53$/, "", upstream)
+                    if (upstream ~ /^1\.(1\.1|0\.0)\.[123]$/) {
+                      print "    - https://" upstream "/dns-query"
+                      next
+                    }
+                  }
+                  { print }
+                ' "$CFG" > "$TMP"
+                mv "$TMP" "$CFG"
+                trap - EXIT
 
                 # Keep DHCP disabled in the Kubernetes deployment model (router handles DHCP).
                 if [ -f "$CFG" ]; then
