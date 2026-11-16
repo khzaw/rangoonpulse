@@ -15,7 +15,7 @@ data:
       "title": "Homelab Control Room",
       "timezone": "browser",
       "schemaVersion": 41,
-      "version": 1,
+      "version": 2,
       "refresh": "1m",
       "tags": ["homelab", "ops", "overview"],
       "time": {
@@ -65,8 +65,218 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Single-screen operational view for the cluster. Use `Node Capacity Overview` for workload drilldown, `Storage Risk Overview` for PVC pressure, and `Resource Advisor` for tuning specifics."
+            "content": "Cluster operations with AdGuard DNS and router redundancy status. Open DNS and Access Paths for resolver latency, router placement, and resources; Node Capacity Overview for workload fit; Storage Risk Overview for PVC pressure. DNS checks are internal probes, not a remote tailnet availability test."
           }
+        },
+        {
+          "id": 16,
+          "title": "AdGuard DNS Checks / 2",
+          "type": "stat",
+          "description": "Successful Gatus private DNS checks. Missing collector telemetry is UNKNOWN. See DNS and Access Paths for per-resolver status.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 4,
+            "w": 8,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((sum(max by(name) (gatus_results_endpoint_success{job=\"gatus\",group=\"DNS\",name=~\"AdGuard (Primary|Secondary) DNS\"} and on(job,instance) (up{job=\"gatus\"} == 1)))) or vector(0)) and on() (max(up{job=\"gatus\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 2,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  },
+                  {
+                    "color": "green",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "links": [
+            {
+              "title": "DNS and Access Paths",
+              "url": "/d/dns-access-paths",
+              "targetBlank": false
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "title": "DNS Router Pods Ready / 2",
+          "type": "stat",
+          "description": "Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 8,
+            "y": 4,
+            "w": 8,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((sum(max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"}))) or vector(0)) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 2,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  },
+                  {
+                    "color": "green",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "links": [
+            {
+              "title": "DNS and Access Paths",
+              "url": "/d/dns-access-paths",
+              "targetBlank": false
+            }
+          ]
+        },
+        {
+          "id": 18,
+          "title": "DNS Router Nodes / 2",
+          "type": "stat",
+          "description": "Expected: 2 distinct Ready nodes with Ready DNS router pods. Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 16,
+            "y": 4,
+            "w": 8,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((count(count by(node) ((max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"})) == 1))) or vector(0)) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 2,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  },
+                  {
+                    "color": "green",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          },
+          "links": [
+            {
+              "title": "DNS and Access Paths",
+              "url": "/d/dns-access-paths",
+              "targetBlank": false
+            }
+          ]
         },
         {
           "id": 2,
@@ -79,7 +289,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 0,
-            "y": 4
+            "y": 9
           },
           "targets": [
             {
@@ -114,7 +324,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 4,
-            "y": 4
+            "y": 9
           },
           "targets": [
             {
@@ -149,7 +359,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 8,
-            "y": 4
+            "y": 9
           },
           "targets": [
             {
@@ -184,7 +394,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 12,
-            "y": 4
+            "y": 9
           },
           "targets": [
             {
@@ -219,7 +429,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 16,
-            "y": 4
+            "y": 9
           },
           "targets": [
             {
@@ -254,7 +464,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 20,
-            "y": 4
+            "y": 9
           },
           "targets": [
             {
@@ -290,7 +500,7 @@ data:
             "h": 8,
             "w": 6,
             "x": 0,
-            "y": 9
+            "y": 14
           },
           "targets": [
             {
@@ -331,7 +541,7 @@ data:
             "h": 8,
             "w": 6,
             "x": 6,
-            "y": 9
+            "y": 14
           },
           "targets": [
             {
@@ -372,7 +582,7 @@ data:
             "h": 8,
             "w": 6,
             "x": 12,
-            "y": 9
+            "y": 14
           },
           "targets": [
             {
@@ -413,7 +623,7 @@ data:
             "h": 8,
             "w": 6,
             "x": 18,
-            "y": 9
+            "y": 14
           },
           "targets": [
             {
@@ -454,7 +664,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 17
+            "y": 22
           },
           "targets": [
             {
@@ -483,7 +693,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 17
+            "y": 22
           },
           "targets": [
             {
@@ -522,7 +732,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 25
+            "y": 30
           },
           "targets": [
             {
@@ -546,7 +756,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 25
+            "y": 30
           },
           "targets": [
             {

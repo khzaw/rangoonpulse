@@ -15,9 +15,9 @@ data:
       "title": "DNS and Access Paths",
       "timezone": "browser",
       "schemaVersion": 41,
-      "version": 1,
+      "version": 2,
       "refresh": "1m",
-      "tags": ["dns", "access", "ingress", "homelab"],
+      "tags": ["dns", "adguard", "tailscale", "access", "ingress", "homelab"],
       "time": {
         "from": "now-24h",
         "to": "now"
@@ -131,8 +131,698 @@ data:
           },
           "options": {
             "mode": "markdown",
-            "content": "Use this when the question is `can clients resolve and reach the thing I exposed?` It combines CoreDNS health, DNS failure signals, ingress/TLS inventory, and public-edge access endpoints already modeled in this cluster."
+            "content": "AdGuard DNS checks and independent router placement appear first; CoreDNS and ingress/TLS inventory follow. Gatus probes private DNS records from inside the cluster and runs on the Pi. Router readiness does not prove tunnel health or approved routes. Remote-client DNS and full-node failover require a separate client-path check."
           }
+        },
+        {
+          "id": 16,
+          "type": "row",
+          "title": "AdGuard and Tailscale DNS routing",
+          "gridPos": {
+            "x": 0,
+            "y": 4,
+            "w": 24,
+            "h": 1
+          },
+          "collapsed": false,
+          "panels": []
+        },
+        {
+          "id": 17,
+          "title": "AdGuard Primary DNS",
+          "type": "stat",
+          "description": "Gatus queries the private gatus.${BASE_DOMAIN} A record through this DNS VIP every 60 seconds. Does not test public upstreams or Tailscale routing. Missing/failed Gatus scrape is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 5,
+            "w": 4,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(gatus_results_endpoint_success{job=\"gatus\",group=\"DNS\",name=\"AdGuard Primary DNS\"} and on(job,instance) (up{job=\"gatus\"} == 1))",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 1,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN"
+                    },
+                    "1": {
+                      "text": "UP"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 19,
+          "title": "Pi Router Ready",
+          "type": "stat",
+          "description": "Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 8,
+            "y": 5,
+            "w": 4,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((max(max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-subnet-router-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-subnet-router-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"}))) or vector(0)) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 1,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN"
+                    },
+                    "1": {
+                      "text": "UP"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 18,
+          "title": "AdGuard Secondary DNS",
+          "type": "stat",
+          "description": "Gatus queries the private gatus.${BASE_DOMAIN} A record through this DNS VIP every 60 seconds. Does not test public upstreams or Tailscale routing. Missing/failed Gatus scrape is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 4,
+            "y": 5,
+            "w": 4,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(gatus_results_endpoint_success{job=\"gatus\",group=\"DNS\",name=\"AdGuard Secondary DNS\"} and on(job,instance) (up{job=\"gatus\"} == 1))",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 1,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN"
+                    },
+                    "1": {
+                      "text": "UP"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 20,
+          "title": "Main Router Ready",
+          "type": "stat",
+          "description": "Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 5,
+            "w": 4,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((max(max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-dns-backup-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-dns-backup-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"}))) or vector(0)) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 1,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN"
+                    },
+                    "1": {
+                      "text": "UP"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 21,
+          "title": "Ready Router Nodes / 2",
+          "type": "stat",
+          "description": "Distinct Ready nodes with a Ready DNS router pod. Expected: 2. Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 16,
+            "y": 5,
+            "w": 4,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "((count(count by(node) ((max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"})) == 1))) or vector(0)) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 2,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  },
+                  {
+                    "color": "green",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 22,
+          "title": "Gatus Scrape",
+          "type": "stat",
+          "description": "Availability of the DNS probe collector. Gatus runs on the Pi, so Pi loss also removes these DNS checks. Router telemetry comes independently from kube-state-metrics.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 20,
+            "y": 5,
+            "w": 4,
+            "h": 5
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(up{job=\"gatus\"})",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "noValue": "UNKNOWN",
+              "min": 0,
+              "max": 1,
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN"
+                    },
+                    "1": {
+                      "text": "UP"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false
+            },
+            "colorMode": "background",
+            "graphMode": "none"
+          }
+        },
+        {
+          "id": 23,
+          "title": "AdGuard Private DNS Check Latency",
+          "type": "timeseries",
+          "description": "Observed Gatus private-record DNS check duration; not upstream recursion latency. Gaps indicate missing collector telemetry.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 10,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max by(name) (gatus_results_duration_seconds{job=\"gatus\",group=\"DNS\",name=~\"AdGuard (Primary|Secondary) DNS\"} and on(job,instance) (up{job=\"gatus\"} == 1))",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0,
+              "custom": {
+                "spanNulls": false
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            }
+          }
+        },
+        {
+          "id": 24,
+          "title": "DNS Router Readiness by Node",
+          "type": "timeseries",
+          "description": "Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 10,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"})) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{pod}} \u00b7 {{node}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bool",
+              "min": 0,
+              "custom": {
+                "spanNulls": false
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            }
+          }
+        },
+        {
+          "id": 25,
+          "title": "DNS Router CPU Usage",
+          "type": "timeseries",
+          "description": "Existing kubelet cAdvisor metrics for the router container on each node.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 18,
+            "w": 8,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(pod,node) (rate(container_cpu_usage_seconds_total{job=\"kubelet\",metrics_path=\"/metrics/cadvisor\",namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",container=\"tailscale\"}[5m]))",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{pod}} \u00b7 {{node}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "cores",
+              "min": 0,
+              "custom": {
+                "spanNulls": false
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            }
+          }
+        },
+        {
+          "id": 26,
+          "title": "DNS Router Memory",
+          "type": "timeseries",
+          "description": "Existing kubelet cAdvisor metrics for the router container on each node.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 8,
+            "y": 18,
+            "w": 8,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by(pod,node) (container_memory_working_set_bytes{job=\"kubelet\",metrics_path=\"/metrics/cadvisor\",namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",container=\"tailscale\"})",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "legendFormat": "{{pod}} \u00b7 {{node}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "min": 0,
+              "custom": {
+                "spanNulls": false
+              }
+            }
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "calcs": [
+                "lastNotNull",
+                "max"
+              ]
+            }
+          }
+        },
+        {
+          "id": 27,
+          "title": "DNS Router Placement",
+          "type": "table",
+          "description": "Pod readiness on a Ready Kubernetes node. This does not test the Tailscale tunnel, route approval, or remote DNS path. Missing kube-state-metrics telemetry is UNKNOWN.",
+          "datasource": {
+            "uid": "$datasource"
+          },
+          "gridPos": {
+            "x": 16,
+            "y": 18,
+            "w": 8,
+            "h": 8
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(max by(namespace,pod,node,pod_ip) (kube_pod_info{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\"}) * on(namespace,pod) group_left() max by(namespace,pod) (kube_pod_status_ready{namespace=\"tailscale\",pod=~\"ts-homelab-(subnet-router|dns-backup)-.+\",condition=\"true\"}) * on(node) group_left() max by(node) (kube_node_status_condition{condition=\"Ready\",status=\"true\"})) and on() (max(up{job=\"kube-state-metrics\"}) == 1)",
+              "datasource": {
+                "uid": "$datasource"
+              },
+              "instant": true,
+              "format": "table"
+            }
+          ],
+          "options": {
+            "showHeader": true
+          },
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "namespace": true
+                },
+                "renameByName": {
+                  "pod": "Router pod",
+                  "node": "Node",
+                  "pod_ip": "Pod IP",
+                  "Value": "Ready"
+                }
+              }
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Ready"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "bool"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 28,
+          "type": "row",
+          "title": "CoreDNS and access inventory",
+          "gridPos": {
+            "x": 0,
+            "y": 26,
+            "w": 24,
+            "h": 1
+          },
+          "collapsed": false,
+          "panels": []
         },
         {
           "id": 2,
@@ -145,7 +835,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 0,
-            "y": 4
+            "y": 27
           },
           "targets": [
             {
@@ -193,7 +883,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 4,
-            "y": 4
+            "y": 27
           },
           "targets": [
             {
@@ -228,7 +918,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 8,
-            "y": 4
+            "y": 27
           },
           "targets": [
             {
@@ -276,7 +966,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 12,
-            "y": 4
+            "y": 27
           },
           "targets": [
             {
@@ -313,7 +1003,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 16,
-            "y": 4
+            "y": 27
           },
           "targets": [
             {
@@ -348,7 +1038,7 @@ data:
             "h": 5,
             "w": 4,
             "x": 20,
-            "y": 4
+            "y": 27
           },
           "targets": [
             {
@@ -383,7 +1073,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 9
+            "y": 32
           },
           "targets": [
             {
@@ -418,7 +1108,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 9
+            "y": 32
           },
           "targets": [
             {
@@ -446,7 +1136,7 @@ data:
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 9
+            "y": 32
           },
           "targets": [
             {
@@ -476,7 +1166,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 17
+            "y": 40
           },
           "targets": [
             {
@@ -527,7 +1217,7 @@ data:
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 17
+            "y": 40
           },
           "targets": [
             {
@@ -565,7 +1255,7 @@ data:
             "h": 9,
             "w": 8,
             "x": 0,
-            "y": 25
+            "y": 48
           },
           "targets": [
             {
@@ -593,7 +1283,7 @@ data:
             "h": 9,
             "w": 8,
             "x": 8,
-            "y": 25
+            "y": 48
           },
           "targets": [
             {
@@ -621,7 +1311,7 @@ data:
             "h": 9,
             "w": 8,
             "x": 16,
-            "y": 25
+            "y": 48
           },
           "targets": [
             {

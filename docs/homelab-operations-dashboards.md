@@ -3,7 +3,7 @@ title: Homelab Operations Dashboards
 summary: Current operating guidance for Homelab Operations Dashboards.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-16
 ---
 
 # Homelab Operations Dashboards
@@ -18,7 +18,7 @@ Additional GitOps-managed Grafana dashboards live under `infrastructure/monitori
 
 - `Homelab Control Room`
   - file: `infrastructure/monitoring/grafana-dashboard-homelab-control-room.yaml`
-  - purpose: single-screen operational status across cluster health, node pressure, Flux, exposures, restarts, and power.
+  - purpose: operational status across AdGuard checks, DNS router/node redundancy, cluster health, node pressure, Flux, exposures, restarts, and power.
 
 - `Storage Risk Overview`
   - file: `infrastructure/monitoring/grafana-dashboard-storage-risk-overview.yaml`
@@ -42,7 +42,7 @@ Additional GitOps-managed Grafana dashboards live under `infrastructure/monitori
 
 - `DNS and Access Paths`
   - file: `infrastructure/monitoring/grafana-dashboard-dns-access-paths.yaml`
-  - purpose: CoreDNS health, DNS failure signals, ingress host inventory, TLS coverage, and public-edge access surfaces.
+  - purpose: per-AdGuard private DNS checks and latency, Tailscale router readiness/placement/resources, CoreDNS health, DNS failure signals, ingress host inventory, TLS coverage, and public-edge access surfaces. See [DNS dashboard](./dns-access-path-dashboard.md) for probe boundaries and missing-telemetry behavior.
 
 - `TrueNAS Host Overview`
   - file: `infrastructure/monitoring/grafana-dashboard-truenas-host-overview.yaml`

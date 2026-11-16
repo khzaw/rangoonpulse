@@ -158,6 +158,13 @@ logs show the surviving router's pod address, and query through the client's
 `100.100.100.100` forwarder. Test each router and each resolver independently;
 restore client preferences and router state after testing.
 
+The [DNS and Access Paths dashboard](./dns-access-path-dashboard.md) shows both
+AdGuard private DNS probes and each router's pod/node readiness, placement, and
+resources. Its probes run inside the cluster; they do not continuously verify
+remote-client failover. Gatus probe data becomes unavailable when the Pi is down,
+while router telemetry remains available through kube-state-metrics on the main
+node.
+
 ### LG webOS tracking policy
 
 Both instances subscribe to [HaGeZi's LG webOS tracker list](https://github.com/hagezi/dns-blocklists#native).
