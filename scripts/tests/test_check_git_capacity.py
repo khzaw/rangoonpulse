@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -13,6 +14,23 @@ spec = importlib.util.spec_from_file_location(
 )
 check_git_capacity = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check_git_capacity)
+
+
+class BootstrapInventoryTests(unittest.TestCase):
+    def test_separately_published_controllers_are_included(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bootstrap = root / 'flux/flux-system'
+            bootstrap.mkdir(parents=True)
+            (bootstrap / 'kustomization.yaml').write_text('resources: []\n')
+            settings = json.dumps({'kind': 'ConfigMap', 'metadata': {'name': 'cluster-settings'}, 'data': {}})
+            controller = {'kind': 'Deployment', 'metadata': {'name': 'source-controller', 'namespace': 'flux-system'},
+                          'spec': {'replicas': 1, 'template': {'spec': {'containers': [
+                              {'name': 'manager', 'resources': {'requests': {'cpu': '20m'}}},
+                          ]}}}}
+            with patch.object(check_git_capacity, 'run', side_effect=[settings, json.dumps(controller)]):
+                objects = check_git_capacity.inventory(root)
+            self.assertEqual(objects[('Deployment', 'flux-system', 'source-controller')], controller)
 
 
 class ChartInputsTests(unittest.TestCase):

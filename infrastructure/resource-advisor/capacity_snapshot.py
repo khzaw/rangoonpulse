@@ -29,6 +29,16 @@ def sanitize(obj):
         result['metadata']['labels'] = meta.get('labels', {})
         result['status'] = {'allocatable': {'cpu': obj['status']['allocatable']['cpu']}}
         return result
+    if kind == 'StatefulSet':
+        # Operator proxies have no ownerReference. These non-secret labels map a
+        # generated StatefulSet back to its Git-managed Connector for CPU checks.
+        labels = meta.get('labels', {})
+        selected = {k: labels[k] for k in (
+            'tailscale.com/parent-resource', 'tailscale.com/parent-resource-ns',
+            'tailscale.com/parent-resource-type',
+        ) if k in labels}
+        if selected:
+            result['metadata']['labels'] = selected
     spec = obj['spec']
     template = {k: copy.deepcopy(v) for k, v in capacity.placement(capacity.pod_spec(obj)).items() if v is not None}
     template['containers'] = [{'name': 'cpu-reservation', 'resources': {

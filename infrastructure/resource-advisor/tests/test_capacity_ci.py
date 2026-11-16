@@ -83,6 +83,19 @@ class CapacityCITests(unittest.TestCase):
         items = baseline()
         self.assertEqual(capacity.projection(items), capacity.projection([capacity_snapshot.sanitize(o) for o in items]))
 
+    def test_only_allowlisted_connector_identity_labels_are_published(self):
+        obj = workload('proxy', '100m')
+        obj['kind'] = 'StatefulSet'
+        labels = {
+            'tailscale.com/parent-resource': 'dns-backup',
+            'tailscale.com/parent-resource-type': 'connector',
+            'tailscale.com/parent-resource-ns': '',
+        }
+        obj['metadata']['labels'] = dict(labels, **{'private-label': 'private-value'})
+        clean = capacity_snapshot.sanitize(obj)
+        self.assertEqual(clean['metadata']['labels'], labels)
+        self.assertNotIn('private-value', json.dumps(clean))
+
     def test_stale_and_future_snapshots_fail_closed(self):
         for generated in [0, 2001]:
             with self.subTest(generated=generated), self.assertRaises(ValueError):

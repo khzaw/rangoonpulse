@@ -37,6 +37,10 @@ def inventory(root):
     objects = load_yaml(run('kubectl', 'kustomize', 'flux', cwd=root))
     settings = next(o['data'] for o in objects if o['kind'] == 'ConfigMap' and o['metadata']['name'] == 'cluster-settings')
     paths = sorted({o['spec']['path'] for o in objects if o['kind'] == 'Kustomization'})
+    # Bootstrap controllers are published separately from the ordinary Flux tree,
+    # but their reservations still belong in Git/CI capacity comparisons.
+    if (root / 'flux/flux-system/kustomization.yaml').is_file():
+        objects.extend(load_yaml(run('kubectl', 'kustomize', 'flux/flux-system', cwd=root)))
     def build(path):
         directory = root / path
         if any((directory / name).exists() for name in ('kustomization.yaml', 'kustomization.yml', 'Kustomization')):

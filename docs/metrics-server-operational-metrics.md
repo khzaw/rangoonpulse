@@ -3,7 +3,7 @@ title: Metrics Server
 summary: Current real-time Metrics API deployment and Talos kubelet TLS compatibility tradeoff.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-16
 ---
 
 # Metrics Server
@@ -18,6 +18,10 @@ Metrics Server provides the live Kubernetes Metrics API used by `kubectl top` an
 - namespace: `kube-system`
 
 Chart and application versions are authoritative in the HelmRelease.
+
+The single replica requests `25m` CPU and `200Mi` memory, with `200m` / `300Mi`
+limits. CPU reservation changes must preserve fresh Metrics API samples and the
+BentoPDF HPA's ability to read its absolute CPU target.
 
 ## Talos TLS Tradeoff
 

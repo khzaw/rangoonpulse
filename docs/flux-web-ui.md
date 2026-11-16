@@ -3,7 +3,7 @@ title: Flux Operator Web UI
 summary: Current private and temporary-share access, source ownership, controller-manifest caveat, and verification.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-16
 ---
 
 # Flux Operator Web UI
@@ -27,9 +27,16 @@ The canonical hostname uses the private ingress path and is intended for LAN or 
 
 `flux/flux-system/gotk-components.yaml` has a Flux `v2.8.8` base with one component override: image-reflector-controller `v1.2.5` and its matching ImageRepository/ImagePolicy CRDs from Flux `v2.9.6`. The scanner explicitly enables `--feature-gates=FluxStorage=true`. Its tag cache uses Flux artifact storage on the existing `/data` emptyDir; no PVC or application data is involved.
 
-This keeps the scanner within Flux's [supported one-minor controller skew](https://fluxcd.io/flux/releases/#supported-releases), while avoiding a coordinated controller upgrade for the storage optimization. The remaining five controller images, shared RBAC, resource requests, and placement are unchanged. A scanner from Flux `v2.10` would exceed that skew against the `v2.8` base; upgrade the distribution coherently before moving to that line.
+This keeps the scanner within Flux's [supported one-minor controller skew](https://fluxcd.io/flux/releases/#supported-releases), while avoiding a coordinated controller upgrade for the storage optimization. The remaining five controller images, shared RBAC, and placement are unchanged. A scanner from Flux `v2.10` would exceed that skew against the `v2.8` base; upgrade the distribution coherently before moving to that line.
 
 The ordinary root Kustomization reconciles `./flux`, but does not include the nested `flux/flux-system/` directory. Updating the generated file alone therefore does not upgrade live controllers. The Flux Operator provides the UI; there is no FluxInstance managing controller versions.
+
+Controller CPU requests are explicit in the generated manifest: `20m` for source,
+Kustomize, and Helm; `10m` for notification and image automation; and `50m` for
+the image reflector. All retain their `1000m` CPU burst limits and existing memory
+settings. Preserve these requests when regenerating the manifest. Resource
+changes use the published-manifest operator workflow below; apply and verify one
+controller Deployment at a time.
 
 ### Regeneration
 
