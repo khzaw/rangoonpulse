@@ -84,20 +84,23 @@ export function request(url, options = {}) {
       res.setEncoding('utf8');
       res.on('data', chunk => {
         body += chunk;
-        if (body.length > 1024 * 1024) req.destroy(new Error('response too large'));
+        if (body.length > 1024 * 1024) {
+          req.destroy(Object.assign(new Error('response too large'), { code: 'ERR_RESPONSE_TOO_LARGE' }));
+        }
       });
       res.on('end', () => resolve({ status: res.statusCode, body }));
       res.on('error', reject);
     });
     // A wall-clock deadline includes DNS, connect, TLS and response time.
-    const timer = setTimeout(() => req.destroy(new Error('request deadline')), 8000);
+    const timer = setTimeout(() => req.destroy(Object.assign(new Error('request deadline'),
+      { code: 'ETIMEDOUT' })), 8000);
     req.on('close', () => clearTimeout(timer));
     req.on('error', reject);
     req.end(options.body);
   });
 }
 
-export async function checkEndpoint(check, api) {
+export async function probeEndpoint(check, api) {
   try {
     const options = check.kubernetesAuth ? {
       ca: api.ca, headers: { Authorization: `Bearer ${api.token}` },
@@ -107,10 +110,25 @@ export async function checkEndpoint(check, api) {
         ? cb(null, [{ address: check.address, family: 4 }]) : cb(null, check.address, 4);
     }
     const response = await request(check.url, options);
-    if (response.status !== 200) return false;
-    if (check.jsonField) return JSON.parse(response.body)[check.jsonField] === check.jsonValue;
-    return !check.kubernetesAuth || response.body.trim() === 'ok';
-  } catch { return false; }
+    if (response.status !== 200) return { ok: false, reason: `HTTP ${response.status}` };
+    if (check.jsonField) {
+      let body;
+      try { body = JSON.parse(response.body); }
+      catch { return { ok: false, reason: 'invalid JSON' }; }
+      if (body?.[check.jsonField] !== check.jsonValue) return { ok: false, reason: 'JSON field mismatch' };
+    } else if (check.kubernetesAuth && response.body.trim() !== 'ok') {
+      return { ok: false, reason: 'unexpected readiness response' };
+    }
+    return { ok: true };
+  } catch (error) {
+    // Only bounded error codes are safe diagnostics; URLs, bodies and error messages may contain secrets.
+    const reason = /^[A-Z][A-Z0-9_]{0,63}$/.test(error.code ?? '') ? error.code : 'request failed';
+    return { ok: false, reason };
+  }
+}
+
+export async function checkEndpoint(check, api) {
+  return (await probeEndpoint(check, api)).ok;
 }
 
 export async function send(destination, credentials, message, lookup) {
@@ -213,13 +231,19 @@ export async function main() {
       metric('iris_launchd_service_up', { launchd_service: service }, launchdServiceRunning(listing, service));
     }
     await Promise.all(config.clusterChecks.map(async check => {
-      const ok = await checkEndpoint(check, api);
+      const { ok, reason } = await probeEndpoint(check, api);
       metric('iris_cluster_probe_success', { check: check.name }, ok);
-      const state = advance(states[check.name], ok, now, config);
+      const previous = states[check.name];
+      const state = advance(previous, ok, now, config);
+      state.lastError = ok ? null : reason;
+      if (state.lastError !== (previous?.lastError ?? null)) {
+        console.error(`${new Date().toISOString()} probe ${check.name}: ${ok ? 'passed' : reason}`);
+      }
       states[check.name] = state;
       await deliver(state, now, config.repeatSeconds, destination => send(destination, credentials,
         `[${state.firing ? 'FIRING' : 'RESOLVED'}] Iris external sentinel: ${check.name}\n` +
-        `${check.url}\n${state.firing ? 'Direct LAN check failed 3 consecutive times.' : 'Direct LAN check recovered.'}\n` +
+        `${check.url}\n${state.firing ? `Direct LAN check failed ${config.failureThreshold} consecutive times.` : 'Direct LAN check recovered.'}\n` +
+        (state.lastError ? `Probe failure: ${state.lastError}\n` : '') +
         'Sent by native launchd watchdog; no cluster alerting/DNS dependency.', lookup));
       metric('iris_cluster_alert_firing', { check: check.name }, state.firing);
       for (const destination of ['telegram', 'discord']) {

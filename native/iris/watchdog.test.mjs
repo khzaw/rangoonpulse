@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { advance, deliver, notificationDue, readinessHealthy, checkEndpoint, launchdServiceRunning, hermesHealth } from './watchdog.mjs';
+import { advance, deliver, notificationDue, readinessHealthy, checkEndpoint, probeEndpoint, launchdServiceRunning, hermesHealth } from './watchdog.mjs';
 
 const config = { failureThreshold: 3, recoveryThreshold: 2 };
 test('launchd list recognizes running jobs across user and GUI domains, regardless of previous exit', () => {
@@ -81,4 +81,42 @@ test('checks reject login HTML, incorrect JSON, and 401 as Kubernetes readiness'
     body = '{"database":"ok"}';
     assert.equal(await checkEndpoint({ url, jsonField: 'database', jsonValue: 'ok' }, {}), true);
   } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+test('probe diagnostics distinguish HTTP, JSON and readiness failures without response contents', async () => {
+  let status = 200;
+  let body = 'ok';
+  const server = createServer((_req, res) => { res.writeHead(status); res.end(body); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}`;
+  try {
+    assert.deepEqual(await probeEndpoint({ url, kubernetesAuth: true }, { token: 'test' }), { ok: true });
+    body = 'private diagnostic';
+    assert.deepEqual(await probeEndpoint({ url, kubernetesAuth: true }, { token: 'test' }),
+      { ok: false, reason: 'unexpected readiness response' });
+    status = 401;
+    assert.deepEqual(await probeEndpoint({ url }, {}), { ok: false, reason: 'HTTP 401' });
+    status = 200;
+    const check = { url, jsonField: 'database', jsonValue: 'ok' };
+    assert.deepEqual(await probeEndpoint(check, {}), { ok: false, reason: 'invalid JSON' });
+    for (body of ['null', '{"database":"private diagnostic"}', '{}']) {
+      assert.deepEqual(await probeEndpoint(check, {}), { ok: false, reason: 'JSON field mismatch' });
+    }
+    body = '{"database":"ok"}';
+    assert.deepEqual(await probeEndpoint(check, {}), { ok: true });
+  } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+test('pinned probes bypass DNS, preserve the Host header, and retain connection error codes', async () => {
+  let host;
+  const server = createServer((req, res) => { host = req.headers.host; res.end('{"database":"ok"}'); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  const check = { url: `http://sentinel.invalid:${port}/api/health`, address: '127.0.0.1',
+    jsonField: 'database', jsonValue: 'ok' };
+  try {
+    assert.deepEqual(await probeEndpoint(check, {}), { ok: true });
+    assert.equal(host, `sentinel.invalid:${port}`);
+  } finally { await new Promise(resolve => server.close(resolve)); }
+  assert.deepEqual(await probeEndpoint(check, {}), { ok: false, reason: 'ECONNREFUSED' });
 });

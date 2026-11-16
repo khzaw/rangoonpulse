@@ -3,7 +3,7 @@ title: Iris native macOS operations
 summary: Native launchd supervision, Darwin telemetry, gateway checks, and an independent sentinel.
 status: active
 owner: homelab
-last_reviewed: 2026-11-11
+last_reviewed: 2026-11-16
 ---
 
 # Iris native macOS operations
@@ -176,6 +176,30 @@ is tracked separately for Telegram/Discord, retried after failures, and persiste
 Requests have an eight-second total deadline. Notifications go straight to the existing providers,
 not through Kubernetes, Alertmanager, ingress, NAS, or cluster DNS. The native resolver explicitly
 uses `1.1.1.1` / `8.8.8.8`, overriding Iris's normal Tailscale/router DNS for notification requests.
+
+Probe failures include a bounded network/TLS error code, HTTP status, or response-validation
+reason in notifications and `alerts.json` (`lastError`). The watchdog logs timestamped failure
+reason changes and the first passing probe; repeated identical failures stay quiet. Raw error
+messages, response bodies and credentials are never included in these diagnostics.
+
+When Grafana works but the sentinel fails, compare the fixed LAN path with the watchdog's
+latest error and its actual running process:
+
+```sh
+curl --noproxy '*' --max-time 8 --resolve grafana.khzaw.dev:443:10.0.0.231 https://grafana.khzaw.dev/api/health
+cat ~/.local/state/rangoonpulse/iris/alerts.json
+tail -30 ~/Library/Logs/rangoonpulse/dev.khzaw.iris.watchdog.log
+launchctl print gui/$(id -u)/dev.khzaw.iris.watchdog
+```
+
+The fixed-address probe bypasses DNS but still uses the host's network routes. If fresh probes
+with the job's Node executable pass while the resident process reports a connection error,
+restart only the watchdog with `launchctl kickstart -k gui/$(id -u)/dev.khzaw.iris.watchdog`.
+This also loads the currently installed runtime after a Node replacement. Keep `alerts.json`:
+the two-success recovery threshold and per-destination RESOLVED delivery must complete normally.
+Verify fresh `iris_cluster_probe_success` metrics, `firing: false`, and resolved deliveries;
+a successful one-off curl alone does not clear the sentinel. The exporter, power sampler and
+application gateways do not need a restart for this check.
 
 Credential ownership:
 
