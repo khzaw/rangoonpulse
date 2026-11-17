@@ -18,7 +18,7 @@ This document explains:
 - Namespace: `default`
 - Primary HelmRelease: `apps/adguard/primary/helmrelease.yaml`
   - Flux Kustomization: `flux/kustomizations/adguard-primary.yaml`
-  - node: `talos-uua-g6r`
+  - node: `talos-7nf-osf`
   - DNS Service: `Service/adguard-dns`
     - type: `LoadBalancer`
     - IP: `10.0.0.233`
@@ -114,10 +114,9 @@ Startup enforces DNS keys in
 
 ### Primary upstream transport
 
-The primary uses Cloudflare DNS-over-HTTPS on TCP `443`. Its node's external
-network path can lose plain UDP/TCP `53` requests even when LAN gateway probes
-succeed. Persistent HTTPS connections make DNS forwarding more resilient to that
-loss; this does not establish that the underlying network path is loss-free.
+The primary uses Cloudflare DNS-over-HTTPS on TCP `443`. HTTPS upstreams avoid
+depending on plain UDP/TCP `53` forwarding. DNS transport does not establish
+that the underlying network path is loss-free.
 
 Primary startup converts plain Cloudflare upstream entries (`1.1.1.1` /
 `1.0.0.1`, including their `.2` and `.3` filtering variants) to the corresponding
@@ -221,7 +220,7 @@ Why this matters:
 - the process can still look superficially healthy unless the probes check the right ports.
 
 Expected GitOps state:
-- primary data claim: `PersistentVolumeClaim/adguard-data`
+- primary data claim: `PersistentVolumeClaim/adguard-primary-local-data`
 - secondary data claim: `PersistentVolumeClaim/adguard-secondary-data`
 - both claims are managed as standalone manifests beside the HelmRelease
 - both claims are annotated `kustomize.toolkit.fluxcd.io/prune: disabled`

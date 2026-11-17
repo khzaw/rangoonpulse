@@ -24,7 +24,7 @@ spec:
         strategy: Recreate
         pod:
           nodeSelector:
-            kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
         containers:
           main:
             image:
@@ -323,6 +323,6 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: adguard-data
+        existingClaim: adguard-primary-local-data
         globalMounts:
           - path: /adguard-data
