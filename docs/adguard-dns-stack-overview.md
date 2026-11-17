@@ -3,7 +3,7 @@ title: AdGuard DNS Stack: Router Setup and Architecture
 summary: Current operating guidance for AdGuard DNS Stack: Router Setup and Architecture.
 status: active
 owner: homelab
-last_reviewed: 2026-11-16
+last_reviewed: 2026-11-18
 ---
 
 # AdGuard DNS Stack: Router Setup and Architecture
@@ -32,7 +32,7 @@ This document explains:
     - ingress VIP: `10.0.0.231`
 - Secondary HelmRelease: `apps/adguard/secondary/helmrelease.yaml`
   - Flux Kustomization: `flux/kustomizations/adguard-secondary.yaml`
-  - node: `talos-7nf-osf`
+  - node: `talos-uua-g6r`
   - DNS Service: `Service/adguard-secondary-dns`
     - type: `LoadBalancer`
     - IP: `10.0.0.234`
@@ -112,19 +112,21 @@ Startup enforces DNS keys in
 - `http.address: 0.0.0.0:80`
 - `dhcp.enabled: false` (router remains DHCP authority)
 
-### Primary upstream transport
+### Upstream transport
 
-The primary uses Cloudflare DNS-over-HTTPS on TCP `443`. HTTPS upstreams avoid
+Both instances use Cloudflare DNS-over-HTTPS on TCP `443`. HTTPS upstreams avoid
 depending on plain UDP/TCP `53` forwarding. DNS transport does not establish
 that the underlying network path is loss-free.
 
-Primary startup converts plain Cloudflare upstream entries (`1.1.1.1` /
+Both startup scripts convert plain Cloudflare upstream entries (`1.1.1.1` /
 `1.0.0.1`, including their `.2` and `.3` filtering variants) to the corresponding
 `https://<IP>/dns-query` endpoints. Existing resolver choices, custom upstreams,
-bootstrap settings, filters, and user rules are preserved. New primary state
+bootstrap settings, filters, and user rules are preserved. New state
 starts with `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query`.
 IP-literal HTTPS upstreams avoid a bootstrap DNS dependency and retain certificate
-verification. The secondary keeps its independent plain Cloudflare upstreams.
+verification. The Pi retains HTTPS forwarding to reduce the impact of packet
+loss on its external network path; it remains a degraded fallback until that
+network path is repaired.
 
 ### Private DNS burst policy
 
@@ -221,9 +223,15 @@ Why this matters:
 
 Expected GitOps state:
 - primary data claim: `PersistentVolumeClaim/adguard-primary-local-data`
-- secondary data claim: `PersistentVolumeClaim/adguard-secondary-data`
+- secondary data claim: `PersistentVolumeClaim/adguard-secondary-local-data`
 - both claims are managed as standalone manifests beside the HelmRelease
 - both claims are annotated `kustomize.toolkit.fluxcd.io/prune: disabled`
+
+The claims are node-local. A node move requires a new claim on the target node
+and a complete state copy with the source writer stopped. Keep the other DNS
+instance serving throughout, compare the copied files before startup, and verify
+DNS and persisted settings before removing the old claim. Never change only a
+node selector or mount two active instances on one writable state directory.
 
 ### 4b) Bootstrap Missing Config Instead Of Falling Back To The Wizard
 If a PVC is genuinely empty, container startup writes a minimal working `AdGuardHome.yaml` to the PVC before launching
@@ -232,8 +240,7 @@ AdGuard.
 Current seeded baseline:
 - web UI on `0.0.0.0:80`
 - DNS on `0.0.0.0:53`
-- primary upstreams `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query`;
-  secondary upstreams `1.1.1.1` and `1.0.0.1`
+- upstreams `https://1.1.1.1/dns-query` and `https://1.0.0.1/dns-query` on both instances
 - query log and statistics enabled
 - DHCP disabled
 

@@ -26,7 +26,7 @@ class AdGuardDNSTests(unittest.TestCase):
         marker = (
             "# Keep primary Cloudflare upstreams"
             if instance == "primary"
-            else "# Keep secondary private DNS"
+            else "# Keep secondary Cloudflare upstreams"
         )
         block = script.split(marker, 1)[1]
         block = block.split("\n", 1)[1].split("# Keep DHCP disabled", 1)[0]
@@ -79,8 +79,7 @@ clients:
         self.assertEqual(yaml.safe_load(result), expected)
         self.assertEqual(self.normalize(result), result)
 
-        secondary_expected = yaml.safe_load(config)
-        secondary_expected["dns"]["ratelimit"] = 0
+        secondary_expected = expected
         secondary_result = self.normalize(config, "secondary")
         self.assertEqual(yaml.safe_load(secondary_result), secondary_expected)
         self.assertEqual(self.normalize(secondary_result, "secondary"), secondary_result)
@@ -110,7 +109,7 @@ clients:
                     self.assertEqual(yaml.safe_load(result), expected)
                     self.assertEqual(self.normalize(result, instance), result)
 
-    def test_seeded_transport_is_instance_specific(self):
+    def test_both_seeded_resolvers_use_https(self):
         for instance in ("primary", "secondary"):
             with self.subTest(instance=instance), tempfile.TemporaryDirectory() as directory:
                 script = startup(instance)
@@ -119,8 +118,7 @@ clients:
                 path = Path(directory) / "AdGuardHome.yaml"
                 subprocess.run(["sh", "-eu", "-c", seed], env=dict(os.environ, CFG=str(path)), check=True)
                 upstreams = ["1.1.1.1", "1.0.0.1"]
-                if instance == "primary":
-                    upstreams = [f"https://{address}/dns-query" for address in upstreams]
+                upstreams = [f"https://{address}/dns-query" for address in upstreams]
                 dns = yaml.safe_load(path.read_text())["dns"]
                 self.assertEqual(dns["upstream_dns"], upstreams)
                 self.assertEqual(dns["ratelimit"], 0)

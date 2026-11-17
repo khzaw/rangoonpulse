@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: adguard-secondary-data
+  name: adguard-secondary-local-data
   namespace: default
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled

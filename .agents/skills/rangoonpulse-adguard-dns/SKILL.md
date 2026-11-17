@@ -13,7 +13,7 @@ Read `docs/adguard-dns-stack-overview.md`. Also read `docs/truenas-networking-an
 - secondary: `apps/adguard/secondary/helmrelease.yaml`
 - Flux units: `adguard-primary` and `adguard-secondary`
 - client DNS services: `${ADGUARD_PRIMARY_IP}` and `${ADGUARD_SECONDARY_IP}`
-- separate local-path PVCs: `adguard-primary-local-data` and `adguard-secondary-data`
+- separate local-path PVCs: `adguard-primary-local-data` and `adguard-secondary-local-data`
 
 Primary and secondary have independent writable state. Router DHCP remains authoritative; AdGuard DHCP stays disabled.
 

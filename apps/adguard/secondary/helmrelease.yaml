@@ -24,7 +24,7 @@ spec:
         strategy: Recreate
         pod:
           nodeSelector:
-            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+            kubernetes.io/hostname: ${UTILITY_NODE_NAME}
         containers:
           main:
             image:
@@ -60,8 +60,8 @@ spec:
                     '  port: 53' \
                     '  ratelimit: 0' \
                     '  upstream_dns:' \
-                    '    - 1.1.1.1' \
-                    '    - 1.0.0.1' \
+                    '    - https://1.1.1.1/dns-query' \
+                    '    - https://1.0.0.1/dns-query' \
                     '  upstream_mode: fastest_addr' \
                     '  fastest_timeout: 1s' \
                     '  cache_size: 16777216' \
@@ -93,13 +93,26 @@ spec:
                   sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
                 fi
 
-                # Keep secondary private DNS free of shared-client UDP burst limits.
-                TMP="$(mktemp "$DATA/conf/.dns-ratelimit.XXXXXX")"
+                # Keep secondary Cloudflare upstreams on HTTPS and disable shared-client rate limiting.
+                # Preserve resolver variants, custom upstreams, and all other runtime settings.
+                TMP="$(mktemp "$DATA/conf/.dns-upstreams.XXXXXX")"
                 trap 'rm -f "$TMP"' EXIT
                 awk '
                   /^dns:/ { in_dns = 1; print; print "  ratelimit: 0"; next }
-                  in_dns && /^[^[:space:]]/ { in_dns = 0 }
+                  in_dns && /^[^[:space:]]/ && !/^dns:/ { in_dns = 0 }
                   in_dns && /^  ratelimit:/ { next }
+                  in_dns && /^  upstream_dns:/ { in_upstreams = 1; print; next }
+                  in_upstreams && (/^  [^[:space:]]/ || /^[^[:space:]]/) { in_upstreams = 0 }
+                  in_dns && in_upstreams && /^    - / {
+                    upstream = $2
+                    gsub(/["\047]/, "", upstream)
+                    sub(/^(udp|tcp):\/\//, "", upstream)
+                    sub(/:53$/, "", upstream)
+                    if (upstream ~ /^1\.(1\.1|0\.0)\.[123]$/) {
+                      print "    - https://" upstream "/dns-query"
+                      next
+                    }
+                  }
                   { print }
                 ' "$CFG" > "$TMP"
                 mv "$TMP" "$CFG"
@@ -310,6 +323,6 @@ spec:
       data:
         enabled: true
         type: persistentVolumeClaim
-        existingClaim: adguard-secondary-data
+        existingClaim: adguard-secondary-local-data
         globalMounts:
           - path: /adguard-data
