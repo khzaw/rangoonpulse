@@ -293,6 +293,8 @@
     const busy = options.busy ?? /(…|\.\.\.)$/.test(text);
     let entry = toasts.get(scope);
     if (!entry) {
+      // Several areas failing for one reason should read as one message.
+      for (const other of toasts.values()) if (other.text === text) return;
       const node = window.document.createElement('button');
       node.type = 'button';
       node.className = 'toast';
@@ -303,6 +305,7 @@
       toasts.set(scope, entry);
     }
     window.clearTimeout(entry.timer);
+    entry.text = text;
     entry.node.querySelector('.toast-text').textContent = text;
     entry.node.dataset.tone = options.error ? 'danger' : busy ? 'busy' : 'done';
     entry.node.setAttribute('aria-label', text + ' — dismiss');
