@@ -77,3 +77,34 @@ test('motion has a reduced-motion fallback and state is never colour alone', () 
   assert.match(fx, /\.textContent = text/);
   assert.doesNotMatch(fx, /innerHTML = [^;]*command\.label(?![^;]*escape)/);
 });
+
+test('the rail folds from one control and the choice is restored before first paint', () => {
+  const html = read('index.html');
+  assert.match(html, /localStorage\.getItem\('rp-nav'\) === 'folded'/);
+  assert.match(html, /id="navMenuBtn"[^>]*aria-controls="navigation"/);
+  const app = read('app.js');
+  assert.match(app, /localStorage\.setItem\('rp-nav', 'folded'\)/);
+  assert.match(app, /if \(!mobileNavigation\.matches\) \{\s+setNavFolded\(!navFolded\(\)\);/, 'narrow screens keep the modal drawer');
+  const css = read('styles.css');
+  const wide = css.slice(css.indexOf('@media (min-width: 981px)'));
+  assert.match(wide, /:root\[data-nav="folded"\] \{ --sidebar-w: 56px; \}/);
+  // Folded labels stay in the accessibility tree; they are moved, not removed.
+  assert.doesNotMatch(wide.slice(0, wide.indexOf('.nav-count')), /\.nav-pill > span[^{]*\{[^}]*display: none/);
+});
+
+test('boxes stay on the dashboard pages', () => {
+  const html = read('index.html');
+  const section = (id) => {
+    const start = html.indexOf('<section id="' + id + '"');
+    return html.slice(start, html.indexOf('</section>\n\n', start));
+  };
+  const classTokens = (source) => [...source.matchAll(/class="([^"]*)"/g)].flatMap((match) => match[1].split(/\s+/));
+  assert.ok(classTokens(section('overview')).includes('box'));
+  assert.ok(classTokens(section('pulse')).includes('tiles'));
+  for (const id of ['exposure', 'deploy', 'updates', 'travel', 'tuning', 'jobs', 'secrets']) {
+    const tokens = classTokens(section(id));
+    assert.ok(tokens.length > 0, id + ' section was not found');
+    for (const boxed of ['box', 'tiles', 'panel']) assert.ok(!tokens.includes(boxed), id + ' must not use ' + boxed);
+  }
+  assert.doesNotMatch(read('styles.css'), /\.panel\b/);
+});

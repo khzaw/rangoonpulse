@@ -10,6 +10,9 @@
         if (mode === 'light' || mode === 'dark') {
           document.documentElement.dataset.theme = mode;
         }
+        if (localStorage.getItem('rp-nav') === 'folded') {
+          document.documentElement.dataset.nav = 'folded';
+        }
         const resolved = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#000000' : '#ffffff');
       })();
@@ -83,7 +86,7 @@
     <header class="topbar">
       <div class="topbar-inner">
         <div class="crumbs">
-          <button id="navMenuBtn" class="icon-btn" type="button" aria-label="Open navigation" aria-controls="navigation" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          <button id="navMenuBtn" class="icon-btn" type="button" aria-label="Toggle navigation" aria-controls="navigation" aria-expanded="true" aria-keyshortcuts="[" title="Toggle navigation ["><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15"/><path d="M9.5 4.5v15"/></svg></button>
           <span class="crumb-root">rp</span><span class="crumb-divider" aria-hidden="true">/</span><span id="currentPageName">Overview</span>
         </div>
         <div class="top-actions">
@@ -108,7 +111,7 @@
             <button id="refreshAllBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
           </div>
         </div>
-        <div class="hero panel">
+        <div class="hero box">
           <div class="hero-stage">
             <canvas id="heroField" class="hero-field" aria-hidden="true"></canvas>
             <div class="hero-body">
@@ -118,8 +121,7 @@
           </div>
           <div id="overviewVitals" class="vitals"></div>
         </div>
-        <div id="overviewStrip" class="tiles tiles-3"></div>
-        <div id="overviewDigest" class="digest"></div>
+        <div id="overviewDigest" class="columns columns-3"></div>
         <details class="freshness">
           <summary>Freshness</summary>
           <div id="overviewMeta" class="meta-line"></div>
@@ -132,10 +134,10 @@
           <div id="pulseStatus" class="pulse-status" role="status">Loading…</div>
         </div>
         <div id="pulseStrip" class="tiles tiles-4 pulse-strip"></div>
-        <div id="nodeTwins" class="pulse-block panel"></div>
-        <div id="powerTicker" class="pulse-block panel"></div>
-        <div id="placementMap" class="pulse-block panel"></div>
-        <div id="storageTanks" class="pulse-block panel"></div>
+        <div id="nodeTwins" class="pulse-block"></div>
+        <div id="powerTicker" class="pulse-block"></div>
+        <div id="placementMap" class="pulse-block"></div>
+        <div id="storageTanks" class="pulse-block"></div>
         <div class="pulse-footer"><span>60 s</span><span>SGT</span></div>
       </section>
 
@@ -168,7 +170,7 @@
             <tbody id="rows"></tbody>
           </table>
         </div>
-        <div id="transmissionPanel" class="route panel">
+        <div id="transmissionPanel" class="route">
           <div class="route-main">
             <div class="eyebrow">Transmission</div>
             <div id="vpnSectionMeta" class="route-state"></div>
@@ -185,7 +187,7 @@
             </div>
           </div>
         </div>
-        <details id="auditDisclosure" class="disclosure panel">
+        <details id="auditDisclosure" class="disclosure">
           <summary>Activity <span id="auditMeta" class="page-meta"></span></summary>
           <div id="auditPanel" class="audit-scroll">
             <table aria-label="Share activity">
@@ -212,9 +214,8 @@
             <button id="siteDeployAllBtn" class="primary" type="button">Deploy all</button>
           </div>
         </div>
-        <div id="siteDeployOverviewStrip" class="tiles tiles-3"></div>
         <div id="siteDeployMsg" class="status-line" role="status" aria-live="polite"></div>
-        <div id="siteDeployList" class="card-grid"></div>
+        <div id="siteDeployList" class="deploy-list"></div>
       </section>
 
       <section id="updates" class="section" data-page-section hidden>
@@ -289,12 +290,12 @@
           <h1 class="page-title">Travel</h1>
           <div id="travelSummary" class="page-meta">loading…</div>
         </div>
-        <div id="travelOverviewStrip" class="tiles tiles-4"></div>
+        <div id="travelOverviewStrip" class="facts"></div>
         <div id="travelOverviewMeta" class="meta-line"></div>
         <div class="block-head"><h2 class="block-title">Links</h2><div id="travelBundlesMeta" class="page-meta"></div></div>
-        <div id="travelBundles" class="card-grid"></div>
+        <div id="travelBundles" class="columns columns-3"></div>
         <div class="block-head"><h2 class="block-title">Controls</h2></div>
-        <div class="travel-actions panel">
+        <div class="travel-actions">
           <div class="travel-action-group">
             <span class="eyebrow">Transmission</span>
             <div class="view-switch" role="group" aria-label="Transmission route">
@@ -308,12 +309,12 @@
           </div>
         </div>
         <div class="block-head"><h2 class="block-title">Access</h2><div id="travelNotesMeta" class="page-meta"></div></div>
-        <div class="card-grid card-grid-2">
-          <article class="card panel">
+        <div class="columns columns-2">
+          <article class="column">
             <div class="eyebrow">Public shares</div>
             <div id="travelShares" class="travel-shares"></div>
           </article>
-          <article class="card panel">
+          <article class="column">
             <div class="eyebrow">Notes</div>
             <div id="travelNotes" class="travel-notes"></div>
           </article>
@@ -325,7 +326,7 @@
           <h1 class="page-title">Tuning</h1>
           <span class="page-meta">read-only</span>
         </div>
-        <div id="tuningSummary" class="tuning-summary panel"><p>Loading…</p></div>
+        <div id="tuningSummary" class="tuning-summary"><p>Loading…</p></div>
         <div class="tuning-ledger-tools">
           <div class="tuning-views view-switch" role="group" aria-label="Tuning selection filters">
             <button type="button" data-tuning-view="selected" aria-pressed="true">Proposed</button>
@@ -350,11 +351,11 @@
           <div id="tuningRows"></div>
           <p id="tuningEmpty" class="tuning-empty" hidden>No matches.</p>
         </div>
-        <details class="tuning-disclosure disclosure panel">
+        <details class="tuning-disclosure disclosure">
           <summary>Capacity and policy</summary>
           <div id="tuningDiagnostics" class="tuning-disclosure-body"></div>
         </details>
-        <details class="tuning-disclosure disclosure panel">
+        <details class="tuning-disclosure disclosure">
           <summary>Reports</summary>
           <div class="tuning-disclosure-body">
             <p class="link-row">
@@ -379,7 +380,6 @@
             <button id="jobsRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
           </div>
         </div>
-        <div id="jobsOverviewStrip" class="tiles tiles-4"></div>
         <div id="jobsList" class="jobs-list"></div>
       </section>
 
@@ -388,7 +388,7 @@
           <h1 class="page-title">Secrets</h1>
           <div id="secretsSummary" class="page-meta"></div>
         </div>
-        <div class="secrets-layout panel">
+        <div class="secrets-layout">
           <aside class="secrets-list-panel">
             <div class="secrets-toolbar">
               <label class="search-shell">

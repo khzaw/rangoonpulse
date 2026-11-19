@@ -1,5 +1,4 @@
       const loadStateEl = document.getElementById('loadState');
-      const overviewStripEl = document.getElementById('overviewStrip');
       const overviewMetaEl = document.getElementById('overviewMeta');
       const overviewDigestEl = document.getElementById('overviewDigest');
       const travelSummaryEl = document.getElementById('travelSummary');
@@ -13,11 +12,9 @@
       const tuningView = window.Tuning.createView(document.getElementById('tuning'));
       const exposureClient = window.ExposureClient.createExposureClient({ request });
       const jobsSummaryEl = document.getElementById('jobsSummary');
-      const jobsOverviewStripEl = document.getElementById('jobsOverviewStrip');
       const jobsRefreshBtn = document.getElementById('jobsRefreshBtn');
       const jobsListEl = document.getElementById('jobsList');
       const siteDeploySummaryEl = document.getElementById('siteDeploySummary');
-      const siteDeployOverviewStripEl = document.getElementById('siteDeployOverviewStrip');
       const siteDeployRefreshBtn = document.getElementById('siteDeployRefreshBtn');
       const siteDeployAllBtn = document.getElementById('siteDeployAllBtn');
       const siteDeployListEl = document.getElementById('siteDeployList');
@@ -80,15 +77,42 @@
       function syncNavigation() {
         navigation.close();
         if (!mobileNavigation.matches) navigation.setAttribute('open', '');
-        navMenuBtn.setAttribute('aria-expanded', 'false');
+        navMenuBtn.setAttribute('aria-expanded', String(!mobileNavigation.matches && !navFolded()));
       }
-      navMenuBtn.onclick = () => {
+
+      // One control: it opens the drawer on narrow screens and folds the rail
+      // to icons on wide ones. The fold is remembered per browser.
+      function navFolded() {
+        return document.documentElement.dataset.nav === 'folded';
+      }
+
+      function setNavFolded(folded) {
+        if (folded) {
+          document.documentElement.dataset.nav = 'folded';
+          localStorage.setItem('rp-nav', 'folded');
+        } else {
+          delete document.documentElement.dataset.nav;
+          localStorage.removeItem('rp-nav');
+        }
+        navMenuBtn.setAttribute('aria-expanded', String(!folded));
+        // Charts are drawn to the content width, which the rail just changed.
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      function toggleNavigation() {
+        if (!mobileNavigation.matches) {
+          setNavFolded(!navFolded());
+          return;
+        }
         navigation.showModal();
         navMenuBtn.setAttribute('aria-expanded', 'true');
         navigation.querySelector('[aria-current="page"]')?.focus();
-      };
+      }
+      navMenuBtn.onclick = toggleNavigation;
       document.getElementById('navCloseBtn').onclick = () => navigation.close();
-      navigation.addEventListener('close', () => navMenuBtn.setAttribute('aria-expanded', 'false'));
+      navigation.addEventListener('close', () => {
+        if (mobileNavigation.matches) navMenuBtn.setAttribute('aria-expanded', 'false');
+      });
       navigation.addEventListener('click', (event) => {
         if (event.target !== navigation || !mobileNavigation.matches) return;
         const bounds = navigation.getBoundingClientRect();
@@ -330,12 +354,10 @@
           loadSecrets();
         }
         if (nextPage === 'jobs' && hasLoadedDashboard && !dashboardState.jobs) {
-          jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           loadJobs();
         }
         if (nextPage === 'deploy' && hasLoadedDashboard && !dashboardState.siteDeployments) {
-          siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           siteDeployListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
           loadSiteDeployments();
         }
@@ -616,19 +638,6 @@
         return '<span class="skeleton-line" style="width:' + (width || '80%') + ';height:' + (height || '13px') + '"></span>';
       }
 
-      function skeletonOverviewStrip(count) {
-        let html = '';
-        for (let i = 0; i < (count || 6); i++) {
-          html +=
-            '<section class="tile panel">' +
-              skeletonLine('56px', '8px') +
-              '<div class="tile-value">' + skeletonLine('64px', '30px') + '</div>' +
-              '<div class="tile-sub">' + skeletonLine('96px', '8px') + '</div>' +
-            '</section>';
-        }
-        return html;
-      }
-
       function skeletonTableRows(cols, count) {
         let html = '';
         for (let i = 0; i < (count || 4); i++) {
@@ -724,7 +733,7 @@
         const href = o.href ? escapeHtml(o.href) : '';
         const tag = href ? 'a' : 'section';
         return (
-          '<' + tag + ' class="tile panel"' + (href ? ' href="' + href + '"' : '') + ' data-tone="' + (o.tone || 'neutral') + '">' +
+          '<' + tag + ' class="tile"' + (href ? ' href="' + href + '"' : '') + ' data-tone="' + (o.tone || 'neutral') + '">' +
             '<div class="tile-label"><span>' + label + '</span>' + (href ? '<svg class="tile-arrow" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg>' : '') + '</div>' +
             '<div class="tile-value" data-roll="' + attrText(value) + '">' + value + '</div>' +
             (o.series ? '<div class="tile-spark">' + window.Pulse.sparkline(o.series, { dot: true, label: label + ', 24 hours' }) + '</div>' : '') +
@@ -761,21 +770,28 @@
         return travelStatusPill(state);
       }
 
-      // What wants updating, what is public, and what was last touched.
+      // Three open columns: what wants updating, what is public, and what
+      // tuning proposes. Each leads with its count and lists the items below.
       function renderOverviewDigest(services, updateItems, helmUpdateItems) {
         if (!overviewDigestEl) return;
+        const tuning = dashboardState.tuning || null;
         const activeServices = services.filter((svc) => svc.enabled);
-        const pending = updateItems.filter((item) => item && item.status === 'update').map((item) => ({
+        const images = updateItems.filter((item) => item && item.status === 'update');
+        const charts = helmUpdateItems.filter((item) => item && item.status === 'update');
+        const pending = images.map((item) => ({
           name: item.name || item.id || 'service',
           detail: (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
-        })).concat(helmUpdateItems.filter((item) => item && item.status === 'update').map((item) => ({
+        })).concat(charts.map((item) => ({
           name: item.name || item.release || item.id || 'release',
           detail: 'chart ' + (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
         })));
-        const audit = (dashboardState.audit || []).slice(0, 6);
+        const reportsAvailable = Boolean(dashboardState.updates && dashboardState.helmUpdates);
+        const preview = tuning && tuning.applyPreflight && Date.parse(tuning.applyPreflight.builtAt) > 0 ? tuning.applyPreflight : null;
+        const proposals = preview && Array.isArray(preview.selected) ? preview.selected : [];
+        const audit = (dashboardState.audit || []).slice(0, 4);
 
         function list(items, empty) {
-          if (!items.length) return '<p class="empty-line">' + escapeHtml(empty) + '</p>';
+          if (!items.length) return empty ? '<p class="empty-line">' + escapeHtml(empty) + '</p>' : '';
           return '<ul class="rows">' + items.map((item) =>
             '<li class="row"' + (item.title ? ' title="' + attrText(item.title) + '"' : '') + '>' +
               (item.href ? '<a class="row-main" href="' + escapeHtml(item.href) + '" target="_blank" rel="noreferrer">' + escapeHtml(item.name) + '</a>' : '<span class="row-main">' + escapeHtml(item.name) + '</span>') +
@@ -784,23 +800,38 @@
           ).join('') + '</ul>';
         }
 
-        function card(title, href, body) {
-          return '<article class="card panel"><div class="card-head"><h2 class="eyebrow">' + title + '</h2>' +
-            '<a class="link" href="' + href + '" aria-label="Open ' + title.toLowerCase() + '"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>' + body + '</article>';
+        function column(title, href, figure, sub, body) {
+          return '<section class="column"><div class="column-head"><h2 class="eyebrow">' + title + '</h2>' +
+            '<a class="link" href="' + href + '" aria-label="Open ' + title.toLowerCase() + '"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>' +
+            '<div class="column-figure" data-roll="' + attrText(figure) + '">' + figure + '</div>' +
+            '<div class="column-sub">' + sub + '</div>' + body + '</section>';
         }
 
         overviewDigestEl.innerHTML =
-          card('Updates', '#updates', list(pending.slice(0, 7), dashboardState.updates && dashboardState.helmUpdates ? 'Up to date' : 'Unavailable')) +
-          card('Shares', '#exposure', list(activeServices.map((svc) => ({
-            name: svc.publicHost || svc.name || svc.id,
-            href: svc.publicUrl,
-            detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
-          })), 'All private')) +
-          card('Activity', '#audit', list(audit.map((entry) => ({
-            name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
-            detail: fmtAgo(entry.ts),
-            title: fmtDateTime(entry.ts),
-          })), 'Nothing yet'));
+          column('Updates', '#updates',
+            reportsAvailable ? String(pending.length) : (pending.length ? pending.length + '+' : '—'),
+            reportsAvailable ? images.length + (images.length === 1 ? ' image' : ' images') + ' · ' + charts.length + (charts.length === 1 ? ' chart' : ' charts') : 'report incomplete',
+            list(pending.slice(0, 7), '')) +
+          column('Shares', '#exposure', String(activeServices.length), activeServices.length ? 'public now' : 'all private',
+            list(activeServices.map((svc) => ({
+              name: svc.publicHost || svc.name || svc.id,
+              href: svc.publicUrl,
+              detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
+            })), '') +
+            (audit.length ? '<div class="eyebrow column-kicker">Recent</div>' + list(audit.map((entry) => ({
+              name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
+              detail: fmtAgo(entry.ts),
+              title: fmtDateTime(entry.ts),
+            })), '') : '')) +
+          column('Tuning', '#tuning',
+            preview ? String(Number(preview.selectedCount ?? proposals.length)) : '—',
+            !preview ? 'preview unavailable' : preview.hardFitOk === false ? 'node fit blocked' : 'proposed changes',
+            list(proposals.slice(0, 7).map((row) => {
+              const current = (row.current && row.current.requests) || {};
+              const next = (row.recommended && row.recommended.requests) || {};
+              const resource = current.memory !== next.memory ? 'memory' : 'cpu';
+              return { name: row.workload || row.release || 'workload', detail: (current[resource] || '?') + ' → ' + (next[resource] || '?') };
+            }), ''));
       }
 
       // Compact posture under the sidebar nav, visible from every page.
@@ -874,34 +905,14 @@
         const vpn = dashboardState.vpn || null;
         const activeExposures = services.filter((svc) => svc.enabled).length;
         const updateItems = updates && Array.isArray(updates.items) ? updates.items : [];
-        const updatesAvailable = updateItems.filter((item) => item && item.status === 'update').length;
         const helmUpdateItems = helmUpdates && Array.isArray(helmUpdates.items) ? helmUpdates.items : [];
-        const helmUpdatesAvailable = helmUpdateItems.filter((item) => item && item.status === 'update').length;
-        const selectedNow = tuning && tuning.applyPreflight ? Number(tuning.applyPreflight.selectedCount || 0) : 0;
-        const hasApplyPreview = Boolean(tuning && tuning.applyPreflight && Date.parse(tuning.applyPreflight.builtAt) > 0);
-        const hardFitOk = tuning && tuning.applyPreflight ? Boolean(tuning.applyPreflight.hardFitOk) : false;
+        const updateCount = updateItems.concat(helmUpdateItems).filter((item) => item && item.status === 'update').length;
         const fetchState = tuning && tuning.fetch ? tuning.fetch.state : 'degraded';
         const fetchDetail = tuning && tuning.fetch ? tuning.fetch.detail : 'resource-advisor unavailable';
         const desiredMode = vpn && vpn.desiredMode ? vpn.desiredMode : 'unknown';
         const runningMode = vpn && vpn.effectiveMode ? vpn.effectiveMode : 'unknown';
         const travelState = travel && travel.summary ? travel.summary.state : 'unknown';
         const travelHeadline = travel && travel.summary ? travel.summary.headline : 'travel snapshot unavailable';
-
-        const updateCount = updatesAvailable + helmUpdatesAvailable;
-        const reportsAvailable = Boolean(updates && helmUpdates);
-        const updateDetail = reportsAvailable
-          ? updatesAvailable + ' image' + (updatesAvailable === 1 ? '' : 's') + ' · ' + helmUpdatesAvailable + ' chart' + (helmUpdatesAvailable === 1 ? '' : 's')
-          : 'report incomplete';
-        overviewStripEl.innerHTML =
-          overviewSegment('Updates', reportsAvailable ? String(updateCount) : (updateCount ? updateCount + '+' : '—'), updateDetail, {
-            href: '#updates', tone: updateCount || !reportsAvailable ? 'warning' : 'status',
-          }) +
-          overviewSegment('Shares', String(activeExposures), activeExposures ? 'public now' : 'all private', {
-            href: '#exposure', tone: activeExposures > 0 ? 'warning' : 'status',
-          }) +
-          overviewSegment('Tuning', hasApplyPreview ? String(selectedNow) : '—', hasApplyPreview ? 'proposed changes' : 'preview unavailable', {
-            href: '#tuning', tone: hardFitOk ? 'status' : 'warning',
-          });
 
         const nodes = pulseMetric('node_ready')?.series || [];
         const nodesReady = nodes.filter((series) => window.Pulse.last(series) === 1).length;
@@ -928,7 +939,7 @@
         renderOverviewDigest(services, updateItems, helmUpdateItems);
         renderNavHealth({
           shares: activeExposures,
-          updates: updatesAvailable + helmUpdatesAvailable,
+          updates: updateCount,
           route: desiredMode,
           travel: travelState,
         });
@@ -948,28 +959,24 @@
         const data = payload || { items: [], summary: {} };
         const items = Array.isArray(data.items) ? data.items : [];
         const summary = data.summary || {};
-        const totalRuns = items.reduce((sum, item) => sum + (Array.isArray(item.recentRuns) ? item.recentRuns.length : 0), 0);
         const failedRuns = items.reduce((sum, item) => sum + (Array.isArray(item.recentRuns) ? item.recentRuns.filter((run) => run.status === 'failed').length : 0), 0);
         const running = Number(summary.running || 0);
         const suspended = Number(summary.suspended || 0);
         const total = Number(summary.total || items.length);
         const found = Number(summary.found || 0);
-        // A refresh after Save or Run must not fold the card being worked on.
+        // A refresh after Save or Run must not fold the row being worked on.
         const openJobs = new Set(Array.from(jobsListEl.querySelectorAll('.job-details[open]'), (node) => node.closest('[data-job-card]')?.dataset.jobCard));
 
         dashboardState.jobs = data;
-        jobsSummaryEl.textContent = 'checked ' + fmtAgo(data.checkedAt);
-        jobsOverviewStripEl.innerHTML =
-          overviewSegment('Jobs', String(total), found + ' in cluster', {
-            barPct: total ? found / total * 100 : 0,
-            tone: found === total ? 'status' : 'danger',
-          }) +
-          overviewSegment('Running', String(running), 'now', { tone: running ? 'warning' : 'neutral' }) +
-          overviewSegment('Suspended', String(suspended), 'paused', { tone: suspended ? 'warning' : 'neutral' }) +
-          overviewSegment('Failures', String(failedRuns), 'of ' + totalRuns + ' recent', {
-            barPct: totalRuns ? failedRuns / totalRuns * 100 : 0,
-            tone: failedRuns ? 'danger' : 'status',
-          });
+        // Only the facts that are not zero earn a place in the summary.
+        jobsSummaryEl.textContent = [
+          total + (total === 1 ? ' job' : ' jobs'),
+          found !== total ? (total - found) + ' missing' : '',
+          running ? running + ' running' : '',
+          suspended ? suspended + ' suspended' : '',
+          failedRuns ? failedRuns + ' failed' : '',
+          'checked ' + fmtAgo(data.checkedAt),
+        ].filter(Boolean).join(' · ');
 
         if (!items.length) {
           jobsListEl.innerHTML = '<div class="empty-state">No jobs.</div>';
@@ -994,7 +1001,7 @@
             ).join('')
             : '<tr><td colspan="5" class="empty-state">No runs.</td></tr>';
           return (
-            '<article class="job-card panel" data-job-card="' + id + '">' +
+            '<article class="job-card" data-job-card="' + id + '">' +
               '<div class="job-head">' +
                 '<div><h3 class="card-title">' + escapeHtml(job.title || job.id) + '</h3><div class="meta-line">' + escapeHtml(job.namespace || '') + '/' + escapeHtml(job.cronJob || '') + '</div></div>' +
                 '<div class="job-status">' +
@@ -1122,39 +1129,32 @@
         dashboardState.siteDeployments = data;
         const readyCount = items.filter((item) => item && item.ready).length;
         const errorCount = items.filter((item) => item && item.errors && item.errors.length).length;
-        siteDeploySummaryEl.textContent = 'checked ' + fmtTime(data.checkedAt);
-        siteDeployOverviewStripEl.innerHTML =
-          overviewSegment('Sites', String(items.length), 'tracked') +
-          overviewSegment('Ready', String(readyCount), 'of ' + items.length, { barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
-          overviewSegment('Errors', String(errorCount), errorCount ? 'check required' : 'none', { tone: errorCount ? 'danger' : 'status' });
+        siteDeploySummaryEl.textContent = readyCount + '/' + items.length + ' ready' + (errorCount ? ' · ' + errorCount + ' with errors' : '') + ' · checked ' + fmtTime(data.checkedAt);
 
         if (!items.length) {
           siteDeployListEl.innerHTML = '<div class="empty-state">No sites.</div>';
           syncSiteDeploymentActivity();
           return;
         }
+        // One ledger row per site; the list's column grid aligns tags and actions.
         siteDeployListEl.innerHTML = items.map((item) => {
           const ready = item.ready;
           const link = item.url ? '<a class="link" href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">Open<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '<span class="muted">internal</span>';
           const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
           const readyDetail = 'Kustomization: ' + conditionLabel(item.kustomizationReady) + ' · Helm: ' + conditionLabel(item.helmReleaseReady);
           return (
-            '<article class="card panel site-deploy-card" data-site-id="' + attrText(item.id) + '">' +
-              '<div class="card-head">' +
+            '<article class="deploy-row" data-site-id="' + attrText(item.id) + '">' +
+              '<div class="deploy-name">' +
                 '<h3 class="card-title">' + escapeHtml(item.title || item.id) + '</h3>' +
-                '<span class="pill" data-tone="' + (ready ? 'ok' : 'warning') + '" title="' + attrText(readyDetail) + '">' + (ready ? 'ready' : 'check') + '</span>' +
+                (ready ? '' : '<div class="meta-line">' + escapeHtml(readyDetail) + '</div>') +
+                '<div class="deploy-progress" role="status" aria-live="polite"></div>' +
+                errorText +
               '</div>' +
-              '<div class="site-deploy-versions">' +
-                deployTag('current', item.currentTag || 'n/a') +
-                deployTag('policy', item.latestTag || 'n/a') +
-              '</div>' +
-              '<div class="site-deploy-meta">' +
-                '<span title="' + attrText(fmtDateTime(item.lastScanTime)) + '">scanned ' + escapeHtml(fmtTime(item.lastScanTime)) + '</span>' +
-                (ready ? '' : '<span>' + escapeHtml(readyDetail) + '</span>') +
-              '</div>' +
-              '<div class="deploy-progress" role="status" aria-live="polite"></div>' +
-              errorText +
-              '<div class="card-foot">' +
+              '<span class="pill" data-tone="' + (ready ? 'ok' : 'warning') + '" title="' + attrText(readyDetail) + '">' + (ready ? 'ready' : 'check') + '</span>' +
+              deployTag('current', item.currentTag || 'n/a') +
+              deployTag('policy', item.latestTag || 'n/a') +
+              '<span class="deploy-scanned" title="' + attrText('Scanned ' + fmtDateTime(item.lastScanTime)) + '">' + escapeHtml(fmtTime(item.lastScanTime)) + '</span>' +
+              '<div class="deploy-actions">' +
                 link +
                 '<button type="button" data-site-deploy-run="' + attrText(item.id) + '">Deploy</button>' +
               '</div>' +
@@ -1182,7 +1182,6 @@
           siteDeploySummaryEl.textContent = 'Deploy snapshot unavailable';
           // Keep existing controls and any in-flight operation visible on a failed refresh.
           if (!dashboardState.siteDeployments) {
-            siteDeployOverviewStripEl.innerHTML = '';
             siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
           }
           if (!hasPendingOperation()) setSiteDeployMsg('Could not refresh deploy targets: ' + err.message, true);
@@ -1313,26 +1312,24 @@
         const notes = Array.isArray(travelData.notes) ? travelData.notes : [];
         const activeShareCount = Number(exposures.activeCount || 0);
 
+        // An open fact: label, a lamp with its reading, and one line of detail.
+        function fact(label, value, detail, tone) {
+          return '<div class="fact"><div class="eyebrow">' + label + '</div>' +
+            '<div class="fact-value">' + (tone && tone !== 'neutral' ? '<span class="lamp ' + tone + '"></span>' : '') + escapeHtml(value) + '</div>' +
+            '<div class="fact-sub">' + escapeHtml(detail) + '</div></div>';
+        }
+
         travelSummaryEl.innerHTML = travelStatusPill(travelData.summary ? travelData.summary.state : '');
         travelSummaryEl.title = travelData.summary && travelData.summary.headline ? travelData.summary.headline : '';
         travelOverviewStripEl.innerHTML =
-          overviewSegment('Private path', escapeHtml(travelStateLabel(privateAccess.state)), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', {
-            tone: travelTone(privateAccess.state),
-          }) +
-          overviewSegment('Exit node', escapeHtml(travelStateLabel(exitNode.state)), escapeHtml(connector.name || 'connector'), {
-            tone: travelTone(exitNode.state),
-          }) +
-          overviewSegment('Transmission', escapeHtml(transmission.desiredMode || 'unknown'), 'running ' + escapeHtml(transmission.effectiveMode || 'unknown') + (transmission.placeholderConfig ? ' · placeholder config' : ''), {
-            tone: transmission.rolloutPending ? 'warning' : transmission.desiredMode === 'vpn' ? 'warning' : 'status',
-          }) +
-          overviewSegment('Shares', String(activeShareCount), activeShareCount ? 'public now' : 'all private', {
-            tone: activeShareCount > 0 ? 'warning' : 'status',
-          });
+          fact('Private path', travelStateLabel(privateAccess.state), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', travelTone(privateAccess.state)) +
+          fact('Exit node', travelStateLabel(exitNode.state), connector.name || 'connector', travelTone(exitNode.state)) +
+          fact('Transmission', transmission.desiredMode || 'unknown', 'running ' + (transmission.effectiveMode || 'unknown') + (transmission.placeholderConfig ? ' · placeholder config' : ''), transmission.rolloutPending || transmission.desiredMode === 'vpn' ? 'warning' : 'status') +
+          fact('Shares', String(activeShareCount), activeShareCount ? 'public now' : 'all private', activeShareCount > 0 ? 'warning' : 'status');
         travelOverviewMetaEl.innerHTML =
           '<span>checked ' + fmtAgo(travelData.checkedAt) + '</span>' +
-          '<span>' + escapeHtml(connector.name || 'n/a') + '</span>' +
           '<span>' + String((connector.advertisedRoutes || []).length) + ' routes</span>';
-        travelBundlesMetaEl.textContent = String(bundles.length);
+        travelBundlesMetaEl.textContent = '';
         travelBundlesEl.innerHTML = bundles.map((bundle) => {
           const targets = Array.isArray(bundle.targets) ? bundle.targets : [];
           const items = targets.length
@@ -1345,14 +1342,14 @@
             ).join('')
             : '<li class="row"><span class="muted">Empty</span></li>';
           return (
-            '<article class="card panel travel-card">' +
-              '<div class="card-head"><h3 class="card-title">' + escapeHtml(bundle.name || bundle.id || 'bundle') + '</h3>' + travelStatusPill(bundle.state) + '</div>' +
+            '<section class="column travel-card">' +
+              '<div class="column-head"><h3 class="card-title">' + escapeHtml(bundle.name || bundle.id || 'bundle') + '</h3>' + travelStatusPill(bundle.state) + '</div>' +
               '<ul class="rows">' + items + '</ul>' +
-            '</article>'
+            '</section>'
           );
         }).join('');
 
-        travelNotesMetaEl.textContent = String(notes.length);
+        travelNotesMetaEl.textContent = '';
         travelSharesEl.innerHTML = activeServices.length
           ? '<ul class="rows">' + activeServices.map((svc) =>
             '<li class="row">' +
@@ -2328,14 +2325,10 @@
         if (!silent) {
           setLoadState('…');
           setBtnLoading(refreshAllBtn, true);
-          overviewStripEl.innerHTML = skeletonOverviewStrip(3);
-          travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
           updatesRowsEl.innerHTML = skeletonTableRows(5, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
-          if (activePage === 'jobs') jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
-          if (activePage === 'deploy') siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(3);
         }
 
         try {
@@ -2426,7 +2419,6 @@
             }
           } else if (!dashboardState.jobs) {
             jobsSummaryEl.textContent = '';
-            jobsOverviewStripEl.innerHTML = '';
             jobsListEl.innerHTML = '';
           }
           if (includeSiteDeployments) {
@@ -2436,13 +2428,11 @@
             } else {
               dashboardState.siteDeployments = null;
               siteDeploySummaryEl.textContent = 'unavailable';
-              siteDeployOverviewStripEl.innerHTML = '';
               siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(siteDeployData ? siteDeployData.reason.message : 'Sites unavailable.') + '</div>';
               if (siteDeployData && !silent) setSiteDeployMsg(siteDeployData.reason.message, true);
             }
           } else if (!dashboardState.siteDeployments) {
             siteDeploySummaryEl.textContent = '';
-            siteDeployOverviewStripEl.innerHTML = '';
             siteDeployListEl.innerHTML = '';
           }
           if (includeSecrets) {
@@ -2715,7 +2705,7 @@
 
       const fx = window.Fx;
       heroField = fx.field(document.getElementById('heroField'));
-      fx.spotlight('.panel');
+      fx.spotlight('.tile');
       fx.glide(document.getElementById('navRail'), document.querySelector('.nav-indicator'), '[aria-current="page"]', 'y');
       document.querySelectorAll('.tabs, .view-switch').forEach((group) => {
         const thumb = group.querySelector('.glide-thumb');
@@ -2768,6 +2758,7 @@
             commands.push({ group: 'Run', label: 'Route Transmission ' + next, hint: 'asks first', run: () => setTransmissionVpnMode(next) });
           }
           commands.push({ group: 'Run', label: 'Disable all shares', hint: 'asks first', danger: true, run: () => emergencyBtn.click() });
+          commands.push({ group: 'View', label: 'Toggle sidebar', hint: '[', keywords: 'fold collapse navigation', run: toggleNavigation });
           for (const mode of ['system', 'light', 'dark']) {
             commands.push({ group: 'Theme', label: mode[0].toUpperCase() + mode.slice(1), keywords: 'theme appearance', run: () => themeModeButtons.find((button) => button.dataset.themeMode === mode)?.click() });
           }
@@ -2792,12 +2783,16 @@
       paletteBtn.onclick = () => commandPalette.open();
       document.addEventListener('keydown', (event) => {
         const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName) || event.target.isContentEditable;
+        const plain = !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
           event.preventDefault();
           commandPalette.toggle();
-        } else if (event.key === '/' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        } else if (event.key === '/' && plain) {
           event.preventDefault();
           commandPalette.open();
+        } else if (event.key === '[' && plain) {
+          event.preventDefault();
+          toggleNavigation();
         }
       });
 
