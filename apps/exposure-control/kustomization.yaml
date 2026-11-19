@@ -12,6 +12,7 @@ configMapGenerator:
       - app.js
       - exposure-core.js
       - exposure-client.js
+      - fx.js
       - pulse.js
       - power-ledger.js
       - tuning.js

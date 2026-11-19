@@ -3,7 +3,7 @@ title: Public Edge and Exposure Control
 summary: Current permanent-public and temporary-share routing, ownership, state, and emergency controls.
 status: active
 owner: homelab
-last_reviewed: 2026-11-13
+last_reviewed: 2026-11-20
 ---
 
 # Public Edge and Exposure Control
@@ -75,11 +75,17 @@ The private [Control Panel](https://controlpanel.khzaw.dev/) combines shares, Tr
 
 The default route is Overview. The navigation groups Monitor (Overview, Pulse), Manage (Updates, Deployments, Jobs, Tuning), and Access (Shares, Travel, Secrets). Desktop uses a fixed rail; narrow screens use a modal menu with Escape dismissal and focus restoration. Theme selection stays in the navigation. Existing hash routes remain stable, including `#audit` and `#transmission`; the audit route opens its Activity disclosure.
 
-Updates separates image and chart inventories into keyboard-accessible tabs. Shares supports text search and an Active filter without replacing in-progress share forms. Disable all shares lives on Shares and Travel. Job schedules and history, overview freshness, and tuning schedule evidence are expandable. Jobs, deployments, and secret inventories load on demand, including when selected during initial loading.
+Overview leads with a count of states that need a look (nodes, travel, Transmission route, advisor), the chips that name them, and four [Pulse](./controlpanel-pulse.md) readings. The trace behind the headline follows primary-node CPU load and is flat when that reading is missing; it is decoration and carries no information the chips and readings do not.
 
-UI sources are `index.html`, `styles.css`, `app.js`, and the focused Pulse/Tuning modules under `apps/exposure-control/`. Run `make validate-all`; verify all nine routes in both themes at desktop and phone widths, keyboard tab navigation, mobile menu dismissal, share filtering, and legacy deep links. UI review must not enable shares, deploy sites, run jobs, or modify secrets merely to exercise controls.
+The command palette (`Cmd/Ctrl+K` or `/`) reaches every page, each share row, theme modes, and the same actions as the page buttons. It adds no capability: destructive actions keep their confirmation, and anything without one on the page has none in the palette.
 
-Update comparisons are best-effort registry evidence, not dependency ownership or rollout proof. Deploy acknowledgments mean reconciliation was requested; readiness comes from the latest Flux snapshot. Missing snapshots remain unavailable rather than showing a false healthy/zero state. Pending writes remain visible during refresh, and reduced motion retains a static activity cue.
+Updates separates image and chart inventories into keyboard-accessible tabs. Shares lists public services first and supports text search and a Public filter without replacing in-progress share forms. Disable all lives on Shares and Travel. Job schedules and history, overview freshness, and tuning schedule evidence are expandable. Jobs, deployments, and secret inventories load on demand, including when selected during initial loading.
+
+Action feedback appears as one toast per area, replaced in place as an operation progresses; errors stay longer and any toast dismisses on click. Deployments keep an inline status line because it carries the pending-reconcile indicator. State is always a lamp plus a text label; figures stay in the text colour.
+
+UI sources are `index.html`, `styles.css`, `app.js`, the presentation layer `fx.js` (palette, toasts, motion), and the focused Pulse/Tuning modules under `apps/exposure-control/`. A new client script must be added to the Kustomize ConfigMap, the server asset map and version rewrite, the deferred HTML scripts, and `npm run check`. Run `make validate-all`; verify all nine routes in both themes at desktop and phone widths, keyboard tab navigation, the palette, mobile menu dismissal, share filtering, and legacy deep links. UI review must not enable shares, deploy sites, run jobs, or modify secrets merely to exercise controls.
+
+Update comparisons are best-effort registry evidence, not dependency ownership or rollout proof. Deploy acknowledgments mean reconciliation was requested; readiness comes from the latest Flux snapshot. Missing snapshots remain unavailable rather than showing a false healthy/zero state. Pending writes remain visible during refresh. Reduced motion disables every animation and leaves static cues: a still trace, an unanimated activity mark, and instant theme changes.
 
 Assets use content hashes, immutable caching, ETags, and brotli/gzip compression. CSP permits the configured font providers and hash-pins the theme bootstrap. Preserve those delivery and security contracts when changing the cockpit.
 

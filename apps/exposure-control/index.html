@@ -27,46 +27,54 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/assets/styles.css" />
-
   </head>
   <body>
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 5v5h-5M4 19v-5h5"/><path d="M19 10a7.5 7.5 0 0 0-13-3.4M5 14a7.5 7.5 0 0 0 13 3.4"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></symbol>
+    </svg>
     <a class="skip-link" href="#mainContent">Skip to content</a>
     <dialog id="navigation" class="sidebar" aria-label="Navigation">
       <nav class="section-nav" aria-label="Main navigation">
         <div class="sidebar-brand">
-          <a href="#overview" class="brand-link" aria-label="rangoonpulse overview"><span class="brand-mark">rp</span><span>rangoonpulse<span class="brand-caption">Control panel</span></span></a>
-          <button id="navCloseBtn" class="icon-button" type="button" aria-label="Close navigation">×</button>
+          <a href="#overview" class="brand-link" aria-label="rangoonpulse overview">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter"><path class="brand-base" d="M3 17h7l2.5-6 4 13 3-10 1.5 3H29"/><path class="brand-trace" pathLength="100" d="M3 17h7l2.5-6 4 13 3-10 1.5 3H29"/></svg></span>
+            <span class="brand-name">rangoonpulse</span>
+          </a>
+          <button id="navCloseBtn" class="icon-btn" type="button" aria-label="Close navigation">×</button>
         </div>
-        <div class="nav-group"><div class="nav-group-label">Monitor</div>
-          <a class="nav-pill" data-page-link data-page-title="Overview" href="#overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></a>
-          <a class="nav-pill" data-page-link data-page-title="Pulse" href="#pulse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h5l3-8 4 16 3-8h5"/></svg><span>Pulse</span></a>
-        </div>
-        <div class="nav-group"><div class="nav-group-label">Manage</div>
-          <a class="nav-pill" data-page-link data-page-title="Updates" href="#updates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-2l2 2M4 17l2 2a7 7 0 0 0 12-2"/></svg><span>Updates</span><span class="nav-count" data-nav-count="updates" hidden></span></a>
-          <a class="nav-pill" data-page-link data-page-title="Deployments" href="#deploy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg><span>Deployments</span></a>
-          <a class="nav-pill" data-page-link data-page-title="Jobs" href="#jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-12 4 5 3-5 2v-5Z"/></svg><span>Jobs</span></a>
-          <a class="nav-pill" data-page-link data-page-title="Tuning" href="#tuning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h8m4 0h4M4 17h2m4 0h10"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Tuning</span></a>
-        </div>
-        <div class="nav-group"><div class="nav-group-label">Access</div>
-          <a class="nav-pill" data-page-link data-page-title="Shares" href="#exposure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg><span>Shares</span><span class="nav-count" data-nav-count="exposure" hidden></span></a>
-          <a class="nav-pill" data-page-link data-page-title="Travel" href="#travel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/></svg><span>Travel</span></a>
-          <a class="nav-pill" data-page-link data-page-title="Secrets" href="#secrets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg><span>Secrets</span></a>
+        <div id="navRail" class="nav-rail">
+          <span class="nav-indicator" aria-hidden="true"></span>
+          <div class="nav-group"><div class="nav-group-label">Monitor</div>
+            <a class="nav-pill" data-page-link data-page-title="Overview" href="#overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></a>
+            <a class="nav-pill" data-page-link data-page-title="Pulse" href="#pulse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h5l3-8 4 16 3-8h5"/></svg><span>Pulse</span></a>
+          </div>
+          <div class="nav-group"><div class="nav-group-label">Manage</div>
+            <a class="nav-pill" data-page-link data-page-title="Updates" href="#updates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-2l2 2M4 17l2 2a7 7 0 0 0 12-2"/></svg><span>Updates</span><span class="nav-count" data-nav-count="updates" hidden></span></a>
+            <a class="nav-pill" data-page-link data-page-title="Deployments" href="#deploy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg><span>Deployments</span></a>
+            <a class="nav-pill" data-page-link data-page-title="Jobs" href="#jobs"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16"/><path d="M16 3v4M8 3v4M3 11h18m-12 4 5 3-5 2v-5Z"/></svg><span>Jobs</span></a>
+            <a class="nav-pill" data-page-link data-page-title="Tuning" href="#tuning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h8m4 0h4M4 17h2m4 0h10"/><rect x="12" y="5" width="4" height="4"/><rect x="6" y="15" width="4" height="4"/></svg><span>Tuning</span></a>
+          </div>
+          <div class="nav-group"><div class="nav-group-label">Access</div>
+            <a class="nav-pill" data-page-link data-page-title="Shares" href="#exposure"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg><span>Shares</span><span class="nav-count" data-nav-count="exposure" hidden></span></a>
+            <a class="nav-pill" data-page-link data-page-title="Travel" href="#travel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/></svg><span>Travel</span></a>
+            <a class="nav-pill" data-page-link data-page-title="Secrets" href="#secrets"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg><span>Secrets</span></a>
+          </div>
         </div>
         <div class="sidebar-footer">
           <div id="navHealth" class="nav-health" aria-live="polite"></div>
-          <div class="theme-switcher seg-switch" role="group" aria-label="Theme mode">
+          <div class="theme-switcher seg-switch" role="group" aria-label="Theme">
             <span class="seg-thumb" aria-hidden="true"></span>
-            <button type="button" data-theme-mode="system">
-              <svg class="seg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="12" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>
-              <span>System</span>
+            <button type="button" data-theme-mode="system" aria-label="System theme" title="System">
+              <svg class="seg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="12"/><path d="M8 21h8M12 17v4"/></svg>
             </button>
-            <button type="button" data-theme-mode="light">
-              <svg class="seg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
-              <span>Light</span>
+            <button type="button" data-theme-mode="light" aria-label="Light theme" title="Light">
+              <svg class="seg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
             </button>
-            <button type="button" data-theme-mode="dark">
-              <svg class="seg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg>
-              <span>Dark</span>
+            <button type="button" data-theme-mode="dark" aria-label="Dark theme" title="Dark">
+              <svg class="seg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
             </button>
           </div>
         </div>
@@ -75,340 +83,258 @@
     <header class="topbar">
       <div class="topbar-inner">
         <div class="crumbs">
-          <button id="navMenuBtn" class="icon-button" type="button" aria-label="Open navigation" aria-controls="navigation" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-          <span class="crumb-root">Control panel</span><span class="crumb-divider" aria-hidden="true">/</span><span id="currentPageName">Overview</span>
+          <button id="navMenuBtn" class="icon-btn" type="button" aria-label="Open navigation" aria-controls="navigation" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          <span class="crumb-root">rp</span><span class="crumb-divider" aria-hidden="true">/</span><span id="currentPageName">Overview</span>
         </div>
         <div class="top-actions">
           <div id="controlActivity" class="control-activity" role="status" aria-live="polite" hidden>
             <canvas id="controlActivityOrb" class="control-activity-orb" aria-hidden="true"></canvas>
             <span id="controlActivityLabel">Syncing…</span>
           </div>
-          <span class="private-label">Private workspace</span>
+          <time id="clock" class="clock" aria-label="Singapore time"></time>
+          <button id="paletteBtn" class="palette-trigger" type="button" aria-label="Open command palette" aria-keyshortcuts="Meta+K Control+K">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span><kbd>⌘K</kbd>
+          </button>
         </div>
       </div>
+      <span class="scroll-progress" aria-hidden="true"></span>
     </header>
     <main id="mainContent" tabindex="-1">
       <section id="overview" class="section" data-page-section>
-        <div class="section-bar">
-          <div>
-            <h1 class="section-heading">Overview</h1>
-            <p class="section-copy">Your homelab at a glance.</p>
-          </div>
-          <div class="section-bar-actions">
-            <div id="loadState" class="result-count">loading…</div>
-            <button id="refreshAllBtn" type="button">Refresh</button>
+        <div class="page-head">
+          <h1 class="page-title">Overview</h1>
+          <div class="page-actions">
+            <div id="loadState" class="page-meta" role="status">loading…</div>
+            <button id="refreshAllBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
           </div>
         </div>
-        <div id="overviewStrip" class="overview-strip overview-priorities"></div>
-        <div id="overviewPosture" class="overview-posture"></div>
-
-        <div class="content-block">
-          <div id="overviewDigest" class="overview-digest"></div>
-        </div>
-        <details class="overview-timestamps">
-          <summary>Data freshness</summary>
-          <div class="overview-meta-row">
-            <div id="overviewMeta" class="overview-meta-cluster"></div>
-            <div id="overviewDetail" class="result-count"></div>
+        <div class="hero panel">
+          <div class="hero-stage">
+            <canvas id="heroField" class="hero-field" aria-hidden="true"></canvas>
+            <div class="hero-body">
+              <div id="overviewHeadline" class="hero-headline" role="status">—</div>
+              <div id="overviewPosture" class="posture"></div>
+            </div>
           </div>
+          <div id="overviewVitals" class="vitals"></div>
+        </div>
+        <div id="overviewStrip" class="tiles tiles-3"></div>
+        <div id="overviewDigest" class="digest"></div>
+        <details class="freshness">
+          <summary>Freshness</summary>
+          <div id="overviewMeta" class="meta-line"></div>
         </details>
       </section>
 
       <section id="pulse" class="section pulse-page" data-page-section hidden>
-        <div class="section-bar pulse-heading">
-          <div>
-
-            <h1 class="section-heading">Pulse</h1>
-            <p class="section-copy">Usage, power, and capacity.</p>
-          </div>
+        <div class="page-head">
+          <h1 class="page-title">Pulse</h1>
           <div id="pulseStatus" class="pulse-status" role="status">Loading…</div>
         </div>
-        <div id="pulseStrip" class="overview-strip pulse-strip"></div>
-        <div id="nodeTwins" class="pulse-block"></div>
-        <div id="powerTicker" class="pulse-block"></div>
-        <div id="placementMap" class="pulse-block"></div>
-        <div id="storageTanks" class="pulse-block"></div>
-        <div id="fluxRibbon" class="pulse-block"></div>
-        <div id="alertBoard" class="pulse-block"></div>
-        <div class="pulse-footer"><span>rangoonpulse / live telemetry</span><span>60 s refresh · Asia/Singapore</span></div>
+        <div id="pulseStrip" class="tiles tiles-4 pulse-strip"></div>
+        <div id="nodeTwins" class="pulse-block panel"></div>
+        <div id="powerTicker" class="pulse-block panel"></div>
+        <div id="placementMap" class="pulse-block panel"></div>
+        <div id="storageTanks" class="pulse-block panel"></div>
+        <div class="pulse-footer"><span>60 s</span><span>SGT</span></div>
       </section>
 
       <section id="exposure" class="section" data-page-section hidden>
-        <div class="panel-actions">
-          <div>
-            <h1 class="section-heading">Shares</h1>
-            <p class="section-copy">Temporary public links. Default: __DEFAULT_EXPIRY_HOURS__h.</p>
-          </div>
-          <div class="section-bar-actions">
-            <div id="exposureMeta" class="section-detail"></div>
-            <button id="exposureRefreshBtn" type="button">Refresh</button>
-            <button id="emergencyBtn" class="danger danger-ghost" type="button">Disable all shares</button>
+        <div class="page-head">
+          <h1 class="page-title">Shares</h1>
+          <div class="page-actions">
+            <div id="exposureMeta" class="page-meta"></div>
+            <button id="exposureRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+            <button id="emergencyBtn" class="danger" type="button">Disable all</button>
           </div>
         </div>
-        <div class="toolbar shares-toolbar">
-          <label class="search-shell"><span class="sr-only">Search services</span><input id="sharesSearch" type="search" placeholder="Search services…" autocomplete="off" /></label>
-          <div class="view-switch" role="group" aria-label="Filter shares"><button type="button" data-share-view="all" aria-pressed="true">All services</button><button type="button" data-share-view="active" aria-pressed="false">Active</button></div>
-          <span id="sharesCount" class="result-count" role="status"></span>
+        <div class="toolbar">
+          <label class="search-shell"><span class="sr-only">Search services</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input id="sharesSearch" type="search" placeholder="Search" autocomplete="off" /></label>
+          <div class="view-switch" role="group" aria-label="Filter shares"><span class="glide-thumb" aria-hidden="true"></span><button type="button" data-share-view="all" aria-pressed="true">All</button><button type="button" data-share-view="active" aria-pressed="false">Public</button></div>
+          <span id="sharesCount" class="page-meta toolbar-end" role="status"></span>
         </div>
         <div class="table-shell">
           <table class="shares-table" aria-label="Service shares">
             <thead>
               <tr>
-                <th>service</th>
-                <th>status</th>
-                <th>auth</th>
-                <th>public url</th>
-                <th>expires</th>
-                <th class="th-actions"></th>
+                <th>Service</th>
+                <th>State</th>
+                <th>Auth</th>
+                <th>Link</th>
+                <th>Expires</th>
+                <th class="th-actions"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
-        <div class="content-block">
-          <div id="msg" class="msg"></div>
-        </div>
-        <div class="content-block" style="padding-top:0">
-          <div id="transmissionPanel" class="subsection-bar">
-            <div>
-              <div class="subsection-label">transmission</div>
-
-            </div>
-            <div id="vpnSectionMeta" class="section-detail"></div>
+        <div id="transmissionPanel" class="route panel">
+          <div class="route-main">
+            <div class="eyebrow">Transmission</div>
+            <div id="vpnSectionMeta" class="route-state"></div>
+            <div id="vpnMeta" class="meta-line">loading…</div>
           </div>
-          <div class="vpn-card">
-            <div class="vpn-row">
-              <div>
-                <div class="vpn-title">Download route</div>
-                <div id="vpnMeta" class="vpn-meta">loading…</div>
-                <div class="vpn-meta">
-
-                  <a href="__TRANSMISSION_VPN_WEBUI_URL__" target="_blank" rel="noreferrer">VPN dashboard ↗</a>
-                </div>
-              </div>
-              <div class="controls">
-                <div class="vpn-toggle">
-                  <span class="vpn-toggle-label" data-vpn-label="direct">Direct</span>
-                  <button id="vpnSwitch" class="toggle-switch" type="button" role="switch" aria-checked="false" aria-label="Route Transmission via VPN">
-                    <span class="toggle-knob" aria-hidden="true"></span>
-                  </button>
-                  <span class="vpn-toggle-label" data-vpn-label="vpn">VPN</span>
-                </div>
-              </div>
+          <div class="route-controls">
+            <a class="link" href="__TRANSMISSION_VPN_WEBUI_URL__" target="_blank" rel="noreferrer">Dashboard<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <div class="vpn-toggle">
+              <span class="vpn-toggle-label" data-vpn-label="direct">Direct</span>
+              <button id="vpnSwitch" class="toggle-switch" type="button" role="switch" aria-checked="false" aria-label="Route Transmission via VPN">
+                <span class="toggle-knob" aria-hidden="true"></span>
+              </button>
+              <span class="vpn-toggle-label" data-vpn-label="vpn">VPN</span>
             </div>
-            <div id="vpnMsg" class="msg"></div>
           </div>
         </div>
-        <details id="auditDisclosure" class="panel-disclosure">
-          <summary>Activity <span id="auditMeta" class="section-detail"></span></summary>
-          <div class="content-block">
-          <div id="auditPanel"></div>
-          <div class="audit-scroll">
-            <table>
+        <details id="auditDisclosure" class="disclosure panel">
+          <summary>Activity <span id="auditMeta" class="page-meta"></span></summary>
+          <div id="auditPanel" class="audit-scroll">
+            <table aria-label="Share activity">
               <thead>
                 <tr>
-                  <th>time</th>
-                  <th>action</th>
-                  <th>service</th>
-                  <th>details</th>
+                  <th>Time</th>
+                  <th>Action</th>
+                  <th>Service</th>
+                  <th>Detail</th>
                 </tr>
               </thead>
               <tbody id="auditRows"></tbody>
             </table>
           </div>
-        </div>
         </details>
       </section>
 
       <section id="deploy" class="section" data-page-section hidden>
-        <div class="section-bar">
-          <div>
-            <h1 class="section-heading">Deployments</h1>
-            <p class="section-copy">Deploy the latest published images.</p>
-          </div>
-          <div id="siteDeploySummary" class="section-detail">loads when opened</div>
-        </div>
-        <div id="siteDeployOverviewStrip" class="overview-strip site-deploy-strip"></div>
-        <div class="toolbar site-deploy-toolbar">
-          <div>
-            <h3 class="section-heading">Sites</h3>
-
-          </div>
-          <div class="site-deploy-toolbar-actions">
-            <button id="siteDeployRefreshBtn" type="button">Refresh</button>
-            <button id="siteDeployAllBtn" type="button">Deploy all</button>
+        <div class="page-head">
+          <h1 class="page-title">Deployments</h1>
+          <div class="page-actions">
+            <div id="siteDeploySummary" class="page-meta"></div>
+            <button id="siteDeployRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+            <button id="siteDeployAllBtn" class="primary" type="button">Deploy all</button>
           </div>
         </div>
-        <div id="siteDeployList" class="site-deploy-grid"></div>
-        <div class="content-block">
-          <div id="siteDeployMsg" class="msg" role="status" aria-live="polite"></div>
-        </div>
+        <div id="siteDeployOverviewStrip" class="tiles tiles-3"></div>
+        <div id="siteDeployMsg" class="status-line" role="status" aria-live="polite"></div>
+        <div id="siteDeployList" class="card-grid"></div>
       </section>
 
       <section id="updates" class="section" data-page-section hidden>
-        <div class="updates-toolbar">
+        <div class="page-head">
           <div>
-            <h1 class="section-heading">Updates</h1>
-            <div id="renovateMeta" class="updates-meta">loading…</div>
+            <h1 class="page-title">Updates</h1>
+            <div id="renovateMeta" class="page-meta">loading…</div>
           </div>
-          <div class="updates-toolbar-actions">
-            <div id="renovateLinks" class="updates-links"></div>
-            <button id="renovateRunBtn" type="button">Run Renovate</button>
+          <div class="page-actions">
+            <div id="renovateLinks" class="link-row"></div>
+            <button id="renovateRunBtn" class="primary" type="button">Run Renovate</button>
           </div>
         </div>
-        <div class="content-block">
-          <div id="renovateMsg" class="msg"></div>
-        </div>
-        <div class="inventory-tabs" role="tablist" aria-label="Update type">
-          <button id="imagesTab" type="button" role="tab" aria-selected="true" aria-controls="imagesPanel" data-update-tab="images">Container images <span id="imagesTabCount"></span></button>
-          <button id="chartsTab" type="button" role="tab" aria-selected="false" aria-controls="chartsPanel" tabindex="-1" data-update-tab="charts">Helm charts <span id="chartsTabCount"></span></button>
+        <div class="tabs" role="tablist" aria-label="Update type">
+          <span class="glide-thumb" aria-hidden="true"></span>
+          <button id="imagesTab" type="button" role="tab" aria-selected="true" aria-controls="imagesPanel" data-update-tab="images">Images <span id="imagesTabCount" class="tab-count"></span></button>
+          <button id="chartsTab" type="button" role="tab" aria-selected="false" aria-controls="chartsPanel" tabindex="-1" data-update-tab="charts">Charts <span id="chartsTabCount" class="tab-count"></span></button>
         </div>
         <div id="imagesPanel" role="tabpanel" aria-labelledby="imagesTab">
-        <div class="updates-toolbar">
-          <div>
-            <h3 class="sr-only">Container images</h3>
-            <div id="updatesMeta" class="updates-meta">no check yet</div>
-          </div>
-          <div class="updates-toolbar-actions">
-            <label class="search-shell updates-search" for="updatesSearchInput">
-              <span class="sr-only">Search images</span>
-              <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="Search images…" />
+          <div class="toolbar">
+            <label class="search-shell" for="updatesSearchInput">
+              <span class="sr-only">Search images</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
+              <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="Search" />
             </label>
-            <label class="toggle-filter">
+            <label class="check-chip">
               <input id="updatesOnlyAvailable" type="checkbox" />
-              <span>Updates only</span>
+              <span>Pending only</span>
             </label>
-            <button id="updatesRefreshBtn" type="button">Check now</button>
+            <div id="updatesMeta" class="page-meta toolbar-end"></div>
+            <button id="updatesRefreshBtn" type="button">Check</button>
           </div>
-        </div>
-        <div class="updates-scroll">
-          <table class="updates-table" role="table" aria-label="Container image updates">
-            <thead>
-              <tr>
-                <th>service</th>
-                <th>version</th>
-                <th>status</th>
-                <th>image</th>
-                <th>action</th>
-              </tr>
-            </thead>
-            <tbody id="updatesRows"></tbody>
-          </table>
-        </div>
-        <div class="content-block">
-          <div id="updatesMsg" class="msg"></div>
-        </div>
+          <div class="table-shell updates-scroll">
+            <table class="updates-table" role="table" aria-label="Container image updates">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Version</th>
+                  <th>State</th>
+                  <th>Image</th>
+                  <th><span class="sr-only">Action</span></th>
+                </tr>
+              </thead>
+              <tbody id="updatesRows"></tbody>
+            </table>
+          </div>
         </div>
         <div id="chartsPanel" role="tabpanel" aria-labelledby="chartsTab" hidden>
-        <div class="updates-toolbar">
-          <div>
-            <h3 class="sr-only">Helm charts</h3>
-            <div id="helmUpdatesMeta" class="updates-meta">no check yet</div>
+          <div class="toolbar">
+            <div id="helmUpdatesMeta" class="page-meta toolbar-end"></div>
+            <button id="helmUpdatesRefreshBtn" type="button">Check</button>
           </div>
-          <button id="helmUpdatesRefreshBtn" type="button">Check now</button>
-        </div>
-        <div class="updates-scroll">
-          <table class="helm-updates-table" role="table" aria-label="Helm chart updates">
-            <thead>
-              <tr>
-                <th>release</th>
-                <th>current</th>
-                <th>latest</th>
-                <th>status</th>
-                <th>chart / repo</th>
-                <th>action</th>
-              </tr>
-            </thead>
-            <tbody id="helmUpdatesRows"></tbody>
-          </table>
-        </div>
-        <div class="content-block">
-          <div id="helmUpdatesMsg" class="msg"></div>
-        </div>
+          <div class="table-shell updates-scroll">
+            <table class="helm-updates-table" role="table" aria-label="Helm chart updates">
+              <thead>
+                <tr>
+                  <th>Release</th>
+                  <th>Current</th>
+                  <th>Latest</th>
+                  <th>State</th>
+                  <th>Chart</th>
+                  <th><span class="sr-only">Action</span></th>
+                </tr>
+              </thead>
+              <tbody id="helmUpdatesRows"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       <section id="travel" class="section" data-page-section hidden>
-        <div class="section-bar">
-          <div>
-            <h1 class="section-heading">Travel</h1>
-            <p class="section-copy">Remote access and readiness.</p>
-          </div>
-          <div id="travelSummary" class="section-detail section-detail-prose">loading…</div>
+        <div class="page-head">
+          <h1 class="page-title">Travel</h1>
+          <div id="travelSummary" class="page-meta">loading…</div>
         </div>
-        <div class="content-block">
-          <div id="travelOverviewStrip" class="overview-strip travel-strip"></div>
-          <div class="overview-meta-row">
-            <div id="travelOverviewMeta" class="overview-meta-cluster"></div>
-            <div id="travelOverviewDetail" class="result-count"></div>
-          </div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">Quick links</h3>
-
-          </div>
-          <div id="travelBundlesMeta" class="section-detail"></div>
-        </div>
-        <div class="content-block" style="padding-top:18px">
-          <div id="travelBundles" class="travel-grid"></div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">Controls</h3>
-
-          </div>
-          <div id="travelActionState" class="section-detail"></div>
-        </div>
-        <div class="content-block" style="padding-top:18px">
-          <div class="travel-actions">
-            <div class="travel-action-group">
-              <button id="travelDirectBtn" type="button">Transmission Direct</button>
-              <button id="travelVpnBtn" type="button">Transmission via VPN</button>
-            </div>
-            <div class="travel-action-group">
-              <button id="travelDisableSharesBtn" class="danger" type="button">Disable all shares</button>
-              <a id="travelExposureLink" class="top-button" href="#exposure">Manage shares</a>
+        <div id="travelOverviewStrip" class="tiles tiles-4"></div>
+        <div id="travelOverviewMeta" class="meta-line"></div>
+        <div class="block-head"><h2 class="block-title">Links</h2><div id="travelBundlesMeta" class="page-meta"></div></div>
+        <div id="travelBundles" class="card-grid"></div>
+        <div class="block-head"><h2 class="block-title">Controls</h2></div>
+        <div class="travel-actions panel">
+          <div class="travel-action-group">
+            <span class="eyebrow">Transmission</span>
+            <div class="view-switch" role="group" aria-label="Transmission route">
+              <button id="travelDirectBtn" type="button">Direct</button>
+              <button id="travelVpnBtn" type="button">VPN</button>
             </div>
           </div>
-          <div id="travelMsg" class="msg"></div>
-        </div>
-        <div class="section-bar">
-          <div>
-            <h3 class="section-heading">Access details</h3>
-
+          <div class="travel-action-group">
+            <a id="travelExposureLink" class="link" href="#exposure">Shares<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <button id="travelDisableSharesBtn" class="danger" type="button">Disable all</button>
           </div>
-          <div id="travelNotesMeta" class="section-detail"></div>
         </div>
-        <div class="content-block" style="padding-top:18px">
-          <div class="travel-support-grid">
-            <article class="support-card travel-support-card">
-              <div class="support-card-title">active shares</div>
-              <div id="travelShares" class="travel-shares"></div>
-            </article>
-            <article class="support-card travel-support-card">
-              <div class="support-card-title">Notes</div>
-              <div id="travelNotes" class="travel-notes"></div>
-            </article>
-          </div>
+        <div class="block-head"><h2 class="block-title">Access</h2><div id="travelNotesMeta" class="page-meta"></div></div>
+        <div class="card-grid card-grid-2">
+          <article class="card panel">
+            <div class="eyebrow">Public shares</div>
+            <div id="travelShares" class="travel-shares"></div>
+          </article>
+          <article class="card panel">
+            <div class="eyebrow">Notes</div>
+            <div id="travelNotes" class="travel-notes"></div>
+          </article>
         </div>
       </section>
 
       <section id="tuning" class="section" data-page-section hidden>
-        <div class="tuning-heading">
-          <h1 class="section-heading">Tuning</h1>
-          <span class="tuning-subtle">PR preview · read-only</span>
+        <div class="page-head tuning-heading">
+          <h1 class="page-title">Tuning</h1>
+          <span class="page-meta">read-only</span>
         </div>
-        <div id="tuningSummary" class="tuning-summary"><p>Loading…</p></div>
+        <div id="tuningSummary" class="tuning-summary panel"><p>Loading…</p></div>
         <div class="tuning-ledger-tools">
-          <div class="tuning-views" role="group" aria-label="Tuning selection filters">
+          <div class="tuning-views view-switch" role="group" aria-label="Tuning selection filters">
             <button type="button" data-tuning-view="selected" aria-pressed="true">Proposed</button>
             <button type="button" data-tuning-view="deferred" aria-pressed="false">Deferred</button>
             <button type="button" data-tuning-view="unchanged" aria-pressed="false">No change</button>
             <button type="button" data-tuning-view="all" aria-pressed="false">All</button>
           </div>
           <div class="tuning-filters">
-            <input id="searchInput" type="search" aria-label="Search tuning workloads" placeholder="Search workloads…" />
+            <input id="searchInput" type="search" aria-label="Search tuning workloads" placeholder="Search" />
             <select id="tuningAction" aria-label="Tuning action filter">
               <option value="all">All actions</option>
               <option value="upsize">Increase</option>
@@ -416,94 +342,83 @@
               <option value="no-change">No change</option>
             </select>
             <select id="noteFilter" aria-label="Tuning note filter"><option value="all">All notes</option></select>
-            <span id="tuningCount" class="tuning-subtle" role="status">Loading…</span>
+            <span id="tuningCount" class="page-meta" role="status"></span>
           </div>
         </div>
         <div class="tuning-ledger" role="region" aria-label="Resource change ledger">
-          <div class="tuning-ledger-head" aria-hidden="true"><span>Workload / container</span><span>Selection / reason</span><span>CPU request</span><span>Memory request</span><span>Evidence</span></div>
+          <div class="tuning-ledger-head" aria-hidden="true"><span>Workload</span><span>Selection</span><span>CPU</span><span>Memory</span><span></span></div>
           <div id="tuningRows"></div>
-          <p id="tuningEmpty" class="tuning-empty" hidden>No matches. Try another filter.</p>
+          <p id="tuningEmpty" class="tuning-empty" hidden>No matches.</p>
         </div>
-        <details class="tuning-disclosure">
+        <details class="tuning-disclosure disclosure panel">
           <summary>Capacity and policy</summary>
           <div id="tuningDiagnostics" class="tuning-disclosure-body"></div>
         </details>
-        <details class="tuning-disclosure">
-          <summary>Reports and logs</summary>
+        <details class="tuning-disclosure disclosure panel">
+          <summary>Reports</summary>
           <div class="tuning-disclosure-body">
-            <p class="report-links">Download:
-              <a href="/api/tuning/latest.json" target="_blank" rel="noopener noreferrer">Report JSON</a>
-              <a href="/api/tuning/latest.md" target="_blank" rel="noopener noreferrer">Report Markdown</a>
+            <p class="link-row">
+              <a href="/api/tuning/latest.json" target="_blank" rel="noopener noreferrer">JSON</a>
+              <a href="/api/tuning/latest.md" target="_blank" rel="noopener noreferrer">Markdown</a>
               <a href="/api/tuning/metrics" target="_blank" rel="noopener noreferrer">Metrics</a>
-              <a href="/api/tuning" target="_blank" rel="noopener noreferrer">Full snapshot JSON</a>
+              <a href="/api/tuning" target="_blank" rel="noopener noreferrer">Snapshot</a>
             </p>
-            <h3>Report output</h3>
-            <pre id="tuningRawReport">Report output unavailable.</pre>
-            <h3>Last execution output</h3>
-            <pre id="tuningRawExecution">Execution output unavailable.</pre>
+            <h3>Report</h3>
+            <pre id="tuningRawReport">Unavailable.</pre>
+            <h3>Last run</h3>
+            <pre id="tuningRawExecution">Unavailable.</pre>
           </div>
         </details>
       </section>
 
       <section id="jobs" class="section" data-page-section hidden>
-        <div class="section-bar">
-          <div>
-            <h1 class="section-heading">Jobs</h1>
-            <p class="section-copy">Schedules and recent runs.</p>
-          </div>
-          <div class="section-bar-actions"><div id="jobsSummary" class="section-detail">Loading…</div><button id="jobsRefreshBtn" type="button">Refresh</button></div>
-        </div>
-        <div class="content-block">
-          <div id="jobsOverviewStrip" class="overview-strip jobs-strip"></div>
-          <div class="overview-meta-row">
-            <div id="jobsOverviewMeta" class="overview-meta-cluster"></div>
-            <div id="jobsOverviewDetail" class="result-count"></div>
+        <div class="page-head">
+          <h1 class="page-title">Jobs</h1>
+          <div class="page-actions">
+            <div id="jobsSummary" class="page-meta"></div>
+            <button id="jobsRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
           </div>
         </div>
-        <div class="content-block"><div id="jobsMsg" class="msg" role="status"></div></div>
+        <div id="jobsOverviewStrip" class="tiles tiles-4"></div>
         <div id="jobsList" class="jobs-list"></div>
       </section>
 
       <section id="secrets" class="section" data-page-section hidden>
-        <div class="section-bar">
-          <div>
-            <h1 class="section-heading">Secrets</h1>
-            <p class="section-copy">Encrypted in Git. Changes deploy through Flux.</p>
-          </div>
-          <div id="secretsSummary" class="section-detail">loading…</div>
+        <div class="page-head">
+          <h1 class="page-title">Secrets</h1>
+          <div id="secretsSummary" class="page-meta"></div>
         </div>
-        <div class="secrets-layout">
+        <div class="secrets-layout panel">
           <aside class="secrets-list-panel">
-            <div class="toolbar secrets-toolbar">
+            <div class="secrets-toolbar">
               <label class="search-shell">
-                <span class="sr-only">Search secrets</span>
-                <input id="secretsSearchInput" type="search" aria-label="Search secrets" placeholder="Search secrets…" />
+                <span class="sr-only">Search secrets</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
+                <input id="secretsSearchInput" type="search" aria-label="Search secrets" placeholder="Search" />
               </label>
               <select id="secretsNamespaceFilter" class="control-select" aria-label="Filter secrets by namespace"></select>
-              <button id="secretsRefreshBtn" type="button">Refresh</button>
+              <button id="secretsRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
             </div>
             <div class="new-secret-row">
-              <input id="newSecretName" class="secret-name-input" type="text" aria-label="New secret name" placeholder="New secret name" />
+              <input id="newSecretName" class="text-input" type="text" aria-label="New secret name" placeholder="new-secret-name" />
               <button id="newSecretBtn" type="button">New</button>
             </div>
             <div id="secretsList" class="secrets-list"></div>
           </aside>
-          <section class="secret-editor-panel">
+          <section class="secret-editor-panel" aria-label="Secret editor">
             <div class="secret-editor-head">
               <div>
-                <div id="secretEditorTitle" class="secret-editor-title">Select a secret</div>
-                <div id="secretEditorMeta" class="secret-editor-meta">Choose a secret to edit.</div>
+                <div id="secretEditorTitle" class="secret-editor-title">No secret selected</div>
+                <div id="secretEditorMeta" class="meta-line"></div>
               </div>
               <div class="secret-editor-actions">
                 <button id="secretAddKeyBtn" type="button" disabled>Add key</button>
-                <button id="secretSaveBtn" type="button" disabled>Commit</button>
+                <button id="secretSaveBtn" class="primary" type="button" disabled>Commit</button>
                 <button id="secretDeleteBtn" class="danger" type="button" disabled>Delete</button>
               </div>
             </div>
             <div id="secretKeyRows" class="secret-key-rows">
-              <div class="empty-state">No secret selected.</div>
+              <div class="empty-state">Pick a secret.</div>
             </div>
-            <div id="secretsMsg" class="msg" role="status" aria-live="polite"></div>
           </section>
         </div>
       </section>
@@ -513,6 +428,7 @@
     <script src="/assets/update-policy.js" defer></script>
     <script src="/assets/pulse.js" defer></script>
     <script src="/assets/tuning.js" defer></script>
+    <script src="/assets/fx.js" defer></script>
     <script src="/assets/exposure-client.js" defer></script>
     <script src="/assets/app.js" defer></script>
 

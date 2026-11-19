@@ -46,7 +46,7 @@ test('copy preserves the exact current value without revealing it and resets fee
   assert.equal(button['aria-label'], 'Copied');
   assert.equal(button.disabled, true);
   assert.ok(classes.has('is-copied'));
-  assert.equal(messages[0][0], 'Value copied to clipboard.');
+  assert.equal(messages[0][0], 'Copied.');
   timers[0]();
   assert.equal(button['aria-label'], 'Copy value');
   assert.equal(button.disabled, false);

@@ -4688,6 +4688,10 @@ const CONTROL_PANEL_ASSETS = new Map([
     filePath: path.join(APP_DIR, "tuning.js"),
     contentType: "application/javascript; charset=utf-8",
   }],
+  ["/assets/fx.js", {
+    filePath: path.join(APP_DIR, "fx.js"),
+    contentType: "application/javascript; charset=utf-8",
+  }],
   ["/assets/exposure-client.js", {
     filePath: path.join(APP_DIR, "exposure-client.js"),
     contentType: "application/javascript; charset=utf-8",
@@ -4801,7 +4805,7 @@ function renderCombinedCockpitHtml(template) {
       /__TRANSMISSION_VPN_WEBUI_URL__/g,
       escapeHtml(TRANSMISSION_VPN_WEBUI_URL),
     )
-    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|tuning\.js|exposure-client\.js|app\.js)/g, (match) => {
+    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|tuning\.js|fx\.js|exposure-client\.js|app\.js)/g, (match) => {
       const asset = CONTROL_PANEL_ASSETS.get(match);
       if (!asset) return match;
       return match + "?v=" + loadStaticAsset(asset.filePath).version;

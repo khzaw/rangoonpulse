@@ -3,7 +3,7 @@ title: Control Panel Pulse
 summary: Read-only node, power, storage, and placement telemetry in the operator cockpit.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-20
 ---
 
 # Control Panel Pulse
@@ -25,6 +25,11 @@ The page refreshes every 60 seconds only while visible and selected, and refresh
 when reopened. Metrics load independently of control actions. Missing readings
 render as unavailable; a failed refresh does not present old readings as live.
 
+Overview reads six of the same named queries (`node_cpu`, `node_mem`,
+`cluster_watts`, `restarts_1h`, `node_role`, `node_ready`) for its four readings
+and node chip. It follows the same rule: one request at most every 30 seconds,
+only while Overview is visible and selected. No other page requests metrics.
+
 Power readings use the existing canonical power recording rules: CPU-derived
 estimates for Kubernetes nodes and fresh software-reported `macmon` system power
 for Iris, plus the TrueNAS chassis/CPU/disk model. They are cost estimates, not
@@ -45,7 +50,8 @@ TrueNAS without adding either external host to Kubernetes readiness or pod inven
 Power history is sampled over seven days. Energy uses timestamp-weighted
 integration; cost uses the configured tariff, and the 30-day projection uses
 the seven-day mean. The current homelab watt reading uses the finer 24-hour query,
-not the coarser seven-day history. Missing tariffs or insufficient history leave
+not the coarser seven-day history. Hovering the seven-day plot, or focusing it and
+using the arrow keys, reads the sampled time and watts at that point. Missing tariffs or insufficient history leave
 cost blank. The new combined series is not backfilled: daily energy/cost needs a
 full day of history and the 30-day projection needs seven days.
 Midnight ticks always use Asia/Singapore, independent of the browser's timezone.
@@ -108,9 +114,10 @@ single brief flash; reduced motion disables it. Refresh preserves focused cells.
 
 ## Delivery and validation
 
-Client primitives live in `apps/exposure-control/pulse.js`, registered in the
-Kustomize ConfigMap, server asset map/versioning, and deferred HTML scripts.
-There are no added runtime dependencies or build steps.
+Client primitives live in `apps/exposure-control/pulse.js`; the hover readout and
+figure transitions come from `fx.js`. Both are registered in the Kustomize
+ConfigMap, server asset map/versioning, and deferred HTML scripts. There are no
+added runtime dependencies or build steps.
 
 ```bash
 npm run check
@@ -121,5 +128,6 @@ curl -fsS 'https://controlpanel.khzaw.dev/api/metrics?names=cluster_watts,tariff
 ```
 
 Verify the Pulse page in light and dark themes, at desktop and 400-pixel widths.
-Navigation to another page must stop periodic metric requests. Keep deployment
-and commits scoped to exposure-control; other cluster work may be concurrent.
+Navigating to any page other than Pulse or Overview must stop periodic metric
+requests. Keep deployment and commits scoped to exposure-control; other cluster
+work may be concurrent.

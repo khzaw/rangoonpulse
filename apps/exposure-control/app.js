@@ -1,15 +1,12 @@
       const loadStateEl = document.getElementById('loadState');
       const overviewStripEl = document.getElementById('overviewStrip');
       const overviewMetaEl = document.getElementById('overviewMeta');
-      const overviewDetailEl = document.getElementById('overviewDetail');
       const overviewDigestEl = document.getElementById('overviewDigest');
       const travelSummaryEl = document.getElementById('travelSummary');
       const travelOverviewStripEl = document.getElementById('travelOverviewStrip');
       const travelOverviewMetaEl = document.getElementById('travelOverviewMeta');
-      const travelOverviewDetailEl = document.getElementById('travelOverviewDetail');
       const travelBundlesMetaEl = document.getElementById('travelBundlesMeta');
       const travelBundlesEl = document.getElementById('travelBundles');
-      const travelActionStateEl = document.getElementById('travelActionState');
       const travelNotesMetaEl = document.getElementById('travelNotesMeta');
       const travelSharesEl = document.getElementById('travelShares');
       const travelNotesEl = document.getElementById('travelNotes');
@@ -17,10 +14,7 @@
       const exposureClient = window.ExposureClient.createExposureClient({ request });
       const jobsSummaryEl = document.getElementById('jobsSummary');
       const jobsOverviewStripEl = document.getElementById('jobsOverviewStrip');
-      const jobsOverviewMetaEl = document.getElementById('jobsOverviewMeta');
-      const jobsOverviewDetailEl = document.getElementById('jobsOverviewDetail');
       const jobsRefreshBtn = document.getElementById('jobsRefreshBtn');
-      const jobsMsgEl = document.getElementById('jobsMsg');
       const jobsListEl = document.getElementById('jobsList');
       const siteDeploySummaryEl = document.getElementById('siteDeploySummary');
       const siteDeployOverviewStripEl = document.getElementById('siteDeployOverviewStrip');
@@ -41,12 +35,7 @@
       const vpnMetaEl = document.getElementById('vpnMeta');
       const transmissionPanelEl = document.getElementById('transmissionPanel');
       const auditPanelEl = document.getElementById('auditPanel');
-      const msgEl = document.getElementById('msg');
-      const vpnMsgEl = document.getElementById('vpnMsg');
-      const renovateMsgEl = document.getElementById('renovateMsg');
-      const updatesMsgEl = document.getElementById('updatesMsg');
       const updatesMetaEl = document.getElementById('updatesMeta');
-      const travelMsgEl = document.getElementById('travelMsg');
       const refreshAllBtn = document.getElementById('refreshAllBtn');
       const emergencyBtn = document.getElementById('emergencyBtn');
       const controlActivityEl = document.getElementById('controlActivity');
@@ -62,7 +51,6 @@
       const renovateRunBtn = document.getElementById('renovateRunBtn');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
       const helmUpdatesRowsEl = document.getElementById('helmUpdatesRows');
-      const helmUpdatesMsgEl = document.getElementById('helmUpdatesMsg');
       const helmUpdatesMetaEl = document.getElementById('helmUpdatesMeta');
       const helmUpdatesRefreshBtn = document.getElementById('helmUpdatesRefreshBtn');
       const secretsSummaryEl = document.getElementById('secretsSummary');
@@ -70,7 +58,6 @@
       const secretsNamespaceFilterEl = document.getElementById('secretsNamespaceFilter');
       const secretsRefreshBtn = document.getElementById('secretsRefreshBtn');
       const secretsListEl = document.getElementById('secretsList');
-      const secretsMsgEl = document.getElementById('secretsMsg');
       const newSecretNameEl = document.getElementById('newSecretName');
       const newSecretBtn = document.getElementById('newSecretBtn');
       const secretEditorTitleEl = document.getElementById('secretEditorTitle');
@@ -242,49 +229,52 @@
 
       document.querySelectorAll('.seg-switch').forEach((el) => setupSegSwitch(el));
 
-      function setMessage(target, text, isError) {
-        target.textContent = text || '';
-        target.style.color = isError ? 'var(--red)' : 'var(--text-3)';
+      // Transient feedback is one toast per area, updated in place.
+      function setMessage(scope, text, isError) {
+        window.Fx.toast(scope, text || '', { error: Boolean(isError) });
       }
 
       function setLoadState(text, isError) {
-        setMessage(loadStateEl, text, isError);
+        loadStateEl.textContent = text || '';
+        loadStateEl.classList.toggle('is-error', Boolean(isError));
       }
 
       function setMsg(text, isError) {
-        setMessage(msgEl, text, isError);
+        setMessage('shares', text, isError);
       }
 
       function setVpnMsg(text, isError) {
-        setMessage(vpnMsgEl, text, isError);
+        setMessage('route', text, isError);
       }
 
       function setRenovateMsg(text, isError) {
-        setMessage(renovateMsgEl, text, isError);
+        setMessage('renovate', text, isError);
       }
 
       function setUpdatesMsg(text, isError) {
-        setMessage(updatesMsgEl, text, isError);
+        setMessage('images', text, isError);
       }
 
       function setTravelMsg(text, isError) {
-        setMessage(travelMsgEl, text, isError);
+        setMessage('travel', text, isError);
       }
 
       function setHelmUpdatesMsg(text, isError) {
-        setMessage(helmUpdatesMsgEl, text, isError);
+        setMessage('charts', text, isError);
       }
 
       function setSecretsMsg(text, isError) {
-        setMessage(secretsMsgEl, text, isError);
+        setMessage('secrets', text, isError);
       }
 
       function setJobsMsg(text, isError) {
-        setMessage(jobsMsgEl, text, isError);
+        setMessage('jobs', text, isError);
       }
 
+      // Deploys keep an inline line: it carries the pending-reconcile beam.
       function setSiteDeployMsg(text, isError) {
-        setMessage(siteDeployMsgEl, text, isError);
+        siteDeployMsgEl.textContent = text || '';
+        siteDeployMsgEl.classList.toggle('is-error', Boolean(isError));
       }
 
       function normalizePage(value) {
@@ -383,21 +373,31 @@
         return date ? timeFormatter.format(date) : 'n/a';
       }
 
+      function fmtAgo(value) {
+        const date = validDate(value);
+        if (!date) return 'n/a';
+        const seconds = Math.max(0, (Date.now() - date.getTime()) / 1000);
+        if (seconds < 60) return 'now';
+        if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+        if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+        return Math.floor(seconds / 86400) + 'd ago';
+      }
+
       function fmtExpiry(value, enabled) {
         if (!value) return enabled
-          ? { text: 'until turned off', state: 'active' }
+          ? { text: 'no expiry', state: 'active' }
           : { text: '—', state: 'none' };
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return { text: 'invalid', state: 'invalid' };
         const diff = d.getTime() - Date.now();
         if (diff <= 0) return { text: 'expired', state: 'expired' };
         const totalSeconds = Math.ceil(diff / 1000);
-        if (totalSeconds < 60) return { text: totalSeconds + 's remaining', state: 'urgent' };
+        if (totalSeconds < 60) return { text: totalSeconds + 's left', state: 'urgent' };
         const mins = Math.ceil(totalSeconds / 60);
-        if (mins < 60) return { text: mins + 'm remaining', state: mins <= 10 ? 'urgent' : 'active' };
+        if (mins < 60) return { text: mins + 'm left', state: mins <= 10 ? 'urgent' : 'active' };
         const hrs = Math.floor(mins / 60);
         const rm = mins % 60;
-        return { text: rm ? hrs + 'h ' + rm + 'm remaining' : hrs + 'h remaining', state: mins <= 120 ? 'urgent' : 'active' };
+        return { text: (rm ? hrs + 'h ' + rm + 'm' : hrs + 'h') + ' left', state: mins <= 120 ? 'urgent' : 'active' };
       }
 
       function updateExpiryNode(node) {
@@ -620,11 +620,10 @@
         let html = '';
         for (let i = 0; i < (count || 6); i++) {
           html +=
-            '<section class="overview-segment">' +
-              '<div class="overview-segment-head">' + skeletonLine('64px', '10px') + '</div>' +
-              '<div class="overview-value" style="margin-top:18px">' + skeletonLine('52px', '36px') + '</div>' +
-              '<div class="overview-subtitle" style="margin-top:12px">' + skeletonLine('110px', '10px') + '</div>' +
-              '<div class="overview-meter" style="margin-top:28px"><span class="overview-meter-fill" style="width:0%"></span></div>' +
+            '<section class="tile panel">' +
+              skeletonLine('56px', '8px') +
+              '<div class="tile-value">' + skeletonLine('64px', '30px') + '</div>' +
+              '<div class="tile-sub">' + skeletonLine('96px', '8px') + '</div>' +
             '</section>';
         }
         return html;
@@ -654,26 +653,26 @@
           return;
         }
 
-        const meta = [];
         const activeRun = renovate.activeRun || null;
         const lastRun = activeRun || renovate.lastRun || null;
-        meta.push('run ' + (lastRun ? (lastRun.status === 'completed' ? (lastRun.conclusion || 'completed') : lastRun.status) : 'idle'));
-        if (lastRun && lastRun.updatedAt) meta.push('updated ' + fmtDateTime(lastRun.updatedAt));
-        meta.push('open PRs ' + String(renovate.openPrCount || 0));
-        renovateMetaEl.textContent = meta.join(' · ');
+        const meta = [lastRun ? (lastRun.status === 'completed' ? (lastRun.conclusion || 'completed') : lastRun.status) : 'idle'];
+        if (lastRun && lastRun.updatedAt) meta.push(fmtAgo(lastRun.updatedAt));
+        meta.push(String(renovate.openPrCount || 0) + ' open');
+        renovateMetaEl.textContent = 'Renovate ' + meta.join(' · ');
+        renovateMetaEl.title = lastRun && lastRun.updatedAt ? fmtDateTime(lastRun.updatedAt) : '';
         renovateRunBtn.disabled = Boolean(activeRun);
 
         const links = [];
         if (renovate.dashboardIssueUrl) {
-          links.push('<a href="' + escapeHtml(renovate.dashboardIssueUrl) + '" target="_blank" rel="noreferrer">Dependency Dashboard</a>');
+          links.push('<a href="' + escapeHtml(renovate.dashboardIssueUrl) + '" target="_blank" rel="noreferrer">Dashboard</a>');
         }
         if (lastRun && lastRun.url) {
-          links.push('<a href="' + escapeHtml(lastRun.url) + '" target="_blank" rel="noreferrer">Latest Run</a>');
+          links.push('<a href="' + escapeHtml(lastRun.url) + '" target="_blank" rel="noreferrer">Run</a>');
         }
         if (renovate.repository) {
-          links.push('<a href="https://github.com/' + escapeHtml(normalizeRepoName(renovate.repository)) + '/pulls?q=is%3Apr+is%3Aopen+label%3Arenovate" target="_blank" rel="noreferrer">Open PRs</a>');
+          links.push('<a href="https://github.com/' + escapeHtml(normalizeRepoName(renovate.repository)) + '/pulls?q=is%3Apr+is%3Aopen+label%3Arenovate" target="_blank" rel="noreferrer">PRs</a>');
         }
-        renovateLinksEl.innerHTML = links.join(' · ');
+        renovateLinksEl.innerHTML = links.join('');
         if (dashboardState.updates) renderUpdates(dashboardState.updates);
         if (dashboardState.helmUpdates) renderHelmUpdates(dashboardState.helmUpdates);
       }
@@ -683,10 +682,7 @@
         try {
           const path = force ? '/api/renovate?force=1' : '/api/renovate';
           renderRenovateStatus(await request(path, 'GET'));
-          if (force) {
-            const activeRun = dashboardState.renovate && dashboardState.renovate.activeRun;
-            setRenovateMsg(activeRun ? 'Renovate workflow is running.' : 'Renovate status refreshed.');
-          }
+          if (force && dashboardState.renovate && dashboardState.renovate.activeRun) setRenovateMsg('Renovate running.');
         } catch (err) {
           renderRenovateStatus({ configured: false, error: err.message });
           if (force) setRenovateMsg(err.message, true);
@@ -695,10 +691,10 @@
 
       async function runRenovate() {
         setBtnLoading(renovateRunBtn, true);
-        setRenovateMsg('Dispatching Renovate workflow...');
+        setRenovateMsg('Starting Renovate…');
         try {
           const payload = await request('/api/renovate/run', 'POST', {});
-          setRenovateMsg(payload.message || 'Renovate workflow dispatched.');
+          setRenovateMsg(payload.message || 'Renovate started.');
           await loadRenovateStatus({ force: true });
           setTimeout(() => {
             loadRenovateStatus({ force: true }).catch(() => {});
@@ -714,26 +710,27 @@
       async function runRenovateScan(label) {
         const targetLabel = String(label || '').trim();
         if (targetLabel) {
-          setRenovateMsg('Dispatching Renovate workflow for ' + targetLabel + '...');
+          setRenovateMsg('Starting Renovate for ' + targetLabel + '…');
         }
         await runRenovate();
       }
 
+      // One stat tile. State shows as a lamp beside the label; the figure stays
+      // ink, and a meter appears only when the value is a share of a whole.
       function overviewSegment(label, value, subtitle, options) {
-        const eyebrow = options && options.eyebrow ? '<span class="overview-eyebrow">' + options.eyebrow + '</span>' : '';
-        // The bar means "share of a whole". State tiles pass no barPct and get no bar.
-        const hasBar = options && options.barPct !== undefined && options.barPct !== null;
-        const barPct = hasBar ? Math.max(0, Math.min(100, Number(options.barPct) || 0)) : 0;
-        const tone = options && options.tone ? options.tone : 'neutral';
-        const href = options && options.href ? escapeHtml(options.href) : '';
+        const o = options || {};
+        const hasBar = o.barPct !== undefined && o.barPct !== null;
+        const barPct = hasBar ? Math.max(0, Math.min(100, Number(o.barPct) || 0)) : 0;
+        const href = o.href ? escapeHtml(o.href) : '';
+        const tag = href ? 'a' : 'section';
         return (
-          (href ? '<a class="overview-segment" href="' + href + '" data-tone="' + tone + '">' : '<section class="overview-segment" data-tone="' + tone + '">') +
-            '<div class="overview-segment-head"><span class="overview-label">' + label + '</span>' + eyebrow + '</div>' +
-            '<div class="overview-value">' + value + '</div>' +
-            (options && options.series ? '<div class="overview-spark">' + window.Pulse.sparkline(options.series, { dot: true }) + '</div>' : '') +
-            '<div class="overview-subtitle">' + subtitle + '</div>' +
-            (hasBar ? '<div class="overview-meter"><span class="overview-meter-fill ' + tone + '" style="width:' + barPct.toFixed(1) + '%"></span></div>' : '') +
-          (href ? '</a>' : '</section>')
+          '<' + tag + ' class="tile panel"' + (href ? ' href="' + href + '"' : '') + ' data-tone="' + (o.tone || 'neutral') + '">' +
+            '<div class="tile-label"><span>' + label + '</span>' + (href ? '<svg class="tile-arrow" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg>' : '') + '</div>' +
+            '<div class="tile-value" data-roll="' + attrText(value) + '">' + value + '</div>' +
+            (o.series ? '<div class="tile-spark">' + window.Pulse.sparkline(o.series, { dot: true, label: label + ', 24 hours' }) + '</div>' : '') +
+            (subtitle ? '<div class="tile-sub">' + subtitle + '</div>' : '') +
+            (hasBar ? '<div class="tile-meter"><span style="width:' + barPct.toFixed(1) + '%"></span></div>' : '') +
+          '</' + tag + '>'
         );
       }
 
@@ -752,19 +749,19 @@
       }
 
       function travelStatusPill(state) {
-        return '<span class="travel-state-pill ' + escapeHtml(travelTone(state)) + '">' + escapeHtml(travelStateLabel(state)) + '</span>';
+        const tone = { status: 'ok', warning: 'warning', danger: 'danger' }[travelTone(state)] || 'neutral';
+        return '<span class="pill" data-tone="' + tone + '">' + escapeHtml(travelStateLabel(state)) + '</span>';
       }
 
-      // Targets inside a bundle: a quiet tick when ready, a full pill only when something deviates.
+      // Targets inside a bundle: a quiet lamp when ready, a pill only when something deviates.
       function travelTargetMark(state) {
         if (String(state || '').toLowerCase() === 'ready') {
-          return '<span class="travel-state-mark status" title="ready" aria-label="ready"></span>';
+          return '<span class="lamp status" title="ready" aria-label="ready"></span>';
         }
         return travelStatusPill(state);
       }
 
-      // The three things worth seeing on landing: what is public, what wants
-      // updating, and what was last touched.
+      // What wants updating, what is public, and what was last touched.
       function renderOverviewDigest(services, updateItems, helmUpdateItems) {
         if (!overviewDigestEl) return;
         const activeServices = services.filter((svc) => svc.enabled);
@@ -775,41 +772,38 @@
           name: item.name || item.release || item.id || 'release',
           detail: 'chart ' + (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
         })));
-        const audit = (dashboardState.audit || []).slice(0, 5);
+        const audit = (dashboardState.audit || []).slice(0, 6);
 
         function list(items, empty) {
-          if (!items.length) return '<p class="support-copy">' + escapeHtml(empty) + '</p>';
-          return '<ul class="digest-list">' + items.map((item) =>
-            '<li class="digest-item">' +
-              (item.href ? '<a href="' + escapeHtml(item.href) + '" target="_blank" rel="noreferrer">' + escapeHtml(item.name) + '</a>' : '<span>' + escapeHtml(item.name) + '</span>') +
-              '<span class="digest-detail">' + escapeHtml(item.detail) + '</span>' +
+          if (!items.length) return '<p class="empty-line">' + escapeHtml(empty) + '</p>';
+          return '<ul class="rows">' + items.map((item) =>
+            '<li class="row"' + (item.title ? ' title="' + attrText(item.title) + '"' : '') + '>' +
+              (item.href ? '<a class="row-main" href="' + escapeHtml(item.href) + '" target="_blank" rel="noreferrer">' + escapeHtml(item.name) + '</a>' : '<span class="row-main">' + escapeHtml(item.name) + '</span>') +
+              '<span class="row-sub">' + escapeHtml(item.detail) + '</span>' +
             '</li>'
           ).join('') + '</ul>';
         }
 
+        function card(title, href, body) {
+          return '<article class="card panel"><div class="card-head"><h2 class="eyebrow">' + title + '</h2>' +
+            '<a class="link" href="' + href + '" aria-label="Open ' + title.toLowerCase() + '"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>' + body + '</article>';
+        }
+
         overviewDigestEl.innerHTML =
-          '<article class="support-card digest-card">' +
-            '<div class="digest-head"><div class="support-card-title">Pending updates</div><a class="digest-link" href="#updates">View all ↗</a></div>' +
-            list(pending.slice(0, 6), dashboardState.updates && dashboardState.helmUpdates ? 'Up to date.' : 'Reports unavailable.') +
-          '</article>' +
-          '<article class="support-card digest-card' + (activeServices.length ? ' is-hot' : '') + '">' +
-            '<div class="digest-head"><div class="support-card-title">Public shares</div><a class="digest-link" href="#exposure">Manage ↗</a></div>' +
-            list(activeServices.map((svc) => ({
-              name: svc.publicHost || svc.name || svc.id,
-              href: svc.publicUrl,
-              detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
-            })), 'No active shares.') +
-          '</article>' +
-          '<article class="support-card digest-card">' +
-            '<div class="digest-head"><div class="support-card-title">Recent activity</div><a class="digest-link" href="#audit">View log ↗</a></div>' +
-            list(audit.map((entry) => ({
-              name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
-              detail: fmtDateTime(entry.ts),
-            })), 'No recent activity.') +
-          '</article>';
+          card('Updates', '#updates', list(pending.slice(0, 7), dashboardState.updates && dashboardState.helmUpdates ? 'Up to date' : 'Unavailable')) +
+          card('Shares', '#exposure', list(activeServices.map((svc) => ({
+            name: svc.publicHost || svc.name || svc.id,
+            href: svc.publicUrl,
+            detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
+          })), 'All private')) +
+          card('Activity', '#audit', list(audit.map((entry) => ({
+            name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
+            detail: fmtAgo(entry.ts),
+            title: fmtDateTime(entry.ts),
+          })), 'Nothing yet'));
       }
 
-      // Compact posture line under the sidebar nav, visible from every page.
+      // Compact posture under the sidebar nav, visible from every page.
       function renderNavHealth(state) {
         const el = document.getElementById('navHealth');
         if (!el) return;
@@ -817,13 +811,58 @@
           return '<div class="nav-health-row' + (tone ? ' ' + tone : '') + '"><span>' + label + '</span><span>' + escapeHtml(String(value)) + '</span></div>';
         }
         el.innerHTML =
-          row('Transmission', state.route, state.route === 'unknown' ? 'warning' : '') +
-          row('Remote access', state.travel, state.travel === 'ready' ? '' : 'warning');
+          row('route', state.route, state.route === 'unknown' ? 'warning' : '') +
+          row('travel', state.travel, state.travel === 'ready' ? '' : 'warning');
         for (const [page, count] of [['exposure', state.shares], ['updates', state.updates]]) {
           const badge = document.querySelector('[data-nav-count="' + page + '"]');
           badge.textContent = String(count);
           badge.hidden = !count;
         }
+      }
+
+      let heroField = null;
+      let vitalsAt = 0;
+
+      function primarySeries(name) {
+        const primary = pulseMetric('node_role')?.series?.find((series) => series.labels.role === 'control-plane')?.labels.node || 'talos-7nf-osf';
+        return pulseMetric(name)?.series?.find((series) => series.labels.node === primary);
+      }
+
+      // Four live readings under the hero. The trace behind the headline beats
+      // with CPU load and goes flat when the reading is missing.
+      function renderVitals() {
+        const P = window.Pulse;
+        const cpu = primarySeries('node_cpu');
+        const cells = [
+          ['CPU', cpu, P.fmt.pct],
+          ['Memory', primarySeries('node_mem'), P.fmt.pct],
+          ['Power', pulseMetric('cluster_watts')?.series?.[0], P.fmt.watts],
+          ['Restarts', pulseMetric('restarts_1h')?.series?.[0], (value) => P.number(value, 0)],
+        ];
+        document.getElementById('overviewVitals').innerHTML = cells.map(([label, series, format]) => {
+          const history = P.values(series);
+          const value = format(P.last(series));
+          return '<a class="vital" href="#pulse" aria-label="' + label + ' ' + attrText(value) + '"><span class="eyebrow">' + label + '</span>' +
+            '<span class="vital-value" data-roll="' + attrText(value) + '">' + value + '</span>' +
+            '<span class="vital-spark">' + (history.some(P.numeric) ? P.sparkline(history, { dot: true, label: label + ', 24 hours' }) : '') + '</span></a>';
+        }).join('');
+        const load = P.last(cpu);
+        heroField?.setVitals({ load, live: P.numeric(load) });
+      }
+
+      // The overview reads a small slice of Pulse telemetry; the server caches
+      // each named query for 30 seconds, so faster repeats would add nothing.
+      async function loadVitals(force) {
+        if (!force && Date.now() - vitalsAt < 30000) return;
+        vitalsAt = Date.now();
+        try {
+          const snapshot = await window.Pulse.fetch(['node_cpu', 'node_mem', 'cluster_watts', 'restarts_1h', 'node_role', 'node_ready'], '24h');
+          for (const [name, metric] of Object.entries(snapshot.metrics)) dashboardState.metrics[name + '|24h'] = metric;
+        } catch {
+          vitalsAt = 0;
+        }
+        renderVitals();
+        if (hasLoadedDashboard) renderOverview();
       }
 
       function renderOverview() {
@@ -852,38 +891,40 @@
         const reportsAvailable = Boolean(updates && helmUpdates);
         const updateDetail = reportsAvailable
           ? updatesAvailable + ' image' + (updatesAvailable === 1 ? '' : 's') + ' · ' + helmUpdatesAvailable + ' chart' + (helmUpdatesAvailable === 1 ? '' : 's')
-          : 'Report incomplete';
+          : 'report incomplete';
         overviewStripEl.innerHTML =
           overviewSegment('Updates', reportsAvailable ? String(updateCount) : (updateCount ? updateCount + '+' : '—'), updateDetail, {
             href: '#updates', tone: updateCount || !reportsAvailable ? 'warning' : 'status',
           }) +
-          overviewSegment('Active shares', String(activeExposures), activeExposures ? 'Public links open' : 'All links private', {
+          overviewSegment('Shares', String(activeExposures), activeExposures ? 'public now' : 'all private', {
             href: '#exposure', tone: activeExposures > 0 ? 'warning' : 'status',
           }) +
-          overviewSegment('Resource changes', hasApplyPreview ? String(selectedNow) : '—', hasApplyPreview ? 'Proposed PR changes' : 'Preview unavailable', {
+          overviewSegment('Tuning', hasApplyPreview ? String(selectedNow) : '—', hasApplyPreview ? 'proposed changes' : 'preview unavailable', {
             href: '#tuning', tone: hardFitOk ? 'status' : 'warning',
           });
 
-        function posture(label, value, href, tone, detail) {
-          return '<a class="posture-item" href="' + href + '" data-tone="' + tone + '" title="' + attrText(detail) + '"><span class="posture-label">' + label + '</span><span class="posture-value">' + escapeHtml(value) + '</span></a>';
+        const nodes = pulseMetric('node_ready')?.series || [];
+        const nodesReady = nodes.filter((series) => window.Pulse.last(series) === 1).length;
+        const travelChipTone = travelState === 'ready' ? 'status' : travelTone(travelState) === 'danger' ? 'danger' : 'warning';
+        function chip(label, value, href, tone, detail) {
+          return '<a class="chip" href="' + href + '" data-tone="' + tone + '" title="' + attrText(detail) + '">' + label + ' <strong>' + escapeHtml(value) + '</strong></a>';
         }
         document.getElementById('overviewPosture').innerHTML =
-          posture('Travel', travelState, '#travel', travelTone(travelState), travelHeadline) +
-          posture('Transmission', runningMode, '#transmission', runningMode === 'unknown' ? 'warning' : 'status', 'Desired route: ' + desiredMode) +
-          posture('Advisor', fetchState === 'live' ? 'Connected' : 'Unavailable', '#tuning', fetchState === 'live' ? 'status' : 'warning', fetchDetail) +
-          '<a class="posture-item posture-telemetry" href="#pulse"><span class="posture-value">Cluster telemetry ↗</span></a>';
+          (nodes.length ? chip('Nodes', nodesReady + '/' + nodes.length, '#pulse', nodesReady === nodes.length ? 'status' : 'danger', 'Kubernetes nodes ready') : '') +
+          chip('Travel', travelState, '#travel', travelChipTone, travelHeadline) +
+          chip('Route', runningMode, '#transmission', runningMode === 'unknown' ? 'warning' : 'status', 'Transmission · desired ' + desiredMode) +
+          chip('Advisor', fetchState === 'live' ? 'live' : 'offline', '#tuning', fetchState === 'live' ? 'status' : 'warning', fetchDetail);
+
+        // The headline counts states that need a look; the chips say which.
+        const attention = [nodes.length && nodesReady !== nodes.length, travelState !== 'ready', runningMode === 'unknown', fetchState !== 'live'].filter(Boolean).length;
+        document.getElementById('overviewHeadline').textContent = attention ? attention + ' to check' : 'All clear';
 
         const meta = [];
-        if (tuning && tuning.fetch) {
-          meta.push('<span>advisor run ' + fmtDateTime(tuning.fetch.lastRunAt) + '</span>');
-          meta.push('<span>advisor mode ' + (tuning.fetch.mode || 'n/a') + '</span>');
-        }
-        if (updates && updates.checkedAt) meta.push('<span>images checked ' + fmtDateTime(updates.checkedAt) + '</span>');
-        if (helmUpdates && helmUpdates.checkedAt) meta.push('<span>charts checked ' + fmtDateTime(helmUpdates.checkedAt) + '</span>');
-        if (vpn) meta.push('<span>transmission desired ' + desiredMode + '</span>');
-        if (travel && travel.checkedAt) meta.push('<span>travel checked ' + fmtDateTime(travel.checkedAt) + '</span>');
+        if (tuning && tuning.fetch) meta.push('<span>advisor ' + fmtAgo(tuning.fetch.lastRunAt) + ' · ' + escapeHtml(tuning.fetch.mode || 'n/a') + '</span>');
+        if (updates && updates.checkedAt) meta.push('<span>images ' + fmtAgo(updates.checkedAt) + '</span>');
+        if (helmUpdates && helmUpdates.checkedAt) meta.push('<span>charts ' + fmtAgo(helmUpdates.checkedAt) + '</span>');
+        if (travel && travel.checkedAt) meta.push('<span>travel ' + fmtAgo(travel.checkedAt) + '</span>');
         overviewMetaEl.innerHTML = meta.join('');
-        overviewDetailEl.textContent = fetchDetail;
         renderOverviewDigest(services, updateItems, helmUpdateItems);
         renderNavHealth({
           shares: activeExposures,
@@ -891,16 +932,15 @@
           route: desiredMode,
           travel: travelState,
         });
-        exposureMetaEl.textContent = activeExposures + ' active share' + (activeExposures === 1 ? '' : 's');
-        vpnSectionMetaEl.textContent = vpn ? ('desired ' + desiredMode + ' · running ' + runningMode) : 'status unavailable';
-        auditMetaEl.textContent = (dashboardState.audit || []).length + ' recent entries';
+        exposureMetaEl.textContent = activeExposures + ' public';
+        auditMetaEl.textContent = String((dashboardState.audit || []).length);
       }
 
       function jobTone(status) {
         const value = String(status || '').toLowerCase();
         if (value === 'succeeded') return 'ok';
         if (value === 'running') return 'warning';
-        if (value === 'failed') return 'excluded';
+        if (value === 'failed') return 'danger';
         return 'neutral';
       }
 
@@ -912,36 +952,27 @@
         const failedRuns = items.reduce((sum, item) => sum + (Array.isArray(item.recentRuns) ? item.recentRuns.filter((run) => run.status === 'failed').length : 0), 0);
         const running = Number(summary.running || 0);
         const suspended = Number(summary.suspended || 0);
+        const total = Number(summary.total || items.length);
+        const found = Number(summary.found || 0);
+        // A refresh after Save or Run must not fold the card being worked on.
+        const openJobs = new Set(Array.from(jobsListEl.querySelectorAll('.job-details[open]'), (node) => node.closest('[data-job-card]')?.dataset.jobCard));
 
         dashboardState.jobs = data;
-        jobsSummaryEl.textContent = String(summary.found || 0) + '/' + String(summary.total || items.length) + ' managed job' + ((summary.total || items.length) === 1 ? '' : 's') + ' found';
+        jobsSummaryEl.textContent = 'checked ' + fmtAgo(data.checkedAt);
         jobsOverviewStripEl.innerHTML =
-          overviewSegment('managed jobs', String(summary.total || items.length), String(summary.found || 0) + ' found in cluster', {
-            eyebrow: 'inventory',
-            barPct: summary.total ? Number(summary.found || 0) / Number(summary.total || 1) * 100 : 0,
-            tone: Number(summary.found || 0) === Number(summary.total || 0) ? 'status' : 'danger',
+          overviewSegment('Jobs', String(total), found + ' in cluster', {
+            barPct: total ? found / total * 100 : 0,
+            tone: found === total ? 'status' : 'danger',
           }) +
-          overviewSegment('active runs', String(running), 'Running now', {
-            eyebrow: 'runtime',
-            tone: running ? 'warning' : 'status',
-          }) +
-          overviewSegment('suspended', String(suspended), 'Paused schedules', {
-            eyebrow: 'configuration',
-            barPct: items.length ? suspended / items.length * 100 : 0,
-            tone: suspended ? 'warning' : 'status',
-          }) +
-          overviewSegment('recent failures', String(failedRuns), String(totalRuns) + ' recent run' + (totalRuns === 1 ? '' : 's') + ' loaded', {
-            eyebrow: 'logs',
+          overviewSegment('Running', String(running), 'now', { tone: running ? 'warning' : 'neutral' }) +
+          overviewSegment('Suspended', String(suspended), 'paused', { tone: suspended ? 'warning' : 'neutral' }) +
+          overviewSegment('Failures', String(failedRuns), 'of ' + totalRuns + ' recent', {
             barPct: totalRuns ? failedRuns / totalRuns * 100 : 0,
             tone: failedRuns ? 'danger' : 'status',
           });
-        jobsOverviewMetaEl.innerHTML =
-          '<span>checked ' + fmtDateTime(data.checkedAt) + '</span>' +
-          '<span>' + String(totalRuns) + ' run log tail' + (totalRuns === 1 ? '' : 's') + '</span>';
-        jobsOverviewDetailEl.textContent = items.length ? '' : 'no managed jobs configured';
 
         if (!items.length) {
-          jobsListEl.innerHTML = '<div class="empty-state">No managed jobs configured.</div>';
+          jobsListEl.innerHTML = '<div class="empty-state">No jobs.</div>';
           return;
         }
 
@@ -949,47 +980,49 @@
           const status = job.status || {};
           const runs = Array.isArray(job.recentRuns) ? job.recentRuns : [];
           const latest = runs[0] || null;
-          const scheduleValue = escapeHtml(status.schedule || '');
-          const timeZoneValue = escapeHtml(status.timeZone || '');
+          const id = escapeHtml(job.id);
+          const recent = runs.slice(0, 12);
           const runRows = runs.length
             ? runs.map((run) =>
               '<tr>' +
-                '<td><div class="svc-name">' + escapeHtml(run.name || 'run') + '</div><div class="svc-id">' + escapeHtml((run.podNames || []).join(', ') || 'no pod yet') + '</div></td>' +
-                '<td><span class="stat-pill ' + jobTone(run.status) + '"><strong>' + escapeHtml(run.status || 'unknown') + '</strong></span></td>' +
+                '<td><div class="svc-name">' + escapeHtml(run.name || 'run') + '</div><div class="svc-id">' + escapeHtml((run.podNames || []).join(', ') || 'no pod') + '</div></td>' +
+                '<td><span class="pill" data-tone="' + jobTone(run.status) + '">' + escapeHtml(run.status || 'unknown') + '</span></td>' +
                 '<td>' + fmtDateTime(run.startedAt) + '</td>' +
-                '<td>' + (run.completedAt ? fmtDateTime(run.completedAt) : 'n/a') + '</td>' +
-                '<td>' + (run.durationSeconds == null ? 'n/a' : String(run.durationSeconds) + 's') + '</td>' +
-                '<td><button class="updates-action-btn" type="button" data-job-log="' + escapeHtml(job.id) + '" data-job-run="' + escapeHtml(run.name || '') + '">Logs</button></td>' +
+                '<td>' + (run.durationSeconds == null ? '—' : String(run.durationSeconds) + 's') + '</td>' +
+                '<td class="updates-action-cell"><button class="updates-action-btn" type="button" data-job-log="' + id + '" data-job-run="' + escapeHtml(run.name || '') + '">Logs</button></td>' +
               '</tr>'
             ).join('')
-            : '<tr><td colspan="6" class="empty-state">No recent runs found.</td></tr>';
-          const logText = latest && latest.logs ? escapeHtml(latest.logs) : 'No logs loaded for the latest run.';
+            : '<tr><td colspan="5" class="empty-state">No runs.</td></tr>';
           return (
-            '<article class="job-card" data-job-card="' + escapeHtml(job.id) + '">' +
-              '<div class="job-card-head">' +
-                '<div><div class="job-title">' + escapeHtml(job.title || job.id) + '</div><div class="job-meta">' + escapeHtml(job.namespace || '') + '/' + escapeHtml(job.cronJob || '') + '</div></div>' +
-                '<div class="job-status-cluster">' +
-                  (!job.found ? '<span class="stat-pill excluded"><strong>Missing</strong></span>' : '') +
-                  '<span class="stat-pill ' + (status.suspend ? 'guarded' : 'ok') + '"><strong>' + (status.suspend ? 'suspended' : 'scheduled') + '</strong></span>' +
+            '<article class="job-card panel" data-job-card="' + id + '">' +
+              '<div class="job-head">' +
+                '<div><h3 class="card-title">' + escapeHtml(job.title || job.id) + '</h3><div class="meta-line">' + escapeHtml(job.namespace || '') + '/' + escapeHtml(job.cronJob || '') + '</div></div>' +
+                '<div class="job-status">' +
+                  (!job.found ? '<span class="pill" data-tone="danger">missing</span>' : '') +
+                  '<span class="pill" data-tone="' + (status.suspend ? 'warning' : 'ok') + '">' + (status.suspend ? 'suspended' : 'scheduled') + '</span>' +
                 '</div>' +
               '</div>' +
-              '<div class="job-brief"><span class="job-schedule">' + escapeHtml(status.schedule || 'No schedule') + ' <span class="muted">' + escapeHtml(status.timeZone || '') + '</span></span><span class="muted">' + (latest ? escapeHtml(latest.status || 'Unknown') + ' · ' + fmtDateTime(latest.startedAt) : 'No recent runs') + '</span><button type="button" data-job-run="' + escapeHtml(job.id) + '">Run now</button></div>' +
-              '<details class="job-details"><summary>Schedule &amp; history</summary>' +
-              '<div class="job-config-grid">' +
-                '<label><span>schedule</span><input class="job-input" data-job-schedule="' + escapeHtml(job.id) + '" type="text" value="' + scheduleValue + '" /></label>' +
-                '<label><span>timezone</span><input class="job-input" data-job-timezone="' + escapeHtml(job.id) + '" type="text" value="' + timeZoneValue + '" /></label>' +
-                '<label class="job-checkbox"><input data-job-suspend="' + escapeHtml(job.id) + '" type="checkbox" ' + (status.suspend ? 'checked' : '') + ' /><span>suspend</span></label>' +
-                '<div class="job-actions">' +
-                  '<button type="button" data-job-save="' + escapeHtml(job.id) + '">Save config</button>' +
+              '<div class="job-brief">' +
+                '<span>' + escapeHtml(status.schedule || 'no schedule') + ' <span class="muted">' + escapeHtml(status.timeZone || '') + '</span></span>' +
+                (recent.length ? '<span class="run-dots" role="img" aria-label="' + attrText('Recent runs, oldest first: ' + recent.map((run) => run.status || 'unknown').reverse().join(', ')) + '">' + recent.map((run) => '<i data-status="' + escapeHtml(run.status || 'unknown') + '"></i>').join('') + '</span>' : '') +
+                '<span class="muted">' + (latest ? escapeHtml(latest.status || 'unknown') + ' · ' + fmtAgo(latest.startedAt) : 'no runs') + '</span>' +
+                '<button type="button" data-job-run="' + id + '">Run</button>' +
+              '</div>' +
+              '<details class="job-details"' + (openJobs.has(job.id) ? ' open' : '') + '><summary>Schedule &amp; history</summary>' +
+                '<div class="job-config-grid">' +
+                  '<label><span class="eyebrow">Schedule</span><input class="job-input" data-job-schedule="' + id + '" type="text" value="' + escapeHtml(status.schedule || '') + '" /></label>' +
+                  '<label><span class="eyebrow">Timezone</span><input class="job-input" data-job-timezone="' + id + '" type="text" value="' + escapeHtml(status.timeZone || '') + '" /></label>' +
+                  '<label class="check-chip"><input data-job-suspend="' + id + '" type="checkbox" ' + (status.suspend ? 'checked' : '') + ' /><span>Suspend</span></label>' +
+                  '<button type="button" data-job-save="' + id + '">Save</button>' +
                 '</div>' +
-              '</div>' +
-              '<div class="job-runtime-line">' +
-                '<span>last schedule ' + fmtDateTime(status.lastScheduleTime) + '</span>' +
-                '<span>last success ' + fmtDateTime(status.lastSuccessfulTime) + '</span>' +
-                '<span>policy ' + escapeHtml(status.concurrencyPolicy || 'Allow') + '</span>' +
-              '</div>' +
-              '<div class="table-shell job-runs-shell"><table><thead><tr><th>run</th><th>status</th><th>started</th><th>completed</th><th>duration</th><th>logs</th></tr></thead><tbody>' + runRows + '</tbody></table></div>' +
-              '<div class="terminal-shell job-log-shell"><pre data-job-log-output="' + escapeHtml(job.id) + '">' + logText + '</pre></div></details>' +
+                '<div class="meta-line">' +
+                  '<span>scheduled ' + fmtAgo(status.lastScheduleTime) + '</span>' +
+                  '<span>succeeded ' + fmtAgo(status.lastSuccessfulTime) + '</span>' +
+                  '<span>policy ' + escapeHtml(status.concurrencyPolicy || 'Allow') + '</span>' +
+                '</div>' +
+                '<div class="table-shell job-runs-shell"><table><thead><tr><th>Run</th><th>State</th><th>Started</th><th>Duration</th><th><span class="sr-only">Logs</span></th></tr></thead><tbody>' + runRows + '</tbody></table></div>' +
+                '<div class="job-log-shell"><pre data-job-log-output="' + id + '">' + (latest && latest.logs ? escapeHtml(latest.logs) : 'No logs.') + '</pre></div>' +
+              '</details>' +
             '</article>'
           );
         }).join('');
@@ -997,16 +1030,11 @@
 
       async function loadJobs(options) {
         const force = Boolean(options && options.force);
-        if (force) {
-          setBtnLoading(jobsRefreshBtn, true);
-          setJobsMsg('Refreshing…');
-        }
+        if (force) setBtnLoading(jobsRefreshBtn, true);
         try {
-          const payload = await request('/api/jobs', 'GET');
-          renderJobs(payload);
-          if (force) setJobsMsg('Refreshed.');
+          renderJobs(await request('/api/jobs', 'GET'));
         } catch (err) {
-          jobsSummaryEl.textContent = 'Managed jobs unavailable';
+          jobsSummaryEl.textContent = 'unavailable';
           jobsListEl.innerHTML = '<div class="empty-state">' + escapeHtml(err.message) + '</div>';
           setJobsMsg(err.message, true);
         } finally {
@@ -1094,42 +1122,39 @@
         dashboardState.siteDeployments = data;
         const readyCount = items.filter((item) => item && item.ready).length;
         const errorCount = items.filter((item) => item && item.errors && item.errors.length).length;
-        siteDeploySummaryEl.textContent = String(items.length) + ' target' + (items.length === 1 ? '' : 's') + ' · ' + String(readyCount) + ' ready';
+        siteDeploySummaryEl.textContent = 'checked ' + fmtTime(data.checkedAt);
         siteDeployOverviewStripEl.innerHTML =
-          overviewSegment('targets', String(items.length), 'Tracked sites', { eyebrow: 'static deploys' }) +
-          overviewSegment('ready', String(readyCount), 'Flux ready', { eyebrow: 'runtime state', barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
-          overviewSegment('errors', String(errorCount), errorCount ? 'Check required' : 'None reported', { eyebrow: 'api inventory' }) +
-          overviewSegment('checked', fmtTime(data.checkedAt), 'Last refresh', { eyebrow: 'snapshot' });
+          overviewSegment('Sites', String(items.length), 'tracked') +
+          overviewSegment('Ready', String(readyCount), 'of ' + items.length, { barPct: items.length ? readyCount / items.length * 100 : 0, tone: readyCount === items.length ? 'status' : 'warning' }) +
+          overviewSegment('Errors', String(errorCount), errorCount ? 'check required' : 'none', { tone: errorCount ? 'danger' : 'status' });
 
         if (!items.length) {
-          siteDeployListEl.innerHTML = '<div class="empty-state">No site deploy targets configured.</div>';
+          siteDeployListEl.innerHTML = '<div class="empty-state">No sites.</div>';
           syncSiteDeploymentActivity();
           return;
         }
         siteDeployListEl.innerHTML = items.map((item) => {
           const ready = item.ready;
-          const latest = item.latestTag || 'n/a';
-          const current = item.currentTag || 'n/a';
-          const link = item.url ? '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">Open site <span aria-hidden="true">↗</span></a>' : '<span class="muted">Cluster-internal</span>';
+          const link = item.url ? '<a class="link" href="' + escapeHtml(item.url) + '" target="_blank" rel="noreferrer">Open<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '<span class="muted">internal</span>';
           const errorText = item.errors && item.errors.length ? '<div class="site-deploy-errors">' + escapeHtml(item.errors.join(' · ')) + '</div>' : '';
           const readyDetail = 'Kustomization: ' + conditionLabel(item.kustomizationReady) + ' · Helm: ' + conditionLabel(item.helmReleaseReady);
           return (
-            '<article class="support-card site-deploy-card" data-site-id="' + attrText(item.id) + '">' +
-              '<div class="site-deploy-card-head">' +
-                '<h4 class="site-deploy-name">' + escapeHtml(item.title || item.id) + '</h4>' +
-                '<span class="status-chip ' + (ready ? 'ok' : 'warning') + '">' + (ready ? 'ready' : 'check') + '</span>' +
+            '<article class="card panel site-deploy-card" data-site-id="' + attrText(item.id) + '">' +
+              '<div class="card-head">' +
+                '<h3 class="card-title">' + escapeHtml(item.title || item.id) + '</h3>' +
+                '<span class="pill" data-tone="' + (ready ? 'ok' : 'warning') + '" title="' + attrText(readyDetail) + '">' + (ready ? 'ready' : 'check') + '</span>' +
               '</div>' +
               '<div class="site-deploy-versions">' +
-                deployTag('current', current) +
-                deployTag('policy', latest) +
+                deployTag('current', item.currentTag || 'n/a') +
+                deployTag('policy', item.latestTag || 'n/a') +
               '</div>' +
               '<div class="site-deploy-meta">' +
-                '<span title="' + attrText(fmtDateTime(item.lastScanTime)) + '">Scanned ' + escapeHtml(fmtTime(item.lastScanTime)) + '</span>' +
-                '<span title="' + attrText(readyDetail) + '">' + (ready ? 'Flux ready' : escapeHtml(readyDetail)) + '</span>' +
+                '<span title="' + attrText(fmtDateTime(item.lastScanTime)) + '">scanned ' + escapeHtml(fmtTime(item.lastScanTime)) + '</span>' +
+                (ready ? '' : '<span>' + escapeHtml(readyDetail) + '</span>') +
               '</div>' +
               '<div class="deploy-progress" role="status" aria-live="polite"></div>' +
               errorText +
-              '<div class="site-deploy-actions">' +
+              '<div class="card-foot">' +
                 link +
                 '<button type="button" data-site-deploy-run="' + attrText(item.id) + '">Deploy</button>' +
               '</div>' +
@@ -1147,12 +1172,12 @@
         const hasPendingOperation = () => Array.from(siteDeployOperations.values()).some((operation) => operation.pending);
         if (force) {
           setBtnLoading(siteDeployRefreshBtn, true);
-          if (!hasPendingOperation()) setSiteDeployMsg('Refreshing deploy targets...');
+          if (!hasPendingOperation()) setSiteDeployMsg('Refreshing…');
         }
         try {
           const payload = await request('/api/site-deployments', 'GET');
           renderSiteDeployments(payload);
-          if (force && !hasPendingOperation()) setSiteDeployMsg('Deploy targets refreshed.');
+          if (force && !hasPendingOperation()) setSiteDeployMsg('');
         } catch (err) {
           siteDeploySummaryEl.textContent = 'Deploy snapshot unavailable';
           // Keep existing controls and any in-flight operation visible on a failed refresh.
@@ -1170,14 +1195,14 @@
         const restoreFocus = document.activeElement === button;
         const operation = beginSiteDeployment(siteId);
         if (!operation) return;
-        setSiteDeployMsg('Reconciling ' + siteId + ' through Flux image automation…');
+        setSiteDeployMsg('Reconciling ' + siteId + '…');
         try {
           const payload = await request('/api/site-deployments/' + encodeURIComponent(siteId) + '/run', 'POST', {});
           const handled = (payload.steps || []).filter((step) => step.handled).length;
           const total = (payload.steps || []).length;
-          const acknowledgment = handled + '/' + total + ' controllers acknowledged the request. Readiness is shown separately.';
+          const acknowledgment = handled + '/' + total + ' controllers acknowledged.';
           finishSiteDeployment(operation, false, acknowledgment);
-          setSiteDeployMsg('Reconcile requested for ' + siteId + '. ' + acknowledgment);
+          setSiteDeployMsg(siteId + ' · ' + acknowledgment);
           await loadSiteDeployments();
         } catch (err) {
           finishSiteDeployment(operation, true, err.message);
@@ -1192,15 +1217,15 @@
       async function runAllSiteDeployments(button) {
         const operation = beginSiteDeployment('*');
         if (!operation) return;
-        setSiteDeployMsg('Reconciling all sites through Flux image automation…');
+        setSiteDeployMsg('Reconciling all…');
         try {
           const payload = await request('/api/site-deployments/run', 'POST', {});
           const steps = (payload.results || []).flatMap((result) => result.steps || []);
           const handled = steps.filter((step) => step.handled).length;
           const total = steps.length;
-          const acknowledgment = handled + '/' + total + ' controllers acknowledged the request. Readiness is shown separately.';
+          const acknowledgment = handled + '/' + total + ' controllers acknowledged.';
           finishSiteDeployment(operation, false, acknowledgment);
-          setSiteDeployMsg('Reconcile requested for all sites. ' + acknowledgment);
+          setSiteDeployMsg('all · ' + acknowledgment);
           await loadSiteDeployments();
         } catch (err) {
           finishSiteDeployment(operation, true, err.message);
@@ -1213,14 +1238,14 @@
         const timeZoneEl = jobsListEl.querySelector('[data-job-timezone="' + CSS.escape(jobId) + '"]');
         const suspendEl = jobsListEl.querySelector('[data-job-suspend="' + CSS.escape(jobId) + '"]');
         setBtnLoading(button, true);
-        setJobsMsg('Saving ' + jobId + '...');
+        setJobsMsg('Saving ' + jobId + '…');
         try {
           const payload = await request('/api/jobs/' + encodeURIComponent(jobId), 'PATCH', {
             schedule: scheduleEl ? scheduleEl.value : undefined,
             timeZone: timeZoneEl ? timeZoneEl.value : undefined,
             suspend: suspendEl ? suspendEl.checked : false,
           });
-          setJobsMsg(payload.gitops && payload.gitops.changed ? 'Committed ' + jobId + ' config and requested Flux reconcile.' : 'No config change for ' + jobId + '.');
+          setJobsMsg(payload.gitops && payload.gitops.changed ? 'Saved ' + jobId + '.' : 'No change.');
           await loadJobs();
         } catch (err) {
           setJobsMsg(err.message, true);
@@ -1232,10 +1257,10 @@
       async function runJobNow(jobId, button) {
         if (!confirm('Run ' + jobId + ' now?')) return;
         setBtnLoading(button, true);
-        setJobsMsg('Creating manual run for ' + jobId + '...');
+        setJobsMsg('Starting ' + jobId + '…');
         try {
           const payload = await request('/api/jobs/' + encodeURIComponent(jobId) + '/run', 'POST', {});
-          setJobsMsg('Created ' + (payload.jobName || 'manual job') + '.');
+          setJobsMsg('Started ' + (payload.jobName || jobId) + '.');
           await loadJobs();
         } catch (err) {
           setJobsMsg(err.message, true);
@@ -1247,11 +1272,11 @@
       async function loadJobLogs(jobId, jobName, button) {
         const output = jobsListEl.querySelector('[data-job-log-output="' + CSS.escape(jobId) + '"]');
         setBtnLoading(button, true);
-        if (output) output.textContent = 'Loading logs for ' + jobName + '...';
+        if (output) output.textContent = 'Loading…';
         try {
           const payload = await request('/api/jobs/' + encodeURIComponent(jobId) + '/runs/' + encodeURIComponent(jobName) + '/logs', 'GET');
-          if (output) output.textContent = payload.logs || 'No logs available for ' + jobName + '.';
-          setJobsMsg('Loaded logs for ' + jobName + '.');
+          if (output) output.textContent = payload.logs || 'No logs.';
+          output?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         } catch (err) {
           if (output) output.textContent = err.message;
           setJobsMsg(err.message, true);
@@ -1264,17 +1289,15 @@
         const travelData = travel || null;
         const activeServices = (dashboardState.services || []).filter((svc) => svc.enabled);
         if (!travelData) {
-          travelSummaryEl.textContent = 'Travel data unavailable';
+          travelSummaryEl.textContent = 'unavailable';
+          travelSummaryEl.title = '';
           travelOverviewStripEl.innerHTML = '';
           travelOverviewMetaEl.innerHTML = '';
-          travelOverviewDetailEl.textContent = 'travel snapshot unavailable';
-          travelBundlesMetaEl.textContent = '0 bundles';
-          travelBundlesEl.innerHTML =
-            '<article class="support-card travel-card"><div class="support-card-title">travel status</div><p class="support-copy">Travel snapshot unavailable from the control panel backend.</p></article>';
-          travelActionStateEl.textContent = 'status unavailable';
-          travelNotesMetaEl.textContent = '0 notes';
-          travelSharesEl.innerHTML = '<p class="support-copy">No travel share data available.</p>';
-          travelNotesEl.innerHTML = '<p class="support-copy">Travel notes unavailable.</p>';
+          travelBundlesMetaEl.textContent = '';
+          travelBundlesEl.innerHTML = '<div class="empty-state">Travel data unavailable.</div>';
+          travelNotesMetaEl.textContent = '';
+          travelSharesEl.innerHTML = '<p class="empty-line">—</p>';
+          travelNotesEl.innerHTML = '<p class="empty-line">—</p>';
           if (travelDirectBtn) travelDirectBtn.disabled = true;
           if (travelVpnBtn) travelVpnBtn.disabled = true;
           if (travelDisableSharesBtn) travelDisableSharesBtn.disabled = true;
@@ -1290,71 +1313,60 @@
         const notes = Array.isArray(travelData.notes) ? travelData.notes : [];
         const activeShareCount = Number(exposures.activeCount || 0);
 
-        travelSummaryEl.textContent = travelData.summary && travelData.summary.headline
-          ? travelData.summary.headline
-          : 'Travel snapshot loaded.';
+        travelSummaryEl.innerHTML = travelStatusPill(travelData.summary ? travelData.summary.state : '');
+        travelSummaryEl.title = travelData.summary && travelData.summary.headline ? travelData.summary.headline : '';
         travelOverviewStripEl.innerHTML =
-          overviewSegment('private path', travelStateLabel(privateAccess.state), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', {
-            eyebrow: 'tailnet/private',
+          overviewSegment('Private path', escapeHtml(travelStateLabel(privateAccess.state)), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', {
             tone: travelTone(privateAccess.state),
           }) +
-          overviewSegment('exit node', travelStateLabel(exitNode.state), connector.name || 'connector', {
-            eyebrow: 'home egress',
+          overviewSegment('Exit node', escapeHtml(travelStateLabel(exitNode.state)), escapeHtml(connector.name || 'connector'), {
             tone: travelTone(exitNode.state),
           }) +
-          overviewSegment('transmission', transmission.desiredMode || 'unknown', 'running ' + (transmission.effectiveMode || 'unknown'), {
-            eyebrow: transmission.placeholderConfig ? 'placeholder vpn config' : 'download path',
+          overviewSegment('Transmission', escapeHtml(transmission.desiredMode || 'unknown'), 'running ' + escapeHtml(transmission.effectiveMode || 'unknown') + (transmission.placeholderConfig ? ' · placeholder config' : ''), {
             tone: transmission.rolloutPending ? 'warning' : transmission.desiredMode === 'vpn' ? 'warning' : 'status',
           }) +
-          overviewSegment('public shares', String(activeShareCount), activeShareCount ? 'disable if not needed' : 'All links private', {
-            eyebrow: 'share hosts',
+          overviewSegment('Shares', String(activeShareCount), activeShareCount ? 'public now' : 'all private', {
             tone: activeShareCount > 0 ? 'warning' : 'status',
           });
         travelOverviewMetaEl.innerHTML =
-          '<span>checked ' + fmtDateTime(travelData.checkedAt) + '</span>' +
-          '<span>connector ' + escapeHtml(connector.name || 'n/a') + '</span>' +
-          '<span>' + String((connector.advertisedRoutes || []).length) + ' advertised route(s)</span>';
-        travelOverviewDetailEl.textContent = connector.detail || 'travel snapshot loaded';
-        travelBundlesMetaEl.textContent = bundles.length + ' bundle' + (bundles.length === 1 ? '' : 's');
+          '<span>checked ' + fmtAgo(travelData.checkedAt) + '</span>' +
+          '<span>' + escapeHtml(connector.name || 'n/a') + '</span>' +
+          '<span>' + String((connector.advertisedRoutes || []).length) + ' routes</span>';
+        travelBundlesMetaEl.textContent = String(bundles.length);
         travelBundlesEl.innerHTML = bundles.map((bundle) => {
           const targets = Array.isArray(bundle.targets) ? bundle.targets : [];
           const items = targets.length
             ? targets.map((target) =>
-              '<li class="travel-target-item">' +
-                '<div class="travel-target-head">' +
-                  '<a href="' + escapeHtml(target.url || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(target.name || target.id || 'target') + '</a>' +
-                  travelTargetMark(target.state) +
-                '</div>' +
+              '<li class="row">' +
+                '<a class="row-main" href="' + escapeHtml(target.url || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(target.name || target.id || 'target') + '</a>' +
+                travelTargetMark(target.state) +
                 (target.state !== 'ready' ? '<div class="travel-target-meta">' + escapeHtml(target.detail || 'Probe unavailable') + '</div>' : '') +
               '</li>'
             ).join('')
-            : '<li class="travel-target-item travel-target-empty"><span class="muted">no targets in this bundle.</span></li>';
+            : '<li class="row"><span class="muted">Empty</span></li>';
           return (
-            '<article class="support-card travel-card">' +
-              '<div class="travel-card-head"><div class="support-card-title">' + escapeHtml(bundle.name || bundle.id || 'bundle') + '</div>' + travelStatusPill(bundle.state) + '</div>' +
-              '<ul class="travel-target-list">' + items + '</ul>' +
+            '<article class="card panel travel-card">' +
+              '<div class="card-head"><h3 class="card-title">' + escapeHtml(bundle.name || bundle.id || 'bundle') + '</h3>' + travelStatusPill(bundle.state) + '</div>' +
+              '<ul class="rows">' + items + '</ul>' +
             '</article>'
           );
         }).join('');
 
-        travelActionStateEl.textContent =
-          'transmission ' + (transmission.desiredMode || 'unknown') +
-          ' · ' + activeShareCount + ' active share' + (activeShareCount === 1 ? '' : 's');
-        travelNotesMetaEl.textContent = notes.length + ' note' + (notes.length === 1 ? '' : 's');
+        travelNotesMetaEl.textContent = String(notes.length);
         travelSharesEl.innerHTML = activeServices.length
-          ? activeServices.map((svc) =>
-            '<div class="travel-share-item">' +
-              '<a href="' + escapeHtml(svc.publicUrl || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(svc.name || svc.id || 'service') + '</a>' +
-              '<span class="travel-share-meta">' + escapeHtml(svc.authMode || 'none') + ' · ' + escapeHtml(fmtExpiry(svc.expiresAt, svc.enabled).text) + '</span>' +
-            '</div>'
-          ).join('')
-          : '<p class="support-copy">No temporary public shares are active.</p>';
+          ? '<ul class="rows">' + activeServices.map((svc) =>
+            '<li class="row">' +
+              '<a class="row-main" href="' + escapeHtml(svc.publicUrl || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(svc.name || svc.id || 'service') + '</a>' +
+              '<span class="row-sub">' + escapeHtml(svc.authMode || 'none') + ' · ' + escapeHtml(fmtExpiry(svc.expiresAt, svc.enabled).text) + '</span>' +
+            '</li>'
+          ).join('') + '</ul>'
+          : '<p class="empty-line">All private</p>';
         travelNotesEl.innerHTML = notes.length
           ? notes.map((note) =>
-            '<div class="travel-note-item">' + travelTargetMark(note.level === 'warn' ? 'degraded' : 'ready') +
+            '<div class="travel-note-item"><span class="lamp ' + (note.level === 'warn' ? 'warning' : 'status') + '"></span>' +
               '<span>' + escapeHtml(note.message || '') + '</span></div>'
           ).join('')
-          : '<p class="support-copy">No additional travel notes right now.</p>';
+          : '<p class="empty-line">None</p>';
 
         if (travelDirectBtn) {
           travelDirectBtn.disabled = mutationInFlight > 0 || transmission.desiredMode === 'direct';
@@ -1372,7 +1384,8 @@
       function renderTransmissionVpn(status) {
         transmissionVpnState = status || null;
         if (!status) {
-          vpnMetaEl.textContent = 'Transmission VPN status unavailable.';
+          vpnMetaEl.textContent = '';
+          vpnSectionMetaEl.textContent = 'unavailable';
           vpnSwitch.disabled = true;
           vpnSwitch.classList.remove('on');
           vpnSwitch.setAttribute('aria-checked', 'false');
@@ -1381,16 +1394,12 @@
         }
         const desiredMode = status.desiredMode || 'direct';
         const effectiveMode = status.effectiveMode || 'pending';
-        const meta = [
-          'desired: ' + desiredMode,
-          'running: ' + effectiveMode,
-          'default: ' + (status.defaultMode || 'direct'),
-          'provider: ' + (status.provider || 'custom') + '/' + (status.vpnType || 'wireguard'),
-        ];
-        if (status.podName) meta.push('pod/' + status.podName);
+        const meta = [(status.provider || 'custom') + '/' + (status.vpnType || 'wireguard')];
+        if (desiredMode !== effectiveMode) meta.unshift('desired ' + desiredMode);
         if (status.rolloutPending) meta.push('rollout pending');
-        if (status.placeholderConfig) meta.push('placeholder credentials scaffolded');
-        vpnMetaEl.textContent = meta.join(' · ');
+        if (status.placeholderConfig) meta.push('placeholder config');
+        vpnMetaEl.innerHTML = meta.map((item) => '<span>' + escapeHtml(item) + '</span>').join('');
+        vpnSectionMetaEl.textContent = effectiveMode;
         const vpnOn = desiredMode === 'vpn';
         vpnSwitch.disabled = mutationInFlight > 0;
         vpnSwitch.classList.toggle('on', vpnOn);
@@ -1436,13 +1445,14 @@
           const td = document.createElement('td');
           td.colSpan = 6;
           td.className = 'empty-state';
-          td.textContent = 'No services configured.';
+          td.textContent = 'No services.';
           document.getElementById('sharesCount').textContent = '0 / 0';
           tr.appendChild(td);
           rowsEl.appendChild(tr);
           return;
         }
-        services.forEach((svc) => {
+        // Public shares lead; the rest keep their configured order.
+        services.slice().sort((a, b) => Number(Boolean(b.enabled)) - Number(Boolean(a.enabled))).forEach((svc) => {
           const tr = document.createElement('tr');
           tr.dataset.serviceId = svc.id;
           if (svc.enabled) tr.classList.add('is-enabled');
@@ -1459,7 +1469,8 @@
 
           const statusTd = document.createElement('td');
           const statusBadge = document.createElement('span');
-          statusBadge.className = 'exposure-state ' + (svc.enabled ? 'on' : 'off');
+          statusBadge.className = 'pill';
+          statusBadge.dataset.tone = svc.enabled ? 'ok' : 'neutral';
           statusBadge.textContent = svc.enabled ? 'Public' : 'Private';
           statusTd.appendChild(statusBadge);
 
@@ -1538,7 +1549,7 @@
             });
             const untilDisabledOpt = document.createElement('option');
             untilDisabledOpt.value = 'until-disabled';
-            untilDisabledOpt.textContent = 'Until turned off';
+            untilDisabledOpt.textContent = 'No expiry';
             expirySelect.appendChild(untilDisabledOpt);
 
             const authSelect = document.createElement('select');
@@ -1582,42 +1593,46 @@
         });
         const emptyRow = document.createElement('tr');
         emptyRow.dataset.shareEmpty = '';
-        emptyRow.innerHTML = '<td colspan="6" class="empty-state">No matching services.</td>';
+        emptyRow.innerHTML = '<td colspan="6" class="empty-state">No match.</td>';
         rowsEl.appendChild(emptyRow);
         filterShares();
         tickExpiryCountdowns();
       }
 
       function renderAudit(entries) {
-        auditRowsEl.innerHTML = '';
         if (!entries.length) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="4" class="empty-state">No audit entries yet.</td>';
-          auditRowsEl.appendChild(tr);
+          auditRowsEl.innerHTML = '<tr><td colspan="4" class="empty-state">Nothing yet.</td></tr>';
           return;
         }
-        entries.forEach((entry) => {
-          const tr = document.createElement('tr');
+        auditRowsEl.innerHTML = entries.map((entry) => {
           const parts = [];
           if (entry.hours) parts.push(entry.hours + 'h');
-          if (entry.expiryMode === 'until-disabled') parts.push('until turned off');
+          if (entry.expiryMode === 'until-disabled') parts.push('no expiry');
           if (entry.authMode) parts.push(entry.authMode);
-          if (entry.mode) parts.push('mode: ' + entry.mode);
-          if (entry.disabled != null) parts.push('disabled: ' + entry.disabled);
+          if (entry.mode) parts.push('mode ' + entry.mode);
+          if (entry.disabled != null) parts.push('disabled ' + entry.disabled);
+          // The mark flags a change that opened the public surface.
           const actionClass = entry.action === 'enable'
             ? 'action-enable'
             : entry.action === 'emergency-disable-all'
               ? 'action-emergency'
-              : entry.action === 'disable' || entry.action === 'auto-expire'
-                ? 'action-disable'
-                : 'action-routine';
-          tr.innerHTML =
-            '<td class="audit-time">' + fmtDateTime(entry.ts) + '</td>' +
-            '<td class="audit-action ' + actionClass + '">' + (entry.action || '') + '</td>' +
-            '<td>' + (entry.serviceId || '') + '</td>' +
-            '<td class="audit-detail">' + parts.join(' · ') + '</td>';
-          auditRowsEl.appendChild(tr);
-        });
+              : 'action-routine';
+          return (
+            '<tr>' +
+              '<td class="audit-time">' + fmtDateTime(entry.ts) + '</td>' +
+              '<td class="audit-action ' + actionClass + '">' + escapeHtml(entry.action || '') + '</td>' +
+              '<td>' + escapeHtml(entry.serviceId || '') + '</td>' +
+              '<td class="audit-detail">' + escapeHtml(parts.join(' · ')) + '</td>' +
+            '</tr>'
+          );
+        }).join('');
+      }
+
+      function updateTone(status) {
+        if (status === 'update') return 'warning';
+        if (status === 'current') return 'ok';
+        if (status === 'not-installed') return 'danger';
+        return 'neutral';
       }
 
       function renderUpdates(payload) {
@@ -1630,11 +1645,11 @@
         updatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="5" class="empty-state">No update rows available.</td>';
+          tr.innerHTML = '<td colspan="5" class="empty-state">No images.</td>';
           updatesRowsEl.appendChild(tr);
         } else if (!visibleItems.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="5" class="empty-state">No update rows match the current filter.</td>';
+          tr.innerHTML = '<td colspan="5" class="empty-state">No match.</td>';
           updatesRowsEl.appendChild(tr);
         } else {
           visibleItems.forEach((item) => {
@@ -1649,14 +1664,14 @@
             const statusLabel = item.status === 'update' ? workflow.label : String(item.statusText || 'unknown').toLowerCase();
             let actionHtml = '<span class="updates-action-note">—</span>';
             if (workflow.url) {
-              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(workflow.url) + '" target="_blank" rel="noreferrer">' + escapeHtml(workflow.label) + '</a>';
+              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(workflow.url) + '" target="_blank" rel="noreferrer" aria-label="' + attrText(workflow.label) + '">Open</a>';
             } else if (item.status === 'update') {
               if (!renovateConfigured) {
                 actionHtml = '<span class="updates-action-note">Renovate off</span>';
               } else if (renovateActiveRun && workflow.canRun) {
                 actionHtml = '<span class="updates-action-note">Scan running</span>';
               } else if (workflow.canRun) {
-                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="image" data-item-label="' + escapeHtml(item.name || item.id || 'service') + '">Run scan</button>';
+                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="image" data-item-label="' + escapeHtml(item.name || item.id || 'service') + '">Scan</button>';
               } else {
                 actionHtml = '<span class="updates-action-note" title="' + attrText(workflow.detail) + '">' + escapeHtml(workflow.label) + '</span>';
               }
@@ -1664,29 +1679,26 @@
             tr.innerHTML =
               '<td class="updates-service-cell" data-label="Service" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
               '<td class="updates-version-cell" data-label="Version" role="cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
-              '<td class="updates-status-cell" data-label="Status" role="cell"><span class="update-chip ' + (item.status || 'unknown') + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
+              '<td class="updates-status-cell" data-label="State" role="cell"><span class="pill" data-tone="' + updateTone(item.status) + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
               '<td class="updates-context-cell" data-label="Image" role="cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(visibleDetail) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
             updatesRowsEl.appendChild(tr);
           });
         }
-        const checkedAt = payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) : 'not checked yet';
         const nextCheckAt = payload && payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : 'unknown';
         const source = payload && payload.source ? payload.source : 'unknown';
-        const staleText = payload && payload.stale ? ' · stale cache' : '';
-        const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
-        const filterText = items.length && visibleItems.length !== items.length ? ' · showing ' + visibleItems.length + '/' + items.length : '';
-        updatesMetaEl.textContent = 'Checked ' + checkedAt + staleText + refreshingText + filterText;
-        updatesMetaEl.title = 'Next check: ' + nextCheckAt + ' · ' + source;
+        const staleText = payload && payload.stale ? ' · stale' : '';
+        const refreshingText = payload && payload.refreshInProgress ? ' · refreshing' : '';
+        const filterText = items.length && visibleItems.length !== items.length ? visibleItems.length + ' / ' + items.length + ' · ' : '';
+        updatesMetaEl.textContent = filterText + (payload && payload.checkedAt ? 'checked ' + fmtAgo(payload.checkedAt) : 'not checked') + staleText + refreshingText;
+        updatesMetaEl.title = (payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) + ' · ' : '') + 'next ' + nextCheckAt + ' · ' + source;
       }
 
       async function loadUpdates(options) {
         const force = Boolean(options && options.force);
         if (force) {
           setBtnLoading(updatesRefreshBtn, true);
-          setLoadState('Checking image updates...');
-          setMsg('Checking image updates...');
-          setUpdatesMsg('Checking registries...');
+          setUpdatesMsg('Checking registries…');
         }
         try {
           const path = force ? '/api/image-updates?force=1' : '/api/image-updates';
@@ -1694,25 +1706,9 @@
           dashboardState.updates = payload;
           renderUpdates(payload);
           renderOverview();
-          if (payload.stale) {
-            setUpdatesMsg('Showing cached data while background refresh runs.');
-            if (force) {
-              setLoadState('Image update check running in background...');
-              setMsg('Image update check started.');
-            }
-          } else {
-            setUpdatesMsg('');
-            if (force) {
-              setLoadState('Image updates checked at ' + fmtTime(new Date()));
-              setMsg('Image update check complete.');
-            }
-          }
+          setUpdatesMsg(payload.stale ? 'Cached; refreshing in background.' : force ? 'Images checked.' : '');
         } catch (err) {
           setUpdatesMsg(err.message, true);
-          if (force) {
-            setLoadState(err.message, true);
-            setMsg(err.message, true);
-          }
         } finally {
           if (force) setBtnLoading(updatesRefreshBtn, false);
         }
@@ -1726,7 +1722,7 @@
         helmUpdatesRowsEl.innerHTML = '';
         if (!items.length) {
           const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="6" class="empty-state">No helm chart rows available.</td>';
+          tr.innerHTML = '<td colspan="6" class="empty-state">No charts.</td>';
           helmUpdatesRowsEl.appendChild(tr);
         } else {
           items.forEach((item) => {
@@ -1736,40 +1732,39 @@
             const matchingPr = findMatchingRenovatePr(item, 'helm');
             let actionHtml = '<span class="updates-action-note">—</span>';
             if (matchingPr) {
-              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">Open PR #' + matchingPr.number + '</a>';
+              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">PR #' + escapeHtml(matchingPr.number) + '</a>';
             } else if (item.status === 'update') {
               if (!renovateConfigured) {
                 actionHtml = '<span class="updates-action-note">Renovate off</span>';
               } else if (renovateActiveRun) {
                 actionHtml = '<span class="updates-action-note">Scan running</span>';
               } else {
-                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="helm" data-item-label="' + escapeHtml(item.name || item.id || 'chart') + '">Run scan</button>';
+                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="helm" data-item-label="' + escapeHtml(item.name || item.id || 'chart') + '">Scan</button>';
               }
             }
             tr.innerHTML =
               '<td class="updates-service-cell" data-label="Release" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center helm-current-cell" data-label="Current" role="cell">' + escapeHtml(item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center helm-latest-cell" data-label="Latest" role="cell">' + escapeHtml(item.latestVersion || '—') + '</td>' +
-              '<td class="updates-cell-center updates-status-cell" data-label="Status" role="cell"><span class="update-chip ' + attrText(item.status || 'unknown') + '">' + escapeHtml(String(item.statusText || 'unknown').toLowerCase()) + '</span></td>' +
+              '<td class="updates-status-cell" data-label="State" role="cell"><span class="pill" data-tone="' + updateTone(item.status) + '">' + escapeHtml(String(item.statusText || 'unknown').toLowerCase()) + '</span></td>' +
               '<td class="updates-context-cell" data-label="Chart" role="cell"><div class="updates-version">' + escapeHtml(item.chart || '—') + '</div><div class="updates-sub">' + escapeHtml((item.repo || '—') + (item.detail ? ' · ' + item.detail : '')) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
             helmUpdatesRowsEl.appendChild(tr);
           });
         }
-        const checkedAt = payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) : 'not checked yet';
         const nextCheckAt = payload && payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : 'unknown';
         const source = payload && payload.source ? payload.source : 'unknown';
-        const staleText = payload && payload.stale ? ' · stale cache' : '';
-        const refreshingText = payload && payload.refreshInProgress ? ' · background refresh running' : '';
-        helmUpdatesMetaEl.textContent = 'Checked ' + checkedAt + staleText + refreshingText;
-        helmUpdatesMetaEl.title = 'Next check: ' + nextCheckAt + ' · ' + source;
+        const staleText = payload && payload.stale ? ' · stale' : '';
+        const refreshingText = payload && payload.refreshInProgress ? ' · refreshing' : '';
+        helmUpdatesMetaEl.textContent = (payload && payload.checkedAt ? 'checked ' + fmtAgo(payload.checkedAt) : 'not checked') + staleText + refreshingText;
+        helmUpdatesMetaEl.title = (payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) + ' · ' : '') + 'next ' + nextCheckAt + ' · ' + source;
       }
 
       async function loadHelmUpdates(options) {
         const force = Boolean(options && options.force);
         if (force) {
           setBtnLoading(helmUpdatesRefreshBtn, true);
-          setHelmUpdatesMsg('Checking helm chart repos...');
+          setHelmUpdatesMsg('Checking chart repos…');
         }
         try {
           const path = force ? '/api/helm-updates?force=1' : '/api/helm-updates';
@@ -1777,11 +1772,7 @@
           dashboardState.helmUpdates = payload;
           renderHelmUpdates(payload);
           renderOverview();
-          if (payload.stale) {
-            setHelmUpdatesMsg('Showing cached data while background refresh runs.');
-          } else {
-            setHelmUpdatesMsg('');
-          }
+          setHelmUpdatesMsg(payload.stale ? 'Cached; refreshing in background.' : force ? 'Charts checked.' : '');
         } catch (err) {
           setHelmUpdatesMsg(err.message, true);
         } finally {
@@ -1863,10 +1854,10 @@
           (!query || secretFilterText(item).includes(query))
         );
         secretsSummaryEl.textContent = data.configured
-          ? String(items.length) + ' managed secret' + (items.length === 1 ? '' : 's') + ' · branch ' + (data.branch || 'master')
-          : (data.reason || 'Secret editor is not configured.');
+          ? String(items.length) + (items.length === 1 ? ' secret' : ' secrets') + ' · ' + (data.branch || 'master')
+          : (data.reason || 'Not configured.');
         if (!visible.length) {
-          secretsListEl.innerHTML = '<div class="empty-state">No managed secrets match.</div>';
+          secretsListEl.innerHTML = '<div class="empty-state">No match.</div>';
           secretsListEl.classList.remove('is-filtering');
           return;
         }
@@ -1879,7 +1870,7 @@
             return (
               '<button class="secret-list-item ' + (id === current ? 'active' : '') + '" type="button" data-secret-namespace="' + escapeHtml(item.namespace) + '" data-secret-name="' + escapeHtml(item.name) + '">' +
                 '<span class="secret-list-name">' + escapeHtml(item.name) + '</span>' +
-                '<span class="secret-list-meta">' + escapeHtml(item.namespace) + ' · ' + String(item.keyCount || 0) + ' key(s)' + (item.existsLive ? '' : ' · not live') + '</span>' +
+                '<span class="secret-list-meta">' + escapeHtml(item.namespace) + ' · ' + String(item.keyCount || 0) + (Number(item.keyCount) === 1 ? ' key' : ' keys') + (item.existsLive ? '' : ' · not live') + '</span>' +
               '</button>'
             );
           }).join('');
@@ -1887,7 +1878,7 @@
             '<section class="secret-app-group">' +
               '<div class="secret-app-head">' +
                 '<span class="secret-app-name">' + escapeHtml(group.appName) + '</span>' +
-                '<span class="secret-app-meta">' + count + ' secret' + (count === 1 ? '' : 's') + ' · ' + totalKeys + ' key' + (totalKeys === 1 ? '' : 's') + '</span>' +
+                '<span class="secret-app-meta">' + (count > 1 ? count + ' · ' : '') + totalKeys + (totalKeys === 1 ? ' key' : ' keys') + '</span>' +
               '</div>' +
               '<div class="secret-app-children">' + children + '</div>' +
             '</section>'
@@ -1903,18 +1894,18 @@
         secretSaveBtn.disabled = !hasSecret;
         secretDeleteBtn.disabled = !hasSecret;
         if (!hasSecret) {
-          secretEditorTitleEl.textContent = 'Select a secret';
-          secretEditorMetaEl.textContent = 'Values stay hidden until a Secret is opened.';
-          secretKeyRowsEl.innerHTML = '<div class="empty-state">No secret selected.</div>';
+          secretEditorTitleEl.textContent = 'No secret selected';
+          secretEditorMetaEl.textContent = '';
+          secretKeyRowsEl.innerHTML = '<div class="empty-state">Pick a secret.</div>';
           renderSecretsList(dashboardState.secrets);
           return;
         }
         const entries = Object.entries(secret.stringData || {}).sort((left, right) => left[0].localeCompare(right[0]));
         secretEditorTitleEl.textContent = secret.namespace + '/' + secret.name;
-        secretEditorMetaEl.textContent = (secret.repoPath || '') + ' · type ' + (secret.type || 'Opaque');
+        secretEditorMetaEl.textContent = [secret.repoPath, secret.type || 'Opaque'].filter(Boolean).join(' · ');
         secretKeyRowsEl.innerHTML = entries.length
           ? entries.map(([key, value]) => secretKeyRowHtml(key, value)).join('')
-          : '<div class="empty-state">This Secret has no keys yet.</div>';
+          : '<div class="empty-state">No keys.</div>';
         renderSecretsList(dashboardState.secrets);
       }
 
@@ -1937,7 +1928,7 @@
           button.classList.add('is-copied');
           button.title = 'Copied';
           button.setAttribute('aria-label', 'Copied');
-          setSecretsMsg('Value copied to clipboard.');
+          setSecretsMsg('Copied.');
           window.setTimeout(() => {
             button.innerHTML = secretActionIcon('copy');
             button.classList.remove('is-copied');
@@ -1947,7 +1938,7 @@
           }, 1800);
         } catch {
           button.disabled = false;
-          setSecretsMsg('Could not copy. Allow clipboard access or reveal the value and copy it manually.', true);
+          setSecretsMsg('Clipboard blocked. Allow clipboard access, or reveal and copy.', true);
         }
       }
 
@@ -1962,7 +1953,7 @@
                 '<button class="secret-icon-btn secret-copy-btn" type="button" title="Copy value" aria-label="Copy value">' + secretActionIcon('copy') + '</button>' +
               '</div>' +
             '</div>' +
-            '<button class="secret-remove-key-btn danger" type="button" title="Remove key">Remove</button>' +
+            '<button class="secret-remove-key-btn danger" type="button" title="Remove key" aria-label="Remove key">×</button>' +
           '</div>'
         );
       }
@@ -1982,12 +1973,12 @@
         const force = Boolean(options && options.force);
         if (force) {
           setBtnLoading(secretsRefreshBtn, true);
-          setSecretsMsg('Refreshing managed secret inventory...');
+          setSecretsMsg('Refreshing…');
         }
         try {
           const payload = await request(force ? '/api/secrets?force=1' : '/api/secrets', 'GET');
           renderSecretsList(payload);
-          if (force) setSecretsMsg('Secret inventory refreshed.');
+          if (force) setSecretsMsg('');
         } catch (err) {
           setSecretsMsg(err.message, true);
         } finally {
@@ -1996,11 +1987,11 @@
       }
 
       async function openSecret(namespace, name) {
-        setSecretsMsg('Loading ' + namespace + '/' + name + '...');
+        setSecretsMsg('Loading ' + namespace + '/' + name + '…');
         try {
           const secret = await request('/api/secrets/' + encodeURIComponent(namespace) + '/' + encodeURIComponent(name), 'GET');
           renderSecretEditor(secret);
-          setSecretsMsg('Secret loaded.');
+          setSecretsMsg('');
         } catch (err) {
           setSecretsMsg(err.message, true);
         }
@@ -2013,14 +2004,14 @@
         try {
           mutationInFlight += 1;
           setBtnLoading(secretSaveBtn, true);
-          setSecretsMsg('Encrypting, committing, pushing, and requesting Flux reconcile...');
+          setSecretsMsg('Committing…');
           await request('/api/secrets/' + encodeURIComponent(secret.namespace) + '/' + encodeURIComponent(secret.name), 'PUT', {
             type: secret.type || 'Opaque',
             stringData: readSecretEditorForm(),
           });
           await loadSecrets({ force: true });
           await openSecret(secret.namespace, secret.name);
-          setSecretsMsg('Secret change committed and Flux reconcile requested.');
+          setSecretsMsg('Committed.');
         } catch (err) {
           setSecretsMsg(err.message, true);
         } finally {
@@ -2034,14 +2025,14 @@
         const namespace = selectedNamespace === 'all' ? 'default' : selectedNamespace;
         const name = String(newSecretNameEl.value || '').trim();
         if (!namespace || !name) {
-          setSecretsMsg('Namespace and secret name are required.', true);
+          setSecretsMsg('Name required.', true);
           return;
         }
         if (!confirm('Create ' + namespace + '/' + name + ' in Git?')) return;
         try {
           mutationInFlight += 1;
           setBtnLoading(newSecretBtn, true);
-          setSecretsMsg('Creating encrypted Secret file...');
+          setSecretsMsg('Creating…');
           await request('/api/secrets', 'POST', {
             namespace,
             name,
@@ -2057,7 +2048,7 @@
             type: 'Opaque',
             stringData: {},
           });
-          setSecretsMsg('Secret file created and Flux reconcile requested.');
+          setSecretsMsg('Created.');
         } catch (err) {
           setSecretsMsg(err.message, true);
         } finally {
@@ -2073,11 +2064,11 @@
         try {
           mutationInFlight += 1;
           setBtnLoading(secretDeleteBtn, true);
-          setSecretsMsg('Removing Secret file and requesting Flux prune...');
+          setSecretsMsg('Deleting…');
           await request('/api/secrets/' + encodeURIComponent(secret.namespace) + '/' + encodeURIComponent(secret.name), 'DELETE');
           renderSecretEditor(null);
           await loadSecrets({ force: true });
-          setSecretsMsg('Secret removal committed and Flux reconcile requested.');
+          setSecretsMsg('Deleted.');
         } catch (err) {
           setSecretsMsg(err.message, true);
         } finally {
@@ -2091,7 +2082,7 @@
         dashboardState.services = payload.services || [];
         renderRows(dashboardState.services);
         renderOverview();
-        setLoadState('Exposure state refreshed ' + fmtTime(new Date()));
+        setLoadState(fmtTime(new Date()));
       }
 
       let pulseRequest = null;
@@ -2106,27 +2097,31 @@
 
       function renderPulseStrip() {
         const P = window.Pulse;
-        const cpu = pulseMetric('node_cpu')?.series || [];
-        const primaryName = pulseMetric('node_role')?.series?.find((series) => series.labels.role === 'control-plane')?.labels.node || 'talos-7nf-osf';
-        const primary = cpu.find((series) => series.labels.node === primaryName);
-        const memory = pulseMetric('node_mem')?.series?.find((series) => series.labels.node === primaryName);
         const definitions = [
-          ['cpu', primary, P.fmt.pct, .7, 'primary node'],
-          ['memory', memory, P.fmt.pct, .8, 'primary node'],
-          ['power', pulseMetric('cluster_watts')?.series?.[0], P.fmt.watts, Infinity, 'cluster · estimated'],
-          ['restarts', pulseMetric('restarts_1h')?.series?.[0], (value) => P.number(value, 0), 0, 'rolling hour'],
+          ['CPU', primarySeries('node_cpu'), P.fmt.pct, .7, true],
+          ['Memory', primarySeries('node_mem'), P.fmt.pct, .8, true],
+          ['Power', pulseMetric('cluster_watts')?.series?.[0], P.fmt.watts, Infinity, false],
+          ['Restarts', pulseMetric('restarts_1h')?.series?.[0], (value) => P.number(value, 0), 0, false],
         ];
-        document.getElementById('pulseStrip').innerHTML = definitions.map(([label, series, format, threshold, eyebrow]) => {
+        document.getElementById('pulseStrip').innerHTML = definitions.map(([label, series, format, threshold, share]) => {
           const current = P.last(series);
           const history = P.values(series);
           const finite = history.filter(P.numeric);
-          const subtitle = finite.length ? '24 h / ' + format(Math.min(...finite)) + ' — ' + format(Math.max(...finite)) : 'Telemetry unavailable';
-          return overviewSegment(label, format(current), subtitle, { eyebrow, series: history, tone: current > threshold ? 'warning' : 'neutral', barPct: label === 'cpu' || label === 'memory' ? current * 100 : null });
+          const subtitle = finite.length ? format(Math.min(...finite)) + ' – ' + format(Math.max(...finite)) + ' · 24 h' : 'no data';
+          return overviewSegment(label, format(current), subtitle, { series: finite.length ? history : null, tone: current > threshold ? 'warning' : 'neutral', barPct: share && P.numeric(current) ? current * 100 : null });
         }).join('');
       }
 
-      function pulseSectionHeader(index, title, detail) {
-        return '<div class="section-bar"><h2 class="section-heading"><span class="pulse-section-index" aria-hidden="true">' + index + '</span>' + escapeHtml(title) + '</h2><div class="section-detail">' + escapeHtml(detail) + '</div></div>';
+      function pulseSectionHeader(title, detail) {
+        return '<div class="block-head"><h2 class="block-title">' + escapeHtml(title) + '</h2><div class="page-meta">' + escapeHtml(detail) + '</div></div>';
+      }
+
+      // Drawing width inside a padded pulse block. An empty block is not laid
+      // out yet, so its first render measures the column it will fill.
+      function pulseInnerWidth(el) {
+        const style = window.getComputedStyle(el);
+        const outer = el.clientWidth || el.parentElement.clientWidth - 2;
+        return Math.max(280, outer - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight));
       }
 
       function renderNodeTwins() {
@@ -2143,29 +2138,32 @@
         }).sort((a, b) => Number(b.roles.includes('control-plane')) - Number(a.roles.includes('control-plane')) || a.name.localeCompare(b.name));
         const ready = models.filter((model) => model.ready === 1).length;
         const pods = models.every((model) => P.numeric(model.pods)) ? models.reduce((sum, model) => sum + model.pods, 0) : null;
-        document.getElementById('nodeTwins').innerHTML = pulseSectionHeader('02', 'the machines', models.length ? ready + '/' + models.length + ' ready · ' + P.number(pods, 0) + ' pods' : 'Node inventory unavailable') +
-          (models.length ? '<div class="node-twins-grid">' + models.map(P.twinCard).join('') + '</div><div class="pulse-reading-key"><span class="key-halftone"></span> current usage <span class="key-request"></span> requested capacity</div>' : '<p class="pulse-empty">Waiting for node telemetry.</p>');
+        document.getElementById('nodeTwins').innerHTML = pulseSectionHeader('Machines', models.length ? ready + '/' + models.length + ' ready · ' + P.number(pods, 0) + ' pods' : 'unavailable') +
+          (models.length ? '<div class="node-twins-grid">' + models.map(P.twinCard).join('') + '</div><div class="pulse-reading-key"><span class="key-halftone"></span> usage <span class="key-request"></span> requested</div>' : '<p class="pulse-empty">No node data.</p>');
       }
 
+      let powerPoints = [];
       function renderPowerTicker() {
         const P = window.Pulse;
         const series = pulseMetric('homelab_watts', '7d')?.series?.[0];
         const tariff = P.last(pulseMetric('tariff', '7d')?.series?.[0]);
         const power = P.power(series, tariff);
         const ticks = P.dayTicks(series);
+        // Same order and length as the plotted values, for the hover readout.
+        powerPoints = (series?.values || []).map(([at, watts]) => ({ at, watts }));
         const stats = [
-          [P.fmt.watts(P.last(pulseMetric('homelab_watts')?.series?.[0])), 'homelab estimated now'],
-          [P.numeric(power.kwh24h) ? P.number(power.kwh24h, 2) + '\u00a0kWh' : '—', 'energy / 24 h'],
-          [P.fmt.sgd(power.sgdPerDay), 'cost / day'],
-          [P.fmt.sgd(power.sgd30d), 'projected / 30 d'],
+          [P.fmt.watts(P.last(pulseMetric('homelab_watts')?.series?.[0])), 'now'],
+          [P.numeric(power.kwh24h) ? P.number(power.kwh24h, 2) + ' kWh' : '—', '24 h'],
+          [P.fmt.sgd(power.sgdPerDay), 'per day'],
+          [P.fmt.sgd(power.sgd30d), '30 d projected'],
         ];
         const el = document.getElementById('powerTicker');
-        const width = Math.max(280, el.parentElement.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
-        el.innerHTML = pulseSectionHeader('03', 'power & cost', '7 days · ' + (P.numeric(tariff) ? 'S$ ' + tariff.toFixed(4) + ' / kWh' : 'tariff unavailable')) +
+        const width = pulseInnerWidth(el);
+        el.innerHTML = pulseSectionHeader('Power', '7 d · ' + (P.numeric(tariff) ? 'S$ ' + tariff.toFixed(4) + '/kWh' : 'no tariff')) +
           '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
-          '<div class="ticker-wave">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 80, label: 'Estimated homelab power over seven days' }) + '</div>' +
+          '<div class="ticker-wave" tabindex="0" role="group" aria-label="Estimated homelab power, seven days. Arrow keys read values.">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 84, label: 'Estimated homelab power over seven days' }) + '</div>' +
           '<div class="ticker-days">' + ticks.filter((tick) => tick.x > .015 && tick.x < .985).map((tick) => '<span style="left:' + tick.x * 100 + '%">' + escapeHtml(tick.label) + '</span>').join('') + '</div>' +
-          '<div class="ticker-note">Kubernetes nodes + Iris + nas · Software power estimates · 30-day cost uses the seven-day average.<span>' + (power.kwh24h === null ? 'Awaiting sufficient history' : 'Tariff from cluster configuration') + '</span></div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
+          '<div class="ticker-note"><span>Estimated · Kubernetes nodes + Iris + nas</span>' + (power.kwh24h === null ? '<span>awaiting history</span>' : '') + '</div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
       }
 
       const expandedStorageGroups = new Set();
@@ -2186,22 +2184,22 @@
         const groups = [...grouped].sort(([a], [b]) => a === 'truenas' ? -1 : b === 'truenas' ? 1 : a.localeCompare(b));
         const el = document.getElementById('storageTanks');
         const focusedGroup = el.contains(document.activeElement) ? document.activeElement.dataset.storageGroup : null;
-        el.innerHTML = pulseSectionHeader('05', 'storage', claims.length ? claims.length + ' claims · ' + measured + ' measured · ' + warnings + ' above 80%' : 'Volume inventory unavailable') +
+        el.innerHTML = pulseSectionHeader('Storage', claims.length ? claims.length + ' claims · ' + measured + ' measured · ' + warnings + ' above 80%' : 'unavailable') +
           groups.map(([key, items]) => {
             items.sort((a, b) => (b.util ?? -1) - (a.util ?? -1) || a.name.localeCompare(b.name));
             const expanded = expandedStorageGroups.has(key);
             const visible = expanded ? items : items.slice(0, 16);
             const title = key === 'truenas' ? 'TrueNAS' : key;
-            const copy = key === 'truenas' ? 'Network volumes · expandable' : key === 'local-path' ? 'Node-local volumes · fixed capacity' : 'Persistent volumes';
-            return '<section class="tank-group"><div class="tank-group-heading"><div><h3>' + escapeHtml(title) + '<span>' + items.length + '</span></h3><p>' + copy + '</p></div>' +
-              (items.length > 16 ? '<button type="button" class="tank-more" data-storage-group="' + escapeHtml(key) + '" aria-expanded="' + expanded + '">' + (expanded ? 'Show fewer' : 'Show all · ' + (items.length - 16) + ' more') + '</button>' : '') + '</div>' +
+            const copy = key === 'truenas' ? 'network' : key === 'local-path' ? 'node-local' : '';
+            return '<section class="tank-group"><div class="tank-group-heading"><div><h3>' + escapeHtml(title) + '<span>' + items.length + (copy ? ' · ' + copy : '') + '</span></h3></div>' +
+              (items.length > 16 ? '<button type="button" class="tank-more" data-storage-group="' + escapeHtml(key) + '" aria-expanded="' + expanded + '">' + (expanded ? 'Fewer' : '+' + (items.length - 16)) + '</button>' : '') + '</div>' +
               '<div class="tank-grid">' + visible.map((claim) => {
                 const tone = claim.util >= .9 ? 'danger' : claim.util >= .8 ? 'warning' : '';
                 const size = claim.measured ? P.fmt.bytes(claim.used) + ' / ' + P.fmt.bytes(claim.capacity) : P.fmt.bytes(claim.requested) + ' requested';
                 const projection = P.numeric(claim.daysToFull) && claim.daysToFull < 30 ? '<span class="tank-eta ' + (claim.daysToFull < 7 ? 'danger' : 'warning') + '">full in ' + Math.max(1, Math.ceil(claim.daysToFull)) + ' d</span>' : '';
-                return '<figure class="tank ' + tone + (claim.measured ? '' : ' is-unmeasured') + '"><div class="tank-value">' + P.fmt.pct(claim.util) + '</div>' + P.tankSvg(claim) + '<figcaption><div class="tank-name" title="' + escapeHtml(claim.namespace + '/' + claim.name) + '">' + escapeHtml(claim.name) + '</div><div class="tank-size">' + size + '</div>' + (claim.measured ? projection : '<span class="tank-unavailable">usage unavailable</span>') + '</figcaption></figure>';
+                return '<figure class="tank ' + tone + (claim.measured ? '' : ' is-unmeasured') + '"><div class="tank-value">' + P.fmt.pct(claim.util) + '</div>' + P.tankSvg(claim) + '<figcaption><div class="tank-name" title="' + escapeHtml(claim.namespace + '/' + claim.name) + '">' + escapeHtml(claim.name) + '</div><div class="tank-size">' + size + '</div>' + (claim.measured ? projection : '<span class="tank-unavailable">unmeasured</span>') + '</figcaption></figure>';
               }).join('') + '</div></section>';
-          }).join('') + (claims.length ? '<div class="storage-note">Usage telemetry covers NAS volumes; outlined local volumes show requested capacity.<span>' + projections + ' projected full within 30 days</span></div>' : '<p class="pulse-empty">Waiting for persistent volume inventory.</p>');
+          }).join('') + (claims.length ? (projections ? '<div class="storage-note"><span>' + projections + ' full within 30 d</span></div>' : '') : '<p class="pulse-empty">No volume data.</p>');
         if (focusedGroup) [...el.querySelectorAll('[data-storage-group]')].find((button) => button.dataset.storageGroup === focusedGroup)?.focus({ preventScroll: true });
       }
       document.getElementById('storageTanks').addEventListener('click', (event) => {
@@ -2242,19 +2240,19 @@
         const total = nodes.reduce((sum, [, pods]) => sum + weight(pods), 0);
         const el = document.getElementById('placementMap');
         const focused = el.contains(document.activeElement) ? { pod: document.activeElement.dataset.podKey, namespace: document.activeElement.dataset.namespace, node: document.activeElement.closest('[data-placement-node]')?.dataset.placementNode } : null;
-        const width = Math.max(280, el.parentElement.clientWidth - (window.innerWidth <= 720 ? 36 : 64));
+        const width = pulseInnerWidth(el);
         const stacked = window.innerWidth <= 720;
         const chartHeight = stacked ? 300 : Math.max(260, Math.min(420, width * .36));
         const namespaceCount = new Set(placementPods.map((pod) => pod.namespace)).size;
-        el.innerHTML = pulseSectionHeader('04', 'where things run', placementPods.length ? placementPods.length + ' pods · ' + namespaceCount + ' namespaces' : 'Pod inventory unavailable') +
-          '<div class="placement-legend"><span>area / requested memory</span><span class="placement-density">usage / request ' + [1, 2, 3, 4, 5].map((step) => '<i class="density-step density-' + step + '"></i>').join('') + '<span>low → high</span></span></div>' +
+        el.innerHTML = pulseSectionHeader('Placement', placementPods.length ? placementPods.length + ' pods · ' + namespaceCount + ' namespaces' : 'unavailable') +
+          '<div class="placement-legend"><span>area = memory request</span><span class="placement-density">usage ' + [1, 2, 3, 4, 5].map((step) => '<i class="density-step density-' + step + '"></i>').join('') + '</span></div>' +
           '<div class="placement-nodes" style="grid-template-columns:' + (stacked ? '1fr' : nodes.map(([, pods]) => weight(pods) + 'fr').join(' ')) + '">' + nodes.map(([name, pods]) => {
             const nodeWidth = stacked ? width : (width - 24 * (nodes.length - 1)) * weight(pods) / total;
             const collapsed = new Set([...collapsedNamespaces].filter((key) => key.startsWith(name + '|')).map((key) => key.slice(name.length + 1)));
             const requested = pods.reduce((sum, pod) => sum + (pod.request || 0), 0);
             return '<section class="placement-node" data-placement-node="' + escapeHtml(name) + '"><div class="placement-node-heading"><h3>' + escapeHtml(name) + '</h3><span>' + pods.length + ' pods · ' + P.fmt.bytes(requested) + '</span></div>' + P.placementSvg(pods, nodeWidth, chartHeight, { collapsed, flashing }) + '</section>';
-          }).join('') + '</div>' + (placementPods.length ? '' : '<p class="pulse-empty">Waiting for pod inventory.</p>') +
-          '<div id="placementDetail" class="placement-detail" role="status">Hover or focus a pod for details. Select a namespace to fold it.</div><div class="placement-note">Squares / restarts · red / over request · checkered / not running or phase unknown.<span>Minimum visible area: 32 Mi</span></div>';
+          }).join('') + '</div>' + (placementPods.length ? '' : '<p class="pulse-empty">No pod data.</p>') +
+          '<div id="placementDetail" class="placement-detail" role="status">Hover a pod · click a namespace to fold</div><div class="placement-note"><span>square restarts · red over request · checkered not running</span></div>';
         if (focused) {
           const target = [...el.querySelectorAll('[data-pod-key], [data-namespace]')].find((element) => focused.pod ? element.dataset.podKey === focused.pod : element.dataset.namespace === focused.namespace && element.closest('[data-placement-node]')?.dataset.placementNode === focused.node);
           target?.focus({ preventScroll: true });
@@ -2316,7 +2314,7 @@
           })()]);
           const degraded = Object.values(dashboardState.metrics).filter((metric) => metric.state !== 'live').length;
           status.dataset.state = degraded ? 'degraded' : 'live';
-          status.textContent = (degraded ? degraded + ' signals unavailable' : 'Live') + ' · ' + new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
+          status.textContent = (degraded ? degraded + ' unavailable' : 'Live') + ' · ' + new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit' });
           renderPulse();
         })().finally(() => { pulseRequest = null; });
         return pulseRequest;
@@ -2328,23 +2326,16 @@
         if (activePage === 'pulse') void loadPulse();
         const silent = Boolean(options && options.silent);
         if (!silent) {
-          setLoadState('Refreshing…');
-          setMsg('Refreshing...');
-          setVpnMsg('Refreshing…');
-          setUpdatesMsg('Loading…');
-          setTravelMsg('Loading…');
+          setLoadState('…');
           setBtnLoading(refreshAllBtn, true);
           overviewStripEl.innerHTML = skeletonOverviewStrip(3);
           travelOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
-          jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
-          siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
           updatesRowsEl.innerHTML = skeletonTableRows(5, 4);
           helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
-          if (activePage === 'jobs') jobsListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
-          if (activePage === 'deploy') siteDeployListEl.innerHTML = '<div class="table-shell"><table><tbody>' + skeletonTableRows(4, 3) + '</tbody></table></div>';
-          if (activePage === 'secrets') secretsListEl.innerHTML = skeletonTableRows(1, 5);
+          if (activePage === 'jobs') jobsOverviewStripEl.innerHTML = skeletonOverviewStrip(4);
+          if (activePage === 'deploy') siteDeployOverviewStripEl.innerHTML = skeletonOverviewStrip(3);
         }
 
         try {
@@ -2429,16 +2420,14 @@
               if (!silent) setJobsMsg('');
             } else {
               dashboardState.jobs = null;
-              jobsSummaryEl.textContent = 'Managed jobs unavailable';
-              jobsListEl.innerHTML = '<div class="empty-state">' + escapeHtml(jobsData ? jobsData.reason.message : 'Managed jobs unavailable.') + '</div>';
+              jobsSummaryEl.textContent = 'unavailable';
+              jobsListEl.innerHTML = '<div class="empty-state">' + escapeHtml(jobsData ? jobsData.reason.message : 'Jobs unavailable.') + '</div>';
               if (jobsData && !silent) setJobsMsg(jobsData.reason.message, true);
             }
           } else if (!dashboardState.jobs) {
-            jobsSummaryEl.textContent = 'Loading…';
+            jobsSummaryEl.textContent = '';
             jobsOverviewStripEl.innerHTML = '';
-            jobsOverviewMetaEl.innerHTML = '';
-            jobsOverviewDetailEl.textContent = 'open jobs to load cron state';
-            jobsListEl.innerHTML = '<div class="empty-state">Open the jobs page to load managed CronJob state.</div>';
+            jobsListEl.innerHTML = '';
           }
           if (includeSiteDeployments) {
             if (siteDeployData && siteDeployData.status === 'fulfilled') {
@@ -2446,27 +2435,27 @@
               if (!silent) setSiteDeployMsg('');
             } else {
               dashboardState.siteDeployments = null;
-              siteDeploySummaryEl.textContent = 'Site deploys unavailable';
+              siteDeploySummaryEl.textContent = 'unavailable';
               siteDeployOverviewStripEl.innerHTML = '';
-              siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(siteDeployData ? siteDeployData.reason.message : 'Site deploys unavailable.') + '</div>';
+              siteDeployListEl.innerHTML = '<div class="empty-state">' + escapeHtml(siteDeployData ? siteDeployData.reason.message : 'Sites unavailable.') + '</div>';
               if (siteDeployData && !silent) setSiteDeployMsg(siteDeployData.reason.message, true);
             }
           } else if (!dashboardState.siteDeployments) {
-            siteDeploySummaryEl.textContent = 'Loading…';
+            siteDeploySummaryEl.textContent = '';
             siteDeployOverviewStripEl.innerHTML = '';
-            siteDeployListEl.innerHTML = '<div class="empty-state">Open deploy sites to load static-site targets.</div>';
+            siteDeployListEl.innerHTML = '';
           }
           if (includeSecrets) {
             if (secretsData && secretsData.status === 'fulfilled') {
               renderSecretsList(secretsData.value);
               if (!silent) setSecretsMsg('');
             } else {
-              renderSecretsList({ configured: false, items: [], namespaces: [], reason: secretsData ? secretsData.reason.message : 'Secret inventory unavailable.' });
+              renderSecretsList({ configured: false, items: [], namespaces: [], reason: secretsData ? secretsData.reason.message : 'Secrets unavailable.' });
               if (secretsData && !silent) setSecretsMsg(secretsData.reason.message, true);
             }
           } else if (!dashboardState.secrets) {
-            secretsSummaryEl.textContent = 'Secret inventory loads only when this page is opened.';
-            secretsListEl.innerHTML = '<div class="empty-state">Open the secrets page to load managed secret inventory.</div>';
+            secretsSummaryEl.textContent = '';
+            secretsListEl.innerHTML = '';
           }
 
           renderOverview();
@@ -2474,7 +2463,7 @@
           if (activePage === 'jobs' && !includeJobs && !dashboardState.jobs) void loadJobs();
           if (activePage === 'deploy' && !includeSiteDeployments && !dashboardState.siteDeployments) void loadSiteDeployments();
           if (activePage === 'secrets' && !includeSecrets && !dashboardState.secrets) void loadSecrets();
-          setLoadState((silent ? 'Last refresh ' : 'Updated ') + fmtTime(new Date()));
+          setLoadState(fmtTime(new Date()));
           if (!silent) setMsg('');
         } catch (err) {
           setLoadState(err.message, true);
@@ -2484,7 +2473,7 @@
         }
       }
 
-      refreshAllBtn.onclick = () => loadDashboard();
+      refreshAllBtn.onclick = () => { loadDashboard(); loadVitals(true); };
       const exposureRefreshBtn = document.getElementById('exposureRefreshBtn');
       if (exposureRefreshBtn) exposureRefreshBtn.onclick = () => loadDashboard();
       updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
@@ -2512,7 +2501,13 @@
         secretKeyRowsEl.insertAdjacentHTML('beforeend', secretKeyRowHtml('', ''));
       };
       themeModeButtons.forEach((button) => {
-        button.addEventListener('click', () => applyThemeMode(button.dataset.themeMode));
+        button.addEventListener('click', () => {
+          const next = button.dataset.themeMode;
+          const apply = () => applyThemeMode(next);
+          // Reveal only when the page will actually change colour.
+          if (resolvedThemeMode(next) === resolvedThemeMode(storedThemeMode())) apply();
+          else window.Fx.reveal(button, apply);
+        });
       });
       if (themeMedia) {
         themeMedia.addEventListener('change', () => {
@@ -2554,7 +2549,7 @@
             if (!row.isConnected) return;
             row.remove();
             if (!secretKeyRowsEl.querySelector('.secret-key-row')) {
-              secretKeyRowsEl.innerHTML = '<div class="empty-state">This Secret has no keys yet.</div>';
+              secretKeyRowsEl.innerHTML = '<div class="empty-state">No keys.</div>';
             }
           };
           row.addEventListener('transitionend', finishRemoval, { once: true });
@@ -2688,11 +2683,13 @@
           if (!target) return;
           event.preventDefault();
           setActivePage(target, { focus: true });
+          if (target === 'overview') loadVitals();
         });
       });
 
       window.addEventListener('hashchange', () => {
         setActivePage(window.location.hash, { replace: true, focus: true });
+        if (activePage === 'overview') loadVitals();
       });
 
       let pulseResizeTimer;
@@ -2700,16 +2697,113 @@
         clearTimeout(pulseResizeTimer);
         pulseResizeTimer = setTimeout(() => { if (activePage === 'pulse') { renderPowerTicker(); renderPlacementMap(); } }, 200);
       });
-      setInterval(() => {
-        if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
-      }, 60000);
+      // Telemetry refreshes only for the page that is on screen.
+      function refreshVisibleTelemetry() {
+        if (document.visibilityState !== 'visible') return;
+        if (activePage === 'pulse') loadPulse({ silent: true });
+        if (activePage === 'overview') loadVitals();
+      }
+      setInterval(refreshVisibleTelemetry, 60000);
       document.documentElement.classList.toggle('is-backgrounded', document.hidden);
       document.addEventListener('visibilitychange', () => {
         document.documentElement.classList.toggle('is-backgrounded', document.hidden);
-        if (document.visibilityState === 'visible' && activePage === 'pulse') loadPulse({ silent: true });
+        refreshVisibleTelemetry();
       });
       setInterval(tickExpiryCountdowns, 1000);
+
+      /* ------------------------------------------------- presentation */
+
+      const fx = window.Fx;
+      heroField = fx.field(document.getElementById('heroField'));
+      fx.spotlight('.panel');
+      fx.glide(document.getElementById('navRail'), document.querySelector('.nav-indicator'), '[aria-current="page"]', 'y');
+      document.querySelectorAll('.tabs, .view-switch').forEach((group) => {
+        const thumb = group.querySelector('.glide-thumb');
+        if (thumb) fx.glide(group, thumb, '[aria-selected="true"], [aria-pressed="true"]', 'x');
+      });
+      const crosshairTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+      fx.crosshair(document.getElementById('powerTicker'), {
+        plot: '.ticker-wave',
+        getPoints: () => powerPoints,
+        format: (point) => crosshairTime.format(new Date(point.at * 1000)) + ' · ' + window.Pulse.fmt.watts(point.watts),
+      });
+
+      // Figures roll to a new value and stay still when it has not changed.
+      const rolledFigures = new Map();
+      function rollFigures() {
+        document.querySelectorAll('[data-roll]:not([data-rolled])').forEach((node) => {
+          const key = (node.closest('[id]')?.id || '') + '|' + (node.parentElement.querySelector('.tile-label, .eyebrow')?.textContent || '');
+          node.dataset.rolled = '1';
+          fx.roll(node, node.dataset.roll, rolledFigures.get(key));
+          rolledFigures.set(key, node.dataset.roll);
+        });
+      }
+      new MutationObserver(rollFigures).observe(document.getElementById('mainContent'), { childList: true, subtree: true });
+
+      const clockEl = document.getElementById('clock');
+      const clockFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+      function tickClock() {
+        clockEl.textContent = clockFormat.format(new Date()) + ' SGT';
+      }
+      tickClock();
+      setInterval(tickClock, 15000);
+
+      // Everything reachable by pointer is reachable from the palette.
+      const commandPalette = fx.palette({
+        getCommands() {
+          const commands = pageLinks.map((link) => ({
+            group: 'Go to',
+            label: link.dataset.pageTitle,
+            run: () => setActivePage(link.getAttribute('href'), { focus: true }),
+          }));
+          commands.push({ group: 'Run', label: 'Refresh', hint: 'all data', run: () => refreshAllBtn.click() });
+          if (!renovateRunBtn.disabled) commands.push({ group: 'Run', label: 'Run Renovate', run: () => runRenovate() });
+          commands.push(
+            { group: 'Run', label: 'Check images', hint: 'registries', run: () => loadUpdates({ force: true }) },
+            { group: 'Run', label: 'Check charts', hint: 'helm repos', run: () => loadHelmUpdates({ force: true }) },
+            { group: 'Run', label: 'Deploy all sites', hint: 'flux reconcile', run: () => { setActivePage('deploy'); runAllSiteDeployments(siteDeployAllBtn); } },
+          );
+          if (transmissionVpnState) {
+            const next = transmissionVpnState.desiredMode === 'vpn' ? 'direct' : 'vpn';
+            commands.push({ group: 'Run', label: 'Route Transmission ' + next, hint: 'asks first', run: () => setTransmissionVpnMode(next) });
+          }
+          commands.push({ group: 'Run', label: 'Disable all shares', hint: 'asks first', danger: true, run: () => emergencyBtn.click() });
+          for (const mode of ['system', 'light', 'dark']) {
+            commands.push({ group: 'Theme', label: mode[0].toUpperCase() + mode.slice(1), keywords: 'theme appearance', run: () => themeModeButtons.find((button) => button.dataset.themeMode === mode)?.click() });
+          }
+          for (const service of dashboardState.services || []) {
+            commands.push({
+              group: 'Shares',
+              label: service.name || service.id,
+              hint: service.enabled ? 'public' : 'private',
+              keywords: [service.id, service.publicHost].join(' '),
+              run: () => {
+                setActivePage('exposure');
+                sharesSearch.value = service.name || service.id;
+                filterShares();
+              },
+            });
+          }
+          return commands;
+        },
+      });
+      const paletteBtn = document.getElementById('paletteBtn');
+      if (!/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) paletteBtn.querySelector('kbd').textContent = 'Ctrl K';
+      paletteBtn.onclick = () => commandPalette.open();
+      document.addEventListener('keydown', (event) => {
+        const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName) || event.target.isContentEditable;
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          commandPalette.toggle();
+        } else if (event.key === '/' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+          event.preventDefault();
+          commandPalette.open();
+        }
+      });
+
       renderPulseStrip();
+      renderVitals();
       applyThemeMode(storedThemeMode());
       setActivePage(window.location.hash || '#overview', { replace: true });
       loadDashboard();
+      loadVitals();

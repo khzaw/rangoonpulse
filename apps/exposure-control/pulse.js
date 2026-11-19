@@ -114,8 +114,8 @@
   function monthlyLedger(snapshot, now = Date.now()) {
     const rows = (Array.isArray(snapshot?.months) ? snapshot.months : []).filter((row) =>
       /^\d{4}-(0[1-9]|1[0-2])$/.test(row?.month) && numeric(row.costSgd) && row.costSgd >= 0);
-    if (snapshot?.state === 'unavailable') return '<div class="monthly-ledger"><h3>monthly totals</h3><p class="pulse-empty">Monthly history unavailable. Saved totals remain in PostgreSQL.</p></div>';
-    if (!rows.length) return '<div class="monthly-ledger"><h3>monthly totals</h3><p class="pulse-empty">Awaiting the first collection. Monthly totals will appear here, without projected or backfilled values.</p></div>';
+    if (snapshot?.state === 'unavailable') return '<div class="monthly-ledger"><h3>monthly totals</h3><p class="pulse-empty">Monthly history unavailable.</p></div>';
+    if (!rows.length) return '<div class="monthly-ledger"><h3>monthly totals</h3><p class="pulse-empty">Awaiting the first collection.</p></div>';
     const shown = rows.slice(-24);
     const max = Math.max(...shown.map((row) => row.costSgd), 0.0001);
     const collected = Math.max(...shown.map((row) => Date.parse(row.collectedUntil)).filter(Number.isFinite));
