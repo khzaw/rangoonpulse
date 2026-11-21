@@ -2,6 +2,7 @@ const http = require("node:http");
 const https = require("node:https");
 const crypto = require("node:crypto");
 const powerLedger = require("./power-ledger.js");
+const activityFeed = require("./activity-feed.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
@@ -214,6 +215,18 @@ const SECRET_EDITOR_GIT_AUTHOR_NAME = String(
 const SECRET_EDITOR_GIT_AUTHOR_EMAIL = String(
   process.env.SECRET_EDITOR_GIT_AUTHOR_EMAIL || "controlpanel@khzaw.dev",
 ).trim();
+const ACTIVITY_BRANCH = String(
+  process.env.ACTIVITY_BRANCH || SECRET_EDITOR_BRANCH || "master",
+).trim();
+const ACTIVITY_ROOT_KUSTOMIZATION = String(
+  process.env.ACTIVITY_ROOT_KUSTOMIZATION || "flux-system",
+).trim();
+const ACTIVITY_CACHE_TTL_SECONDS = clampInt(
+  process.env.ACTIVITY_CACHE_TTL_SECONDS,
+  30,
+  5,
+  600,
+);
 const SECRET_EDITOR_JOB_TIMEOUT_SECONDS = clampInt(
   process.env.SECRET_EDITOR_JOB_TIMEOUT_SECONDS,
   180,
@@ -417,6 +430,9 @@ const travelSnapshotCache = {
   snapshot: null,
   ts: 0,
 };
+const activityCache = { ts: 0, snapshot: null, promise: null };
+// A commit's file list never changes, so each one is read from GitHub once.
+const activityCommitFiles = new Map();
 const renovateStatusCache = {
   promise: null,
   snapshot: null,
@@ -2836,6 +2852,16 @@ function cronJobStatus(cronJob) {
   };
 }
 
+function jobBelongsToCronJob(item, cronJob) {
+  const labels = (item && item.metadata && item.metadata.labels) || {};
+  const owners = (item && item.metadata && item.metadata.ownerReferences) || [];
+  return (
+    labels["cronjob-name"] === cronJob ||
+    labels["batch.kubernetes.io/cronjob-name"] === cronJob ||
+    owners.some((owner) => owner && owner.kind === "CronJob" && owner.name === cronJob)
+  );
+}
+
 async function managedJobSnapshot(job) {
   const cronJob = await kubeGetJson(managedJobPath(job, "/cronjobs/" + encodeURIComponent(job.cronJob)));
   if (!cronJob) {
@@ -2851,15 +2877,10 @@ async function managedJobSnapshot(job) {
   const jobsList = await kubeGetJson(
     managedJobPath(job, "/jobs"),
   );
-  const recentJobs = sortJobsNewestFirst((Array.isArray(jobsList && jobsList.items) ? jobsList.items : []).filter((item) => {
-    const labels = (item && item.metadata && item.metadata.labels) || {};
-    const owners = (item && item.metadata && item.metadata.ownerReferences) || [];
-    return (
-      labels["cronjob-name"] === job.cronJob ||
-      labels["batch.kubernetes.io/cronjob-name"] === job.cronJob ||
-      owners.some((owner) => owner && owner.kind === "CronJob" && owner.name === job.cronJob)
-    );
-  })).slice(0, 8);
+  const recentJobs = sortJobsNewestFirst(
+    (Array.isArray(jobsList && jobsList.items) ? jobsList.items : [])
+      .filter((item) => jobBelongsToCronJob(item, job.cronJob)),
+  ).slice(0, 8);
   const recentRuns = [];
   for (const item of recentJobs) {
     const name = item && item.metadata && item.metadata.name;
@@ -4256,6 +4277,139 @@ function renderMetrics() {
   ].join("\n");
 }
 
+async function listAllKustomizations() {
+  const list = await kubeGetJson(
+    "/apis/kustomize.toolkit.fluxcd.io/v1/kustomizations",
+  );
+  return Array.isArray(list && list.items) ? list.items : [];
+}
+
+async function activityCommitFileNames(sha) {
+  if (activityCommitFiles.has(sha)) return activityCommitFiles.get(sha);
+  const detail = await githubRequest(
+    githubRepositoryPath() + "/commits/" + encodeURIComponent(sha),
+  );
+  const files = (Array.isArray(detail && detail.files) ? detail.files : [])
+    .flatMap((file) => [file && file.filename, file && file.previous_filename])
+    .filter(Boolean)
+    .map(String);
+  activityCommitFiles.set(sha, files);
+  return files;
+}
+
+async function listActivityGit() {
+  const since = new Date(
+    Date.now() - activityFeed.WINDOW_HOURS * 3600000,
+  ).toISOString();
+  const listing = await githubRequest(
+    githubRepositoryPath() +
+      "/commits?sha=" + encodeURIComponent(ACTIVITY_BRANCH) +
+      "&since=" + encodeURIComponent(since) +
+      "&per_page=100",
+  );
+  const commits = Array.isArray(listing) ? listing : [];
+  const current = new Set(
+    commits.map((commit) => String((commit && commit.sha) || "").toLowerCase()),
+  );
+  for (const sha of activityCommitFiles.keys()) {
+    if (!current.has(sha)) activityCommitFiles.delete(sha);
+  }
+  const files = new Map();
+  await mapWithConcurrency([...current].filter(Boolean), 6, async (sha) => {
+    // A commit whose files cannot be read still appears, without an area.
+    files.set(sha, await activityCommitFileNames(sha).catch(() => []));
+  });
+  return { commits, files };
+}
+
+// Run summaries only: the Jobs page owns pods and log tails.
+async function listManagedJobRuns() {
+  const namespaces = [...new Set(MANAGED_JOBS.map((job) => job.namespace))];
+  const jobsByNamespace = new Map(
+    await Promise.all(
+      namespaces.map(async (namespace) => {
+        const list = await kubeGetJson(
+          "/apis/batch/v1/namespaces/" + encodeURIComponent(namespace) + "/jobs",
+        );
+        return [namespace, Array.isArray(list && list.items) ? list.items : []];
+      }),
+    ),
+  );
+  return MANAGED_JOBS.map((job) => ({
+    job,
+    runs: jobsByNamespace
+      .get(job.namespace)
+      .filter((item) => jobBelongsToCronJob(item, job.cronJob))
+      .map((item) => summarizeJob(item, [], "")),
+  }));
+}
+
+async function buildActivitySnapshot() {
+  const unavailable = (message) => Promise.reject(new Error(message));
+  const kube = kubeApiAvailable();
+  const git = githubConfigured();
+  const [gitData, helmReleases, kustomizations, jobRuns] = await Promise.allSettled([
+    git ? listActivityGit() : unavailable("GitHub integration is not configured."),
+    kube ? listAllHelmReleases() : unavailable("kubernetes api unavailable"),
+    kube ? listAllKustomizations() : unavailable("kubernetes api unavailable"),
+    kube ? listManagedJobRuns() : unavailable("kubernetes api unavailable"),
+  ]);
+  const settled = (result, fallback) =>
+    result.status === "fulfilled" ? result.value : fallback;
+  const sourceState = (result) =>
+    result.status === "fulfilled" ? "live" : "unavailable";
+  const fluxAvailable =
+    helmReleases.status === "fulfilled" && kustomizations.status === "fulfilled";
+  const feed = activityFeed.buildFeed({
+    commits: settled(gitData, { commits: [] }).commits,
+    commitFiles: settled(gitData, { files: new Map() }).files,
+    helmReleases: settled(helmReleases, []),
+    kustomizations: settled(kustomizations, []),
+    audit: loadAuditEntries(200),
+    jobs: MANAGED_JOBS,
+    jobRuns: settled(jobRuns, []),
+    repository: GITHUB_REPOSITORY,
+    rootKustomization: ACTIVITY_ROOT_KUSTOMIZATION,
+    panelAuthor: SECRET_EDITOR_GIT_AUTHOR_NAME,
+    gitAvailable: gitData.status === "fulfilled",
+    fluxAvailable,
+  });
+  return {
+    ...feed,
+    sources: {
+      git: git ? sourceState(gitData) : "unconfigured",
+      flux: fluxAvailable ? "live" : "unavailable",
+      jobs: sourceState(jobRuns),
+      panel: "live",
+    },
+    checkedAt: nowIso(),
+  };
+}
+
+async function getActivityFeed(forceRefresh) {
+  const cacheAgeMs = Date.now() - activityCache.ts;
+  if (
+    !forceRefresh &&
+    activityCache.snapshot &&
+    cacheAgeMs < ACTIVITY_CACHE_TTL_SECONDS * 1000
+  ) {
+    return activityCache.snapshot;
+  }
+
+  if (!activityCache.promise) {
+    activityCache.promise = (async () => {
+      const snapshot = await buildActivitySnapshot();
+      activityCache.snapshot = snapshot;
+      activityCache.ts = Date.now();
+      return snapshot;
+    })().finally(() => {
+      activityCache.promise = null;
+    });
+  }
+
+  return await activityCache.promise;
+}
+
 async function handleApi(req, res, parsedUrl) {
   const pathname = parsedUrl.pathname;
   if (req.method === "GET" && pathname === "/api/services") {
@@ -4484,6 +4638,18 @@ async function handleApi(req, res, parsedUrl) {
     }
   }
 
+  if (req.method === "GET" && pathname === "/api/activity") {
+    const force =
+      parsedUrl.searchParams.get("force") === "1" ||
+      parsedUrl.searchParams.get("refresh") === "1";
+    try {
+      const payload = await getActivityFeed(force);
+      return sendJson(res, 200, payload);
+    } catch (err) {
+      return sendJson(res, 500, { error: err.message });
+    }
+  }
+
   if (req.method === "GET" && pathname === "/api/travel") {
     const force =
       parsedUrl.searchParams.get("force") === "1" ||
@@ -4692,6 +4858,10 @@ const CONTROL_PANEL_ASSETS = new Map([
     filePath: path.join(APP_DIR, "fx.js"),
     contentType: "application/javascript; charset=utf-8",
   }],
+  ["/assets/feed.js", {
+    filePath: path.join(APP_DIR, "feed.js"),
+    contentType: "application/javascript; charset=utf-8",
+  }],
   ["/assets/exposure-client.js", {
     filePath: path.join(APP_DIR, "exposure-client.js"),
     contentType: "application/javascript; charset=utf-8",
@@ -4805,7 +4975,7 @@ function renderCombinedCockpitHtml(template) {
       /__TRANSMISSION_VPN_WEBUI_URL__/g,
       escapeHtml(TRANSMISSION_VPN_WEBUI_URL),
     )
-    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|tuning\.js|fx\.js|exposure-client\.js|app\.js)/g, (match) => {
+    .replace(/\/assets\/(styles\.css|thinking-orb\.js|pulse\.js|tuning\.js|fx\.js|feed\.js|exposure-client\.js|app\.js)/g, (match) => {
       const asset = CONTROL_PANEL_ASSETS.get(match);
       if (!asset) return match;
       return match + "?v=" + loadStaticAsset(asset.filePath).version;

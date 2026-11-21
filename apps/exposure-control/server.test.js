@@ -318,6 +318,46 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
   await stop(child);
 });
 
+test("activity feed serves the audit log without Git or cluster access and never invents their state", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "exposure-control-activity-"));
+  temporaryDirectories.push(directory);
+  const servicesPath = path.join(directory, "services.json");
+  fs.writeFileSync(servicesPath, JSON.stringify([{ id: "books", name: "Books", target: "http://127.0.0.1:9" }]));
+  const recent = new Date(Date.now() - 60000).toISOString();
+  fs.writeFileSync(path.join(directory, "audit.json"), [
+    { action: "disable", serviceId: "books", ts: new Date(Date.now() - 9 * 86400000).toISOString() },
+    { action: "enable", serviceId: "books", authMode: "none", hours: 1, ts: recent },
+  ].map((entry) => JSON.stringify(entry)).join("\n") + "\n");
+  const port = await availablePort();
+  const child = spawn(process.execPath, [SERVER_PATH], { cwd: REPO_ROOT, env: {
+    ...process.env, PORT: String(port), APP_DIR: __dirname, DATA_DIR: directory,
+    SERVICES_FILE: servicesPath, TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
+    PUBLIC_DOMAIN: "example.test", CONTROL_PANEL_HOST: "controlpanel.example.test",
+    KUBERNETES_SERVICE_HOST: "", GITHUB_TOKEN: "", GITHUB_REPOSITORY: "",
+  }, stdio: ["ignore", "pipe", "pipe"] });
+  children.push(child);
+  await waitForStartup(child);
+
+  const response = await exposureRequest(port, "/api/activity");
+  assert.equal(response.status, 200);
+  const feed = response.json();
+  assert.equal(feed.state, "unknown");
+  assert.deepEqual(feed.sources, { git: "unconfigured", flux: "unavailable", jobs: "unavailable", panel: "live" });
+  assert.deepEqual([feed.summary.commits, feed.summary.rollouts, feed.summary.failed], [null, null, null]);
+  assert.deepEqual(feed.events.map((event) => [event.text, event.at, event.tone]), [["Shared books", recent, "warning"]]);
+  assert.ok(Number.isFinite(Date.parse(feed.checkedAt)));
+  assert.deepEqual((await exposureRequest(port, "/api/activity?force=1")).json().events, feed.events);
+  assert.equal((await exposureRequest(port, "/api/activity", "POST", {})).status, 404);
+  assert.equal((await exposureRequest(port, "/api/activity", "GET", undefined, "other.example.test")).status, 403);
+
+  const html = await exposureRequest(port, "/");
+  const assetUrl = html.text.match(/src="(\/assets\/feed.js\?v=[^"]+)"/)[1];
+  const asset = await exposureRequest(port, assetUrl);
+  assert.equal(asset.status, 200);
+  assert.match(asset.headers["cache-control"], /immutable/);
+  assert.match(asset.text, /root\.Feed = factory\(\)/);
+});
+
 function prometheusPayload(url, result) {
   const range = url.pathname.endsWith("query_range");
   return {

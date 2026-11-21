@@ -101,7 +101,7 @@ test('boxes stay on the dashboard pages', () => {
   const classTokens = (source) => [...source.matchAll(/class="([^"]*)"/g)].flatMap((match) => match[1].split(/\s+/));
   assert.ok(classTokens(section('overview')).includes('box'));
   assert.ok(classTokens(section('pulse')).includes('tiles'));
-  for (const id of ['exposure', 'deploy', 'updates', 'travel', 'tuning', 'jobs', 'secrets']) {
+  for (const id of ['activity', 'exposure', 'deploy', 'updates', 'travel', 'tuning', 'jobs', 'secrets']) {
     const tokens = classTokens(section(id));
     assert.ok(tokens.length > 0, id + ' section was not found');
     for (const boxed of ['box', 'tiles', 'panel']) assert.ok(!tokens.includes(boxed), id + ' must not use ' + boxed);

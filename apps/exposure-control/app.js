@@ -63,6 +63,13 @@
       const secretSaveBtn = document.getElementById('secretSaveBtn');
       const secretDeleteBtn = document.getElementById('secretDeleteBtn');
       const secretKeyRowsEl = document.getElementById('secretKeyRows');
+      const feedHeadlineEl = document.getElementById('feedHeadline');
+      const feedEyebrowEl = document.getElementById('feedEyebrow');
+      const feedCountersEl = document.getElementById('feedCounters');
+      const feedFiltersEl = document.getElementById('feedFilters');
+      const feedStatusEl = document.getElementById('feedStatus');
+      const feedRefreshBtn = document.getElementById('feedRefreshBtn');
+      const feedListEl = document.getElementById('feedList');
       const pageSections = Array.from(document.querySelectorAll('[data-page-section]'));
       const pageLinks = Array.from(document.querySelectorAll('[data-page-link]'));
 
@@ -304,7 +311,7 @@
       function normalizePage(value) {
         const candidate = String(value || '').replace(/^#/, '').trim().toLowerCase();
         if (candidate === 'audit' || candidate === 'transmission') return 'exposure';
-        const knownPages = new Set(['overview', 'pulse', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
+        const knownPages = new Set(['overview', 'pulse', 'activity', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets']);
         if (knownPages.has(candidate)) return candidate;
         return 'overview';
       }
@@ -316,6 +323,7 @@
         const previousPage = activePage;
         activePage = nextPage;
         if (nextPage === 'pulse' && previousPage !== 'pulse') loadPulse({ silent: true });
+        if (nextPage === 'activity' && previousPage !== 'activity') loadActivity();
         pageSections.forEach((section) => {
           section.hidden = section.id !== nextPage;
           section.classList.toggle('page-active', section.id === nextPage);
@@ -460,6 +468,7 @@
           if (/secrets/.test(target)) return { state: 'working', label: 'Loading secrets' };
           if (/jobs/.test(target)) return { state: 'working', label: 'Loading jobs' };
           if (/tuning/.test(target)) return { state: 'working', label: 'Reading resource advisor' };
+          if (/activity/.test(target)) return { state: 'searching', label: 'Reading activity' };
           if (/travel/.test(target)) return { state: 'working', label: 'Checking travel readiness' };
           return { state: 'working', label: 'Syncing control plane' };
         }
@@ -2317,10 +2326,97 @@
         return pulseRequest;
       }
 
+      /* --------------------------------------------------------- activity */
+
+      const FEED_PAGE = 40;
+      const feedState = { payload: null, view: 'all', limit: FEED_PAGE, seen: null, loadedAt: 0, request: null, painted: {} };
+
+      // Each region repaints only when its markup changes, so a quiet refresh
+      // leaves focus, hover and finished animations alone.
+      function paintFeed(element, key, markup) {
+        if (feedState.painted[key] === markup) return;
+        feedState.painted[key] = markup;
+        element.innerHTML = markup;
+      }
+
+      function feedSkeleton() {
+        return '<div class="feed-skeleton" aria-hidden="true">' + [72, 54, 63, 48].map((width) =>
+          '<div class="feed-skeleton-row">' + skeletonLine('46px', '20px') + skeletonLine('30px', '30px') +
+            '<div>' + skeletonLine('120px', '12px') + skeletonLine(width + '%', '16px') + '</div></div>'
+        ).join('') + '</div>';
+      }
+
+      // `swap` marks a change of view: rows enter together. Otherwise only
+      // events that were not in the previous snapshot announce themselves.
+      function renderActivity(options) {
+        const payload = feedState.payload;
+        if (!payload) return;
+        const F = window.Feed;
+        const now = Date.now();
+        const events = Array.isArray(payload.events) ? payload.events : [];
+        const swap = Boolean(options && options.swap) || !feedState.seen;
+        paintFeed(feedHeadlineEl, 'headline', F.headlineMarkup(payload.state));
+        paintFeed(feedCountersEl, 'counters', F.countersMarkup(payload.summary));
+        feedEyebrowEl.textContent = 'Last ' + (Number(payload.summary && payload.summary.hours) || 24) + ' h · ' + F.dayLabel(new Date(now));
+        paintFeed(feedFiltersEl, 'filters', F.filtersMarkup(events, feedState.view));
+        const visible = F.select(events, feedState.view);
+        const fresh = swap ? new Set() : new Set(visible.filter((event) => !feedState.seen.has(event.id)).map((event) => event.id));
+        feedListEl.classList.toggle('is-swapping', swap);
+        paintFeed(feedListEl, 'list', F.listMarkup(visible, {
+          limit: feedState.limit, fresh, now,
+          empty: feedState.view === 'failed' ? 'Nothing failed.' : 'Nothing here.',
+        }));
+        feedState.seen = new Set(events.map((event) => event.id));
+        const status = F.statusLine(payload, now);
+        feedStatusEl.dataset.state = status.state;
+        feedStatusEl.textContent = status.text;
+      }
+
+      async function loadActivity(options) {
+        const force = Boolean(options && options.force);
+        if (feedState.request) return feedState.request;
+        // The server caches the feed for 30 seconds; sooner repeats add nothing.
+        if (!force && feedState.payload && Date.now() - feedState.loadedAt < 20000) return undefined;
+        if (!feedState.payload) paintFeed(feedListEl, 'list', feedSkeleton());
+        if (force) setBtnLoading(feedRefreshBtn, true);
+        feedState.request = (async () => {
+          try {
+            feedState.payload = await request(force ? '/api/activity?force=1' : '/api/activity', 'GET');
+            feedState.loadedAt = Date.now();
+            renderActivity();
+          } catch (err) {
+            feedStatusEl.dataset.state = 'degraded';
+            feedStatusEl.textContent = 'unavailable';
+            if (!feedState.payload) paintFeed(feedListEl, 'list', '<p class="empty-state">' + escapeHtml(err.message) + '</p>');
+          } finally {
+            feedState.request = null;
+            if (force) setBtnLoading(feedRefreshBtn, false);
+          }
+        })();
+        return feedState.request;
+      }
+
+      // Area tags toggle; the fixed views behave like a segmented control.
+      function setFeedView(view) {
+        const next = String(view || 'all');
+        feedState.view = next.startsWith('area:') && feedState.view === next ? 'all' : next;
+        feedState.limit = FEED_PAGE;
+        renderActivity({ swap: true });
+        feedFiltersEl.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+        // A shorter list must start under the filter bar: bring a bar that has
+        // scrolled away back under the top bar, or the list up to a pinned one.
+        const bar = feedFiltersEl.parentElement.getBoundingClientRect();
+        const ceiling = document.querySelector('.topbar').getBoundingClientRect().bottom;
+        const top = feedListEl.getBoundingClientRect().top;
+        if (bar.top < ceiling - 1) window.scrollBy({ top: bar.top - ceiling, behavior: 'auto' });
+        else if (top < bar.bottom) window.scrollBy({ top: top - bar.bottom, behavior: 'auto' });
+      }
+
       async function loadDashboard(options) {
         // Telemetry has its own loading state; a slow metrics query must not
         // delay rendering the operator controls returned by the other APIs.
         if (activePage === 'pulse') void loadPulse();
+        if (activePage === 'activity') void loadActivity();
         const silent = Boolean(options && options.silent);
         if (!silent) {
           setLoadState('…');
@@ -2478,6 +2574,20 @@
       helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
       jobsRefreshBtn.onclick = () => loadJobs({ force: true });
+      feedRefreshBtn.onclick = () => loadActivity({ force: true });
+      feedFiltersEl.onclick = (event) => {
+        const chip = event.target.closest('[data-feed-view]');
+        if (chip) setFeedView(chip.dataset.feedView);
+      };
+      feedListEl.onclick = (event) => {
+        const area = event.target.closest('[data-feed-view]');
+        if (area) {
+          setFeedView(area.dataset.feedView);
+        } else if (event.target.closest('[data-feed-more]')) {
+          feedState.limit += FEED_PAGE;
+          renderActivity();
+        }
+      };
       siteDeployRefreshBtn.onclick = () => loadSiteDeployments({ force: true });
       siteDeployAllBtn.onclick = () => runAllSiteDeployments(siteDeployAllBtn);
       secretsRefreshBtn.onclick = () => loadSecrets({ force: true });
@@ -2692,6 +2802,7 @@
         if (document.visibilityState !== 'visible') return;
         if (activePage === 'pulse') loadPulse({ silent: true });
         if (activePage === 'overview') loadVitals();
+        if (activePage === 'activity') loadActivity();
       }
       setInterval(refreshVisibleTelemetry, 60000);
       document.documentElement.classList.toggle('is-backgrounded', document.hidden);

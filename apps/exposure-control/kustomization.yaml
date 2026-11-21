@@ -9,9 +9,11 @@ resources:
 configMapGenerator:
   - name: exposure-control-app-files
     files:
+      - activity-feed.js
       - app.js
       - exposure-core.js
       - exposure-client.js
+      - feed.js
       - fx.js
       - pulse.js
       - power-ledger.js

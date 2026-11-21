@@ -16,7 +16,7 @@ This document records wiring and permission requirements, not a guarantee that a
 
 | Location | Key / consumer | Required capability |
 | --- | --- | --- |
-| `default/exposure-control-github` | `GITHUB_TOKEN`; Control Panel and secret-commit Jobs | Repository tree reads, contents writes, PR/issue reads, and Actions workflow status/dispatch |
+| `default/exposure-control-github` | `GITHUB_TOKEN`; Control Panel and secret-commit Jobs | Repository tree and commit-history reads, contents writes, PR/issue reads, and Actions workflow status/dispatch |
 | `monitoring/resource-advisor-github` | `token`; advisor apply Jobs and capacity publisher | Repository contents and pull-request writes; does not require Actions dispatch |
 | `default/dynacat-github` | `token` → `GITHUB_RELEASES_TOKEN` | Authenticated public-release reads only |
 | `default/ghcr-pull-secret` | `.dockerconfigjson`; private workload image pulls | GHCR package reads |

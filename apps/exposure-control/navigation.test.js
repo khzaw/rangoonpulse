@@ -19,7 +19,7 @@ function element(id, attributes = {}) {
 }
 
 function routing() {
-  const pages = ['overview', 'pulse', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets'];
+  const pages = ['overview', 'pulse', 'activity', 'updates', 'deploy', 'travel', 'exposure', 'tuning', 'jobs', 'secrets'];
   const nodes = Object.fromEntries(pages.map((id) => {
     const node = element(id);
     node.heading = element(id + '-heading');
@@ -39,7 +39,7 @@ function routing() {
     mobileNavigation: { matches: true }, navigation: { open: true, close() { this.open = false; } },
     transmissionPanelEl: element(), auditPanelEl: element(),
     jobsListEl: element(), jobsOverviewStripEl: element(), siteDeployListEl: element(), siteDeployOverviewStripEl: element(), secretsListEl: element(),
-    loadPulse: () => loads.push('pulse'), loadJobs: () => loads.push('jobs'), loadSecrets: () => loads.push('secrets'), loadSiteDeployments: () => loads.push('deploy'),
+    loadPulse: () => loads.push('pulse'), loadActivity: () => loads.push('activity'), loadJobs: () => loads.push('jobs'), loadSecrets: () => loads.push('secrets'), loadSiteDeployments: () => loads.push('deploy'),
     skeletonTableRows: () => '', skeletonOverviewStrip: () => '',
   };
   vm.createContext(context);
@@ -81,6 +81,17 @@ test('page navigation loads lazy inventories but reuses an existing snapshot', (
   context.setActivePage('deploy');
   context.setActivePage('secrets');
   assert.deepEqual(loads, ['jobs', 'deploy', 'secrets']);
+});
+
+test('telemetry pages load on entry and not again while they stay on screen', () => {
+  const { context, loads } = routing();
+  context.setActivePage('activity', { focus: true });
+  context.setActivePage('#activity');
+  assert.equal(context.activePage, 'activity');
+  assert.equal(context.window.location.hash, '#activity');
+  context.setActivePage('pulse');
+  context.setActivePage('activity');
+  assert.deepEqual(loads, ['activity', 'pulse', 'activity']);
 });
 
 test('tab keyboard navigation wraps, supports Home/End and leaves one tab in the tab order', () => {

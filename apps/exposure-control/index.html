@@ -53,6 +53,7 @@
           <div class="nav-group"><div class="nav-group-label">Monitor</div>
             <a class="nav-pill" data-page-link data-page-title="Overview" href="#overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></a>
             <a class="nav-pill" data-page-link data-page-title="Pulse" href="#pulse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h5l3-8 4 16 3-8h5"/></svg><span>Pulse</span></a>
+            <a class="nav-pill" data-page-link data-page-title="Activity" href="#activity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h11M10 12h11M10 18h11"/><rect x="3" y="4.5" width="3" height="3"/><rect x="3" y="10.5" width="3" height="3"/><rect x="3" y="16.5" width="3" height="3"/></svg><span>Activity</span></a>
           </div>
           <div class="nav-group"><div class="nav-group-label">Manage</div>
             <a class="nav-pill" data-page-link data-page-title="Updates" href="#updates"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-2l2 2M4 17l2 2a7 7 0 0 0 12-2"/></svg><span>Updates</span><span class="nav-count" data-nav-count="updates" hidden></span></a>
@@ -141,6 +142,24 @@
         <div class="pulse-footer"><span>60 s</span><span>SGT</span></div>
       </section>
 
+      <section id="activity" class="section feed-page" data-page-section hidden>
+        <div class="feed-head">
+          <div class="feed-title">
+            <div id="feedEyebrow" class="eyebrow">Last 24 h</div>
+            <h1 id="feedHeadline" class="feed-headline">Activity</h1>
+          </div>
+          <dl id="feedCounters" class="feed-counters"></dl>
+        </div>
+        <div class="feed-bar">
+          <div id="feedFilters" class="feed-filters" role="group" aria-label="Filter activity"></div>
+          <div class="feed-live">
+            <div id="feedStatus" class="pulse-status" role="status">Loading…</div>
+            <button id="feedRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
+          </div>
+        </div>
+        <div id="feedList" class="feed-list"></div>
+      </section>
+
       <section id="exposure" class="section" data-page-section hidden>
         <div class="page-head">
           <h1 class="page-title">Shares</h1>
@@ -188,9 +207,9 @@
           </div>
         </div>
         <details id="auditDisclosure" class="disclosure">
-          <summary>Activity <span id="auditMeta" class="page-meta"></span></summary>
+          <summary>Audit <span id="auditMeta" class="page-meta"></span></summary>
           <div id="auditPanel" class="audit-scroll">
-            <table aria-label="Share activity">
+            <table aria-label="Operator audit">
               <thead>
                 <tr>
                   <th>Time</th>
@@ -429,6 +448,7 @@
     <script src="/assets/pulse.js" defer></script>
     <script src="/assets/tuning.js" defer></script>
     <script src="/assets/fx.js" defer></script>
+    <script src="/assets/feed.js" defer></script>
     <script src="/assets/exposure-client.js" defer></script>
     <script src="/assets/app.js" defer></script>
 

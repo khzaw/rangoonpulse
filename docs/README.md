@@ -51,6 +51,7 @@ All repository documentation is public. These guides retain technical context ne
 
 - [`resource-advisor.md`](./resource-advisor.md): current Resource Advisor contract
 - [`controlpanel-pulse.md`](./controlpanel-pulse.md): cockpit node, power, PVC, and pod-placement telemetry
+- [`controlpanel-activity.md`](./controlpanel-activity.md): cockpit timeline of commits, Flux rollouts, operator actions, and job runs
 - [`flux-reconciliation-alerts.md`](./flux-reconciliation-alerts.md): Flux readiness alerts and source, image-publication, rollback, and capacity triage
 - [`homelab-operations-dashboards.md`](./homelab-operations-dashboards.md): Grafana operations dashboard inventory
 - [`dashboards-dynacat.md`](./dashboards-dynacat.md): Dynacat configuration and widget constraints

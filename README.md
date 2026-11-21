@@ -78,7 +78,7 @@ Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); th
 | **Two architectures** | An AMD64 primary node handles the heavier workloads; an ARM64 Raspberry Pi runs utility services. |
 | **Storage by workload** | TrueNAS provides shared files and media; node-local storage handles latency-sensitive databases and caches. |
 | **Resource tuning** | Resource Advisor uses Prometheus data to propose budgeted resource changes through pull requests. |
-| **Control Panel** | A private interface for temporary shares, telemetry, deployments, scheduled jobs, secrets, and resource tuning. |
+| **Control Panel** | A private interface for temporary shares, telemetry, a Git-to-cluster activity timeline, deployments, scheduled jobs, secrets, and resource tuning. |
 | **Encrypted secrets** | SOPS + age protects Git-managed secrets; Flux decrypts them in the cluster. |
 
 ## Services
