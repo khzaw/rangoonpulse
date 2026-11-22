@@ -21,6 +21,13 @@ spec:
           sourceLabels:
             - __metrics_path__
           targetLabel: metrics_path
+      # Swap is disabled on these nodes, and container start times duplicate
+      # kube-state-metrics. Nothing queries either family from this endpoint.
+      metricRelabelings:
+        - action: drop
+          sourceLabels:
+            - __name__
+          regex: (container|node|pod)_swap_[a-z_]+|container_start_time_seconds
       scheme: https
       tlsConfig:
         caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt

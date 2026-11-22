@@ -27,9 +27,10 @@ spec:
   postRenderers:
     - kustomize:
         patches:
-          # Append to the chart's bucket thinning instead of replacing it.
-          # These diagnostic distributions have no dashboard/rule consumers;
-          # retain their counts/sums and all request latency, SLO and error data.
+          # Append to the chart's metric relabelings instead of replacing them.
+          # Every dropped family has no loaded rule, provisioned dashboard, or
+          # repository query consumer (docs/prometheus-storage.md). Histogram
+          # drops remove only `_bucket` series; `_count`/`_sum` stay for rates.
           - target:
               group: monitoring.coreos.com
               version: v1
@@ -42,6 +43,61 @@ spec:
                   action: drop
                   sourceLabels: [__name__]
                   regex: apiserver_(request_body_size_bytes|watch_list_duration_seconds|watch_cache_read_wait_seconds|watch_events_sizes|response_sizes)_bucket
+              # Latency SLO, burn-rate and dashboard queries read
+              # apiserver_request_sli_duration_seconds instead.
+              - op: add
+                path: /spec/endpoints/0/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: (apiserver_request|etcd_request)_duration_seconds_bucket
+              - op: add
+                path: /spec/endpoints/0/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: (apiserver_admission_(controller|step|webhook)_admission_duration_seconds|apiserver_flowcontrol_[a-z_]+|apiserver_request_filter_duration_seconds|apiserver_storage_transformation_duration_seconds|apiserver_(crd_)?conversion_webhook_duration_seconds|apiserver_impersonation_[a-z_]+|authentication_duration_seconds|authentication_token_cache_request_duration_seconds|authorization_duration_seconds|field_validation_request_duration_seconds|node_authorizer_graph_actions_duration_seconds|rest_client_(request|response)_size_bytes|workqueue_work_duration_seconds)_bucket
+              - op: add
+                path: /spec/endpoints/0/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: kubernetes_feature_enabled
+          # Endpoint order is chart-defined; the tests fail the release instead
+          # of attaching a filter to the wrong kubelet endpoint after an upgrade.
+          - target:
+              group: monitoring.coreos.com
+              version: v1
+              kind: ServiceMonitor
+              name: kube-prometheus-stack-kubelet
+            patch: |-
+              - op: test
+                path: /spec/endpoints/1/path
+                value: /metrics/cadvisor
+              - op: test
+                path: /spec/endpoints/2/path
+                value: /metrics/probes
+              - op: add
+                path: /spec/endpoints/0/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: (apiserver_delegated_(authn|authz)_request_duration_seconds|authentication_token_cache_request_duration_seconds|csi_operations_seconds|dra_operations_duration_seconds|kubelet_http_requests_duration_seconds|kubelet_image_pull_duration_seconds|kubelet_pod_start_(sli|total)_duration_seconds|kubelet_volume_metric_collection_duration_seconds|rest_client_(rate_limiter_duration_seconds|request_size_bytes|response_size_bytes)|volume_operation_total_seconds|workqueue_work_duration_seconds)_bucket
+              - op: add
+                path: /spec/endpoints/0/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: kubernetes_feature_enabled
+              # Redundant, static, or always-zero cadvisor series. CPU, memory
+              # (working set/RSS/cache), throttling, PSI, OOM, network bytes
+              # and block I/O stay.
+              - op: add
+                path: /spec/endpoints/1/metricRelabelings/-
+                value:
+                  action: drop
+                  sourceLabels: [__name__]
+                  regex: container_(memory_(failcnt|failures_total|kernel_usage|max_usage_bytes|usage_bytes|total_(active|inactive)_file_bytes)|network_(receive|transmit)_errors_total|threads|sockets|processes|start_time_seconds|last_seen|health_state|cpu_load_d_average_10s|ulimits_soft|cpu_cfs_burst_(periods|seconds)_total)
   values:
     alertmanager:
       enabled: true
@@ -190,6 +246,14 @@ spec:
             cpu: 100m
             memory: 128Mi
 
+      # Only the chart's Grafana Overview dashboard reads Grafana's own
+      # metrics. Keep its families and drop the other ~5.8k internal series.
+      serviceMonitor:
+        metricRelabelings:
+          - action: keep
+            sourceLabels: [__name__]
+            regex: grafana_(alerting_result_total|build_info|stat_totals_dashboard|http_request_duration_seconds_(bucket|count|sum))|process_[a-z_]+|go_goroutines
+
       defaultDashboardsTimezone: browser
 
       ingress:
@@ -239,6 +303,33 @@ spec:
         limits:
           cpu: 100m
           memory: 256Mi
+      # No rule, dashboard, or repository query reads these resources'
+      # families. Excluding the collectors also drops their watches.
+      collectorsExclude:
+        - certificatesigningrequests
+        - configmaps
+        - endpointslices
+        - leases
+        - limitranges
+        - mutatingwebhookconfigurations
+        - networkpolicies
+        - replicationcontrollers
+        - secrets
+        - storageclasses
+        - validatingwebhookconfigurations
+        - volumeattachments
+      # kube_replicaset_owner stays for the pod-owner recording rules. KSM
+      # matches these regexes unanchored, so anchor them explicitly.
+      metricDenylist:
+        - ^kube_replicaset_(created|metadata_generation|spec_replicas|status_.+)$
+        - ^kube_pod_(ips|restart_policy|scheduler|service_account|status_qos_class|tolerations)$
+
+    kubelet:
+      serviceMonitor:
+        probesMetricRelabelings:
+          - action: drop
+            sourceLabels: [__name__]
+            regex: prober_probe_duration_seconds_bucket
 
     nodeExporter:
       enabled: true

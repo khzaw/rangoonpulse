@@ -3,7 +3,7 @@ title: Prometheus Storage
 summary: Current TSDB sizing, retention, metric ingestion policy, node affinity, and recovery constraints.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-23
 ---
 
 # Prometheus Storage
@@ -22,19 +22,25 @@ Resource Advisor depends on the 14-day metrics window. Losing the TSDB does not 
 
 ## Metric Ingestion
 
-The monitoring HelmRelease appends an API-server `ServiceMonitor` filter through its inline post-renderer. This preserves the chart's existing histogram bucket thinning. It excludes only the `_bucket` series for these unused diagnostic distributions:
+Ingestion keeps only series that something reads. A consumer is a loaded Prometheus rule (chart defaults and repository PrometheusRules, including recording rules), a dashboard ConfigMap provisioned by the Grafana sidecar, or a repository query (Resource Advisor, Control Panel, Dynacat, power ledger). The filters live in `infrastructure/monitoring/helmrelease.yaml` and `servicemonitor-kubelet-resource.yaml`:
 
-- `apiserver_request_body_size_bytes`
-- `apiserver_watch_list_duration_seconds`
-- `apiserver_watch_cache_read_wait_seconds`
-- `apiserver_watch_events_sizes`
-- `apiserver_response_sizes`
+| Source | Mechanism | Dropped |
+|---|---|---|
+| API server | post-renderer, appended to the chart's bucket thinning | `_bucket` series of request/response size, watch, request-filter, admission, flow-control, authn/authz, storage-transformation, conversion-webhook, field-validation, client-size and workqueue work-duration histograms; `apiserver_request_duration_seconds_bucket` and `etcd_request_duration_seconds_bucket`; `kubernetes_feature_enabled` |
+| kubelet `/metrics` | post-renderer | `_bucket` series of CSI, volume, image-pull, HTTP, pod-start, DRA and client histograms; `kubernetes_feature_enabled` |
+| kubelet cAdvisor | post-renderer | redundant, static or always-zero families: memory usage/max/kernel/failcnt/failures/active-inactive file, network error counters, thread/socket/process counts, start time, last seen, health state, load average, ulimits, CFS burst |
+| kubelet probes | chart value | `prober_probe_duration_seconds_bucket` |
+| kubelet `/metrics/resource` | repository ServiceMonitor | swap families (swap is disabled) and container start time |
+| kube-state-metrics | chart values | collectors for Secrets, ConfigMaps, EndpointSlices, Leases, webhook configurations, NetworkPolicies, StorageClasses, VolumeAttachments, CSRs, LimitRanges and ReplicationControllers; ReplicaSet status/spec families and static pod attributes by denylist |
+| Grafana self-scrape | chart value (keep-list) | everything except the families the chart's Grafana Overview dashboard reads |
 
-Their `_count` and `_sum` series remain available for rates and averages. Request latency, availability/SLO, error, etcd, kubelet, resource, and Resource Advisor inputs remain collected. Scrape cadence and retention are unchanged.
+The SLO, burn-rate and API server dashboard queries use `apiserver_request_sli_duration_seconds`, which stays. Histogram drops remove only `_bucket` series; `_count` and `_sum` remain for rates and averages. CPU usage and throttling, working set/RSS/cache, PSI, OOM events, network and block I/O, `kube_replicaset_owner` (pod-owner recording rules), and the unconsumed API server counters and gauges also remain for diagnosis. Scrapes use the 60s global interval except the kubelet cAdvisor endpoint, which keeps the chart's 10s interval; each cAdvisor series therefore costs several times the samples of a 60s series.
 
-Before extending the filter, audit the exact chart's rendered rules and dashboards, loaded Prometheus rules, saved Grafana dashboards/alerts, and repository consumers. Restore a distribution's buckets before adding a quantile query for it. A chart change must still render the targeted monitor and preserve its upstream relabel rules.
+The kubelet post-renderer tests the endpoint paths before appending. A chart that reorders kubelet endpoints fails the Helm release instead of filtering the wrong endpoint.
 
-Verify the loaded filter, successful scrapes, and `scrape_samples_post_metric_relabeling` after a change. Existing samples expire normally; fewer incoming series do not immediately reclaim the TSDB's head memory or disk blocks.
+Remove the matching filter before adding a consumer for a dropped family, such as a quantile query, a Grafana self-metric panel, or a kube-state-metrics resource. On chart upgrades, check the new chart's rules and dashboards against these filters; the Grafana keep-list in particular hides any family a new Grafana Overview revision adds. To audit, extract metric-name tokens from `/api/v1/rules`, the `grafana_dashboard=1` ConfigMaps and tracked repository files. Compare them with `count by (__name__, job, metrics_path) ({__name__=~".+"})` and the rendered filters.
+
+Verify the loaded filters, successful scrapes, rule health and `scrape_samples_post_metric_relabeling` after a change. Existing samples expire normally; fewer incoming series do not immediately reclaim the TSDB's head memory or disk blocks.
 
 ## Backup Status
 
