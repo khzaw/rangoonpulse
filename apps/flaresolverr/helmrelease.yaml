@@ -45,7 +45,8 @@ spec:
                 cpu: "84m"
                 memory: "512Mi"
               limits:
-                cpu: "562m"
+                # Chromium start-up and challenge solving are multi-process.
+                cpu: "1500m"
                 memory: "2468Mi"
             securityContext:
               allowPrivilegeEscalation: false
