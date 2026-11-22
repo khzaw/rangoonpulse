@@ -3,7 +3,7 @@ title: Gatus Service Monitoring
 summary: Git-managed availability checks, shared PostgreSQL history, private access, and operator integrations.
 status: active
 owner: homelab
-last_reviewed: 2026-11-10
+last_reviewed: 2026-11-22
 ---
 
 # Gatus Service Monitoring
@@ -15,10 +15,10 @@ Dynacat, the Control Panel, and Grafana.
 
 ## Checks
 
-The 70 checks poll every 60 seconds: 61 HTTP, three DNS, and six TCP checks.
-The inline configuration is the authoritative endpoint inventory. Coverage spans
-all current application backends, the six permanent-public Tunnel hostnames,
-DNS resolution, selected data services, and native-host access.
+The 70 checks comprise 61 HTTP, three DNS, and six TCP checks. The inline
+configuration is the authoritative endpoint inventory. Coverage spans all current
+application backends, the six permanent-public Tunnel hostnames, DNS resolution,
+selected data services, and native-host access.
 
 - App checks use private HTTPS health/login/dashboard paths, retaining ingress,
   DNS, and TLS coverage. Internal services without a canonical hostname use their
@@ -36,6 +36,19 @@ DNS resolution, selected data services, and native-host access.
 - **Infrastructure** includes TrueNAS's HTTPS UI and its independent NFS TCP
   listener. **Operations** includes Dynacat, Control Panel, Flux UI, Resource
   Advisor, Prometheus readiness, and Alertmanager readiness.
+
+Check intervals follow blast radius:
+
+| Interval | Checks | Reason |
+|---|---|---|
+| 60 seconds | **DNS** and **Data services** groups, TrueNAS NFS (8) | Shared dependencies whose failure explains many other red checks; Grafana's DNS panels use these results |
+| 2 minutes | **Operations** and **Public sites** groups (12) | Several checks per private-ingress or Cloudflare Tunnel path localize a path-wide failure before app checks catch up; includes Prometheus and Alertmanager readiness |
+| 5 minutes | Every other check (50) | Individual app backends, infrastructure web UIs, and native-host checks |
+
+Add new checks to the 5-minute tier unless they cover a shared dependency or an
+access path. Each evaluation is a write transaction in the shared PostgreSQL that
+also reads that endpoint's retained result history, so a shorter interval costs
+database load as well as Gatus CPU.
 
 Keep known endpoint semantics when changing targets:
 
@@ -62,9 +75,10 @@ Gatus depends on the cluster and shared PostgreSQL for its own operation;
 independent Iris monitoring and the existing Prometheus alerts remain necessary
 for failures that take Gatus's runtime or storage down.
 
-Gatus records each failed evaluation immediately. No Gatus notification provider
-is configured; existing Prometheus/Alertmanager native-host alerts retain their
-own persistence thresholds and receiver configuration. TLS chain, hostname, and
+Gatus records each failed evaluation immediately, so a failure appears within
+the check's interval plus its timeout. No Gatus notification provider is
+configured; existing Prometheus/Alertmanager native-host alerts retain their own
+persistence thresholds and receiver configuration. TLS chain, hostname, and
 validity checks are enabled. Certificate renewal monitoring remains owned by
 cert-manager and the existing monitoring stack; domain-registration expiry is
 not an availability condition.
@@ -83,10 +97,12 @@ not an availability condition.
   the restricted role/database without restarting the shared server. Its role
   has a 16-connection limit; Gatus evaluates at most ten endpoints concurrently.
 - The database retains 1,440 detailed results and 100 events per endpoint, plus
-  upstream's approximately 32-day aggregate uptime window. At a one-minute
-  interval, detailed results cover about one day. Write-through caching reduces
-  dashboard reads. History is persistent but shares PostgreSQL's failure domain
-  and [backup gap](./media-postgres.md#backup-status).
+  upstream's approximately 32-day aggregate uptime window. Detailed results
+  cover about one day for 60-second checks, two days for 2-minute checks, and
+  five days for 5-minute checks; uptime and response-time views use the
+  aggregates. Write-through caching reduces dashboard reads. History is
+  persistent but shares PostgreSQL's failure domain and
+  [backup gap](./media-postgres.md#backup-status).
 
 Resource Advisor reports `default/Deployment/gatus`, container `main`, and can
 propose changes to its mapped app-template resources after the usual maturity
@@ -134,9 +150,10 @@ curl -fsS 'https://gatus.khzaw.dev/api/v1/endpoints/statuses?page=1&pageSize=1' 
   jq '{total:length,failures:[.[] | select(.results[-1].success != true) | {name,results}]}'
 ```
 
-After changing checks, verify the expected URL set and several one-minute
-evaluations. Check the configured Dynacat summary and Health entry, fresh
-Control Panel image/chart and Secrets rows, a fresh advisor report, the disabled
-share gate, valid canonical DNS/TLS, and Prometheus's Gatus scrape target.
+After changing checks, verify the expected URL set and each changed check's
+results across at least two of its intervals. Check the configured Dynacat
+summary and Health entry, fresh Control Panel image/chart and Secrets rows, a
+fresh advisor report, the disabled share gate, valid canonical DNS/TLS, and
+Prometheus's Gatus scrape target.
 
 Upstream: [Gatus configuration and API](https://github.com/TwiN/gatus#configuration).

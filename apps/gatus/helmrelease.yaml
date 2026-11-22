@@ -212,7 +212,7 @@ spec:
               header: Rangoonpulse
               description: Service availability across the homelab.
               dashboard-heading: Service health
-              dashboard-subheading: Private HTTPS, infrastructure, and native service checks · every 60 seconds
+              dashboard-subheading: Private HTTPS, infrastructure, and native service checks · every 1–5 minutes
               dark-mode: true
               default-sort-by: group
               buttons:
@@ -222,6 +222,9 @@ spec:
                   link: https://controlpanel.${BASE_DOMAIN}
                 - name: Grafana
                   link: https://grafana.${BASE_DOMAIN}
+            # Interval tiers (docs/gatus.md): 60s for shared dependencies (DNS,
+            # Data services, TrueNAS NFS); 2m for access paths and monitoring
+            # (Operations, Public sites); 5m for every other check.
             endpoints:
               - name: AdGuard Primary DNS
                 group: DNS
@@ -296,7 +299,7 @@ spec:
               - name: Flaresolverr
                 group: Downloads
                 url: http://flaresolverr.default.svc.cluster.local:8191/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -305,7 +308,7 @@ spec:
               - name: SABnzbd
                 group: Downloads
                 url: https://sabnzbd.${BASE_DOMAIN}/login/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -314,7 +317,7 @@ spec:
               - name: Transmission
                 group: Downloads
                 url: https://torrent.${BASE_DOMAIN}/transmission/web/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -323,7 +326,7 @@ spec:
               - name: Transmission VPN UI
                 group: Downloads
                 url: https://torrent-vpn.${BASE_DOMAIN}/api/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -332,7 +335,7 @@ spec:
               - name: AdGuard Primary
                 group: Infrastructure
                 url: https://adguard.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -341,7 +344,7 @@ spec:
               - name: AdGuard Secondary
                 group: Infrastructure
                 url: https://adguard2.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -350,7 +353,7 @@ spec:
               - name: Grafana
                 group: Infrastructure
                 url: https://grafana.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -359,7 +362,7 @@ spec:
               - name: Router
                 group: Infrastructure
                 url: https://router.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -368,7 +371,7 @@ spec:
               - name: Speedtest Tracker
                 group: Infrastructure
                 url: https://speedtest.${BASE_DOMAIN}/admin/login
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -377,7 +380,7 @@ spec:
               - name: TrueNAS
                 group: Infrastructure
                 url: https://nas.${BASE_DOMAIN}/ui/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -393,7 +396,7 @@ spec:
               - name: Audiobookshelf
                 group: Media and library
                 url: https://audiobookshelf.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -402,7 +405,7 @@ spec:
               - name: BookOrbit
                 group: Media and library
                 url: https://bookorbit.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -411,7 +414,7 @@ spec:
               - name: Immich
                 group: Media and library
                 url: https://photos.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -420,7 +423,7 @@ spec:
               - name: Immich Machine Learning
                 group: Media and library
                 url: http://immich-machine-learning.default.svc.cluster.local:3003/ping
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -429,7 +432,7 @@ spec:
               - name: Jellyfin
                 group: Media and library
                 url: https://jellyfin.${BASE_DOMAIN}/web/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -438,7 +441,7 @@ spec:
               - name: RomM
                 group: Media and library
                 url: https://roms.${BASE_DOMAIN}/api/heartbeat
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -446,7 +449,7 @@ spec:
               - name: Seerr
                 group: Media and library
                 url: https://seerr.${BASE_DOMAIN}/login
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -455,7 +458,7 @@ spec:
               - name: Shelfmark
                 group: Media and library
                 url: https://shelfmark.${BASE_DOMAIN}/api/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -464,7 +467,7 @@ spec:
               - name: Tracerr
                 group: Media and library
                 url: https://tracerr.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -473,7 +476,7 @@ spec:
               - name: Bazarr
                 group: Media automation
                 url: https://bazarr.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -482,7 +485,7 @@ spec:
               - name: Jackett
                 group: Media automation
                 url: https://jackett.${BASE_DOMAIN}/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -491,7 +494,7 @@ spec:
               - name: Profilarr
                 group: Media automation
                 url: https://profilarr.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -499,7 +502,7 @@ spec:
               - name: Prowlarr
                 group: Media automation
                 url: https://prowlarr.${BASE_DOMAIN}/login?returnUrl=%2F
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -508,7 +511,7 @@ spec:
               - name: Radarr
                 group: Media automation
                 url: https://radarr.${BASE_DOMAIN}/login?returnUrl=%2F
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -517,7 +520,7 @@ spec:
               - name: Sonarr
                 group: Media automation
                 url: https://sonarr.${BASE_DOMAIN}/login?returnUrl=%2F
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -526,7 +529,7 @@ spec:
               - name: Subarr
                 group: Media automation
                 url: https://subarr.${BASE_DOMAIN}/api/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -535,7 +538,7 @@ spec:
               - name: autobrr
                 group: Media automation
                 url: https://autobrr.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -543,7 +546,7 @@ spec:
               - name: Hermes Dashboard
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9119/api/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -552,7 +555,7 @@ spec:
               - name: Hermes Gateway
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes-gateway
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -561,7 +564,7 @@ spec:
               - name: Hermes HTTPS Edge
                 group: "OpenClaw & Hermes"
                 url: https://athena.${BASE_DOMAIN}/api/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -570,7 +573,7 @@ spec:
               - name: Hermes Readiness
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/hermes
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -579,7 +582,7 @@ spec:
               - name: Iris API Readiness
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:9101/healthz/openclaw
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -588,7 +591,7 @@ spec:
               - name: Iris Gateway
                 group: "OpenClaw & Hermes"
                 url: http://${IRIS_MAC_MINI_IP}:18789/healthz
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -597,7 +600,7 @@ spec:
               - name: Iris HTTPS Edge
                 group: "OpenClaw & Hermes"
                 url: https://iris.${BASE_DOMAIN}/healthz
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -606,7 +609,7 @@ spec:
               - name: Iris SSH
                 group: "OpenClaw & Hermes"
                 url: tcp://${IRIS_MAC_MINI_IP}:22
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 5s
                 conditions:
@@ -614,7 +617,7 @@ spec:
               - name: Alertmanager
                 group: Operations
                 url: http://kube-prometheus-stack-alertmanager.monitoring.svc.cluster.local:9093/-/ready
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -622,7 +625,7 @@ spec:
               - name: Control Panel
                 group: Operations
                 url: https://controlpanel.${BASE_DOMAIN}/healthz
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -631,7 +634,7 @@ spec:
               - name: Dynacat
                 group: Operations
                 url: https://rangoonpulse.${BASE_DOMAIN}/api/healthz
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -639,7 +642,7 @@ spec:
               - name: Flux UI
                 group: Operations
                 url: https://fluxui.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -647,7 +650,7 @@ spec:
               - name: Prometheus
                 group: Operations
                 url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/ready
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -655,7 +658,7 @@ spec:
               - name: Resource Advisor
                 group: Operations
                 url: http://resource-advisor-exporter.monitoring.svc.cluster.local:8081/healthz
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -663,7 +666,7 @@ spec:
               - name: 75 Soft
                 group: Personal apps
                 url: https://seventyfivesoft.${ERICAKNIGHT_DOMAIN}/healthz
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -672,7 +675,7 @@ spec:
               - name: Actual Budget
                 group: Personal apps
                 url: https://actual.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -681,7 +684,7 @@ spec:
               - name: Anki
                 group: Personal apps
                 url: https://anki.${BASE_DOMAIN}/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -689,7 +692,7 @@ spec:
               - name: Interview Prep
                 group: Personal apps
                 url: https://itvp.${BASE_DOMAIN}/api/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -698,7 +701,7 @@ spec:
               - name: Miniflux
                 group: Personal apps
                 url: https://rss.${BASE_DOMAIN}/healthcheck
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -706,7 +709,7 @@ spec:
               - name: Obsidian LiveSync
                 group: Personal apps
                 url: https://livesync.${BASE_DOMAIN}/_up
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -715,7 +718,7 @@ spec:
               - name: Reactive Resume
                 group: Personal apps
                 url: https://build-resume.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -723,7 +726,7 @@ spec:
               - name: Retirement
                 group: Personal apps
                 url: https://retirement.${BASE_DOMAIN}/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -731,7 +734,7 @@ spec:
               - name: Vaultwarden
                 group: Personal apps
                 url: https://passwords.${BASE_DOMAIN}
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 48s
                 conditions:
@@ -740,7 +743,7 @@ spec:
               - name: Blog
                 group: Public sites
                 url: https://blog.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -748,7 +751,7 @@ spec:
               - name: Blog Apex
                 group: Public sites
                 url: https://${BASE_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -756,7 +759,7 @@ spec:
               - name: Erica Knight
                 group: Public sites
                 url: https://${ERICAKNIGHT_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -764,7 +767,7 @@ spec:
               - name: Erica Knight WWW
                 group: Public sites
                 url: https://www.${ERICAKNIGHT_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -772,7 +775,7 @@ spec:
               - name: MMCal
                 group: Public sites
                 url: https://mmcal.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -780,7 +783,7 @@ spec:
               - name: Rangoon Mapper
                 group: Public sites
                 url: https://rangoonmapper.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 2m
                 client:
                   timeout: 10s
                 conditions:
@@ -788,7 +791,7 @@ spec:
               - name: Nodecast TV
                 group: TV
                 url: https://tv.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -796,7 +799,7 @@ spec:
               - name: Tunarr
                 group: TV
                 url: https://tunarr.${BASE_DOMAIN}/web
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -804,7 +807,7 @@ spec:
               - name: iSponsorBlockTV
                 group: TV
                 url: https://sponsorblocktv.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -812,7 +815,7 @@ spec:
               - name: BentoPDF
                 group: Tools
                 url: https://bento.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -820,7 +823,7 @@ spec:
               - name: ChartDB
                 group: Tools
                 url: https://chartsdb.${BASE_DOMAIN}/
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
@@ -828,7 +831,7 @@ spec:
               - name: Kroki
                 group: Tools
                 url: https://diagrams.${BASE_DOMAIN}/health
-                interval: 60s
+                interval: 5m
                 client:
                   timeout: 10s
                 conditions:
