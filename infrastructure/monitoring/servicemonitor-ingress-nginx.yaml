@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ingress-nginx
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - ingress-nginx
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+      app.kubernetes.io/component: controller-metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 60s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        # Series budget: per-Ingress request counters plus reload and connection health only.
+        # Drop whole metric names here, never labels: merging counters by label would collide.
+        - sourceLabels: [__name__]
+          action: keep
+          regex: nginx_ingress_controller_(requests|config_last_reload_successful|nginx_process_connections)
+        # Requests for hosts that no Ingress defines (default backend, IP-literal probes)
+        # carry an empty ingress label and arbitrary client methods.
+        - sourceLabels: [__name__, ingress]
+          action: drop
+          regex: nginx_ingress_controller_requests;

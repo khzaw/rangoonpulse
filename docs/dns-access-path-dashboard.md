@@ -3,7 +3,7 @@ title: DNS And Access Paths Dashboard
 summary: AdGuard checks, Tailscale router placement and resources, CoreDNS health, and ingress inventory.
 status: active
 owner: homelab
-last_reviewed: 2026-11-16
+last_reviewed: 2026-11-22
 ---
 
 # DNS And Access Paths Dashboard
@@ -66,6 +66,11 @@ continuous remote-client probe implied by these panels.
   - `kube_service_info`
 - Prometheus DNS service discovery failure counter:
   - `prometheus_sd_dns_lookup_failures_total`
+
+Per-Ingress request counters (`nginx_ingress_controller_requests`) are scraped
+but not charted on this dashboard. See
+[ingress request metrics](./networking.md#ingress-request-metrics) for the
+labels, series budget, usage query, and health-check caveat.
 
 ## Verification
 

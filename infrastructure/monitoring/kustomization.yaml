@@ -28,6 +28,7 @@ resources:
   - grafana-dashboard-tls-certificate-audit.yaml
   - servicemonitor-cert-manager.yaml
   - servicemonitor-flux-operator.yaml
+  - servicemonitor-ingress-nginx.yaml
   - prometheusrule-power-estimation.yaml
   - prometheusrule-node-capacity-overview.yaml
   - prometheusrule-control-plane-visibility.yaml

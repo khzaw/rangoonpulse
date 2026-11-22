@@ -5,6 +5,7 @@ kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/baremetal/deploy.yaml
   - custom-headers.yaml
+  - metrics-service.yaml
 
 patches:
   # Patch 1: Change Service type and pin the shared ingress VIP
@@ -56,6 +57,32 @@ patches:
         value:
           cpu: 500m
           memory: 512Mi
+    target:
+      kind: Deployment
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+
+  # Patch 5: Export lean request metrics on :10254 (series budget in docs/networking.md).
+  # Counters are per Ingress with status classes; per-request histograms are never computed.
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --enable-metrics=true
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --metrics-per-host=false
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --report-status-classes=true
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --exclude-socket-metrics=nginx_ingress_controller_connect_duration_seconds,nginx_ingress_controller_header_duration_seconds,nginx_ingress_controller_response_duration_seconds,nginx_ingress_controller_request_duration_seconds,nginx_ingress_controller_request_size,nginx_ingress_controller_response_size,nginx_ingress_controller_bytes_sent
+      - op: add
+        path: /spec/template/spec/containers/0/ports/-
+        value:
+          name: metrics
+          containerPort: 10254
+          protocol: TCP
     target:
       kind: Deployment
       name: ingress-nginx-controller

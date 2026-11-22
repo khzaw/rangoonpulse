@@ -3,7 +3,7 @@ title: Networking and Access Topology
 summary: Current private ingress, public Tunnel, temporary-share, DNS, and dedicated-edge paths.
 status: active
 owner: homelab
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-22
 ---
 
 # Networking and Access Topology
@@ -99,6 +99,45 @@ HTTPS uses ingress host routing; SSH uses a dedicated LoadBalancer Service. The 
 ## LAN Device Proxies
 
 `infrastructure/lan-gateway/` uses selectorless Services plus static Endpoints for the NAS and router. Ingress-nginx terminates TLS and proxies to the LAN devices. Keep the static target IPs in `flux/cluster-settings.yaml`.
+
+## Ingress Request Metrics
+
+Patch 5 in `core/ingress-nginx/kustomization.yaml` enables controller metrics on
+port `10254`. The cluster-internal `ingress-nginx-controller-metrics` Service
+exposes them, and `infrastructure/monitoring/servicemonitor-ingress-nginx.yaml`
+scrapes them every 60 seconds under job `ingress-nginx-controller-metrics`.
+
+Prometheus keeps only these series:
+
+- `nginx_ingress_controller_requests`: a counter labelled by `namespace`,
+  `ingress`, `service`, `path`, `method`, and status class (`2xx` through `5xx`)
+- `nginx_ingress_controller_config_last_reload_successful`
+- `nginx_ingress_controller_nginx_process_connections`
+
+The series budget is 1,000. The controller drops the host label, reports status
+classes, and never computes the per-request size, bytes-sent, or duration
+histograms (`--exclude-socket-metrics`). The ServiceMonitor keeps only the three
+names above. It also drops request series with an empty `ingress` label, which
+come from hosts no Ingress defines. Do not merge counter labels with
+`labeldrop` or relabeling: series that collapse together collide and corrupt
+counts. To change the series set, change the controller flags or the keep list,
+then measure:
+
+```promql
+scrape_samples_post_metric_relabeling{job="ingress-nginx-controller-metrics"}
+```
+
+Requests per Ingress over 14 days:
+
+```promql
+sort_desc(sum by (namespace, ingress) (increase(nginx_ingress_controller_requests[14d])))
+```
+
+Limits:
+
+- Only traffic through ingress-nginx is counted: LAN, Tailscale, and the Mac mini edge hosts. Permanent-public sites and temporary shares use Cloudflare Tunnel and do not appear.
+- The metrics have no user-agent or client label, so health checks cannot be separated from use. Gatus checks most private hosts through the ingress VIP. A check every N seconds adds 1,209,600 / N requests per 14 days: 20,160 at 60 seconds and 4,032 at 5 minutes. Dynacat Health monitors add more. Treat an Ingress whose count is near its checker floor as unused.
+- History starts when the metrics were enabled on 2026-11-22. The first full 14-day window ends on 2026-12-06.
 
 ## Current Constraints
 
