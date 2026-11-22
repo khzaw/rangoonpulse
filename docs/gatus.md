@@ -31,8 +31,9 @@ selected data services, and native-host access.
   resolver must return `${INGRESS_VIP}` for `gatus.${BASE_DOMAIN}` with `NOERROR`.
   The AdGuard web checks remain separate from DNS functionality.
 - **Data services** checks the shared, Immich, and Vaultwarden PostgreSQL
-  listeners and requires an actual `PONG` response from Immich Valkey. Immich's
-  machine-learning `/ping` check requires `pong`.
+  listeners and requires an actual `PONG` response from Immich Valkey, whose
+  kubelet probes only check TCP. Immich's machine-learning `/ping` check
+  requires `pong`.
 - **Infrastructure** includes TrueNAS's HTTPS UI and its independent NFS TCP
   listener. **Operations** includes Dynacat, Control Panel, Flux UI, Resource
   Advisor, Prometheus readiness, and Alertmanager readiness.

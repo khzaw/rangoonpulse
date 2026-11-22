@@ -66,6 +66,8 @@ ExternalDNS intentionally ignores Ingress rules/TLS fields. Public-edge hostname
 
 For ordinary workloads prefer non-root execution, RuntimeDefault seccomp, no privilege escalation, and all capabilities dropped. Apply exceptions only after inspecting the workload's real device, networking, or storage requirements.
 
+Prefer HTTP, TCP, or gRPC probes for containers with small CPU limits. Every exec probe runs `runc exec` inside the container cgroup, about 0.1 CPU-s on the primary node, which counts as container usage and can CFS-throttle the main process. When a chart merges hardcoded exec probes beneath values, replace them with a guarded inline Kustomize post-renderer patch.
+
 app-template v5 disables service-account token automounting by default. Set `defaultPodOptions.automountServiceAccountToken: true` only for workloads that call the Kubernetes API.
 
 ## Validation

@@ -38,7 +38,7 @@ Do not duplicate the allowlist in docs. Inspect the mapping and validate its pat
 
 ## Data And Policy Gates
 
-The advisor analyzes Deployments/StatefulSets in `TARGET_NAMESPACES`, using per-container p95 CPU/memory, throttling, restarts, and declared resources. Every discovered container remains in the report, including deadband and awaiting-metrics rows. The p95 window samples hourly; live measurements do not guarantee an immediate historical sample for a newly deployed container.
+The advisor analyzes Deployments/StatefulSets in `TARGET_NAMESPACES`, using per-container p95 CPU/memory, throttling, restarts, and declared resources. Every discovered container remains in the report, including deadband and awaiting-metrics rows. The p95 window samples hourly; live measurements do not guarantee an immediate historical sample for a newly deployed container. Its CPU query filters `image!=""`, excluding the kubelet's duplicate `/metrics/resource` container series; ad hoc container CPU sums need the same filter or `metrics_path="/metrics/cadvisor"`.
 
 Inspect `advisor.py` and the job environment for exact policy. Current defaults include:
 

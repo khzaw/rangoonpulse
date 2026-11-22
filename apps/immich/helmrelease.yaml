@@ -88,28 +88,62 @@ spec:
         namespace: flux-system
   install: { remediation: { retries: 3 } }
   upgrade: { remediation: { retries: 3 } }
+  postRenderers:
+    - kustomize:
+        patches:
+          # The chart merges hardcoded exec probes beneath values, so values
+          # cannot change the handler. Each exec runs in Valkey's cgroup
+          # (~0.1 CPU-s), which dominated its CPU and throttled the server
+          # under its limit. Kubelet TCP checks do not; Gatus still requires
+          # PONG. Keep the chart's timings and failure thresholds.
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: immich-valkey
+            patch: |
+              - op: test
+                path: /spec/template/spec/containers/0/name
+                value: main
+              - op: replace
+                path: /spec/template/spec/containers/0/startupProbe
+                value:
+                  tcpSocket:
+                    port: redis
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 30
+              - op: replace
+                path: /spec/template/spec/containers/0/readinessProbe
+                value:
+                  tcpSocket:
+                    port: redis
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+              - op: replace
+                path: /spec/template/spec/containers/0/livenessProbe
+                value:
+                  tcpSocket:
+                    port: redis
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
   values:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
       nodeSelector:
         kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
 
+    # Shared by every component, including Valkey and machine learning.
     controllers:
       main:
         containers:
           main:
             env:
               TZ: "${TIMEZONE}"
-              DB_HOSTNAME: immich-postgres
-              DB_PORT: "5432"
-              DB_USERNAME: immich
-              DB_DATABASE_NAME: immich
-              DB_VECTOR_EXTENSION: pgvector
-              DB_PASSWORD:
-                valueFrom:
-                  secretKeyRef:
-                    name: immich-db-secret
-                    key: POSTGRES_PASSWORD
 
     immich:
       persistence:
@@ -122,21 +156,6 @@ spec:
         main:
           containers:
             main:
-              # -e fails on server errors without a shell/grep pipeline.
-              # Keep the chart's probe timings and failure thresholds.
-              probes:
-                liveness:
-                  spec:
-                    exec:
-                      command: [valkey-cli, -e, PING]
-                readiness:
-                  spec:
-                    exec:
-                      command: [valkey-cli, -e, PING]
-                startup:
-                  spec:
-                    exec:
-                      command: [valkey-cli, -e, PING]
               resources:
                 requests:
                   cpu: "50m"
@@ -183,6 +202,18 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-server
                 tag: v3.4.2
+              # Only the server connects to PostgreSQL.
+              env:
+                DB_HOSTNAME: immich-postgres
+                DB_PORT: "5432"
+                DB_USERNAME: immich
+                DB_DATABASE_NAME: immich
+                DB_VECTOR_EXTENSION: pgvector
+                DB_PASSWORD:
+                  valueFrom:
+                    secretKeyRef:
+                      name: immich-db-secret
+                      key: POSTGRES_PASSWORD
               resources:
                 requests:
                   cpu: "100m"
