@@ -42,6 +42,61 @@ spec:
             summary: Monthly power cost CronJob is missing
             description: Restore power-cost-ledger through the media-postgres Flux Kustomization before uncollected Prometheus history expires.
 
+        # The check itself encodes the TimescaleDB problem; its latest scheduled run failing is the page.
+        # Before the first success, the creation time stands in so a first failed run still alerts.
+        - alert: HomelabCronJobTracearrTimescaleUnhealthy
+          expr: >
+            max by (namespace, cronjob) (
+              kube_cronjob_status_last_schedule_time{namespace="default",cronjob="tracearr-timescaledb-health"}
+            )
+            > (
+              max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{namespace="default",cronjob="tracearr-timescaledb-health"})
+              or max by (namespace, cronjob) (kube_cronjob_created{namespace="default",cronjob="tracearr-timescaledb-health"})
+            )
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Tracerr TimescaleDB jobs or extension need attention
+            description: >-
+              The latest hourly tracearr-timescaledb-health run failed. A compression, retention, or
+              continuous-aggregate job in tracearr has not succeeded within its window, the scheduler
+              is not starting due jobs, the extension is older than the image's library, or the check
+              could not reach media-postgres. Read the reason with
+              kubectl logs -n default -l app.kubernetes.io/name=tracearr-timescaledb-health --prefix
+              and follow docs/media-postgres.md#extension-updates.
+
+        # Keyed on scheduling, not success, so a failing check pages only through the alert above.
+        - alert: HomelabCronJobStale
+          expr: >
+            (
+              time() - (
+                max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time{namespace="default",cronjob="tracearr-timescaledb-health"})
+                or max by (namespace, cronjob) (kube_cronjob_created{namespace="default",cronjob="tracearr-timescaledb-health"})
+              )
+            ) > 10800
+            unless on (namespace, cronjob)
+              (kube_cronjob_spec_suspend{namespace="default",cronjob="tracearr-timescaledb-health"} == 1)
+          for: 15m
+          labels:
+            severity: warning
+            namespace: default
+            cronjob: tracearr-timescaledb-health
+          annotations:
+            summary: Tracerr TimescaleDB health check has stopped running
+            description: The hourly tracearr-timescaledb-health CronJob has not been scheduled for 3h, so failing TimescaleDB jobs in tracearr would go unnoticed. Check the CronJob and the media-postgres Flux Kustomization.
+
+        - alert: HomelabCronJobMissing
+          expr: absent(kube_cronjob_created{namespace="default",cronjob="tracearr-timescaledb-health"})
+          for: 1h
+          labels:
+            severity: warning
+            namespace: default
+            cronjob: tracearr-timescaledb-health
+          annotations:
+            summary: Tracerr TimescaleDB health CronJob is missing
+            description: Restore tracearr-timescaledb-health through the media-postgres Flux Kustomization; without it, failing TimescaleDB jobs in tracearr go unnoticed.
+
         - alert: HomelabCronJobStale
           expr: >
             (
@@ -193,7 +248,7 @@ spec:
           expr: >
             kube_cronjob_spec_suspend{
               namespace=~"monitoring|democratic-csi|default",
-              cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger"
+              cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger|tracearr-timescaledb-health"
             } == 1
           for: 7d
           labels:

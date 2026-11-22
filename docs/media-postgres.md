@@ -54,6 +54,16 @@ Image upgrades replace the server library and can raise the PostgreSQL minor ver
 4. Scale Tracerr back up.
 5. Failed jobs keep their retry backoff. Send them through the scheduler with `SELECT alter_job(<job_id>, next_start => now())`, then confirm that `timescaledb_information.job_stats` reports success and `job_errors` has no new rows. A foreground `CALL run_job` does not prove the fix because it can succeed while scheduled runs fail.
 
+### Job Health Alert
+
+The hourly `tracearr-timescaledb-health` CronJob in `apps/media-postgres/timescaledb-health/` runs `check.sql` in a read-only session as the `tracearr` role. That role owns the database and its jobs. The check fails in three cases:
+
+- The installed extension differs from the image's library.
+- A scheduled job has gone longer than three schedule intervals, and at least two hours, without a success.
+- A due job has not started for an hour.
+
+The telemetry reporter is ignored. A failed scheduled run raises `HomelabCronJobTracearrTimescaleUnhealthy` through Discord and Telegram; see [CronJob alerts](./cronjob-deadman-alerts.md). The failed pod's log names each problem. The extension check fires after every image rollout until the update above is done. To confirm a fix, run the check on demand with `kubectl create job -n default --from=cronjob/tracearr-timescaledb-health tracearr-timescaledb-health-manual-$(date +%s)`. The alert itself clears only after the next scheduled run succeeds.
+
 ## Secrets
 
 All database credentials are SOPS-managed:

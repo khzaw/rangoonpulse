@@ -3,7 +3,7 @@ title: CronJob Dead-Man's-Switch Alerts
 summary: PrometheusRule alerts that page on silent CronJob failure (staleness, failed runs, deletion, forgotten suspend) and the Alertmanager route that lets the warning-severity family reach Discord/Telegram.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-22
 ---
 
 # CronJob Dead-Man's-Switch Alerts
@@ -26,8 +26,9 @@ services and no new secrets.
 | `resource-advisor-apply-pr` | `monitoring` | `30 3 * * 1` (weekly Mon) | 8d (691200s) |
 | `truenas-management-plane-refresh` | `democratic-csi` | `0 4 * * 1` (weekly Mon) | 8d (691200s) |
 | `power-cost-ledger` | `default` | `15 0 1 * 1` (Mondays + month-start) | 8d (691200s) |
+| `tracearr-timescaledb-health` | `default` | `23 * * * *` (hourly) | 3h since last schedule (10800s) |
 
-All four use `concurrencyPolicy: Forbid`, `ttlSecondsAfterFinished: 21600` (6h), and
+All five use `concurrencyPolicy: Forbid`, `ttlSecondsAfterFinished: 21600` (6h), and
 small job history limits. The ledger falls back to its creation time before its
 first scheduled success, so an uninitialized job cannot silently avoid staleness.
 Its eight-day alert leaves time to collect before Prometheus's 14-day/8GB retention
@@ -35,7 +36,7 @@ expires. See [monthly cost collection](./power-estimation-dashboard.md#durable-m
 
 ## Alert Families
 
-The rule group `homelab-cronjob-deadman.rules` (interval `2m`) defines four alert families.
+The rule group `homelab-cronjob-deadman.rules` (interval `2m`) defines four shared alert families plus one check-specific alert.
 All alerts carry `severity: warning` and both `summary` and `description` annotations.
 
 ### HomelabCronJobStale
@@ -49,6 +50,7 @@ One rule per CronJob (same `alertname`, per-job threshold). Fires when the time 
 | `resource-advisor-apply-pr` | 8d | Weekly schedule; 8d is just over one missed week. |
 | `truenas-management-plane-refresh` | 8d | Weekly schedule; 8d is just over one missed week. |
 | `power-cost-ledger` | 8d | Weekly plus month-start schedule; leaves recovery time before metrics retention expires. |
+| `tracearr-timescaledb-health` | 3h | Hourly schedule. Keyed on `kube_cronjob_status_last_schedule_time`, so it pages only when the check stops running; a failing check pages through its own alert. |
 
 Expression shape (per job):
 
@@ -103,12 +105,31 @@ Single rule. Fires when `kube_cronjob_spec_suspend == 1` for any tracked CronJob
 ```
 kube_cronjob_spec_suspend{
   namespace=~"monitoring|democratic-csi|default",
-  cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger"
+  cronjob=~"resource-advisor-report|resource-advisor-apply-pr|truenas-management-plane-refresh|power-cost-ledger|tracearr-timescaledb-health"
 } == 1
 ```
 
 This is the backstop for the suspend exclusion in HomelabCronJobStale: a job toggled to
 suspended in controlpanel and forgotten will not go stale, but will trip this after 7 days.
+
+### HomelabCronJobTracearrTimescaleUnhealthy
+
+`tracearr-timescaledb-health` turns TimescaleDB problems in the media-postgres `tracearr`
+database into a failed run. See [Job Health Alert](./media-postgres.md#job-health-alert).
+It is not in `HomelabCronJobRunFailed`, because that alert would stay firing until failed Jobs age out.
+This alert fires when the CronJob's latest scheduled run is newer than its last success, `for: 10m`.
+It clears when the next scheduled run succeeds. Before the first success, the CronJob creation
+time stands in, so a failing first run still pages.
+
+```
+max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time{namespace="default",cronjob="tracearr-timescaledb-health"})
+> (
+  max by (namespace, cronjob) (kube_cronjob_status_last_successful_time{namespace="default",cronjob="tracearr-timescaledb-health"})
+  or max by (namespace, cronjob) (kube_cronjob_created{namespace="default",cronjob="tracearr-timescaledb-health"})
+)
+```
+
+`scripts/test_timescaledb_health_alerts_promql.py` covers this alert and the check's stale rule with promtool in CI.
 
 ## Alertmanager Routing
 

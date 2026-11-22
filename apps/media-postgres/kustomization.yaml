@@ -6,4 +6,5 @@ namespace: default
 resources:
   - helmrelease.yaml
   - power-ledger
+  - timescaledb-health
 

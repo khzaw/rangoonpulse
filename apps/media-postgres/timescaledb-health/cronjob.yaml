@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tracearr-timescaledb-health
+  namespace: default
+spec:
+  schedule: "23 * * * *"
+  timeZone: "${TIMEZONE}"
+  suspend: false
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 1800
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      # One retry absorbs a brief media-postgres restart; a real problem fails both tries.
+      backoffLimit: 1
+      activeDeadlineSeconds: 120
+      ttlSecondsAfterFinished: 21600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: tracearr-timescaledb-health
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          nodeSelector:
+            kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: check
+              # Reuse the shared DB image and its already-cached psql binary.
+              image: timescale/timescaledb:2.32.1-pg16
+              command: [sh, /scripts/check.sh]
+              env:
+                - name: PGHOST
+                  value: media-postgres.default.svc.cluster.local
+                - name: PGDATABASE
+                  value: tracearr
+                - name: PGUSER
+                  value: tracearr
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: tracerr-db-secret
+                      key: POSTGRES_PASSWORD
+                - name: PGAPPNAME
+                  value: tracearr-timescaledb-health
+                - name: PGCONNECT_TIMEOUT
+                  value: "10"
+                # The check only reads; the owner credentials cannot write in this session.
+                - name: PGOPTIONS
+                  value: "-c default_transaction_read_only=on -c statement_timeout=30s"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  cpu: 100m
+                  memory: 48Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: code
+                  mountPath: /scripts
+                  readOnly: true
+          volumes:
+            - name: code
+              configMap:
+                name: tracearr-timescaledb-health

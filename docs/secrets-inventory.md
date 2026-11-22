@@ -3,7 +3,7 @@ title: Secrets Inventory
 summary: Current SOPS-managed Kubernetes Secret manifests and their primary consumers.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-22
 ---
 
 # Secrets Inventory
@@ -35,7 +35,7 @@ All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and incl
 - `romm-secret`: RomM database role and app signing key; its provisioning hook also consumes `media-postgres-secret`
 - `speedtest-tracker-secret`: Speedtest Tracker and `media-postgres` database bootstrap
 - `tracerr-app-secret`: Tracerr application secrets
-- `tracerr-db-secret`: Tracerr and `media-postgres` database bootstrap
+- `tracerr-db-secret`: Tracerr, `media-postgres` database bootstrap, and the read-only `tracearr-timescaledb-health` check
 - `transmission-gluetun-control-secret`: control-panel Gluetun action authentication
 - `transmission-vpn-secret`: Transmission/Gluetun VPN material
 - `vaultwarden-db-secret`: Vaultwarden and dedicated PostgreSQL credentials
