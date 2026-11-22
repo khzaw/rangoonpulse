@@ -68,7 +68,7 @@ spec:
             resources:
               requests:
                 cpu: "148m"
-                memory: "500Mi"
+                memory: "256Mi"
               limits:
                 cpu: "878m"
                 memory: "757Mi"
@@ -128,7 +128,8 @@ spec:
                 cpu: "60m"
                 memory: "338Mi"
               limits:
-                cpu: "237m"
+                # Chromium start-up and PDF rendering are multi-process.
+                cpu: "1000m"
                 memory: "778Mi"
             securityContext:
               allowPrivilegeEscalation: false
