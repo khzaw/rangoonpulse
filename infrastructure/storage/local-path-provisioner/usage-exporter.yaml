@@ -2,9 +2,12 @@
 ---
 # local-path volumes are hostPath directories, so the kubelet never reports
 # kubelet_volume_stats_* for them. This DaemonSet walks the provisioner
-# directories with `du` every five minutes, writes the result as Prometheus
-# text into an emptyDir, and serves it as /metrics.txt with busybox httpd
-# for a PodMonitor.
+# directories with `du` every hour, writes the result as Prometheus text into
+# an emptyDir, and serves it as /metrics.txt with busybox httpd for a
+# PodMonitor. A primary-node walk crosses hundreds of thousands of files and
+# runs at the CPU limit for about a minute, so the interval stays long: usage
+# trends need no finer resolution, and node-exporter filesystem alerts cover
+# disk-full on the shared filesystem.
 # Labels come from the directory name: pvc-<uid>_<namespace>_<claim>.
 #
 # Shell expansions are written as $${...} because this Kustomization runs
@@ -56,7 +59,7 @@ data:
       else
         rm -f "$OUT.tmp"
       fi
-      sleep "$${INTERVAL_SECONDS:-300}"
+      sleep "$${INTERVAL_SECONDS:-3600}"
     done
 ---
 apiVersion: apps/v1
@@ -96,7 +99,7 @@ spec:
             - name: PORT
               value: "9101"
             - name: INTERVAL_SECONDS
-              value: "300"
+              value: "3600"
           ports:
             - name: metrics
               containerPort: 9101
