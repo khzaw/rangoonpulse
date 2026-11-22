@@ -42,6 +42,22 @@ this topology needs no FRR routing pods. `infrastructure/metallb-config/` owns t
 address pool and L2 advertisement. Introducing BGP requires reviewing the backend
 choice as well as adding peer and advertisement configuration.
 
+One node answers ARP for each address. A Service with `externalTrafficPolicy: Local`
+is eligible only on nodes with a ready endpoint. A `Cluster` Service is eligible on
+every node with a speaker. When more than one node is eligible, `default-l2` makes
+the primary announce through `preferredNodeSelectors`, which requires MetalLB
+0.16.2 or later. Without that preference, MetalLB announces from the node with the
+lowest `sha256("<node>#<ip>")`, which is effectively arbitrary for each address.
+If the primary's speaker leaves, the remaining eligible node announces.
+
+The preference is pool-wide. Today it only decides `${IRIS_VIP}`, whose two
+Services use `Cluster` policy. Every other LoadBalancer Service uses `Local` with
+endpoints on one node, so the preference does not move them. A new `Cluster`
+Service in `default-pool` is announced from the primary while the primary is up.
+Do not scope announcements with `serviceSelectors` for shared addresses: MetalLB
+does not announce an `allow-shared-ip` Service when an advertisement that matches
+it has `serviceSelectors`.
+
 ### Permanently Public Sites
 
 ```text
@@ -95,6 +111,10 @@ See [agent access](./agent-access.md) for enrollment and recovery.
 - SSH on `${IRIS_VIP}:22`
 
 HTTPS uses ingress host routing; SSH uses a dedicated LoadBalancer Service. The Mac mini services remain responsible for their own authentication and origin policy after network routing succeeds.
+
+The primary announces `${IRIS_VIP}`, so web traffic enters on the node that runs
+the controller. The utility node takes over the address, and SSH through it, while
+the primary is down. See [Mac mini edge](./mac-mini-edge.md#announcement-and-failover).
 
 ## LAN Device Proxies
 

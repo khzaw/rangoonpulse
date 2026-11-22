@@ -1,9 +1,9 @@
 ---
 title: Mac Mini Dedicated Edge
-summary: Current Iris OpenClaw, Athena Hermes, SSH, DNS ownership, and host-authentication boundary.
+summary: Current Iris OpenClaw, Athena Hermes, SSH, VIP announcement and failover, DNS ownership, and host-authentication boundary.
 status: active
 owner: homelab
-last_reviewed: 2026-11-14
+last_reviewed: 2026-11-23
 ---
 
 # Mac Mini Dedicated Edge
@@ -17,6 +17,32 @@ last_reviewed: 2026-11-14
 - `${IRIS_VIP}:22` -> Mac mini SSH at `${IRIS_MAC_MINI_IP}:22`
 
 The two HTTPS hosts use ingress host routing on the same VIP. SSH uses a separate LoadBalancer Service that shares the VIP.
+
+## Announcement And Failover
+
+Two LoadBalancer Services share `${IRIS_VIP}` through `metallb.io/allow-shared-ip`:
+`ingress-nginx/ingress-nginx-iris-controller` (80/443) and the selectorless
+`default/iris-ssh-edge` (22). MetalLB only shares an address between Services that
+both use `externalTrafficPolicy: Cluster`, or both use `Local` with identical pod
+selectors. The SSH Service has no pods, so both Services stay `Cluster`, and both
+nodes are eligible to announce. `default-l2` prefers the primary, which also runs
+the pinned ingress-nginx controller. See
+[networking](./networking.md#private-services) for the election rule.
+
+- Primary up: the primary answers ARP. Web traffic enters on the controller's node,
+  and SSH is forwarded from the primary to `${IRIS_MAC_MINI_IP}:22`.
+- Primary down: the utility node announces the address, and SSH keeps working
+  through it. Web ingress is down because the controller stays Pending until the
+  primary returns.
+- Primary back: the announcement returns to the primary.
+
+Each move resets TCP sessions through the VIP, including SSH and long-lived
+OpenClaw or Hermes connections, because kube-proxy NAT state belongs to the node
+that forwarded them. A restart of the primary's MetalLB speaker moves the address
+away and back.
+
+The ARP owner does not affect tailnet clients. The Tailscale Connector runs on the
+utility node, and kube-proxy there forwards its traffic for `${IRIS_VIP}` directly.
 
 ## DNS Ownership
 
@@ -58,8 +84,14 @@ gateway log with the trusted proxy list and the controller's current node.
 
 ## Verification
 
+Both edge Services should show the primary in `servicel2statuses`. On a LAN host,
+the ARP entry for `10.0.0.235` should carry the primary's MAC, the same MAC as the
+shared ingress VIP `10.0.0.231`.
+
 ```bash
 kubectl get svc,ingress,endpoints -n default | grep -E 'iris|hermes|athena'
+kubectl -n metallb-system get servicel2statuses
+arp -n 10.0.0.235; arp -n 10.0.0.231
 kubectl get connector homelab-subnet-router -o yaml
 dig @1.1.1.1 +short iris.khzaw.dev
 dig @1.1.1.1 +short athena.khzaw.dev

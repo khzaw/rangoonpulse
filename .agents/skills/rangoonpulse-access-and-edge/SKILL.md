@@ -49,7 +49,7 @@ A working share requires the catalog, Tunnel route, and DNS alias to agree. Cata
 ## Exceptions
 
 - `iris.khzaw.dev` and `athena.khzaw.dev` use the dedicated Mac mini edge VIP.
-- Iris SSH uses the same VIP through a separate LoadBalancer Service.
+- Iris SSH uses the same VIP through a separate LoadBalancer Service. Both edge Services stay `Cluster` policy, as MetalLB address sharing requires. `default-l2` prefers the primary, so the controller's node announces the VIP and the utility node takes over SSH during a primary outage.
 - Transmission mode is runtime-owned; Flux owns only the control shape.
 
 ## Verification

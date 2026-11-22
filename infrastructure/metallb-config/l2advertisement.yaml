@@ -7,3 +7,11 @@ metadata:
 spec:
   ipAddressPools:
     - default-pool
+  # Soft preference (MetalLB 0.16.2+; the editor schema above predates it):
+  # the primary announces whenever it is eligible, otherwise another eligible
+  # node does. See docs/networking.md.
+  preferredNodeSelectors:
+    - weight: 100
+      preference:
+        matchLabels:
+          kubernetes.io/hostname: ${PRIMARY_NODE_NAME}
