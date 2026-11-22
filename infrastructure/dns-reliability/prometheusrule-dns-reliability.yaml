@@ -38,6 +38,30 @@ spec:
             summary: "CoreDNS upstream health checks are failing"
             description: "CoreDNS detected upstream health check failures in the last 15 minutes."
 
+        - alert: CoreDNSReplicasOnSingleNode
+          # Fires when one node holds every ready replica and there are at least
+          # two. Kubernetes never rebalances the preferred anti-affinity, so a
+          # replacement scheduled during a node outage or drain stays co-located.
+          # Per-pod max() tolerates duplicate kube-state-metrics series.
+          expr: |
+            (
+              count by (node) (
+                max by (namespace, pod, node) (kube_pod_info{namespace="kube-system", pod=~"coredns-.*", node!=""})
+                * on (namespace, pod) group_left ()
+                (max by (namespace, pod) (kube_pod_status_ready{namespace="kube-system", pod=~"coredns-.*", condition="true"}) == 1)
+              )
+              == on () group_left ()
+              count (
+                max by (namespace, pod) (kube_pod_status_ready{namespace="kube-system", pod=~"coredns-.*", condition="true"}) == 1
+              )
+            ) > 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "All ready CoreDNS replicas are on {{ $labels.node }}"
+            description: "All {{ $value }} ready CoreDNS replicas have run on {{ $labels.node }} for 30 minutes, so cluster DNS has no node-failure redundancy. With both nodes Ready, delete one co-located replica so its replacement schedules on the other node (docs/dns-reliability.md)."
+
         - alert: FluxSourceGitRepositoryReconcileErrors
           # A single error leaves a counter increase visible for the lookback.
           # Keep that shorter than `for` so recovered one-off errors cannot fire.

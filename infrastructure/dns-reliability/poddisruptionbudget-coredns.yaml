@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/poddisruptionbudget-policy-v1.json
+---
+# Talos owns the CoreDNS Deployment; this separate budget only limits voluntary
+# evictions such as node drains. It cannot prevent node-failure evictions.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/part-of: dns-reliability
+    app.kubernetes.io/managed-by: flux
+spec:
+  minAvailable: 1
+  # Never let an unready replica block a drain; protect only the last ready one.
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels:
+      k8s-app: kube-dns

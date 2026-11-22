@@ -3,7 +3,7 @@ title: Kubernetes Upgrades on Talos
 summary: Safe Kubernetes-only upgrades, recovery data, bootstrap ownership, and per-node verification.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-22
 ---
 
 # Kubernetes upgrades on Talos
@@ -93,11 +93,16 @@ kubectl -n kube-system rollout status deployment/coredns
 ```
 
 Compare the live Corefile with
-`infrastructure/dns-reliability/coredns-configmap.yaml`. Follow
+`infrastructure/dns-reliability/coredns-configmap.yaml`. A CoreDNS rollout can
+place both replicas on one node; confirm one replica per node, or restore the
+spread with the [placement procedure](./dns-reliability.md#coredns-ownership-and-placement). Follow
 [the DNS reliability runbook](./dns-reliability.md)
 if Flux cannot fetch its source. Do not disable CoreDNS in Talos without first
-planning ownership of its deployment, Service and RBAC; bootstrap pruning can
-remove resources.
+planning ownership of its Deployment, Service and RBAC. After
+`cluster.coreDNS.disabled` is set, the next `upgrade-k8s` prunes the CoreDNS
+Deployment, `kube-dns` Service, ConfigMap, ServiceAccount and RBAC unless they
+were first released from the bootstrap inventory. Removing their inventory
+annotation alone does not prevent pruning.
 
 If dependent Flux Kustomizations remain unready, trace the dependency to its
 root and read the kustomize-controller logs. A controller can fail to report status during an API interruption and leave dependencies blocked until a long retry interval expires. Request fresh reconciliation of the affected root objects, then verify their dependents. Do not diagnose a `Building manifests`

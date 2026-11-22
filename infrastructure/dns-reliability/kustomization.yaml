@@ -4,5 +4,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - coredns-configmap.yaml
+  - poddisruptionbudget-coredns.yaml
   - podmonitor-flux-controllers.yaml
   - prometheusrule-dns-reliability.yaml
