@@ -68,7 +68,7 @@ spec:
                     key: COOKIE_SECRET
             resources:
               requests:
-                cpu: "84m"
+                cpu: "50m"
                 memory: "341Mi"
               limits:
                 cpu: "338m"
