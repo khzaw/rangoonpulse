@@ -5,9 +5,10 @@
 # directories with `du` every hour, writes the result as Prometheus text into
 # an emptyDir, and serves it as /metrics.txt with busybox httpd for a
 # PodMonitor. A primary-node walk crosses hundreds of thousands of files and
-# runs at the CPU limit for about a minute, so the interval stays long: usage
-# trends need no finer resolution, and node-exporter filesystem alerts cover
-# disk-full on the shared filesystem.
+# needs about four CPU-seconds in one single-threaded `du`. The one-core limit
+# lets it finish in seconds instead of being CFS-throttled for a minute. The
+# interval stays long: usage trends need no finer resolution, and
+# node-exporter filesystem alerts cover disk-full on the shared filesystem.
 # Labels come from the directory name: pvc-<uid>_<namespace>_<claim>.
 #
 # Shell expansions are written as $${...} because this Kustomization runs
@@ -114,7 +115,7 @@ spec:
               cpu: 5m
               memory: 16Mi
             limits:
-              cpu: 100m
+              cpu: "1"
               memory: 32Mi
           securityContext:
             # Root plus DAC_READ_SEARCH so du can enter directories owned by
