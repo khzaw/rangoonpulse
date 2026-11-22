@@ -1,9 +1,9 @@
 ---
 title: Gatus Service Monitoring
-summary: Git-managed availability checks, shared PostgreSQL history, private access, and operator integrations.
+summary: Git-managed availability checks, 60s-tier Prometheus alerts, shared PostgreSQL history, private access, and operator integrations.
 status: active
 owner: homelab
-last_reviewed: 2026-11-22
+last_reviewed: 2026-11-23
 ---
 
 # Gatus Service Monitoring
@@ -42,14 +42,16 @@ Check intervals follow blast radius:
 
 | Interval | Checks | Reason |
 |---|---|---|
-| 60 seconds | **DNS** and **Data services** groups, TrueNAS NFS (8) | Shared dependencies whose failure explains many other red checks; Grafana's DNS panels use these results |
+| 60 seconds | **DNS** and **Data services** groups, TrueNAS NFS (8) | Shared dependencies whose failure explains many other red checks; Grafana's DNS panels use these results. The only tier that sends [alerts](#alerts) |
 | 2 minutes | **Operations** and **Public sites** groups (12) | Several checks per private-ingress or Cloudflare Tunnel path localize a path-wide failure before app checks catch up; includes Prometheus and Alertmanager readiness |
 | 5 minutes | Every other check (50) | Individual app backends, infrastructure web UIs, and native-host checks |
 
 Add new checks to the 5-minute tier unless they cover a shared dependency or an
 access path. Each evaluation is a write transaction in the shared PostgreSQL that
 also reads that endpoint's retained result history, so a shorter interval costs
-database load as well as Gatus CPU.
+database load as well as Gatus CPU. Each 60s endpoint also carries
+`extra-labels: {tier: '60s'}`, which selects it for alerting. Moving an endpoint
+into or out of the 60s tier must add or remove that label in the same change.
 
 Keep known endpoint semantics when changing targets:
 
@@ -62,8 +64,9 @@ Keep known endpoint semantics when changing targets:
   mode is valid, so a disabled VPN is not a failed UI check.
 - Speedtest uses `/admin/login`, exercising page rendering, sessions, and the
   database. Preserve the existing final login/dashboard paths for other apps.
-- Gatus's own health is monitored externally by Dynacat and its Prometheus
-  scrape. A self-check inside Gatus cannot report when Gatus itself is down.
+- Gatus's own health is monitored externally by Dynacat and by the
+  `GatusMetricsAbsent` and `GatusResultsStale` alerts. A self-check inside Gatus
+  cannot report when Gatus itself is down.
 
 The existing service HTTP checks retain their 48-second timeouts. New HTTP
 checks use ten seconds; native HTTP and TCP checks use ten and five seconds
@@ -77,12 +80,83 @@ independent Iris monitoring and the existing Prometheus alerts remain necessary
 for failures that take Gatus's runtime or storage down.
 
 Gatus records each failed evaluation immediately, so a failure appears within
-the check's interval plus its timeout. No Gatus notification provider is
-configured; existing Prometheus/Alertmanager native-host alerts retain their own
-persistence thresholds and receiver configuration. TLS chain, hostname, and
+the check's interval plus its timeout. Gatus has no notification provider:
+60s-tier failures notify through Prometheus and Alertmanager (see
+[Alerts](#alerts)), and the 2m and 5m tiers are dashboard-only. Native-host
+Prometheus alerts keep their own thresholds and routes. TLS chain, hostname, and
 validity checks are enabled. Certificate renewal monitoring remains owned by
 cert-manager and the existing monitoring stack; domain-registration expiry is
 not an availability condition.
+
+## Alerts
+
+`infrastructure/monitoring/prometheusrule-gatus.yaml` alerts on the 60s tier.
+Gatus v5 exports each endpoint's `extra-labels` on its result metrics, so the
+rules select `tier="60s"` rather than group names or keys. Renaming an endpoint
+or group needs no rule change; changing an interval does (see above). Gatus
+metrics carry neither the interval nor the failing condition.
+
+| Alert | Condition | Notifies after |
+|---|---|---|
+| `GatusEndpointFailing` | `max_over_time(gatus_results_endpoint_success{tier="60s"}[3m])` is 0 for an endpoint, held `for: 1m` | Four consecutive failed scrapes, about 4m after the first; needs at least three consecutive failed evaluations |
+| `GatusResultsStale` | The endpoint's `gatus_results_total` has not increased over 10m, held `for: 5m` | About 15m without a new result while scrapes still succeed |
+| `GatusMetricsAbsent` | No `gatus_results_endpoint_success{tier="60s"}` series, held `for: 15m` | Gatus down or failing its scrape, `monitoring/ServiceMonitor/gatus` drift, or the tier label removed |
+
+`GatusEndpointFailing` uses a window rather than the latest gauge with a long
+`for`. One successful scrape in the window keeps it quiet, so one to three
+failed scrapes never notify, and the first success resolves it. The rule
+aggregates by `key`, `group`, `name`, and `type`, dropping the scrape target's
+pod and instance labels. Across a Gatus restart, pre-restart samples stay in the
+window: a failed first result after the restart cannot notify, and an outage
+that spans the restart keeps firing. A failed scrape does not reset the hold.
+An endpoint that alternates between success and failure never notifies; the
+dashboard shows it.
+
+The deadman alerts cover the two ways the failure alert can go blind. If
+evaluations stop, for example with all ten concurrency slots blocked, the
+success gauge keeps its last value and only the result counter shows it. If
+Gatus is down, its scrape fails, or the label is dropped, the series disappear
+and only `absent()` shows it. A normal Recreate rollout finishes well inside 15m.
+
+All three are `severity: warning`. A dedicated `Gatus.*` route in
+`infrastructure/monitoring/alertmanagerconfig-homelab.yaml` sends them to
+`critical-multi` (Discord and Telegram), grouped by `alertname` and Gatus
+`group`, with the shared 30s wait, 5m group interval, and 4h repeat. A DNS outage
+produces one `GatusEndpointFailing` notification listing each failing resolver.
+The stale and absent alerts have no `group` label, so each arrives as a single
+notification. Alerts carry `key`, `group`, `type`, and `gatus_endpoint`. The
+last is Gatus's `name`, renamed because the shared Discord title renders `name`
+as a Flux object.
+
+### Triage
+
+The alert links `https://gatus.khzaw.dev/endpoints/<key>`, which shows the
+failing condition and error. Check the dependency directly from there. For
+`GatusResultsStale` or `GatusMetricsAbsent`, check the pod, its recent
+evaluations, and the `monitoring/gatus` scrape target:
+
+```sh
+kubectl get pods -n default -l app.kubernetes.io/name=gatus
+kubectl logs -n default deployment/gatus --since=30m | grep -E 'key=<key>|ERROR' | tail
+kubectl rollout restart deployment/gatus -n default  # only if evaluations are stuck
+```
+
+### Planned maintenance
+
+Gatus maintenance windows only pause Gatus's own notification providers, and
+none are configured. They do not stop the metrics these alerts read. Silence in
+Alertmanager instead, scoped to the affected group or endpoint, with an expiry:
+
+```sh
+kubectl exec -n monitoring alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- \
+  amtool --alertmanager.url=http://localhost:9093 silence add \
+  alertname=GatusEndpointFailing 'group="Data services"' \
+  --duration=2h --author=<operator> --comment='<planned work>'
+```
+
+Match `key=<key>` to silence one endpoint. Use `silence query` to list and
+`silence expire <id>` to end a silence early. Silencing the deadman alerts hides
+a broken monitor, so do that only for Gatus's own maintenance.
 
 ## Runtime and storage
 
@@ -156,5 +230,17 @@ results across at least two of its intervals. Check the configured Dynacat
 summary and Health entry, fresh Control Panel image/chart and Secrets rows, a
 fresh advisor report, the disabled share gate, valid canonical DNS/TLS, and
 Prometheus's Gatus scrape target.
+
+After changing the 60s tier or the alert rules, run
+`scripts/test_gatus_alerts_promql.py` (CI runs it with promtool). Then confirm
+that the live selection matches the tier (DNS 3, Data services 4,
+Infrastructure 1) and that `GatusEndpointFailing` returns nothing while every
+check is healthy:
+
+```sh
+kubectl exec -n monitoring prometheus-kube-prometheus-stack-prometheus-0 -c prometheus -- \
+  promtool query instant http://localhost:9090 \
+  'count by (group) (gatus_results_endpoint_success{tier="60s"})'
+```
 
 Upstream: [Gatus configuration and API](https://github.com/TwiN/gatus#configuration).

@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.0-standalone-strict/all.json
+---
+# Alerts on Gatus's 60s-tier checks (docs/gatus.md#alerts). Endpoints opt in with
+# `extra-labels: {tier: '60s'}` in apps/gatus/helmrelease.yaml. Expressions
+# aggregate by Gatus's endpoint labels, dropping the scrape target's pod/instance,
+# so samples from before and after a Gatus restart count together. Gatus's `name`
+# label is copied to `gatus_endpoint` because the shared Discord title renders
+# `name` as a Flux object.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gatus
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab-gatus.rules
+      interval: 1m
+      rules:
+        # No successful result in four consecutive scrapes: the 3m window holds
+        # three, and `for` requires one more. A single success clears it.
+        - alert: GatusEndpointFailing
+          expr: >
+            max without (name) (
+              label_replace(
+                max by (key, group, name, type) (
+                  max_over_time(gatus_results_endpoint_success{tier="60s"}[3m])
+                ),
+                "gatus_endpoint", "$1", "name", "(.+)"
+              )
+            ) == 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Gatus check {{ $labels.group }}/{{ $labels.gatus_endpoint }} is failing"
+            description: "Gatus {{ $labels.type }} check {{ $labels.group }}/{{ $labels.gatus_endpoint }} has failed in four consecutive scrapes (about 4m, at least three 60s evaluations). Gatus metrics do not name the failing condition; https://gatus.${BASE_DOMAIN}/endpoints/{{ $labels.key }} shows the latest results and errors. Runbook and silencing: docs/gatus.md#alerts."
+
+        # Scrapes still succeed, but an endpoint's result counter stopped moving,
+        # so GatusEndpointFailing would only see a frozen gauge.
+        - alert: GatusResultsStale
+          expr: >
+            max without (name) (
+              label_replace(
+                sum by (key, name) (
+                  increase(gatus_results_total{tier="60s"}[10m])
+                ),
+                "gatus_endpoint", "$1", "name", "(.+)"
+              )
+            ) == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Gatus stopped evaluating {{ $labels.gatus_endpoint }}"
+            description: "Gatus is still scraped, but its 60s check {{ $labels.gatus_endpoint }} (key {{ $labels.key }}) has recorded no new result for about 15m, so GatusEndpointFailing cannot see new failures for it. Check the Gatus pod logs and restart deployment/gatus in default if evaluations are stuck. Runbook: docs/gatus.md#alerts."
+
+        - alert: GatusMetricsAbsent
+          expr: absent(gatus_results_endpoint_success{tier="60s"})
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Gatus 60s-tier metrics are absent; Gatus alerts are blind"
+            description: "Prometheus has had no gatus_results_endpoint_success series with tier=60s for 15m. Gatus is down or failing its scrape, monitoring/ServiceMonitor/gatus no longer matches its Service, or the tier extra-label was removed from apps/gatus/helmrelease.yaml. Until this resolves, GatusEndpointFailing and GatusResultsStale cannot fire. Runbook: docs/gatus.md#alerts."

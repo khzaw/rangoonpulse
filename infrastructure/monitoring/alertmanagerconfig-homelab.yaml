@@ -49,6 +49,19 @@ spec:
           - name: alertname
             matchType: "=~"
             value: Flux.*
+      # One notification per alert and Gatus group, e.g. a DNS outage's three
+      # failing resolvers arrive together.
+      - receiver: critical-multi
+        groupBy:
+          - alertname
+          - group
+        matchers:
+          - name: severity
+            matchType: "="
+            value: warning
+          - name: alertname
+            matchType: "=~"
+            value: Gatus.*
       - receiver: "null"
   receivers:
     - name: critical-multi

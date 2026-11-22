@@ -133,7 +133,7 @@ max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time{namespace="d
 
 ## Alertmanager Routing
 
-The route tree in `alertmanagerconfig-homelab.yaml` explicitly delivers the `TrueNAS.*`, `Iris.*`, `SingaporePower.*`, `HomelabCronJob.*`, and `Flux.*` warning families. Unmatched warning alerts reach the final null receiver. Keep this family's explicit matcher or its warnings will be silently dropped.
+The route tree in `alertmanagerconfig-homelab.yaml` explicitly delivers the `TrueNAS.*`, `Iris.*`, `SingaporePower.*`, `HomelabCronJob.*`, `Flux.*`, and [`Gatus.*`](./gatus.md#alerts) warning families. Unmatched warning alerts reach the final null receiver. Keep this family's explicit matcher or its warnings will be silently dropped.
 
 A route placed before the final `receiver: "null"` entry sends the family to
 `critical-multi` (Discord + Telegram):

@@ -37,7 +37,7 @@ All repository documentation is public. These guides retain technical context ne
 - [`talos-userspace-oom-control-plane-cgroups.md`](./talos-userspace-oom-control-plane-cgroups.md): Talos userspace OOM and API recovery
 - [`media-postgres.md`](./media-postgres.md): shared TimescaleDB consumers and local-storage tradeoff
 - [`book-library-storage.md`](./book-library-storage.md): shared ebook/audiobook claims, app-state separation, and data-preserving changes
-- [`gatus.md`](./gatus.md): Git-managed service checks, PostgreSQL history, and monitoring integration
+- [`gatus.md`](./gatus.md): Git-managed service checks, 60s-tier alerts, PostgreSQL history, and monitoring integration
 - [`interview-prep.md`](./interview-prep.md): ITVP persistence and image promotion
 - [`retirement.md`](./retirement.md): Retirement SQLite and Litestream protection
 - [`seventyfivesoft.md`](./seventyfivesoft.md): 75 Soft SQLite and Litestream protection

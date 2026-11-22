@@ -42,4 +42,5 @@ resources:
   - prometheusrule-seventyfivesoft-litestream.yaml
   - prometheusrule-cronjob-deadman.yaml
   - prometheusrule-flux-reconciliation.yaml
+  - prometheusrule-gatus.yaml
   - alertmanagerconfig-homelab.yaml

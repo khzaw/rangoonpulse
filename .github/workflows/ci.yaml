@@ -54,6 +54,7 @@ jobs:
           python scripts/test_flux_alerts_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
           python scripts/test_dns_alerts_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
           python scripts/test_timescaledb_health_alerts_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
+          python scripts/test_gatus_alerts_promql.py --promtool "$RUNNER_TEMP/prometheus-3.15.0.linux-amd64/promtool"
 
       - name: Test durable monthly power ledger
         run: |
