@@ -196,6 +196,18 @@
       "prPriority": 20
     },
     {
+      "description": "Remind the merger that TimescaleDB image bumps leave the tracearr extension version behind.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "timescale/timescaledb"
+      ],
+      "prBodyNotes": [
+        "After rollout, update the TimescaleDB extension in the media-postgres `tracearr` database. Follow `docs/media-postgres.md#extension-updates`."
+      ]
+    },
+    {
       "description": "Group GitHub Actions patch and minor updates.",
       "matchManagers": [
         "github-actions"

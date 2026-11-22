@@ -3,7 +3,7 @@ title: Tracerr
 summary: Current Tracerr deployment, Tracearr upstream naming, shared database, Redis, secrets, and exposure surfaces.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-22
 ---
 
 # Tracerr
@@ -16,7 +16,7 @@ Repository objects, directory names, Flux wiring, and hostname use `tracerr`. Th
 
 - source: `apps/tracerr/`
 - application image: `ghcr.io/connorgallopo/tracearr`
-- database: shared `media-postgres`
+- database: shared `media-postgres`; TimescaleDB extension updates follow [Media PostgreSQL](./media-postgres.md#extension-updates)
 - Redis: persistent sidecar in the Tracerr release
 - hostname: `tracerr.khzaw.dev`
 - temporary share: fully wired through exposure-control and public-edge

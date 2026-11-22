@@ -44,7 +44,15 @@ The elevated lock table is required by Tracearr hypertables with many chunks. Th
 
 Only `tracearr` has the TimescaleDB extension. The image installs it in `postgres` and `template1` on first boot. The init script removes it from both before it creates any application database. Every database created later, including those from app-owned hooks, therefore starts without it. Do not install the extension anywhere else. Each database that holds an unused copy runs its own TimescaleDB scheduler process. That copy also pins a library version that later images must keep shipping.
 
-Image upgrades replace the server library but leave the extension version inside `tracearr` unchanged. To update it, run `ALTER EXTENSION timescaledb UPDATE` as the first command of a fresh `psql -X` session. After an image change, check `timescaledb_information.job_stats` in `tracearr` for failing compression, retention, or continuous-aggregate jobs.
+### Extension Updates
+
+Image upgrades replace the server library and can raise the PostgreSQL minor version, but `tracearr` keeps loading the library that matches its own extension version. An old extension can break on a newer PostgreSQL minor. For example, TimescaleDB versions without upstream fix [timescale/timescaledb#11015](https://github.com/timescale/timescaledb/pull/11015) fail every scheduler-run job on PostgreSQL 16.16 with SQLSTATE 24000 `cannot drop portal "" while it is being set up`. After every `timescale/timescaledb` image rollout, update the extension to the image's version:
+
+1. Back up `tracearr` with `pg_dump -Fc` inside the pod. Verify the file with `pg_restore --list` and match its SHA-256 after download. The update has no downgrade path.
+2. Scale `deploy/tracerr` to zero and wait until `tracearr` has no client backends.
+3. Run `ALTER EXTENSION timescaledb UPDATE` as the only command of a fresh `psql -X` session. The loader restarts the database's job scheduler. Do not restart media-postgres.
+4. Scale Tracerr back up.
+5. Failed jobs keep their retry backoff. Send them through the scheduler with `SELECT alter_job(<job_id>, next_start => now())`, then confirm that `timescaledb_information.job_stats` reports success and `job_errors` has no new rows. A foreground `CALL run_job` does not prove the fix because it can succeed while scheduled runs fail.
 
 ## Secrets
 
@@ -81,4 +89,9 @@ The repository defines no automated dump, physical backup, snapshot, or offsite 
 flux get kustomization media-postgres -n flux-system
 kubectl get hr,pod,pvc -n default | grep media-postgres
 kubectl logs -n default deploy/media-postgres --since=30m
+kubectl exec -n default deploy/media-postgres -- psql -X -U postgres -d tracearr \
+  -c "select default_version, installed_version from pg_available_extensions where name = 'timescaledb'" \
+  -c "select job_id, last_run_status, last_successful_finish from timescaledb_information.job_stats order by job_id"
 ```
+
+`installed_version` must equal `default_version`. Every job must show a recent success, except the telemetry reporter, which never runs while telemetry is off.
