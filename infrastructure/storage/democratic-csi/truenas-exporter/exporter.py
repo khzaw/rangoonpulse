@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import ssl
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -12,6 +13,20 @@ from power import ApiClient, PowerCollector
 
 PORT = int(os.environ.get("PORT", "9118"))
 TRUENAS_API_BASE = os.environ.get("TRUENAS_API_BASE", "http://10.0.0.210/api/v2.0").rstrip("/")
+# Every middleware request is a NAS login. Dataset usage changes slowly, so
+# scrapes reuse one dataset read for this long; a newly listed PV refreshes
+# sooner, at most once per DATASET_MIN_REFRESH_SECONDS.
+DATASET_REFRESH_SECONDS = float(os.environ.get("TRUENAS_DATASET_REFRESH_SECONDS", "900"))
+DATASET_MIN_REFRESH_SECONDS = 110
+# Every dataset in one flat list, with only the ZFS usage properties the
+# metrics need and no user properties or snapshots: about 90 KB instead of
+# 640 KB for the unfiltered query, with identical values.
+DATASET_QUERY = "/pool/dataset?" + urllib.parse.urlencode({
+    "extra.flat": "true",
+    "extra.retrieve_children": "true",
+    "extra.properties": "usedbydataset,available,refquota,quota",
+    "extra.retrieve_user_props": "false",
+})
 TRUENAS_USERNAME = os.environ["TRUENAS_USERNAME"]
 TRUENAS_PASSWORD = os.environ["TRUENAS_PASSWORD"]
 POWER = PowerCollector(
@@ -73,6 +88,35 @@ def _metric(name, labels, value):
     return f"{name}{{{label_text}}} {value}\n"
 
 
+class DatasetCache:
+    """One TrueNAS dataset read shared by scrapes until it is due again."""
+
+    def __init__(self, fetch, clock=time, refresh_seconds=DATASET_REFRESH_SECONDS,
+                 min_refresh_seconds=DATASET_MIN_REFRESH_SECONDS):
+        self.lock = threading.Lock()
+        self.fetch = fetch
+        self.clock = clock
+        self.refresh_seconds = refresh_seconds
+        self.min_refresh_seconds = min_refresh_seconds
+        self.state = None  # (monotonic fetch time, wall fetch time, PV names, datasets)
+
+    def get(self, pv_names):
+        with self.lock:
+            now = self.clock.monotonic()
+            if self.state is not None:
+                age = now - self.state[0]
+                new_pv = not pv_names <= self.state[2]
+                if age < self.refresh_seconds and not (new_pv and age >= self.min_refresh_seconds):
+                    return self.state[1], self.state[3]
+            # A failed read keeps no partial state and is retried on the next scrape.
+            datasets = {item.get("name"): item for item in self.fetch()}
+            self.state = (now, int(self.clock.time()), frozenset(pv_names), datasets)
+            return self.state[1], datasets
+
+
+DATASETS = DatasetCache(lambda: _truenas_get(DATASET_QUERY))
+
+
 def _collect():
     lines = [
         "# HELP truenas_pvc_dataset_used_bytes TrueNAS ZFS dataset bytes used by dataset for Kubernetes PVC-backed datasets.\n",
@@ -88,10 +132,8 @@ def _collect():
         "# HELP truenas_pvc_dataset_last_scrape_timestamp_seconds Last successful TrueNAS dataset scrape timestamp.\n",
         "# TYPE truenas_pvc_dataset_last_scrape_timestamp_seconds gauge\n",
     ]
-    now = int(time.time())
-    pvs = _kube_get("/api/v1/persistentvolumes").get("items", [])
-    datasets = {item.get("name"): item for item in _truenas_get("/pool/dataset")}
-    for pv in pvs:
+    volumes = []
+    for pv in _kube_get("/api/v1/persistentvolumes").get("items", []):
         spec = pv.get("spec", {})
         csi = spec.get("csi") or {}
         attrs = csi.get("volumeAttributes") or {}
@@ -105,14 +147,18 @@ def _collect():
         if not driver.startswith("org.democratic-csi"):
             continue
         dataset = share.removeprefix("/mnt/")
-        labels = {
+        volumes.append({
             "namespace": namespace,
             "persistentvolumeclaim": pvc,
             "persistentvolume": pv.get("metadata", {}).get("name", ""),
             "storageclass": spec.get("storageClassName", ""),
             "dataset": dataset,
             "pool": dataset.split("/", 1)[0],
-        }
+        })
+    # The timestamp is when TrueNAS was read, so cached values report their age.
+    now, datasets = DATASETS.get(frozenset(labels["persistentvolume"] for labels in volumes))
+    for labels in volumes:
+        dataset = labels["dataset"]
         try:
             item = datasets[dataset]
             used = _prop(item, "usedbydataset")

@@ -131,7 +131,8 @@ spec:
           cpu: 5m
           memory: 16Mi
         limits:
-          cpu: 50m
+          # 50m throttled the Pi node's proxy on kubelet volume-stats bursts.
+          cpu: 200m
           memory: 64Mi
 
     storageClasses:

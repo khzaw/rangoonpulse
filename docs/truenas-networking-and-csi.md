@@ -1,9 +1,9 @@
 ---
 title: TrueNAS Networking and CSI Recovery
-summary: TrueNAS console policy, asymmetric-routing constraint, NFS settings, management-plane refresh, and diagnostic split.
+summary: TrueNAS console policy, asymmetric-routing constraint, NFS settings, management API callers, management-plane refresh, and diagnostic split.
 status: active
 owner: homelab
-last_reviewed: 2026-11-16
+last_reviewed: 2026-11-23
 ---
 
 # TrueNAS Networking and CSI Recovery
@@ -14,6 +14,7 @@ last_reviewed: 2026-11-16
 - Cluster NFS mounts use NFSv4.1.
 - democratic-csi uses the TrueNAS API for dataset and share lifecycle.
 - `truenas-management-plane-refresh` runs Monday at 04:00 Asia/Singapore to refresh the management path.
+- Every authenticated TrueNAS API request is a full login; keep cluster callers to the budget in [Management API Callers](#management-api-callers).
 - Monitoring alerts cover TrueNAS and CSI management failures.
 
 Accepting Tailscale routes on the NAS can send replies for cluster-originated NFS/API traffic through the wrong interface. The resulting asymmetric path looks like a storage outage even when the NAS and datasets are healthy.
@@ -51,6 +52,41 @@ The unit's configured `ExecStart` can still show `/usr/bin/cli --menu --pager`:
 the launcher replaces itself with `agetty` when the menu is disabled. Inspect
 the running process rather than changing or disabling the systemd unit. To
 restore the automatic menu, set `consolemenu` to `true` through the same API.
+
+## Management API Callers
+
+On TrueNAS 25.04 every authenticated REST request (`/api/v2.0`, HTTP Basic) is a
+separate middleware login: about 0.9 seconds of NAS work and one `AUTHENTICATION`
+record in the middleware audit log, whatever method it calls. An unauthenticated
+request is rejected in about 10 ms without a login. Cluster traffic leaves through
+the primary node address, so the audit log attributes the exporter and both
+controllers to that one source; tell them apart by method and timing.
+
+| Caller | Requests | Logins per day |
+| --- | --- | --- |
+| democratic-csi HDD and NVMe controllers | CSI `Probe` from the 60-second liveness check calls `GET /system/version/`; the driver caches the answer for 60 seconds, so each controller logs in about every 120 seconds. Provisioning, expansion, and snapshot RPCs log in on demand. | ~1,440 |
+| `truenas-pvc-dataset-exporter` `/metrics` | One flat `pool.dataset.query` limited to `usedbydataset`, `available`, `refquota`, and `quota`, without user properties or snapshots (about 90 KB), reused by scrapes for 15 minutes. A newly listed democratic-csi PV refreshes it sooner, at most once per 110 seconds. | ~96 |
+| `truenas-pvc-dataset-exporter` `/power` | `/disk` inventory hourly. `/proc/stat` through `core.download` every 10 minutes; each download also creates a middleware job. Both are re-read on the next two polls after any failure or restart. Disk busy counters come from Netdata every 120 seconds without middleware. | ~168 |
+| democratic-csi node plugins | None. Kubelet volume stats run `findmnt` and `df` locally on each node. | 0 |
+| Blackbox `truenas-ui` and `truenas-api`, Gatus, Dynacat, refresh preflight | Unauthenticated `/ui/` or a `401` from `/api/v2.0/system/version/`. | 0 |
+
+Operator and agent sessions add logins only while they work. Do not add a
+per-scrape or per-minute authenticated caller; cache slowly changing NAS state,
+read host counters from Netdata where its values are exact, and prefer
+unauthenticated reachability probes. Count audit records read-only before and
+after a caller change:
+
+```bash
+# democratic-csi API credentials in the environment; the password stays off the
+# command line. Returns a count, not records.
+printf 'user = "%s:%s"\n' "$TRUENAS_USERNAME" "$TRUENAS_PASSWORD" |
+  curl -sS -K - -H 'Content-Type: application/json' \
+    -d '{"services":["MIDDLEWARE"],"query-filters":[["event","=","AUTHENTICATION"]],"query-options":{"count":true}}' \
+    "http://${NAS_IP}/api/v2.0/audit/query"
+```
+
+Audit retention is five days. The audit handler (`tnaudit`) is a separate
+service that the refresh does not restart.
 
 ## CSI Health Checks
 

@@ -3,7 +3,7 @@ title: Node Power Estimation Dashboard
 summary: Current operating guidance for Node Power Estimation Dashboard.
 status: active
 owner: homelab
-last_reviewed: 2026-11-04
+last_reviewed: 2026-11-23
 ---
 
 # Node Power Estimation Dashboard
@@ -106,14 +106,26 @@ power metric labels.
 CPU and boot identity still come from `/proc/stat`, via the supported REST file
 API (`core.download` / `filesystem.get`, `buffered: false`). The installed Netdata
 CPU helper sums all CPU fields, including guest ticks already counted in user/nice,
-and its absolute dimension quantizes the percentage. It cannot preserve this
-model's guest-safe calculation over the polling interval. Do not substitute the
-aggregate CPU percentage without rechecking the installed implementation. The
-collector reads `/disk` inventory each poll to validate model and standby policy;
-it does not download `/proc/diskstats`.
+and truncates each one-second percentage to a whole number. It cannot preserve
+this model's guest-safe calculation over the polling interval. Do not substitute
+the aggregate CPU percentage without rechecking the installed implementation.
+It does not download `/proc/diskstats`.
 
-These are **four NAS HTTP requests and one middleware download job per poll**,
-batched into one short-lived Python worker inside the existing Kubernetes pod.
+Each authenticated middleware request is a NAS login, and each download also
+creates a middleware job; see
+[Management API Callers](./truenas-networking-and-csi.md#management-api-callers).
+So the collector reads Netdata disk counters every poll but refreshes the exact
+CPU counters every **10 minutes** and the `/disk` inventory (model and standby
+validation) every **hour**. Each sample uses the busy fraction of the latest
+completed CPU window, which spans up to ten minutes; CPU energy over time is
+unchanged, but the CPU component moves in ten-minute steps. After any failure or
+process start, both are read on the next two polls so estimation resumes as
+before. A replaced drive disappears from Netdata under its cached identity,
+fails the poll, and forces a fresh inventory.
+
+A poll is therefore one Netdata request, plus up to three middleware requests and
+one download job when a CPU or inventory read is due, batched into one
+short-lived Python worker inside the existing Kubernetes pod.
 A hard **25-second** whole-poll deadline covers interpreter startup, DNS, headers,
 redirects, framing and bodies; socket inactivity is bounded to three seconds.
 The parent kills and reaps an overdue worker before releasing sample state.
@@ -128,13 +140,17 @@ must advance, even if the counter remains unchanged on an idle disk. The emitted
 power timestamp is the oldest disk source timestamp, not the HTTP fetch time.
 A dedicated `server=rangoonpulse-power` cursor leaves the existing 60-second
 Prometheus Netdata scrape's averaging window untouched. There is no new NAS
-service, cluster workload, resident sampler, or resource-limit increase.
+service, cluster workload, or resident sampler. The worker's Python bytecode is
+cached on a small `emptyDir` (`PYTHONPYCACHEPREFIX`): the image ships no compiled
+standard library, and recompiling it cost about 0.9 CPU-seconds per poll. A
+one-core limit lets the remaining short burst finish without CFS throttling.
 
 The model deliberately uses rounded engineering allowances, not a hardware sensor:
 
 - Fixed **12 W** platform allowance includes idle CPU, RAM, fans, networking,
   NVMe/USB and an approximate conversion-loss allowance.
-- Additional CPU allowance is **10 W × host CPU busy fraction**. The first eight
+- Additional CPU allowance is **10 W × host CPU busy fraction** over the latest
+  CPU window (up to ten minutes). The first eight
   Linux CPU counters exclude duplicated guest counters; idle and I/O-wait time
   do not contribute dynamic CPU power.
 - `ST8000VN004`: **8 W idle / 10 W active**.

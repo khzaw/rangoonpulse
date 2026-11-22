@@ -66,6 +66,10 @@ spec:
               value: http://${NAS_IP}/api/v2.0
             - name: TRUENAS_NETDATA_BASE
               value: http://${NAS_IP}:6999
+            # The image ships no stdlib bytecode and runs as non-root, so
+            # without a writable cache every telemetry worker recompiles it.
+            - name: PYTHONPYCACHEPREFIX
+              value: /var/cache/python
             - name: TRUENAS_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -103,17 +107,23 @@ spec:
               cpu: 10m
               memory: 32Mi
             limits:
-              cpu: 100m
+              # One core: a short single-threaded poll burst fits in one CFS period.
+              cpu: 1000m
               memory: 128Mi
           volumeMounts:
             - name: exporter-script
               mountPath: /opt/truenas-pvc-dataset-exporter
               readOnly: true
+            - name: python-cache
+              mountPath: /var/cache/python
       volumes:
         - name: exporter-script
           configMap:
             name: truenas-pvc-dataset-exporter-script
             defaultMode: 0555
+        - name: python-cache
+          emptyDir:
+            sizeLimit: 32Mi
 ---
 apiVersion: v1
 kind: Service

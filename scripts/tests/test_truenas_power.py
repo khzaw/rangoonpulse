@@ -46,10 +46,12 @@ class API:
         self.boot = 1700000000
         self.clock = Clock()
         self.models = ["ST8000VN004-3CP101", "ST8000NT001-3LZ101", "ST8000VN002-2ZM188"]
+        self.reads = []
 
-    def snapshot(self, deadline):
-        return {"inventory": self.get("/disk", deadline),
-                "cpu": self.read_file("/proc/stat", deadline),
+    def snapshot(self, deadline, inventory=True, cpu=True):
+        self.reads.append((inventory, cpu))
+        return {"inventory": self.get("/disk", deadline) if inventory else None,
+                "cpu": self.read_file("/proc/stat", deadline) if cpu else None,
                 "disks": self.read_disks(deadline)}
 
     def get(self, path, deadline):
@@ -69,6 +71,8 @@ class API:
         raise ValueError("Unexpected raw file read")
 
     def read_disks(self, deadline):
+        if self.fail:
+            raise TimeoutError("NAS offline")
         return "\n".join(
             f'netdata_Disk_Busy_Time_total{{chart="truenas_disk_stats.busy.drive-{i}",'
             f'family="disk.busy",dimension="drive-{i}.busy"}} '
@@ -294,7 +298,8 @@ class PowerTests(unittest.TestCase):
                 module = self.load()
                 api = API()
                 clock = api.clock
-                collector = module.PowerCollector(api=api, clock=clock)
+                # Re-read inventory each poll; caching is covered separately.
+                collector = module.PowerCollector(api=api, clock=clock, inventory_seconds=0)
                 collector.collect()
                 clock.advance(120)
                 api.active = True
@@ -397,7 +402,7 @@ class PowerTests(unittest.TestCase):
         for change in ("replacement", "duplicate", "missing"):
             with self.subTest(change=change):
                 api = API()
-                collector = self.load().PowerCollector(api, clock=api.clock)
+                collector = self.load().PowerCollector(api, clock=api.clock, inventory_seconds=0)
                 collector.collect()
                 api.clock.advance(120)
                 api.active = 1
@@ -425,6 +430,7 @@ class PowerTests(unittest.TestCase):
             "claimRef": {"namespace": "default", "name": "fixture"}, "storageClassName": "truenas-nfs"}}
         module._kube_get = mock.Mock(return_value={"items": [pv]})
         module._truenas_get = mock.Mock(return_value=[{"name": "tank/fixture", "usedbydataset": 10, "available": 90}])
+        module.DATASETS.refresh_seconds = 0  # Read TrueNAS on every scrape here.
         api = API()
         module.POWER = self.load().PowerCollector(api, clock=api.clock)
         module.Handler.log_message = lambda *args: None
@@ -544,6 +550,16 @@ class PowerTests(unittest.TestCase):
                     "server": "rangoonpulse-power",
                 }.items()})
                 self.assertEqual(len([r for r in requests if "method" in r]), 2)
+                # Cached polls make no middleware request and send no credentials.
+                before = len(requests)
+                with mock.patch.object(module.subprocess, "Popen", wraps=subprocess.Popen) as workers:
+                    netdata_only = client.snapshot(time.monotonic()+5, inventory=False, cpu=False)
+                    self.assertEqual(workers.call_count, 1)
+                self.assertIsNone(netdata_only["inventory"])
+                self.assertIsNone(netdata_only["cpu"])
+                self.assertIn("truenas_disk_stats.busy.drive-0", netdata_only["disks"])
+                self.assertEqual(len(requests), before + 1)
+                self.assertEqual(requests[-1]["auth"], None)
                 with self.assertRaises(ValueError):
                     client.read_file("/proc/diskstats", time.monotonic()+3)
             finally:
@@ -563,6 +579,102 @@ class PowerTests(unittest.TestCase):
                 if change == "boot":
                     api.boot += 1
                 self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+
+    def test_cached_inventory_and_cpu_still_detect_drive_replacement(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock)
+        collector.collect()
+        api.clock.advance(120)
+        api.active = 1
+        self.assertIn('truenas_power_scrape_success{host="truenas"} 1', collector.collect())
+        original_get, original_disks = api.get, api.read_disks
+        def get(path, deadline):
+            inventory = original_get(path, deadline)
+            inventory[0]["identifier"] = "new-0"
+            return inventory
+        api.get = get
+        api.read_disks = lambda deadline: original_disks(deadline).replace("drive-0", "new-0")
+        api.clock.advance(120)
+        # Netdata no longer reports the cached identity: fail closed, then
+        # re-read the inventory and rebuild the baseline before emitting watts.
+        self.assertEqual(collector.collect(), 'truenas_power_scrape_success{host="truenas"} 0\n')
+        self.assertEqual(api.reads[-1], (False, False))
+        api.clock.advance(120)
+        self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+        self.assertEqual(api.reads[-1], (True, True))
+        api.clock.advance(120)
+        api.active = 2
+        self.assertIn('truenas_power_scrape_success{host="truenas"} 1', collector.collect())
+
+    def test_inventory_and_cpu_reads_follow_their_own_cadence(self):
+        module = self.load()
+        api = API()
+        collector = module.PowerCollector(api, clock=api.clock)
+        results = []
+        for poll in range(32):
+            if poll:
+                api.clock.advance(120)
+            api.active = poll
+            results.append(collector.collect())
+        # Bootstrap reads inventory and CPU, then CPU once more for a ratio.
+        self.assertEqual(api.reads[:3], [(True, True), (False, True), (False, False)])
+        self.assertTrue(all('truenas_power_scrape_success{host="truenas"} 1' in r for r in results[1:]))
+        cpu_polls = [i for i, (_, cpu) in enumerate(api.reads) if cpu]
+        inventory_polls = [i for i, (inventory, _) in enumerate(api.reads) if inventory]
+        # Every 600 seconds of 120-second polls after the ratio exists.
+        self.assertEqual(cpu_polls, [0, 1, 6, 11, 16, 21, 26, 31])
+        self.assertEqual(inventory_polls, [0, 30])
+        self.assertEqual(module.CPU_SECONDS, 600)
+        self.assertEqual(module.INVENTORY_SECONDS, 3600)
+
+    def test_cpu_ratio_covers_the_whole_refresh_window(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock)
+        counters = iter([
+            "cpu 100 0 50 850 0 0 0 0 0 0\nbtime 1700000000\n",
+            "cpu 110 0 50 930 0 0 0 0 0 0\nbtime 1700000000\n",  # 10 of 90 ticks active
+            "cpu 410 0 50 1830 900 0 0 0 0 0\nbtime 1700000000\n",  # 300 of 2100 ticks active
+        ])
+        api.read_file = lambda path, deadline: next(counters)
+        collector.collect()
+        for _ in range(5):  # The ratio from 120s holds until the read due at 720s.
+            api.clock.advance(120)
+            result = collector.collect()
+            self.assertIn('truenas_power_cpu_utilization_ratio{host="truenas"} 0.1111111111111111', result)
+        api.clock.advance(120)
+        self.assertIn(f'truenas_power_cpu_utilization_ratio{{host="truenas"}} {300/2100}', collector.collect())
+
+    def test_reboot_seen_at_cpu_refresh_rebuilds_every_baseline(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock, cpu_seconds=240)
+        collector.collect()
+        for poll in range(1, 3):
+            api.clock.advance(120)
+            api.active = poll
+            self.assertIn('truenas_power_scrape_success{host="truenas"} 1', collector.collect())
+        api.boot += 1
+        api.clock.advance(120)
+        api.active = 3
+        self.assertNotIn("truenas_estimated_power_watts{", collector.collect())
+        self.assertEqual(api.reads[-1], (False, True))
+        api.clock.advance(120)
+        api.active = 4
+        self.assertIn('truenas_power_scrape_success{host="truenas"} 1', collector.collect())
+
+    def test_failed_poll_rereads_inventory_and_cpu(self):
+        api = API()
+        collector = self.load().PowerCollector(api, clock=api.clock)
+        collector.collect()
+        api.clock.advance(120)
+        api.active = 1
+        collector.collect()
+        api.fail = True
+        api.clock.advance(120)
+        self.assertEqual(collector.collect(), 'truenas_power_scrape_success{host="truenas"} 0\n')
+        api.fail = False
+        api.clock.advance(120)
+        collector.collect()
+        self.assertEqual(api.reads[-1], (True, True))
 
     def test_missing_drive_does_not_silently_reduce_the_baseline(self):
         module = self.load()

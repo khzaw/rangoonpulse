@@ -14,6 +14,13 @@ import urllib.request
 # Rounded engineering allowances, not measured wall watts. See the power docs.
 DRIVES = {"ST8000VN004": (8.0, 10.0), "ST8000NT001": (8.0, 10.0), "ST8000VN002": (4.0, 6.0)}
 
+# Each authenticated middleware request costs a login on the NAS, and the CPU
+# download also creates a middleware job. Disk busy counters come from Netdata
+# every poll; the static drive inventory and the exact /proc/stat CPU counters
+# are refreshed on these slower cadences (seconds) once a baseline exists.
+INVENTORY_SECONDS = 3600
+CPU_SECONDS = 600
+
 # Raw incremental values are Linux busy milliseconds, not Netdata's ms/s
 # averages. names=no preserves the exact middleware disk identifier.
 NETDATA_QUERY = urllib.parse.urlencode({
@@ -45,6 +52,15 @@ def disk_samples(text, identities, now):
     if any(not 0 <= now - timestamp <= 5 for _, timestamp in selected.values()):
         raise ValueError("Netdata busy sample is stale or future dated")
     return selected
+
+
+def cpu_counters(text):
+    lines = [line.split() for line in text.splitlines()]
+    cpu = next([int(x) for x in line[1:9]] for line in lines if line and line[0] == "cpu")
+    boot = next(int(line[1]) for line in lines if line and line[0] == "btime")
+    if len(cpu) != 8 or min(cpu) < 0 or boot <= 0:
+        raise ValueError("Invalid kernel CPU counters")
+    return cpu, boot
 
 
 def metric(name, value):
@@ -80,11 +96,13 @@ class ApiClient:
                    "body": body, "limit": limit, "authenticated": authenticated}
         return self._isolated(payload, min(deadline, time.monotonic() + 3), limit)
 
-    def snapshot(self, deadline):
+    def snapshot(self, deadline, inventory=True, cpu=True):
         # One interpreter per poll, not one cold import per HTTP request. This
-        # preserves the existing 100m CPU cap without weakening cancellation.
+        # preserves the existing CPU cap without weakening cancellation. Only
+        # the requested middleware reads are made; Netdata is read every poll.
         payload = {"base": self.base, "netdata_base": self.netdata_base, "auth": self.auth,
-                   "operation": "snapshot", "deadline": deadline}
+                   "operation": "snapshot", "deadline": deadline,
+                   "inventory": bool(inventory), "cpu": bool(cpu)}
         return json.loads(self._isolated(payload, deadline, 2097152))
 
     def _isolated(self, payload, deadline, limit):
@@ -157,7 +175,8 @@ class DirectApiClient(ApiClient):
 
 
 class PowerCollector:
-    def __init__(self, api, clock=time, platform_watts=12.0, cpu_watts=10.0):
+    def __init__(self, api, clock=time, platform_watts=12.0, cpu_watts=10.0,
+                 inventory_seconds=INVENTORY_SECONDS, cpu_seconds=CPU_SECONDS):
         if any(not math.isfinite(value) or value <= 0 for value in (platform_watts, cpu_watts)):
             raise ValueError("Power allowances must be positive and finite")
         self.lock = threading.Lock()
@@ -165,7 +184,18 @@ class PowerCollector:
         self.clock = clock
         self.platform_watts = platform_watts
         self.cpu_watts = cpu_watts
+        self.inventory_seconds = inventory_seconds
+        self.cpu_seconds = cpu_seconds
         self.previous = None
+        self.inventory = None
+        self.cpu = None
+
+    def reset(self):
+        # A later scrape retries from fresh counters and a fresh inventory;
+        # never replay old watts.
+        self.previous = None
+        self.inventory = None
+        self.cpu = None
 
     def collect(self):
         if not self.lock.acquire(blocking=False):
@@ -173,19 +203,24 @@ class PowerCollector:
         try:
             return self._sample()
         except Exception:  # noqa: BLE001 - fail closed at the collection boundary.
-            # A later scrape retries from fresh counters; never replay old watts.
-            self.previous = None
+            self.reset()
             return metric("truenas_power_scrape_success", 0)
         finally:
             self.lock.release()
 
     def _sample(self):
-        deadline = self.clock.monotonic() + 25
-        snapshot = self.api.snapshot(deadline)
-        inventory, cpu_text, disk_text = snapshot["inventory"], snapshot["cpu"], snapshot["disks"]
-        cpu_lines = [line.split() for line in cpu_text.splitlines()]
-        cpu = next([int(x) for x in line[1:9]] for line in cpu_lines if line[0] == "cpu")
-        boot = next(int(line[1]) for line in cpu_lines if line[0] == "btime")
+        started = self.clock.monotonic()
+        deadline = started + 25
+        need_inventory = self.inventory is None or started - self.inventory[0] >= self.inventory_seconds
+        # Until a CPU ratio exists, read counters on every poll so a restart or
+        # failure costs the usual two polls rather than a whole CPU interval.
+        need_cpu = (self.cpu is None or self.cpu["ratio"] is None
+                    or started - self.cpu["at"] >= self.cpu_seconds)
+        snapshot = self.api.snapshot(deadline, inventory=need_inventory, cpu=need_cpu)
+        now = self.clock.monotonic()
+        if need_inventory:
+            self.inventory = (now, snapshot["inventory"])
+        inventory = self.inventory[1]
         drives = [(item["name"], item["model"].split("-", 1)[0]) for item in inventory if item.get("rotationrate")]
         if sorted(model for _, model in drives) != sorted(DRIVES):
             raise ValueError("Drive inventory does not match the power model")
@@ -195,28 +230,25 @@ class PowerCollector:
                 or len({identity for _, identity, _ in identities}) != len(DRIVES)
                 or any(not identity for _, identity, _ in identities)):
             raise ValueError("Missing or duplicate disk identity")
-        disks = disk_samples(disk_text, identities, self.clock.time())
-        if len(cpu) != 8 or min(cpu) < 0 or boot <= 0:
-            raise ValueError("Invalid initial kernel counters")
         if any(item.get("hddstandby") != "ALWAYS ON" for item in inventory if item.get("rotationrate")):
             raise ValueError("The spinning-drive model requires disabled standby")
-        current = (self.clock.monotonic(), cpu, boot, disks, identities)
+        disks = disk_samples(snapshot["disks"], identities, self.clock.time())
+        if need_cpu:
+            self._update_cpu(snapshot["cpu"], now)
+        current = (now, disks, identities)
         previous, self.previous = self.previous, current
-        if previous is None:
+        if previous is None or self.cpu["ratio"] is None:
             return metric("truenas_power_scrape_success", 0)
         elapsed = current[0] - previous[0]
-        if boot != previous[2] or identities != previous[4] or not 0 < elapsed <= 300:
+        if identities != previous[2] or not 0 < elapsed <= 300:
             return metric("truenas_power_scrape_success", 0)
-        delta = [value - old for value, old in zip(cpu, previous[1])]
-        if len(cpu) != 8 or min(cpu) < 0 or min(delta) < 0 or sum(delta) <= 0:
-            raise ValueError("CPU counters are invalid or reset")
-        if any(disks[name][0] < previous[3][name][0]
-               or not 0 < disks[name][1] - previous[3][name][1] <= 300 for name, _ in drives):
+        if any(disks[name][0] < previous[1][name][0]
+               or not 0 < disks[name][1] - previous[1][name][1] <= 300 for name, _ in drives):
             raise ValueError("Disk counters reset or source timestamp did not advance")
-        cpu_ratio = (sum(delta) - delta[3] - delta[4]) / sum(delta)
+        cpu_ratio = self.cpu["ratio"]
         disk_watts = sum(DRIVES[model][0] + (DRIVES[model][1] - DRIVES[model][0]) *
-                         min(1, (disks[name][0] - previous[3][name][0]) /
-                             ((disks[name][1] - previous[3][name][1]) * 1000))
+                         min(1, (disks[name][0] - previous[1][name][0]) /
+                             ((disks[name][1] - previous[1][name][1]) * 1000))
                          for name, model in drives)
         dynamic_cpu = self.cpu_watts * cpu_ratio
         return "".join(metric(name, value) for name, value in (
@@ -229,6 +261,20 @@ class PowerCollector:
             ("truenas_estimated_power_watts", self.platform_watts + dynamic_cpu + disk_watts),
         ))
 
+    def _update_cpu(self, text, now):
+        counters, boot = cpu_counters(text)
+        previous, ratio = self.cpu, None
+        if (previous is not None and boot == previous["boot"]
+                and 0 < now - previous["at"] <= self.cpu_seconds + 300):
+            delta = [value - old for value, old in zip(counters, previous["counters"])]
+            if min(delta) < 0 or sum(delta) <= 0:
+                raise ValueError("CPU counters are invalid or reset")
+            ratio = (sum(delta) - delta[3] - delta[4]) / sum(delta)
+        elif previous is not None and boot != previous["boot"]:
+            # A reboot invalidates every counter baseline, including disks.
+            self.previous = None
+        self.cpu = {"at": now, "counters": counters, "boot": boot, "ratio": ratio}
+
 
 if __name__ == "__main__":
     try:
@@ -238,8 +284,8 @@ if __name__ == "__main__":
         client.auth = params.pop("auth")
         if operation == "snapshot":
             deadline = params["deadline"]
-            result = {"inventory": client.get("/disk", deadline),
-                      "cpu": client.read_file("/proc/stat", deadline),
+            result = {"inventory": client.get("/disk", deadline) if params.get("inventory", True) else None,
+                      "cpu": client.read_file("/proc/stat", deadline) if params.get("cpu", True) else None,
                       "disks": client.read_disks(deadline)}
             sys.stdout.buffer.write(json.dumps(result).encode())
         else:
