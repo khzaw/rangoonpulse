@@ -41,7 +41,8 @@ spec:
                 cpu: "50m"
                 memory: "400Mi"
               limits:
-                cpu: "469m"
+                # The daily 04:00 subtitle index jobs need more than 469m.
+                cpu: "1000m"
                 memory: "954Mi"
     service:
       main:
