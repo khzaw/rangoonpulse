@@ -50,8 +50,8 @@ spec:
               TUNARR_SEARCH_REDUCE_INDEXER_MEMORY_USAGE: "true"
             resources:
               requests:
-                cpu: "50m"
-                memory: "2141Mi"
+                cpu: "38m"
+                memory: "1765Mi"
               limits:
                 cpu: "1000m"
                 memory: "4096Mi"
