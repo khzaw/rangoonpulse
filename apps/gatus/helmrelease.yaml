@@ -224,12 +224,17 @@ spec:
                   link: https://grafana.${BASE_DOMAIN}
             # Interval tiers (docs/gatus.md): 60s for shared dependencies (DNS,
             # Data services, TrueNAS NFS); 2m for access paths and monitoring
-            # (Operations, Public sites); 5m for every other check.
+            # (Operations, Public sites); 5m for every other check. The
+            # `tier: '60s'` extra-label selects an endpoint for the Prometheus
+            # Gatus alerts; add or remove it whenever an interval enters or
+            # leaves the 60s tier.
             endpoints:
               - name: AdGuard Primary DNS
                 group: DNS
                 url: ${ADGUARD_PRIMARY_IP}
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 dns:
@@ -242,6 +247,8 @@ spec:
                 group: DNS
                 url: ${ADGUARD_SECONDARY_IP}
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 dns:
@@ -254,6 +261,8 @@ spec:
                 group: DNS
                 url: kube-dns.kube-system.svc.cluster.local
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 dns:
@@ -266,6 +275,8 @@ spec:
                 group: Data services
                 url: tcp://immich-postgres.default.svc.cluster.local:5432
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 conditions:
@@ -274,6 +285,8 @@ spec:
                 group: Data services
                 url: tcp://immich-valkey.default.svc.cluster.local:6379
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 conditions:
@@ -284,6 +297,8 @@ spec:
                 group: Data services
                 url: tcp://media-postgres.default.svc.cluster.local:5432
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 conditions:
@@ -292,6 +307,8 @@ spec:
                 group: Data services
                 url: tcp://vaultwarden-postgres.default.svc.cluster.local:5432
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 conditions:
@@ -389,6 +406,8 @@ spec:
                 group: Infrastructure
                 url: tcp://${NAS_IP}:2049
                 interval: 60s
+                extra-labels:
+                  tier: '60s'
                 client:
                   timeout: 5s
                 conditions:
