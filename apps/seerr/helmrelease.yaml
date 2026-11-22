@@ -45,8 +45,10 @@ spec:
               LOG_LEVEL: "debug"
               NODE_OPTIONS: "--dns-result-order=ipv4first"
             resources:
+              # Interactive use stays below 100m; the limit absorbs the nightly
+              # sync bursts. Resource Advisor treats this request as the floor.
               requests:
-                cpu: "281m"
+                cpu: "100m"
                 memory: "576Mi"
               limits:
                 cpu: "2250m"

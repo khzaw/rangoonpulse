@@ -69,7 +69,7 @@ DEFAULT_SERVICE_TUNING_POLICIES = {
     # the known-good interactive floors captured in the manifests.
     "jellyseerr": {
         "profile": BURST_REQUEST_FLOOR_PROFILE,
-        "min_request_cpu_m": 281.0,
+        "min_request_cpu_m": 100.0,
         "min_request_memory_mi": 576.0,
         "min_downsize_cpu_m_total": 100.0,
         "min_downsize_memory_mi_total": 256.0,
