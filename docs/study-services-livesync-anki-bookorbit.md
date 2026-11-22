@@ -44,6 +44,8 @@ Saved download-client and indexer credentials are encrypted with `BOOK_REQUEST_E
 
 BookOrbit scan cadence, users, and metadata-provider settings are runtime application state, not declared in this repository. Do not copy those values into Git docs unless they become managed configuration.
 
+`/api/v1/health` runs a PostgreSQL query on every request. The startup probe and the 30-second readiness probe use it. Liveness checks the static UI root `/`, so a shared `media-postgres` outage marks BookOrbit unready instead of restarting it into startup migrations that cannot reach the database. app-template only renders a probe that sets `enabled: true` and `custom: true`.
+
 BookOrbit keeps about five transactions per second on `bookorbit` while idle. Its download monitor polls every second, and the chapter, chapter-lookup, bulk-run, AI-job, author-enrichment, and metadata-fetch workers poll their PostgreSQL queues every two to four seconds. The application hardcodes these intervals and offers no environment or runtime setting to change them. Reducing the load requires an upstream change.
 
 A temporary BookOrbit share is fully wired through exposure-control and public-edge.

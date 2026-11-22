@@ -103,8 +103,14 @@ spec:
                   - FOWNER
                   - SETGID
                   - SETUID
+            # /api/v1/health queries PostgreSQL on every call, so readiness uses it
+            # sparingly. Liveness checks the static UI root so a shared
+            # media-postgres outage marks the pod unready instead of restarting it
+            # into startup migrations that cannot reach the database.
             probes:
               startup:
+                enabled: true
+                custom: true
                 spec:
                   httpGet:
                     path: /api/v1/health
@@ -113,17 +119,21 @@ spec:
                   timeoutSeconds: 5
                   failureThreshold: 60
               readiness:
+                enabled: true
+                custom: true
                 spec:
                   httpGet:
                     path: /api/v1/health
                     port: 3000
-                  periodSeconds: 10
+                  periodSeconds: 30
                   timeoutSeconds: 5
-                  failureThreshold: 6
+                  failureThreshold: 2
               liveness:
+                enabled: true
+                custom: true
                 spec:
                   httpGet:
-                    path: /api/v1/health
+                    path: /
                     port: 3000
                   periodSeconds: 20
                   timeoutSeconds: 5
