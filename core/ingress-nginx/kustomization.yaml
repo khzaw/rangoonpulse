@@ -87,3 +87,28 @@ patches:
       kind: Deployment
       name: ingress-nginx-controller
       namespace: ingress-nginx
+
+  # Patch 6: Hard-pin the controller to the primary and roll it surge-first (docs/networking.md).
+  # externalTrafficPolicy: Local announces the VIP from the node running the Ready controller.
+  # No pod anti-affinity (blocks the same-node surge) and no PDB (blocks drains on one replica).
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector/kubernetes.io~1hostname
+        value: ${PRIMARY_NODE_NAME}
+      - op: replace
+        path: /spec/strategy
+        value:
+          type: RollingUpdate
+          rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 0
+      - op: replace
+        path: /spec/minReadySeconds
+        value: 5
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --shutdown-grace-period=5
+    target:
+      kind: Deployment
+      name: ingress-nginx-controller
+      namespace: ingress-nginx

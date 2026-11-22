@@ -3,7 +3,7 @@ title: Networking and Access Topology
 summary: Current private ingress, public Tunnel, temporary-share, DNS, and dedicated-edge paths.
 status: active
 owner: homelab
-last_reviewed: 2026-11-22
+last_reviewed: 2026-11-23
 ---
 
 # Networking and Access Topology
@@ -100,6 +100,45 @@ HTTPS uses ingress host routing; SSH uses a dedicated LoadBalancer Service. The 
 
 `infrastructure/lan-gateway/` uses selectorless Services plus static Endpoints for the NAS and router. Ingress-nginx terminates TLS and proxies to the LAN devices. Keep the static target IPs in `flux/cluster-settings.yaml`.
 
+## Ingress Controller Placement And Rollout
+
+Patch 6 in `core/ingress-nginx/kustomization.yaml` runs the single controller
+replica only on the primary node (`kubernetes.io/hostname: ${PRIMARY_NODE_NAME}`).
+
+The controller Service uses `externalTrafficPolicy: Local`, so MetalLB announces
+`${INGRESS_VIP}` from the node that runs the controller pod. Pinning keeps the VIP
+and the proxy hop on the node that hosts most backends, including Jellyfin and
+Immich. A controller on the utility node would relay that traffic, video streams
+included, back across the LAN. The pin is a required `nodeSelector`, not a
+preferred affinity: the scheduler never moves a running pod, so a preference
+leaves the controller on the utility node after any primary outage.
+
+Trade-off: while the primary is down or drained, private ingress is down. That
+includes hosts whose backends run on the utility node and the Mac mini edge HTTPS
+hosts on `${IRIS_VIP}`. The controller pod stays Pending until the primary returns.
+This is accepted because most backends live on the primary. Permanent-public sites
+and temporary shares do not use ingress-nginx.
+
+Rollout contract:
+
+- `maxSurge: 1` and `maxUnavailable: 0` start the replacement beside the old pod
+  on the primary and remove the old pod only after the new one is available. The
+  controller uses no host ports, so both pods fit on one node, and the VIP
+  announcement does not move. The primary must keep room for a second controller
+  request; the capacity checks count this surge.
+- Readiness (`/healthz`) passes only when NGINX is running and its Lua backends are
+  loaded. A new pod joins the Service endpoints, kube-proxy's local rules, and the
+  MetalLB announcement only once it is Ready. Certificates load just after the
+  backends, and kube-proxy needs time to program the new endpoint, so
+  `minReadySeconds: 5` keeps the old pod serving until the new one has stayed Ready
+  for 5 seconds.
+- `--shutdown-grace-period=5` keeps the old NGINX accepting connections for 5
+  seconds after its `preStop` hook signals shutdown, so kube-proxy drops the
+  terminating endpoint before NGINX closes its listeners. The upstream default is 0.
+- Do not add pod anti-affinity; it blocks the same-node surge. Do not add a
+  PodDisruptionBudget; with one replica it blocks the node drains that Talos
+  upgrades use.
+
 ## Ingress Request Metrics
 
 Patch 5 in `core/ingress-nginx/kustomization.yaml` enables controller metrics on
@@ -149,6 +188,8 @@ Limits:
 
 ```bash
 kubectl get svc -A | grep -E 'LoadBalancer|ExternalName'
+kubectl -n ingress-nginx get pods -o wide
+kubectl -n metallb-system get servicel2statuses
 kubectl get ingress -A
 kubectl get connector homelab-subnet-router -o yaml
 flux get kustomizations -n flux-system
