@@ -3,7 +3,7 @@ title: CronJob Dead-Man's-Switch Alerts
 summary: PrometheusRule alerts that page on silent CronJob failure (staleness, failed runs, deletion, forgotten suspend) and the Alertmanager route that lets the warning-severity family reach Discord/Telegram.
 status: active
 owner: homelab
-last_reviewed: 2026-11-22
+last_reviewed: 2026-11-23
 ---
 
 # CronJob Dead-Man's-Switch Alerts
@@ -24,7 +24,7 @@ services and no new secrets.
 |---|---|---|---|
 | `resource-advisor-report` | `monitoring` | `30 2 * * *` (daily) | 30h (108000s) |
 | `resource-advisor-apply-pr` | `monitoring` | `30 3 * * 1` (weekly Mon) | 8d (691200s) |
-| `truenas-management-plane-refresh` | `democratic-csi` | `0 4 * * 1` (weekly Mon) | 8d (691200s) |
+| `truenas-management-plane-refresh` | `democratic-csi` | `40 4 * * 1,4` (Mon and Thu) | 5d (432000s) |
 | `power-cost-ledger` | `default` | `15 0 1 * 1` (Mondays + month-start) | 8d (691200s) |
 | `tracearr-timescaledb-health` | `default` | `23 * * * *` (hourly) | 3h since last schedule (10800s) |
 
@@ -48,7 +48,7 @@ One rule per CronJob (same `alertname`, per-job threshold). Fires when the time 
 |---|---|---|
 | `resource-advisor-report` | 30h | Daily schedule; 30h is just over one missed run plus margin. |
 | `resource-advisor-apply-pr` | 8d | Weekly schedule; 8d is just over one missed week. |
-| `truenas-management-plane-refresh` | 8d | Weekly schedule; 8d is just over one missed week. |
+| `truenas-management-plane-refresh` | 5d | Longest gap is Thursday to Monday (4d); 5d pages about a day after one missed run. The [restart cadence](./truenas-networking-and-csi.md#middlewared-memory-and-restart-cadence) keeps NAS memory headroom above its alert. |
 | `power-cost-ledger` | 8d | Weekly plus month-start schedule; leaves recovery time before metrics retention expires. |
 | `tracearr-timescaledb-health` | 3h | Hourly schedule. Keyed on `kube_cronjob_status_last_schedule_time`, so it pages only when the check stops running; a failing check pages through its own alert. |
 

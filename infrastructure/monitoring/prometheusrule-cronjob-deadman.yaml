@@ -161,7 +161,7 @@ spec:
                     cronjob="truenas-management-plane-refresh"
                   }
                 )
-            ) > 691200
+            ) > 432000
             unless on (namespace, cronjob)
               (
                 kube_cronjob_spec_suspend{
@@ -176,7 +176,7 @@ spec:
             cronjob: truenas-management-plane-refresh
           annotations:
             summary: "CronJob truenas-management-plane-refresh has not succeeded within its expected window"
-            description: "The weekly truenas-management-plane-refresh CronJob in namespace democratic-csi last succeeded {{ $value | humanizeDuration }} ago, past its 8d staleness threshold. Inspect or re-run it from controlpanel.khzaw.dev (Managed CronJobs view)."
+            description: "The twice-weekly truenas-management-plane-refresh CronJob in namespace democratic-csi last succeeded {{ $value | humanizeDuration }} ago, past its 5d staleness threshold. Inspect or re-run it from controlpanel.khzaw.dev (Managed CronJobs view)."
 
         - alert: HomelabCronJobRunFailed
           expr: >

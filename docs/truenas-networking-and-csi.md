@@ -1,6 +1,6 @@
 ---
 title: TrueNAS Networking and CSI Recovery
-summary: TrueNAS console policy, asymmetric-routing constraint, NFS settings, management API callers, management-plane refresh, and diagnostic split.
+summary: TrueNAS console policy, asymmetric-routing constraint, NFS settings, management API callers, middlewared restart cadence, and diagnostic split.
 status: active
 owner: homelab
 last_reviewed: 2026-11-23
@@ -13,7 +13,7 @@ last_reviewed: 2026-11-23
 - Keep **Accept Routes** disabled in the TrueNAS Tailscale application.
 - Cluster NFS mounts use NFSv4.1.
 - democratic-csi uses the TrueNAS API for dataset and share lifecycle.
-- `truenas-management-plane-refresh` runs Monday at 04:00 Asia/Singapore to refresh the management path.
+- `truenas-management-plane-refresh` restarts middlewared, nginx, and Netdata on Monday and Thursday at 04:40 Asia/Singapore; see [Middlewared Memory and Restart Cadence](#middlewared-memory-and-restart-cadence).
 - Every authenticated TrueNAS API request is a full login; keep cluster callers to the budget in [Management API Callers](#management-api-callers).
 - Monitoring alerts cover TrueNAS and CSI management failures.
 
@@ -87,6 +87,49 @@ printf 'user = "%s:%s"\n' "$TRUENAS_USERNAME" "$TRUENAS_PASSWORD" |
 
 Audit retention is five days. The audit handler (`tnaudit`) is a separate
 service that the refresh does not restart.
+
+## Middlewared Memory and Restart Cadence
+
+The NAS has 3.7 GiB of RAM, no swap, and a 1 GiB ZFS ARC ceiling.
+`TrueNASMemoryHeadroomLow` uses the kernel's `MemAvailable`, which excludes ARC.
+Middlewared's main process grows linearly between restarts and squeezes ARC;
+available memory also dips for tens of minutes during TrueNAS's own daily jobs
+(update check at 01:21, directory-cache refresh at 03:30, certificate and catalog
+jobs at 04:00).
+
+Growth rises with authenticated API traffic, and download jobs cost the most. With
+about 2,200 logins a day middlewared grew about 55 MiB a day; when the exporter
+also polled `/disk` and `core.download` every 120 seconds (about 3,600 logins and
+720 download jobs a day) it grew about 76 MiB a day. Measured in isolation, one
+download cycle retains about 50 KiB and a bare login about 8 KiB. TrueNAS's own
+04:00 jobs add another 10–30 MiB step each day. A restart frees 550–770 MiB, but
+about 300 MiB returns within the first day as middlewared warms up, so restarting
+more often than every other day gains little. At about 55 MiB a day the lowest
+available memory stayed at or above 11 percent through day four of a cycle; at
+76 MiB a day it fell below 10 percent from day three.
+
+To re-check the rate, fit middlewared memory (Netdata `services.mem_usage`,
+dimension `system-slice_middlewared-service`) from 24 hours after a restart to
+the next restart. Treat a rate well above 55 MiB a day as a new caller to find.
+
+`truenas-management-plane-refresh` restarts middlewared, nginx, and Netdata on
+Monday and Thursday at 04:40 Asia/Singapore, so no cycle exceeds four days. The
+slot follows TrueNAS's 04:00 daily jobs, so it also clears that day's step, and it
+avoids the 03:30 Monday Resource Advisor apply job. A restart makes the API
+unavailable for about a minute:
+
+- democratic-csi management RPCs in that minute fail and are retried by the
+  external sidecars; existing NFS mounts are unaffected
+- the controllers' liveness check tolerates one failed `Probe`
+- Netdata restarts between 60-second scrapes, so `TrueNASNetdataUnavailable`
+  (two minutes) does not fire
+- the power endpoint fails closed for about two polls, below the ten-minute
+  `TrueNASPowerSampleUnavailable` hold; `/metrics` keeps serving cached datasets
+- open TrueNAS UI sessions reconnect
+
+Do not lower the alert threshold to hide growth. If available memory still dips
+below 10 percent late in a cycle, look for a new authenticated caller first, then
+shorten the cadence.
 
 ## CSI Health Checks
 

@@ -6,7 +6,10 @@ metadata:
   name: truenas-management-plane-refresh
   namespace: democratic-csi
 spec:
-  schedule: "0 4 * * 1"
+  # Twice weekly: middlewared regrows after each restart and squeezes ZFS ARC
+  # (docs/truenas-networking-and-csi.md#middlewared-memory-and-restart-cadence).
+  # 04:40 follows TrueNAS's own 04:00 daily jobs and the 03:30 Monday apply job.
+  schedule: "40 4 * * 1,4"
   timeZone: "Asia/Singapore"
   startingDeadlineSeconds: 3600
   suspend: false
