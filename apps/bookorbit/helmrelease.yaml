@@ -112,22 +112,18 @@ spec:
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 60
-              # /api/v1/health pings PostgreSQL on every call. Readiness keeps that
-              # check at a slower cadence; liveness uses the static UI root so a
-              # shared media-postgres outage marks the pod unready instead of
-              # restarting it into failing startup migrations.
               readiness:
                 spec:
                   httpGet:
                     path: /api/v1/health
                     port: 3000
-                  periodSeconds: 30
+                  periodSeconds: 10
                   timeoutSeconds: 5
-                  failureThreshold: 2
+                  failureThreshold: 6
               liveness:
                 spec:
                   httpGet:
-                    path: /
+                    path: /api/v1/health
                     port: 3000
                   periodSeconds: 20
                   timeoutSeconds: 5
