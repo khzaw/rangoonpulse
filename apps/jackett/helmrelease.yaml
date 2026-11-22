@@ -41,7 +41,7 @@ spec:
                 cpu: "75m"
                 memory: "222Mi"
               limits:
-                cpu: "375m"
+                cpu: "1000m"
                 memory: "576Mi"
     service:
       main:
