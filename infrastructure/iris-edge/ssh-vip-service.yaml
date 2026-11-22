@@ -8,7 +8,7 @@ metadata:
   labels:
     khzaw.dev/edge-host: iris
   annotations:
-    metallb.universe.tf/allow-shared-ip: iris-edge-vip
+    metallb.io/allow-shared-ip: iris-edge-vip
 spec:
   type: LoadBalancer
   loadBalancerIP: ${IRIS_VIP}

@@ -15,7 +15,7 @@ patches:
         name: ingress-nginx-controller
         namespace: ingress-nginx
         annotations:
-          metallb.universe.tf/allow-shared-ip: ingress-nginx-shared-vip
+          metallb.io/allow-shared-ip: ingress-nginx-shared-vip
       spec:
         type: LoadBalancer
         loadBalancerIP: ${INGRESS_VIP}

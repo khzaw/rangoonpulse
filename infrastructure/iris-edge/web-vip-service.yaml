@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/name: ingress-nginx
     khzaw.dev/edge-host: iris
   annotations:
-    metallb.universe.tf/allow-shared-ip: iris-edge-vip
+    metallb.io/allow-shared-ip: iris-edge-vip
     external-dns.alpha.kubernetes.io/hostname: iris.${BASE_DOMAIN},athena.${BASE_DOMAIN}
 spec:
   type: LoadBalancer
