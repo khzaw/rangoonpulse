@@ -71,7 +71,8 @@ spec:
                 cpu: "50m"
                 memory: "341Mi"
               limits:
-                cpu: "338m"
+                # Jellyfin history syncs run CPU-bound for tens of minutes.
+                cpu: "1000m"
                 memory: "648Mi"
             probes:
               startup:
