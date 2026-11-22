@@ -73,6 +73,17 @@ spec:
           postgres:
             port: 5432
 
+    configMaps:
+      init:
+        enabled: true
+        data:
+          # Vaultwarden does not use TimescaleDB. The image installs it in
+          # template1, postgres, and POSTGRES_DB on first boot.
+          10-drop-timescaledb.sh: |
+            psql -X -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER}" -d template1 -c "DROP EXTENSION IF EXISTS timescaledb"
+            psql -X -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER}" -d postgres -c "DROP EXTENSION IF EXISTS timescaledb"
+            psql -X -v ON_ERROR_STOP=1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}" -c "DROP EXTENSION IF EXISTS timescaledb"
+
     persistence:
       data:
         enabled: true
@@ -82,3 +93,11 @@ spec:
         accessMode: ReadWriteOnce
         globalMounts:
           - path: /var/lib/postgresql/data
+      init:
+        enabled: true
+        type: configMap
+        identifier: init
+        globalMounts:
+          - path: /docker-entrypoint-initdb.d/10-drop-timescaledb.sh
+            subPath: 10-drop-timescaledb.sh
+            readOnly: true

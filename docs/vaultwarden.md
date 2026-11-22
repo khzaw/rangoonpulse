@@ -3,7 +3,7 @@ title: Vaultwarden Storage and Recovery
 summary: Current Vaultwarden application-data and dedicated PostgreSQL layout, dependencies, and recovery boundaries.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-22
 ---
 
 # Vaultwarden Storage and Recovery
@@ -18,6 +18,8 @@ Vaultwarden uses two node-local persistent stores:
 Both use `local-path` and are pinned to the primary node. Flux reconciles the PostgreSQL release before Vaultwarden. Credentials are SOPS-managed under `infrastructure/secrets/`.
 
 The split keeps PostgreSQL off NFS and avoids SQLite/NFS locking problems, but both data stores share the primary-node disk failure domain.
+
+PostgreSQL runs from the TimescaleDB image, but Vaultwarden does not use the extension. On first boot, an init script in `apps/vaultwarden-postgres/helmrelease.yaml` removes it from `template1`, `postgres`, and the Vaultwarden database. Do not install it again. Each database that holds an unused copy runs its own TimescaleDB scheduler process.
 
 ## Backup Status
 
