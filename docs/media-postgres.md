@@ -3,7 +3,7 @@ title: Media PostgreSQL
 summary: Current shared TimescaleDB consumers, local storage, tuning rationale, secrets, and backup gap.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-22
 ---
 
 # Media PostgreSQL
@@ -39,6 +39,12 @@ Immich uses its own PostgreSQL and is not part of this service.
 Local storage is intentional for PostgreSQL durability, latency, WAL, and Timescale chunk workloads. The cost is primary-node affinity and a shared failure domain.
 
 The elevated lock table is required by Tracearr hypertables with many chunks. The memory ceiling supports large backfills and continuous-aggregate refreshes.
+
+## TimescaleDB Scope
+
+Only `tracearr` has the TimescaleDB extension. The image installs it in `postgres` and `template1` on first boot. The init script removes it from both before it creates any application database. Every database created later, including those from app-owned hooks, therefore starts without it. Do not install the extension anywhere else. Each database that holds an unused copy runs its own TimescaleDB scheduler process. That copy also pins a library version that later images must keep shipping.
+
+Image upgrades replace the server library but leave the extension version inside `tracearr` unchanged. To update it, run `ALTER EXTENSION timescaledb UPDATE` as the first command of a fresh `psql -X` session. After an image change, check `timescaledb_information.job_stats` in `tracearr` for failing compression, retention, or continuous-aggregate jobs.
 
 ## Secrets
 

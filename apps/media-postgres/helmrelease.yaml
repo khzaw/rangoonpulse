@@ -159,6 +159,11 @@ spec:
               set -eu
               echo "Initializing app databases/users (tracearr, reactive_resume, speedtest_tracker, bookorbit) ..."
 
+              # Only Tracearr uses TimescaleDB. The image installs it in postgres and
+              # template1 on first boot, and every new database copies template1.
+              psql -X -v ON_ERROR_STOP=1 -d template1 -c "DROP EXTENSION IF EXISTS timescaledb"
+              psql -X -v ON_ERROR_STOP=1 -d postgres -c "DROP EXTENSION IF EXISTS timescaledb"
+
               # Role: tracearr
               if ! psql -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_roles WHERE rolname='tracearr'" | grep -q 1; then
                 psql -v ON_ERROR_STOP=1 -c "CREATE ROLE tracearr LOGIN PASSWORD '$${TRACERR_DB_PASSWORD}'"
