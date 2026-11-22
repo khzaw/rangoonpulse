@@ -187,6 +187,37 @@ def alertmanager_image_only_change(old, new):
     return intents[0] == intents[1]
 
 
+def operator_container_cpu_limit_only_change(old, new):
+    """Recognize CPU-limit edits on override containers with explicit CPU requests.
+
+    A limit reserves no capacity. Requiring an explicit request on every limited
+    container keeps Kubernetes from defaulting the request to the new limit.
+    """
+    intents = []
+    for obj in (old, new):
+        if not obj or (obj.get('apiVersion'), obj.get('kind')) not in (
+                ('monitoring.coreos.com/v1', 'Alertmanager'), ('monitoring.coreos.com/v1', 'Prometheus')):
+            return False
+        intent = copy.deepcopy(operator_intent(obj))
+        containers = intent.get('spec', {}).get('containers') or []
+        if not isinstance(containers, list):
+            return False
+        for container in containers:
+            if not isinstance(container, dict):
+                return False
+            resources = container.get('resources') or {}
+            limits = resources.get('limits') or {}
+            if 'cpu' not in limits:
+                continue
+            if not (resources.get('requests') or {}).get('cpu'):
+                return False
+            del limits['cpu']
+            if not limits:
+                del resources['limits']
+        intents.append(intent)
+    return intents[0] == intents[1]
+
+
 def changed_workloads(before, after):
     old_workloads = {k: o for k, o in before.items() if o['kind'] in WORKLOADS}
     new_workloads = {k: o for k, o in after.items() if o['kind'] in WORKLOADS}
@@ -204,11 +235,13 @@ def changed_workloads(before, after):
         for rendered_key in old_rendered.keys() | new_rendered.keys():
             if rendered_key[0] not in WORKLOADS:
                 # Chart-version labels do not change the generated workload.
-                # Alertmanager image/version updates retain its explicit CPU.
+                # Alertmanager image/version updates retain its explicit CPU, and
+                # override-container CPU limits reserve none.
                 # Other spec/API changes and additions/removals fail closed.
                 old_operator, new_operator = old_rendered.get(rendered_key), new_rendered.get(rendered_key)
                 if (operator_intent(old_operator) != operator_intent(new_operator)
-                        and not alertmanager_image_only_change(old_operator, new_operator)):
+                        and not alertmanager_image_only_change(old_operator, new_operator)
+                        and not operator_container_cpu_limit_only_change(old_operator, new_operator)):
                     raise ValueError(f'{rendered_key[0]} changed operator-managed resources; render its generated workload explicitly before changing CPU')
                 continue
             if rendered_key in new_rendered:

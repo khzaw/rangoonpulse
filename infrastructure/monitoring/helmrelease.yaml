@@ -114,13 +114,15 @@ spec:
             cpu: 100m
             memory: 128Mi
         containers:
+          # The reloader's /metrics and file-watch bursts exceed a 50m quota
+          # within one CFS period; the limit consumes no schedulable capacity.
           - name: config-reloader
             resources:
               requests:
                 cpu: 5m
                 memory: 16Mi
               limits:
-                cpu: 50m
+                cpu: 200m
                 memory: 64Mi
         alertmanagerConfiguration:
           name: homelab-alerting
@@ -150,13 +152,14 @@ spec:
             cpu: "1"
             memory: 1000Mi
         containers:
+          # Same burst profile as the Alertmanager reloader.
           - name: config-reloader
             resources:
               requests:
                 cpu: 5m
                 memory: 16Mi
               limits:
-                cpu: 50m
+                cpu: 200m
                 memory: 64Mi
         initContainers:
           - name: init-config-reloader
@@ -237,13 +240,16 @@ spec:
           cpu: 500m
           memory: 768Mi
 
+      # Each single-threaded sidecar process re-reads every labelled dashboard
+      # whenever its 60s watch restarts; a one-core limit keeps that burst
+      # out of CFS throttling.
       sidecar:
         resources:
           requests:
             cpu: 10m
             memory: 64Mi
           limits:
-            cpu: 100m
+            cpu: "1"
             memory: 128Mi
 
       # Only the chart's Grafana Overview dashboard reads Grafana's own
@@ -341,12 +347,15 @@ spec:
       readinessProbe:
         failureThreshold: 6
         timeoutSeconds: 5
+      # The container-aware Go runtime runs node-exporter with GOMAXPROCS=1.
+      # A scrape costs about 0.25 CPU-seconds, so any quota below one core
+      # stretches it past a second and throttles most active CFS periods.
       resources:
         requests:
           cpu: 20m
           memory: 48Mi
         limits:
-          cpu: 150m
+          cpu: "1"
           memory: 128Mi
 
     # Talos does not publish scheduler :10259, controller-manager :10257, or

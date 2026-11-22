@@ -189,6 +189,54 @@ class OperatorWorkloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
             self.changes([implicit], [next_implicit])
 
+    def test_operator_container_cpu_limit_change_preserves_explicit_capacity(self):
+        for kind in ('Alertmanager', 'Prometheus'):
+            old = copy.deepcopy(self.workload)
+            old['kind'] = kind
+            old['spec']['containers'] = [{
+                'name': 'config-reloader',
+                'resources': {'requests': {'cpu': '5m', 'memory': '16Mi'},
+                              'limits': {'cpu': '50m', 'memory': '64Mi'}},
+            }]
+            new = copy.deepcopy(old)
+            new['spec']['containers'][0]['resources']['limits']['cpu'] = '200m'
+            with self.subTest(kind=kind, change='limit'):
+                self.assertEqual(self.changes([old], [new]), [])
+                self.assertEqual(old['spec']['containers'][0]['resources']['limits']['cpu'], '50m')
+            added = copy.deepcopy(old)
+            added['spec']['containers'][0]['resources']['limits'].pop('cpu')
+            with self.subTest(kind=kind, change='added_limit'):
+                self.assertEqual(self.changes([added], [new]), [])
+            unlimited = copy.deepcopy(old)
+            unlimited['spec']['containers'][0]['resources'].pop('limits')
+            cpu_only = copy.deepcopy(unlimited)
+            cpu_only['spec']['containers'][0]['resources']['limits'] = {'cpu': '200m'}
+            with self.subTest(kind=kind, change='added_cpu_only_limit'):
+                self.assertEqual(self.changes([unlimited], [cpu_only]), [])
+
+            mutations = {
+                'request': lambda o: o['spec']['containers'][0]['resources']['requests'].update(cpu='10m'),
+                'memory_limit': lambda o: o['spec']['containers'][0]['resources']['limits'].update(memory='128Mi'),
+                'main_limit': lambda o: o['spec']['resources'].update(limits={'cpu': '1'}),
+                'sidecar': lambda o: o['spec']['containers'].append({'name': 'extra', 'image': 'example:v1'}),
+                'image': lambda o: o['spec']['containers'][0].update(image='example:v2'),
+                'api': lambda o: o.update(apiVersion='monitoring.coreos.com/v2'),
+                'unknown_operator': lambda o: o.update(kind='UnknownOperator'),
+            }
+            for name, mutate in mutations.items():
+                with self.subTest(kind=kind, change=name):
+                    changed = copy.deepcopy(new)
+                    mutate(changed)
+                    with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
+                        self.changes([old], [changed])
+            implicit = copy.deepcopy(old)
+            implicit['spec']['containers'][0]['resources']['requests'].pop('cpu')
+            next_implicit = copy.deepcopy(new)
+            next_implicit['spec']['containers'][0]['resources']['requests'].pop('cpu')
+            with self.subTest(kind=kind, change='implicit_request'):
+                with self.assertRaisesRegex(ValueError, 'changed operator-managed resources'):
+                    self.changes([implicit], [next_implicit])
+
     def test_operator_workload_additions_removals_and_renames_fail_closed(self):
         renamed = copy.deepcopy(self.workload)
         renamed['metadata']['name'] = 'renamed'
