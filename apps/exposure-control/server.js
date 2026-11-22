@@ -5097,5 +5097,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log("exposure-control backend listening on :" + PORT);
+  console.log("exposure-control backend listening on :" + server.address().port);
 });

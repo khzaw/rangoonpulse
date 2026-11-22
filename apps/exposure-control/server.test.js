@@ -1,7 +1,6 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
-const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
 const { spawn, execFile } = require("node:child_process");
@@ -46,13 +45,8 @@ function listen(server, port = 0) {
   });
 }
 
-async function availablePort() {
-  const server = net.createServer();
-  const port = await listen(server);
-  await new Promise((resolve) => server.close(resolve));
-  return port;
-}
-
+// Children bind PORT=0 so the kernel assigns the port atomically; reserving a
+// port first and passing it in races with other listeners in the test run.
 function waitForStartup(child) {
   return new Promise((resolve, reject) => {
     let output = "";
@@ -62,9 +56,10 @@ function waitForStartup(child) {
 
     const onOutput = (chunk) => {
       output += chunk.toString();
-      if (output.includes("exposure-control backend listening")) {
+      const match = output.match(/exposure-control backend listening on :(\d+)\r?\n/);
+      if (match) {
         clearTimeout(timeout);
-        resolve();
+        resolve(Number(match[1]));
       }
     };
 
@@ -156,12 +151,11 @@ test("share proxy forwards request bodies and their content length", async () =>
     }),
   );
 
-  const proxyPort = await availablePort();
   const child = spawn(process.execPath, [SERVER_PATH], {
     cwd: REPO_ROOT,
     env: {
       ...process.env,
-      PORT: String(proxyPort),
+      PORT: "0",
       DATA_DIR: directory,
       SERVICES_FILE: servicesPath,
       TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
@@ -173,7 +167,7 @@ test("share proxy forwards request bodies and their content length", async () =>
     stdio: ["ignore", "pipe", "pipe"],
   });
   children.push(child);
-  await waitForStartup(child);
+  const proxyPort = await waitForStartup(child);
 
   const body = JSON.stringify({
     document: "crosspoint-book",
@@ -235,17 +229,17 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
     { id: "books", name: "Books", target: `http://127.0.0.1:${upstreamPort}` },
     { id: "photos", name: "Photos", target: `http://127.0.0.1:${upstreamPort}`, publicHostOverride: "photos.example.test" },
   ]));
-  const port = await availablePort();
+  let port;
   async function start() {
     const child = spawn(process.execPath, [SERVER_PATH], { cwd: REPO_ROOT, env: {
-      ...process.env, PORT: String(port), APP_DIR: __dirname, DATA_DIR: directory,
+      ...process.env, PORT: "0", APP_DIR: __dirname, DATA_DIR: directory,
       SERVICES_FILE: servicesPath, TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
       PUBLIC_DOMAIN: "example.test", SHARE_HOST_PREFIX: "share-",
       CONTROL_PANEL_HOST: "controlpanel.example.test", DEFAULT_AUTH_MODE: "cloudflare-access",
       DEFAULT_EXPIRY_HOURS: "1", KUBERNETES_SERVICE_HOST: "",
     }, stdio: ["ignore", "pipe", "pipe"] });
     children.push(child);
-    await waitForStartup(child);
+    port = await waitForStartup(child);
     return child;
   }
   async function stop(child) {
@@ -328,15 +322,14 @@ test("activity feed serves the audit log without Git or cluster access and never
     { action: "disable", serviceId: "books", ts: new Date(Date.now() - 9 * 86400000).toISOString() },
     { action: "enable", serviceId: "books", authMode: "none", hours: 1, ts: recent },
   ].map((entry) => JSON.stringify(entry)).join("\n") + "\n");
-  const port = await availablePort();
   const child = spawn(process.execPath, [SERVER_PATH], { cwd: REPO_ROOT, env: {
-    ...process.env, PORT: String(port), APP_DIR: __dirname, DATA_DIR: directory,
+    ...process.env, PORT: "0", APP_DIR: __dirname, DATA_DIR: directory,
     SERVICES_FILE: servicesPath, TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
     PUBLIC_DOMAIN: "example.test", CONTROL_PANEL_HOST: "controlpanel.example.test",
     KUBERNETES_SERVICE_HOST: "", GITHUB_TOKEN: "", GITHUB_REPOSITORY: "",
   }, stdio: ["ignore", "pipe", "pipe"] });
   children.push(child);
-  await waitForStartup(child);
+  const port = await waitForStartup(child);
 
   const response = await exposureRequest(port, "/api/activity");
   assert.equal(response.status, 200);
@@ -391,13 +384,12 @@ async function startMetricsPanel(handler, env = {}) {
   temporaryDirectories.push(directory);
   const servicesPath = path.join(directory, "services.json");
   fs.writeFileSync(servicesPath, "[]");
-  const panelPort = await availablePort();
   const child = spawn(process.execPath, [SERVER_PATH], {
     cwd: REPO_ROOT,
     env: {
       ...process.env,
       APP_DIR: __dirname,
-      PORT: String(panelPort),
+      PORT: "0",
       DATA_DIR: directory,
       SERVICES_FILE: servicesPath,
       TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
@@ -413,7 +405,7 @@ async function startMetricsPanel(handler, env = {}) {
     stdio: ["ignore", "pipe", "pipe"],
   });
   children.push(child);
-  await waitForStartup(child);
+  const panelPort = await waitForStartup(child);
   return {
     request: (query) => requestPanel(panelPort, "/api/metrics?" + query),
     telemetry: () => requestPanel(panelPort, "/metrics"),
