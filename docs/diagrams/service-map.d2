@@ -1,0 +1,263 @@
+# Service map: who talks to whom across the homelab.
+# White edges are the private path, amber the permanent public path, green temporary shares.
+# Grey solid edges carry data; dashed edges are control: GitOps, certificates, metrics, alerts.
+# Everything inside the dashed frame runs in the cluster and is reconciled by Flux.
+# Edges stay between groups: an edge into a grid cell drops ELK layering and flattens the sheet.
+# An edge to a higher layer is written `upper <- lower`: `lower -> upper` flips the ELK layers.
+# Icon sources are pinned to commits. Iconify sets the colour in the URL, since D2 cannot recolour.
+direction: down
+vars: {
+  di: https://raw.githubusercontent.com/homarr-labs/dashboard-icons/23fc02e7710a66e0c774989f6e78372e9b6c2e15/svg
+  sh: https://raw.githubusercontent.com/selfhst/icons/df07d93a4b9e1c3930007971a1dfa6203ea02aea/svg
+  ify: https://api.iconify.design/tabler
+  ink: color=%23b0b0b0&height=64
+  private: "#eeeeee"
+  public: "#f0b35c"
+  share: "#3ecf8e"
+}
+
+style.fill: "#000000"
+
+classes: {
+  card: {
+    label.near: bottom-center
+    width: 140
+    height: 142
+    style: {fill: "#101010"; stroke: "#2c2c2c"; font-color: "#f1f1f1"; border-radius: 0; font-size: 14}
+  }
+  group: {
+    style: {fill: "#000000"; stroke: "#2c2c2c"; font-color: "#909090"; border-radius: 0; font-size: 15; font: mono}
+  }
+  key: {
+    shape: text
+    style: {font-color: "#909090"; font-size: 17; font: mono}
+  }
+  frame: {
+    style: {fill: "#000000"; stroke: "#484848"; stroke-dash: 2; font-color: "#b0b0b0"; border-radius: 0; font-size: 17; font: mono}
+  }
+}
+
+(** -> **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 13; font: mono; italic: false}
+(** <- **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 13; font: mono; italic: false}
+(** <-> **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 13; font: mono; italic: false}
+
+internet: Internet {class: card; icon: ${ify}/world.svg?${ink}}
+cloudflare: "Cloudflare\nedge, DNS, Access" {class: card; icon: ${di}/cloudflare.svg}
+remote: Remote devices {class: card; icon: ${ify}/device-mobile.svg?${ink}}
+tailnet: "Tailscale\ntailnet, ACLs" {class: card; icon: ${di}/tailscale-light.svg}
+lan: LAN devices {class: card; icon: ${ify}/devices.svg?${ink}}
+github: "GitHub\nrepo, CI, Renovate" {class: card; icon: ${di}/github-light.svg}
+ghcr: "GHCR\nself-built images" {class: card; icon: ${di}/github-light.svg}
+letsencrypt: Let's Encrypt {class: card; icon: ${di}/lets-encrypt.svg}
+vpn: "WireGuard VPN\noptional route" {class: card; icon: ${di}/wireguard.svg}
+
+notify: ALERTS {
+  class: group
+  grid-rows: 1
+  grid-gap: 12
+  telegram: Telegram {class: card; icon: ${di}/telegram.svg}
+  discord: Discord {class: card; icon: ${di}/discord.svg}
+}
+
+hw: HARDWARE {
+  class: group
+  grid-rows: 1
+  grid-gap: 12
+  primary: "Primary node\nTalos, amd64" {class: card; icon: ${di}/talos.svg}
+  pi: "Raspberry Pi\nTalos, arm64" {class: card; icon: ${di}/raspberry-pi.svg}
+  nas: "TrueNAS\nHDD and NVMe pools" {class: card; icon: ${di}/truenas-scale.svg}
+  mini: "Mac mini\nOpenClaw, Hermes" {class: card; icon: ${di}/apple-light.svg}
+}
+
+cluster: KUBERNETES ON TALOS LINUX {
+  class: frame
+
+  delivery: GITOPS AND AUTOMATION {
+    class: group
+    grid-rows: 2
+    grid-columns: 3
+    grid-gap: 12
+    flux: Flux CD {class: card; icon: ${di}/flux-cd.svg}
+    fluxop: "Flux Operator\nweb UI" {class: card; icon: ${di}/flux-operator-light.svg}
+    imageauto: "Image automation\nself-built images" {class: card; icon: ${di}/flux-cd.svg}
+    advisor: "Resource Advisor\ntuning PRs" {class: card; icon: ${ify}/adjustments-horizontal.svg?${ink}}
+    reloader: Reloader {class: card; icon: ${di}/reloader.svg}
+    sops: "SOPS + age\nsecrets in Git" {class: card; icon: ${ify}/lock.svg?${ink}}
+  }
+
+  edge: INGRESS, DNS AND NETWORK {
+    class: group
+    grid-rows: 3
+    grid-columns: 4
+    grid-gap: 12
+    metallb: "MetalLB\nLayer 2 VIPs" {class: card; icon: ${di}/metallb.svg}
+    nginx: "ingress-nginx\nhosts, TLS" {class: card; icon: ${di}/nginx.svg}
+    certmanager: cert-manager {class: card; icon: ${di}/cert-manager.svg}
+    externaldns: ExternalDNS {class: card; icon: ${di}/kubernetes.svg}
+    adguard1: "AdGuard Home\nprimary" {class: card; icon: ${di}/adguard-home.svg}
+    adguard2: "AdGuard Home\nsecondary" {class: card; icon: ${di}/adguard-home.svg}
+    coredns: "CoreDNS\ncluster DNS" {class: card; icon: ${di}/coredns.svg}
+    canal: "Canal\nCNI" {class: card; icon: ${sh}/calico.svg}
+    tsop: "Tailscale Operator\nAPI proxy" {class: card; icon: ${di}/tailscale-light.svg}
+    tsconn: "Connector\nsubnet router, exit" {class: card; icon: ${di}/tailscale-light.svg}
+    tsdns: "Connector\nDNS backup" {class: card; icon: ${di}/tailscale-light.svg}
+    langw: "LAN proxies\nNAS, router, Mac mini" {class: card; icon: ${ify}/router.svg?${ink}}
+  }
+
+  public: PUBLIC EDGE {
+    class: group
+    grid-rows: 1
+    grid-gap: 12
+    cloudflared: "cloudflared\nCloudflare Tunnel" {class: card; icon: ${di}/cloudflare.svg}
+    exposure: "exposure-control\nshares, Control Panel" {class: card; icon: ${ify}/share-3.svg?${ink}}
+  }
+
+  sites: PUBLIC SITES {
+    class: group
+    grid-rows: 2
+    grid-columns: 2
+    grid-gap: 12
+    blog: Blog {class: card; icon: ${ify}/article.svg?${ink}}
+    mmcal: MMCal {class: card; icon: ${ify}/calendar-month.svg?${ink}}
+    mapper: Rangoon Mapper {class: card; icon: ${ify}/map-2.svg?${ink}}
+    erica: Erica Knight {class: card; icon: ${ify}/id-badge-2.svg?${ink}}
+  }
+
+  media: MEDIA AND LIBRARY {
+    class: group
+    grid-rows: 3
+    grid-columns: 4
+    grid-gap: 12
+    jellyfin: "Jellyfin\nIntel iGPU" {class: card; icon: ${di}/jellyfin.svg}
+    immich: Immich {class: card; icon: ${sh}/immich.svg}
+    seerr: Seerr {class: card; icon: ${di}/seerr.svg}
+    abs: Audiobookshelf {class: card; icon: ${di}/audiobookshelf.svg}
+    shelfmark: Shelfmark {class: card; icon: ${sh}/shelfmark.svg}
+    bookorbit: BookOrbit {class: card; icon: ${ify}/books.svg?${ink}}
+    romm: RomM {class: card; icon: ${di}/romm.svg}
+    tunarr: Tunarr {class: card; icon: ${di}/tunarr.svg}
+    nodecast: Nodecast TV {class: card; icon: ${di}/nodecast-tv.svg}
+    isponsor: iSponsorBlockTV {class: card; icon: ${di}/sponsorblock.svg}
+  }
+
+  arr: AUTOMATION AND DOWNLOADS {
+    class: group
+    grid-rows: 3
+    grid-columns: 4
+    grid-gap: 12
+    sonarr: Sonarr {class: card; icon: ${di}/sonarr.svg}
+    radarr: Radarr {class: card; icon: ${di}/radarr.svg}
+    bazarr: Bazarr {class: card; icon: ${di}/bazarr.svg}
+    subarr: Subarr {class: card; icon: ${sh}/subarr.svg}
+    profilarr: Profilarr {class: card; icon: ${di}/profilarr.svg}
+    prowlarr: Prowlarr {class: card; icon: ${di}/prowlarr.svg}
+    jackett: Jackett {class: card; icon: ${di}/jackett-light.svg}
+    autobrr: autobrr {class: card; icon: ${di}/autobrr.svg}
+    flaresolverr: FlareSolverr {class: card; icon: ${di}/flaresolverr.svg}
+    transmission: "Transmission\n+ Gluetun" {class: card; icon: ${di}/transmission.svg}
+    sabnzbd: SABnzbd {class: card; icon: ${di}/sabnzbd.svg}
+    tracearr: Tracearr {class: card; icon: ${di}/tracearr.svg}
+  }
+
+  personal: PERSONAL APPS AND TOOLS {
+    class: group
+    grid-rows: 3
+    grid-columns: 5
+    grid-gap: 12
+    actual: Actual Budget {class: card; icon: ${di}/actual-budget.svg}
+    retirement: Retirement {class: card; icon: ${ify}/chart-line.svg?${ink}}
+    itvp: Interview Prep {class: card; icon: ${ify}/school.svg?${ink}}
+    soft: 75 Soft {class: card; icon: ${ify}/checklist.svg?${ink}}
+    livesync: "Obsidian\nLiveSync" {class: card; icon: ${di}/obsidian.svg}
+    anki: Anki sync {class: card; icon: ${sh}/anki.svg}
+    miniflux: Miniflux {class: card; icon: ${di}/miniflux-light.svg}
+    resume: Reactive Resume {class: card; icon: ${di}/reactive-resume-light.svg}
+    vaultwarden: Vaultwarden {class: card; icon: ${di}/vaultwarden-light.svg}
+    chartdb: ChartDB {class: card; icon: ${ify}/schema.svg?${ink}}
+    bentopdf: BentoPDF {class: card; icon: ${di}/bentopdf.svg}
+    kroki: Kroki {class: card; icon: ${ify}/chart-dots-3.svg?${ink}}
+    speedtest: "Speedtest\nTracker" {class: card; icon: ${sh}/speedtest-tracker.svg}
+    dynacat: "Dynacat\ndashboard" {class: card; icon: ${di}/dynacat.svg}
+  }
+
+  obs: OBSERVABILITY {
+    class: group
+    grid-rows: 2
+    grid-columns: 3
+    grid-gap: 12
+    prometheus: Prometheus {class: card; icon: ${di}/prometheus.svg}
+    alertmanager: Alertmanager {class: card; icon: ${di}/alertmanager.svg}
+    grafana: Grafana {class: card; icon: ${di}/grafana.svg}
+    gatus: Gatus {class: card; icon: ${di}/gatus.svg}
+    exporters: "Exporters\nnode, blackbox, NAS" {class: card; icon: ${di}/prometheus.svg}
+    metrics: Metrics Server {class: card; icon: ${di}/kubernetes.svg}
+  }
+
+  data: DATABASES {
+    class: group
+    grid-rows: 1
+    grid-gap: 12
+    mediapg: "media-postgres\nTimescaleDB" {class: card; icon: ${di}/postgresql.svg}
+    immichpg: "Immich Postgres\npgvector, Valkey" {class: card; icon: ${di}/postgresql.svg}
+    vwpg: "Vaultwarden\nPostgres" {class: card; icon: ${di}/postgresql.svg}
+    litestream: "Litestream\nSQLite replicas" {class: card; icon: ${di}/sqlite.svg}
+  }
+
+  storage: STORAGE CLASSES {
+    class: group
+    grid-rows: 1
+    grid-gap: 12
+    nfs: "truenas-nfs\ndefault" {class: card; icon: ${di}/truenas.svg}
+    hdd: "truenas-hdd-media\nmedia library" {class: card; icon: ${di}/truenas.svg}
+    nvme: "truenas-nvme-\ndownloads" {class: card; icon: ${di}/truenas.svg}
+    local: "local-path\ndatabases, caches" {class: card; icon: ${ify}/database.svg?${ink}}
+  }
+}
+
+legend: "" {
+  near: bottom-center
+  grid-rows: 1
+  grid-gap: 36
+  style: {fill: "#000000"; stroke: "#000000"}
+  private: "━━ private: LAN, Tailscale" {class: key; style.font-color: ${private}}
+  public: "━━ public: Cloudflare Tunnel" {class: key; style.font-color: ${public}}
+  share: "━━ temporary shares" {class: key; style.font-color: ${share}}
+  data: "━━ data" {class: key}
+  control: "╍╍ control" {class: key}
+}
+
+# Public path
+internet -> cloudflare: HTTPS {style.stroke: ${public}}
+cloudflare -> cluster.public: Tunnel {style.stroke: ${public}}
+cluster.public -> cluster.sites: public hosts {style.stroke: ${public}}
+
+# Temporary shares
+cluster.public -> cluster.media: shares, when enabled {style.stroke: ${share}}
+cluster.public -> cluster.personal: shares, when enabled {style.stroke: ${share}}
+
+# Private path
+lan -> cluster.edge: DNS, HTTPS {style.stroke: ${private}}
+remote -> tailnet: WireGuard {style.stroke: ${private}}
+tailnet -> cluster.edge: subnet routes {style.stroke: ${private}}
+cluster.edge -> cluster.media: routes {style.stroke: ${private}}
+cluster.edge -> cluster.arr: routes {style.stroke: ${private}}
+cluster.edge -> cluster.personal: routes {style.stroke: ${private}}
+cluster.edge -> cluster.obs: routes {style.stroke: ${private}}
+
+# Data
+cluster.media -> cluster.arr: requests
+cluster.arr -> vpn: torrent peers
+cluster.media -> cluster.data: SQL
+cluster.personal -> cluster.data: SQL
+cluster.media -> cluster.storage: volumes
+cluster.arr -> cluster.storage: volumes
+cluster.personal -> cluster.storage: volumes
+cluster.data -> cluster.storage: volumes
+cluster.storage -> hw: NFS, local disks
+
+# Control
+github <-> cluster.delivery: pull master, push PRs {style.stroke-dash: 4}
+ghcr -> cluster.delivery: image tags {style.stroke-dash: 4}
+letsencrypt -> cluster.edge: certificates {style.stroke-dash: 4}
+cluster.delivery <- cluster.obs: usage metrics {style.stroke-dash: 4}
+cluster.obs -> notify: alerts {style.stroke-dash: 4}

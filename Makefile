@@ -3,6 +3,7 @@
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell check-rust build-exposure-cli test-python
+.PHONY: diagrams check-diagrams
 
 # Use this cluster's credentials when available; preserve explicit overrides and
 # kubectl's normal fallback on machines without the ignored local kubeconfig.
@@ -152,6 +153,12 @@ check-docs: ## Validate docs and skill structure
 	python3 -m unittest discover -s scripts/tests -p 'test_check_docs.py'
 	python3 scripts/check_docs.py
 
+diagrams: ## Render docs/diagrams/*.d2 to PNG (needs Docker and network access)
+	scripts/render-diagrams.sh
+
+check-diagrams: ## Fail when a diagram source changed without a render
+	scripts/render-diagrams.sh --check
+
 build-exposure-cli: ## Build the native exposure CLI used by integration tests
 	cd apps/exposure-control/cli && cargo build --locked
 
@@ -165,6 +172,7 @@ check-node: ## Check exposure-control JavaScript and API integration
 
 check-shell: ## Syntax-check shell scripts
 	bash -n scripts/storage-sunset-cleanup.sh
+	bash -n scripts/render-diagrams.sh
 	sh -n apps/media-postgres/power-ledger/collect.sh
 	bash -n apps/exposure-control/secret-commit-job.sh
 
@@ -178,4 +186,4 @@ test-python: ## Run Python unit tests
 	python3 -m unittest discover -s scripts/tests -p 'test_truenas*.py'
 	python3 scripts/update_power_tariff.py --check
 
-validate-all: check-docs test-python check-rust check-node check-shell validate-kustomize ## Run all repository checks safe for local/CI use
+validate-all: check-docs check-diagrams test-python check-rust check-node check-shell validate-kustomize ## Run all repository checks safe for local/CI use

@@ -1,0 +1,73 @@
+# GitOps loop: every change to the cluster is a commit, and four writers besides people make them.
+# Solid edges move desired state forward; dashed edges are the automation that writes back to Git.
+# A writer is drawn as `repo <- writer` so the layout keeps reading left to right.
+# Icon sources are pinned to commits. Iconify sets the colour in the URL, since D2 cannot recolour.
+direction: right
+vars: {
+  di: https://raw.githubusercontent.com/homarr-labs/dashboard-icons/23fc02e7710a66e0c774989f6e78372e9b6c2e15/svg
+  ify: https://api.iconify.design/tabler
+  ink: color=%23b0b0b0&height=64
+  forward: "#eeeeee"
+  writeback: "#f0b35c"
+}
+
+style.fill: "#000000"
+
+classes: {
+  card: {
+    label.near: bottom-center
+    width: 176
+    height: 150
+    style: {fill: "#101010"; stroke: "#2c2c2c"; font-color: "#f1f1f1"; border-radius: 0; font-size: 16}
+  }
+  frame: {
+    style: {fill: "#000000"; stroke: "#484848"; stroke-dash: 2; font-color: "#b0b0b0"; border-radius: 0; font-size: 17; font: mono}
+  }
+  key: {
+    shape: text
+    style: {font-color: "#909090"; font-size: 17; font: mono}
+  }
+}
+
+(** -> **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 15; font: mono; italic: false}
+(** <- **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 15; font: mono; italic: false}
+
+people: "Operators and agents" {class: card; icon: ${ify}/terminal-2.svg?${ink}}
+renovate: "Renovate\ncharts and images" {class: card; icon: ${di}/renovate.svg}
+repo: "rangoonpulse\nmaster" {class: card; icon: ${di}/github-light.svg}
+ci: "CI\nchecks, CPU headroom" {class: card; icon: ${ify}/circle-check.svg?${ink}}
+ghcr: "GHCR\nself-built images" {class: card; icon: ${di}/github-light.svg}
+
+cluster: KUBERNETES ON TALOS LINUX {
+  class: frame
+  flux: "Flux CD\nKustomize, Helm" {class: card; icon: ${di}/flux-cd.svg}
+  workloads: "Workloads\napps and platform" {class: card; icon: ${di}/kubernetes.svg}
+  prometheus: "Prometheus\nusage history" {class: card; icon: ${di}/prometheus.svg}
+  advisor: "Resource Advisor\nbudgeted tuning" {class: card; icon: ${ify}/adjustments-horizontal.svg?${ink}}
+  imageauto: "Image automation\ntag policies" {class: card; icon: ${di}/flux-cd.svg}
+  panel: "Control Panel\nsecret editor" {class: card; icon: ${ify}/layout-dashboard.svg?${ink}}
+}
+
+legend: "" {
+  near: bottom-center
+  grid-rows: 1
+  grid-gap: 36
+  style: {fill: "#000000"; stroke: "#000000"}
+  forward: "━━ desired state" {class: key; style.font-color: ${forward}}
+  writeback: "╍╍ writes back to Git" {class: key; style.font-color: ${writeback}}
+  data: "━━ data" {class: key}
+}
+
+people -> repo: commits {style.stroke: ${forward}}
+repo -> ci: pushes and PRs {style.stroke: ${forward}}
+repo -> cluster.flux: pulls master {style.stroke: ${forward}}
+cluster.flux -> cluster.workloads: reconciles {style.stroke: ${forward}}
+
+cluster.workloads -> cluster.prometheus: metrics
+cluster.prometheus -> cluster.advisor: usage
+ghcr -> cluster.imageauto: new tags
+
+renovate -> repo: update PRs {style.stroke: ${writeback}; style.stroke-dash: 4}
+repo <- cluster.advisor: tuning PRs {style.stroke: ${writeback}; style.stroke-dash: 4}
+repo <- cluster.imageauto: tag commits {style.stroke: ${writeback}; style.stroke-dash: 4}
+repo <- cluster.panel: encrypted secrets {style.stroke: ${writeback}; style.stroke-dash: 4}

@@ -1,73 +1,52 @@
+<div align="center">
+
 # rangoonpulse
 
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
-[![Talos](https://img.shields.io/badge/Talos%20Linux-6952F2?logo=linux&logoColor=white)](https://talos.dev/)
-[![Flux](https://img.shields.io/badge/Flux%20CD-5468FF?logo=flux&logoColor=white)](https://fluxcd.io/)
-[![GitOps](https://img.shields.io/badge/GitOps-Enabled-2E8B57?logo=git&logoColor=white)](#gitops-and-automation)
-[![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
+### My homelab, defined in Git
 
-> My homelab, defined in Git: two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync.
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-e6e6e6?style=flat-square&logo=kubernetes&logoColor=white&labelColor=101010)](https://kubernetes.io/) [![Talos](https://img.shields.io/badge/Talos-e6e6e6?style=flat-square&logo=talos&logoColor=white&labelColor=101010)](https://www.talos.dev/) [![Flux](https://img.shields.io/badge/Flux-GitOps-e6e6e6?style=flat-square&logo=flux&logoColor=white&labelColor=101010)](https://fluxcd.io/) [![Renovate](https://img.shields.io/badge/Renovate-updates-e6e6e6?style=flat-square&logo=renovate&logoColor=white&labelColor=101010)](https://docs.renovatebot.com/) [![SOPS](https://img.shields.io/badge/SOPS-age-e6e6e6?style=flat-square&labelColor=101010)](https://github.com/getsops/sops)
 
-Media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
+[![CI](https://img.shields.io/github/actions/workflow/status/khzaw/rangoonpulse/ci.yaml?branch=master&style=flat-square&label=CI&labelColor=101010)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml) [![Last commit](https://img.shields.io/github/last-commit/khzaw/rangoonpulse?style=flat-square&labelColor=101010&color=e6e6e6)](https://github.com/khzaw/rangoonpulse/commits/master) [![Stars](https://img.shields.io/github/stars/khzaw/rangoonpulse?style=flat-square&labelColor=101010&color=e6e6e6)](https://github.com/khzaw/rangoonpulse/stargazers)
 
-[Architecture](#architecture) · [Hardware](#hardware) · [Services](#services) · [Screenshots](#screenshots) · [Repository layout](#repository-layout) · [Docs](docs/README.md)
+Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync. It runs media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
 
-## Architecture
+[![Service map: every workload group in the cluster, with the private, public, and temporary-share paths into it](docs/diagrams/service-map.png)](docs/diagrams/service-map.png?raw=1)
 
-Private ingress, permanent public sites, and temporary shares follow three distinct paths:
+**Click to open the full-size image.** What runs here and how traffic reaches it. White lines are the private path, amber is public through Cloudflare Tunnel, green is a temporary share. Rendered by `make diagrams` from [this D2 file](docs/diagrams/service-map.d2). [How to read it](docs/diagrams.md).
 
-```mermaid
-flowchart TB
-    accTitle: Homelab access paths
-    accDescr: Private clients use MetalLB and ingress-nginx, while public sites and temporary shares use Cloudflare Tunnel.
-    private["LAN / Tailscale clients"] --> vip["MetalLB ingress VIP"]
-    vip --> nginx["ingress-nginx<br/>Private host routing + TLS"]
-    nginx --> apps["Private app Services"]
+[How it works](#how-it-works) · [Architecture](#architecture) · [Hardware](#hardware) · [Services](#services) · [Workflows](#cicd-workflows) · [Screenshots](#screenshots) · [Docs](docs/README.md)
 
-    internet["Internet clients"] --> cloudflare["Cloudflare edge"]
-    cloudflare --> tunnel["Cloudflare Tunnel"]
-    tunnel -->|Permanent site hosts| sites["Public site Services"]
-    tunnel -->|Share hosts| exposure["exposure-control<br/>Share state + expiry checks"]
-    exposure -->|When enabled| shared["Selected app Services"]
+</div>
 
-    classDef privatePath fill:#17324d,stroke:#6aa9dc,color:#fff
-    classDef publicPath fill:#49321e,stroke:#e6a05b,color:#fff
-    classDef sharePath fill:#293b2d,stroke:#82b78e,color:#fff
-    class private,vip,nginx,apps privatePath
-    class internet,cloudflare,tunnel,sites publicPath
-    class exposure,shared sharePath
+---
+
+## How it works
+
+Talos runs the two nodes. Everything after that comes through Git.
+
+```text
+push to master
+   ├─ CI validates manifests, docs, and diagrams, then checks CPU headroom for changed workloads
+   └─ Flux reconciles flux/ onto the cluster
+         ├─ SOPS and age decrypt secrets in the cluster, so none are committed in plaintext
+         ├─ ingress-nginx, cert-manager, and ExternalDNS publish private hosts with TLS and DNS
+         └─ Cloudflare Tunnel publishes the public sites, and exposure-control gates temporary shares
 ```
 
-Public routes normally bypass MetalLB and ingress-nginx. Canonical app hosts stay private unless explicitly published; temporary shares have separate hostnames and expiry controls. See [networking](docs/networking.md) for routing details.
+Each service is one directory under `apps/` and one Flux Kustomization under `flux/kustomizations/`. A new workload is a new directory and a new entry in [the reconciliation tree](flux/kustomization.yaml).
 
-Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate public upstreams so they do not depend on the LAN filtering path.
+[![GitOps loop: commits reach the cluster through Flux, while Renovate, image automation, Resource Advisor, and the Control Panel write back to Git](docs/diagrams/gitops-loop.png)](docs/diagrams/gitops-loop.png?raw=1)
 
-### Hardware
+People are not the only writers. Four automations change the cluster by changing Git:
 
-| Machine | Role | Architecture | Hardware |
-|---|---|---|---|
-| Primary server | Control plane and primary workloads | `amd64` | 6 CPU cores · 32 GB RAM · Intel iGPU for media |
-| Raspberry Pi | Utility workloads | `arm64` | 4 CPU cores · 8 GB RAM |
+- **Renovate** opens chart, image, and GitHub Actions update PRs every six hours.
+- **Flux image automation** commits new tags for the self-built images.
+- **[Resource Advisor](docs/resource-advisor.md)** reads retained Prometheus metrics and opens budgeted resource-tuning PRs. CI renders the affected workloads and checks CPU capacity, including room for rollouts and scheduled jobs.
+- **The Control Panel** commits SOPS-encrypted secret edits.
 
-TrueNAS provides shared storage. A Mac mini runs native services and independent monitoring outside the Kubernetes cluster.
+Flux owns permanent desired state; the Control Panel owns temporary share and routing state. The two AdGuard instances have independent storage and rollout boundaries, so DNS updates proceed one instance at a time.
 
-Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); the [architecture guide](docs/architecture.md) explains how the components fit together.
-
-### Storage
-
-[![TrueNAS](https://img.shields.io/badge/TrueNAS-0095D5?logo=truenas&logoColor=white&style=flat-square)](https://www.truenas.com/)
-[![democratic-csi](https://img.shields.io/badge/democratic--csi-326CE5?logo=kubernetes&logoColor=white&style=flat-square)](https://github.com/democratic-csi/democratic-csi)
-[![SOPS](https://img.shields.io/badge/SOPS-333333?style=flat-square)](https://github.com/getsops/sops)
-[![age](https://img.shields.io/badge/age-F5C451?style=flat-square)](https://age-encryption.org/)
-
-| Storage class | Purpose |
-|---|---|
-| `truenas-nfs` | Default relocatable storage for ordinary persistent data, books, and audiobooks |
-| `truenas-hdd-media` | Large shared media datasets |
-| `truenas-nvme-downloads` | Shared download workload data |
-| `local-path` | Latency-sensitive databases, SQLite, Prometheus/Grafana state, and caches |
-
-`local-path` is node-affined: moving a workload requires moving its data, not just changing its node selector. See [data protection](docs/data-protection.md) for backup coverage and recovery gaps.
+---
 
 ## Highlights
 
@@ -80,6 +59,47 @@ Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); th
 | **Resource tuning** | Resource Advisor uses Prometheus data to propose budgeted resource changes through pull requests. |
 | **Control Panel** | A private interface for temporary shares, telemetry, a Git-to-cluster activity timeline, deployments, scheduled jobs, secrets, and resource tuning. |
 | **Encrypted secrets** | SOPS + age protects Git-managed secrets; Flux decrypts them in the cluster. |
+| **Diagrams as code** | The diagrams on this page are [D2 sources](docs/diagrams/) rendered by a pinned toolchain. CI fails when a source changes without a render. |
+
+---
+
+## Architecture
+
+Private ingress, permanent public sites, and temporary shares follow three distinct paths:
+
+| Path | Route | Carries |
+|---|---|---|
+| **Private** | LAN or Tailscale client → MetalLB ingress VIP → ingress-nginx → Service | Every app's canonical host |
+| **Public** | Cloudflare edge → Cloudflare Tunnel → Service | The self-built public sites |
+| **Temporary share** | Cloudflare edge → Cloudflare Tunnel → exposure-control → Service | Selected apps, while a share is enabled |
+
+Public routes normally bypass MetalLB and ingress-nginx. Canonical app hosts stay private unless explicitly published; temporary shares have separate hostnames and expiry controls. See [networking](docs/networking.md) for routing details.
+
+Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate public upstreams so they do not depend on the LAN filtering path.
+
+### Hardware
+
+| Machine | Role | Architecture | Hardware |
+|---|---|---|---|
+| Primary server | Control plane and primary workloads | `amd64` | 6 CPU cores · 32 GB RAM · Intel iGPU for media |
+| Raspberry Pi | Utility workloads | `arm64` | 4 CPU cores · 8 GB RAM |
+| TrueNAS | Shared storage over NFS | | HDD pool for media · NVMe pool for downloads |
+| Mac mini | Native services and independent monitoring, outside the cluster | `arm64` | Apple M4 · 24 GB RAM |
+
+Both cluster nodes run [Talos Linux](https://www.talos.dev/). Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); the [architecture guide](docs/architecture.md) explains how the components fit together.
+
+### Storage
+
+| Storage class | Purpose |
+|---|---|
+| `truenas-nfs` | Default relocatable storage for ordinary persistent data, books, and audiobooks |
+| `truenas-hdd-media` | Large shared media datasets |
+| `truenas-nvme-downloads` | Shared download workload data |
+| `local-path` | Latency-sensitive databases, SQLite, Prometheus/Grafana state, and caches |
+
+[democratic-csi](https://github.com/democratic-csi/democratic-csi) provisions the TrueNAS classes. `local-path` is node-affined: moving a workload requires moving its data, not just changing its node selector. See [data protection](docs/data-protection.md) for backup coverage and recovery gaps.
+
+---
 
 ## Services
 
@@ -87,21 +107,16 @@ The services below are declared in [the Flux reconciliation tree](flux/kustomiza
 
 ### Platform and operations
 
-[![Helm](https://img.shields.io/badge/Helm-0F1689?logo=helm&logoColor=white&style=flat-square)](https://helm.sh/)
-[![NGINX](https://img.shields.io/badge/NGINX-009639?logo=nginx&logoColor=white&style=flat-square)](https://nginx.org/)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?logo=cloudflare&logoColor=white&style=flat-square)](https://www.cloudflare.com/)
-[![Tailscale](https://img.shields.io/badge/Tailscale-242424?logo=tailscale&logoColor=white&style=flat-square)](https://tailscale.com/)
-[![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?logo=prometheus&logoColor=white&style=flat-square)](https://prometheus.io/)
-[![Grafana](https://img.shields.io/badge/Grafana-F46800?logo=grafana&logoColor=white&style=flat-square)](https://grafana.com/)
-
 | Area | Components |
 |---|---|
-| **Delivery** | Flux CD, Helm, Flux Operator UI, image automation, Renovate |
-| **Networking** | ingress-nginx, MetalLB, cert-manager, ExternalDNS, Tailscale Operator, subnet/exit Connector and independent DNS backup Connector |
-| **DNS and public edge** | Dual AdGuard Home, Cloudflare Tunnel, exposure-control |
-| **Observability** | Prometheus, Alertmanager, Grafana, node exporter, Metrics Server, [Gatus](docs/gatus.md) |
-| **Operations** | Resource Advisor, Control Panel, host telemetry, power estimates, and independent cluster health checks |
-| **Storage** | TrueNAS, democratic-csi, local-path provisioner |
+| **Cluster** | [Talos Linux](https://www.talos.dev/), [Canal](docs/canal.md) CNI, CoreDNS |
+| **Delivery** | [Flux CD](https://fluxcd.io/), [Helm](https://helm.sh/), [Flux Operator](https://github.com/controlplaneio-fluxcd/flux-operator) UI, image automation, [Renovate](https://docs.renovatebot.com/), [Reloader](https://github.com/stakater/Reloader) |
+| **Networking** | [ingress-nginx](https://kubernetes.github.io/ingress-nginx/), [MetalLB](https://metallb.io/), [cert-manager](https://cert-manager.io/), [ExternalDNS](https://github.com/kubernetes-sigs/external-dns), [Tailscale Operator](https://tailscale.com/kb/1236/kubernetes-operator), subnet/exit Connector and independent DNS backup Connector |
+| **DNS and public edge** | Dual [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome), [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), [exposure-control](docs/public-edge-and-exposure-control.md) |
+| **Observability** | [Prometheus](https://prometheus.io/), Alertmanager, [Grafana](https://grafana.com/oss/grafana/), node exporter, [Metrics Server](https://github.com/kubernetes-sigs/metrics-server), [Gatus](docs/gatus.md) |
+| **Operations** | [Resource Advisor](docs/resource-advisor.md), Control Panel, host telemetry, power estimates, and independent cluster health checks |
+| **Secrets** | [SOPS](https://github.com/getsops/sops) with [age](https://github.com/FiloSottile/age), decrypted by Flux |
+| **Storage** | [TrueNAS](https://www.truenas.com/), [democratic-csi](https://github.com/democratic-csi/democratic-csi), [local-path provisioner](https://github.com/rancher/local-path-provisioner) |
 
 ### Media and library
 
@@ -135,30 +150,22 @@ The services below are declared in [the Flux reconciliation tree](flux/kustomiza
 | **RSS** | [Miniflux](docs/miniflux.md) |
 | **Personal tools** | 75 Soft, Reactive Resume, Vaultwarden, ChartDB, BentoPDF |
 | **Dashboards and utilities** | Dynacat, Speedtest Tracker, Kroki, Flux UI |
-| **Self-built sites** | Blog, MMCal, Rangoon Mapper, Erica Knight |
+| **Self-built public sites** | [Blog](https://blog.khzaw.dev), [MMCal](https://mmcal.khzaw.dev), [Rangoon Mapper](https://rangoonmapper.khzaw.dev), [Erica Knight](https://ericaknight.me) |
 
-## GitOps and automation
+---
 
-```mermaid
-flowchart LR
-    accTitle: GitOps delivery and resource tuning
-    accDescr: Flux reconciles Git into workloads; image automation and Resource Advisor update desired state through commits and pull requests.
-    git["This repository<br/>master"] --> flux["Flux CD"]
-    flux -->|Kustomize + Helm| workloads["Cluster workloads"]
-    prometheus["Prometheus<br/>Workload metrics"] --> advisor["Resource Advisor<br/>Resource tuning PRs"]
-    advisor -->|Merge| git
-    registry["Published<br/>self-built images"] --> images["Flux image<br/>automation"]
-    images -->|Image tag commits| git
+## CI/CD workflows
 
-    classDef delivery fill:#17324d,stroke:#6aa9dc,color:#fff
-    classDef tuning fill:#293b2d,stroke:#82b78e,color:#fff
-    class git,flux,workloads,registry,images delivery
-    class prometheus,advisor tuning
-```
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| [**CI**](.github/workflows/ci.yaml) | Push to `master`, pull request, manual | Runs `make validate-all`, the PromQL alert tests, and the power ledger SQL test, then checks CPU headroom for changed workloads |
+| [**Renovate**](.github/workflows/renovate.yaml) | Every six hours, manual | Opens chart, image, and GitHub Actions update PRs |
+| [**Exposure CLI image**](.github/workflows/exposure-cli.yaml) | Push to `master` and pull request that touch the CLI, manual | Tests and builds the native exposure CLI for `amd64` and `arm64`; pushes to `master` publish the multi-architecture image to GHCR |
+| [**Power tariff update**](.github/workflows/power-tariff.yaml) | Daily, manual | Fetches the official electricity tariff and opens a PR when the power-cost rules change |
 
-Resource Advisor uses retained Prometheus metrics to propose resource changes through PRs. Git/CI checks render affected workloads and check CPU capacity, including room for rollouts and scheduled jobs. See [Resource Advisor](docs/resource-advisor.md) for the policy and its limits.
+Flux image automation and Resource Advisor run inside the cluster, not in GitHub Actions. See [dependency updates](docs/dependency-updates-renovate-and-flux-image-automation.md) for which automation owns which version field.
 
-Flux owns permanent desired state; the Control Panel owns temporary share and routing state. Secrets are encrypted with SOPS. The two AdGuard instances have independent storage and rollout boundaries so DNS updates can proceed one instance at a time.
+---
 
 ## Screenshots
 
@@ -198,6 +205,8 @@ Illustrative UI captures. Metrics, versions, and library contents vary over time
 
 </details>
 
+---
+
 ## Repository layout
 
 ```text
@@ -209,6 +218,7 @@ Illustrative UI captures. Metrics, versions, and library contents vary over time
 │   ├── cluster-settings.yaml     Shared non-secret constants
 │   └── kustomizations/           Component reconciliation boundaries
 ├── docs/                         Current operating guidance
+│   └── diagrams/                 D2 diagram sources and their rendered images
 ├── .agents/skills/               Repository procedures and safety gates
 ├── scripts/                      Validation and operator tooling
 ├── native/                       Native host integrations
@@ -217,17 +227,22 @@ Illustrative UI captures. Metrics, versions, and library contents vary over time
 
 Talos node lifecycle is managed separately from Flux. Generated machine configuration and local operator files are excluded from Git.
 
+---
+
 ## Working with this repository
 
 This repository configures a specific homelab. Its DNS, node identities, and storage settings need adapting for another environment.
 
-The [operating reference](docs/README.md) explains component ownership, maintenance, and recovery. [AGENTS.md](AGENTS.md) is the entry point for coding agents. Local repository checks run with:
+The [operating reference](docs/README.md) explains component ownership, maintenance, and recovery. [AGENTS.md](AGENTS.md) is the entry point for coding agents.
 
 ```bash
-make validate-all
+make validate-all   # repository checks, also run by CI
+make diagrams       # re-render docs/diagrams/*.d2 (needs Docker)
 ```
 
 Validation also builds and tests the native Rust exposure CLI. Rustup selects the toolchain pinned in `apps/exposure-control/cli/rust-toolchain.toml` when Cargo runs from that directory.
+
+---
 
 ## Documentation
 
@@ -235,6 +250,7 @@ Validation also builds and tests the native Rust exposure CLI. Rustup selects th
 |---|---|
 | [Docs index](docs/README.md) | All current operating guidance |
 | [Architecture](docs/architecture.md) | Sources of truth and cross-cutting configuration |
+| [Diagrams](docs/diagrams.md) | How to read, render, and change the diagrams on this page |
 | [Networking](docs/networking.md) | Private ingress, public Tunnel, DNS, and edge exceptions |
 | [Exposure CLI](docs/exposure-cli.md) | CLI commands, defaults, and kubectl usage without a checkout |
 | [AdGuard DNS](docs/adguard-dns-stack-overview.md) | Dual DNS architecture and rollout safety |
