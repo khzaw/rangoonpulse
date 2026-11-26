@@ -12,6 +12,7 @@ configMapGenerator:
       - access-jwt.js
       - activity-feed.js
       - app.js
+      - dns-usage.js
       - exposure-core.js
       - exposure-client.js
       - feed.js

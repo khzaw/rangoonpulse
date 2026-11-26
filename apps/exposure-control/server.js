@@ -10,6 +10,7 @@ const { URL } = require("node:url");
 const { parseDependencyDashboard } = require("./renovate-dashboard");
 const { createExposureCore, ExposureError, normalizeAuthMode } = require("./exposure-core.js");
 const { createAccessVerifier, describeError, AccessTokenError } = require("./access-jwt.js");
+const { createDnsUsage } = require("./dns-usage.js");
 
 const CONFIGURED_BASE_DOMAIN = String(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "",
@@ -58,6 +59,9 @@ const DEFAULT_AUTH_MODE =
   normalizeAuthMode(process.env.DEFAULT_AUTH_MODE) || "cloudflare-access";
 // Without a team domain, cloudflare-access shares reject every request.
 const CF_ACCESS_TEAM_DOMAIN = String(process.env.CF_ACCESS_TEAM_DOMAIN || "").trim();
+// Read-only Cloudflare token for the zone record-usage reading on Overview.
+const CLOUDFLARE_DNS_READ_TOKEN = String(process.env.CLOUDFLARE_DNS_READ_TOKEN || "").trim();
+const DNS_USAGE_ZONE = String(process.env.DNS_USAGE_ZONE || PUBLIC_DOMAIN || "").trim();
 const SHARE_RATE_LIMIT_REQUESTS = clampInt(
   process.env.SHARE_RATE_LIMIT_REQUESTS,
   120,
@@ -4016,6 +4020,18 @@ const accessVerifier = CF_ACCESS_TEAM_DOMAIN
   })
   : null;
 
+const dnsUsage = createDnsUsage({
+  token: CLOUDFLARE_DNS_READ_TOKEN,
+  zoneName: DNS_USAGE_ZONE,
+  fetchJson: async (url, headers) => {
+    const response = await requestUrl(url, {
+      headers: { accept: "application/json", ...headers }, timeoutMs: 5000, totalTimeoutMs: 8000,
+      maxBodyBytes: 256 * 1024,
+    });
+    return JSON.parse(response.body);
+  },
+});
+
 async function checkAccessToken(svc, token) {
   if (!accessVerifier) {
     return { status: 403, message: "cloudflare access verification is not configured" };
@@ -4685,6 +4701,11 @@ async function handleApi(req, res, parsedUrl) {
     }
   }
 
+  if (req.method === "GET" && pathname === "/api/dns-usage") {
+    const force = parsedUrl.searchParams.get("force") === "1";
+    return sendJson(res, 200, await dnsUsage.get(force));
+  }
+
   if (req.method === "GET" && pathname === "/api/travel") {
     const force =
       parsedUrl.searchParams.get("force") === "1" ||
@@ -5149,4 +5170,7 @@ server.listen(PORT, "0.0.0.0", () => {
     warmKeys();
     setInterval(warmKeys, 30 * 60 * 1000).unref();
   }
+  console.log(dnsUsage.configured
+    ? "dns record usage read for zone " + DNS_USAGE_ZONE
+    : "CLOUDFLARE_DNS_READ_TOKEN unset: overview shows no DNS record usage");
 });

@@ -80,6 +80,12 @@ spec:
                   secretKeyRef:
                     name: power-ledger-db
                     key: snapshot-token
+              CLOUDFLARE_DNS_READ_TOKEN:
+                valueFrom:
+                  secretKeyRef:
+                    name: exposure-control-cloudflare
+                    key: token
+                    optional: true
               APP_DIR: /app-files
               EXPOSURE_CONTROL_URL: http://127.0.0.1:8080
               TZ: "${TIMEZONE}"

@@ -3,7 +3,7 @@ title: Secrets Inventory
 summary: Current SOPS-managed Kubernetes Secret manifests and their primary consumers.
 status: active
 owner: homelab
-last_reviewed: 2026-11-22
+last_reviewed: 2026-11-27
 ---
 
 # Secrets Inventory
@@ -21,6 +21,7 @@ All listed manifests are SOPS-encrypted under `infrastructure/secrets/` and incl
 - `anki-server-secret`: Anki sync server credentials
 - `bookorbit-secret`: BookOrbit application, saved client/indexer credential encryption key, and `media-postgres` database bootstrap
 - `dynacat-github`: authenticated GitHub release-widget reads
+- `exposure-control-cloudflare`: control-panel `token` for the Overview DNS record-usage chip; a Cloudflare API token limited to Zone Read and DNS Read on the base-domain zone
 - `exposure-control-github`: control-panel GitHub reads and actions
 - `gatus-secret`: `POSTGRES_PASSWORD` and `DATABASE_URL` for Gatus's restricted PostgreSQL role, runtime history, and app-owned provisioning hook; the hook also consumes `media-postgres-secret`
 - `ghcr-pull-secret`: Erica Knight, Rangoon Mapper, Retirement, and Exposure CLI private image pulls

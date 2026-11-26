@@ -182,6 +182,7 @@
         updates: null,
         helmUpdates: null,
         travel: null,
+        dns: null,
         tuning: null,
         jobs: null,
         siteDeployments: null,
@@ -926,17 +927,26 @@
         const nodes = pulseMetric('node_ready')?.series || [];
         const nodesReady = nodes.filter((series) => window.Pulse.last(series) === 1).length;
         const travelChipTone = travelState === 'ready' ? 'status' : travelTone(travelState) === 'danger' ? 'danger' : 'warning';
-        function chip(label, value, href, tone, detail) {
-          return '<a class="chip" href="' + href + '" data-tone="' + tone + '" title="' + attrText(detail) + '">' + label + ' <strong>' + escapeHtml(value) + '</strong></a>';
+        function chip(label, value, href, tone, detail, external) {
+          return '<a class="chip" href="' + escapeHtml(href) + '"' + (external ? ' target="_blank" rel="noreferrer"' : '') + ' data-tone="' + tone + '" title="' + attrText(detail) + '">' + label + ' <strong>' + escapeHtml(value) + '</strong></a>';
         }
+        // Cloudflare caps records per zone; amber from 80% of the quota, red from 95%.
+        const dns = dashboardState.dns && dashboardState.dns.state !== 'unconfigured' ? dashboardState.dns : null;
+        const dnsKnown = Boolean(dns && Number.isInteger(dns.records));
+        const dnsShare = dnsKnown && dns.quota ? dns.records / dns.quota : 0;
+        const dnsTone = !dnsKnown ? 'warning' : dnsShare >= 0.95 ? 'danger' : dnsShare >= 0.8 ? 'warning' : 'status';
+        const dnsDetail = !dns ? '' : dnsKnown
+          ? dns.zone + ' · ' + dns.records + ' of ' + (dns.quota || '?') + ' Cloudflare DNS records' + (dns.state === 'stale' ? ' · last refresh failed: ' + dns.detail : '')
+          : 'DNS record usage unavailable: ' + (dns.detail || 'unknown');
         document.getElementById('overviewPosture').innerHTML =
           (nodes.length ? chip('Nodes', nodesReady + '/' + nodes.length, '#pulse', nodesReady === nodes.length ? 'status' : 'danger', 'Kubernetes nodes ready') : '') +
           chip('Travel', travelState, '#travel', travelChipTone, travelHeadline) +
           chip('Route', runningMode, '#transmission', runningMode === 'unknown' ? 'warning' : 'status', 'Transmission · desired ' + desiredMode) +
-          chip('Advisor', fetchState === 'live' ? 'live' : 'offline', '#tuning', fetchState === 'live' ? 'status' : 'warning', fetchDetail);
+          chip('Advisor', fetchState === 'live' ? 'live' : 'offline', '#tuning', fetchState === 'live' ? 'status' : 'warning', fetchDetail) +
+          (dns ? chip('DNS', dnsKnown ? dns.records + (dns.quota ? '/' + dns.quota : '') : 'offline', dns.dashboardUrl || '#overview', dnsTone, dnsDetail, Boolean(dns.dashboardUrl)) : '');
 
         // The headline counts states that need a look; the chips say which.
-        const attention = [nodes.length && nodesReady !== nodes.length, travelState !== 'ready', runningMode === 'unknown', fetchState !== 'live'].filter(Boolean).length;
+        const attention = [nodes.length && nodesReady !== nodes.length, travelState !== 'ready', runningMode === 'unknown', fetchState !== 'live', dns && dnsTone !== 'status'].filter(Boolean).length;
         document.getElementById('overviewHeadline').textContent = attention ? attention + ' to check' : 'All clear';
 
         const meta = [];
@@ -944,6 +954,7 @@
         if (updates && updates.checkedAt) meta.push('<span>images ' + fmtAgo(updates.checkedAt) + '</span>');
         if (helmUpdates && helmUpdates.checkedAt) meta.push('<span>charts ' + fmtAgo(helmUpdates.checkedAt) + '</span>');
         if (travel && travel.checkedAt) meta.push('<span>travel ' + fmtAgo(travel.checkedAt) + '</span>');
+        if (dns && dns.checkedAt) meta.push('<span>dns ' + fmtAgo(dns.checkedAt) + '</span>');
         overviewMetaEl.innerHTML = meta.join('');
         renderOverviewDigest(services, updateItems, helmUpdateItems);
         renderNavHealth({
@@ -2431,7 +2442,7 @@
           const includeSecrets = activePage === 'secrets';
           const includeJobs = activePage === 'jobs';
           const includeSiteDeployments = activePage === 'deploy';
-          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, jobsData, siteDeployData, secretsData] = await Promise.allSettled([
+          const [svcData, auditData, vpnData, tuningData, updatesData, helmUpdatesData, renovateData, travelData, dnsData, jobsData, siteDeployData, secretsData] = await Promise.allSettled([
             exposureClient.list(),
             exposureClient.audit(),
             request('/api/transmission-vpn', 'GET'),
@@ -2440,6 +2451,7 @@
             request('/api/helm-updates', 'GET'),
             request('/api/renovate', 'GET'),
             request('/api/travel', 'GET'),
+            request('/api/dns-usage', 'GET'),
             includeJobs ? request('/api/jobs', 'GET') : Promise.resolve(null),
             includeSiteDeployments ? request('/api/site-deployments', 'GET') : Promise.resolve(null),
             includeSecrets ? request('/api/secrets', 'GET') : Promise.resolve(null),
@@ -2503,6 +2515,7 @@
             renderTravel(null);
             if (travelData && !silent) setTravelMsg(travelData.reason.message, true);
           }
+          dashboardState.dns = dnsData.status === 'fulfilled' ? dnsData.value : null;
           if (includeJobs) {
             if (jobsData && jobsData.status === 'fulfilled') {
               renderJobs(jobsData.value);
