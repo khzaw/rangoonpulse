@@ -3,7 +3,7 @@
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell check-rust build-exposure-cli test-python
-.PHONY: diagrams check-diagrams
+.PHONY: diagrams check-diagrams badges
 
 # Use this cluster's credentials when available; preserve explicit overrides and
 # kubectl's normal fallback on machines without the ignored local kubeconfig.
@@ -158,6 +158,9 @@ diagrams: ## Render docs/diagrams/*.d2 to PNG (needs Docker and network access)
 
 check-diagrams: ## Fail when a diagram source changed without a render
 	scripts/render-diagrams.sh --check
+
+badges: ## Render the README tags in .github/badges (needs network access)
+	python3 scripts/render_badges.py
 
 build-exposure-cli: ## Build the native exposure CLI used by integration tests
 	cd apps/exposure-control/cli && cargo build --locked

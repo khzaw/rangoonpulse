@@ -2,7 +2,27 @@
 
 # rangoonpulse
 
-[![Kubernetes](.github/badges/kubernetes.svg)](https://kubernetes.io/) [![Talos](.github/badges/talos.svg)](https://www.talos.dev/) [![Flux: GitOps](.github/badges/flux.svg)](https://fluxcd.io/) [![Renovate: updates](.github/badges/renovate.svg)](https://docs.renovatebot.com/) [![SOPS: age](.github/badges/sops.svg)](https://github.com/getsops/sops) [![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
+[![Talos: Linux](.github/badges/talos.svg)](https://www.talos.dev/)
+[![Kubernetes: 2 nodes](.github/badges/kubernetes.svg)](https://kubernetes.io/)
+[![Flux: GitOps](.github/badges/flux.svg)](https://fluxcd.io/)
+[![Helm: charts](.github/badges/helm.svg)](https://helm.sh/)
+[![Renovate: updates](.github/badges/renovate.svg)](https://docs.renovatebot.com/)
+[![SOPS: age](.github/badges/sops.svg)](https://github.com/getsops/sops)\
+[![NGINX: ingress](.github/badges/nginx.svg)](https://kubernetes.github.io/ingress-nginx/)
+[![Let's Encrypt: TLS](.github/badges/letsencrypt.svg)](https://letsencrypt.org/)
+[![Cloudflare: Tunnel](.github/badges/cloudflare.svg)](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+[![Tailscale: remote access](.github/badges/tailscale.svg)](https://tailscale.com/)
+[![AdGuard Home: DNS](.github/badges/adguard.svg)](https://github.com/AdguardTeam/AdGuardHome)\
+[![TrueNAS: NFS](.github/badges/truenas.svg)](https://www.truenas.com/)
+[![PostgreSQL: databases](.github/badges/postgresql.svg)](https://www.postgresql.org/)
+[![Prometheus: metrics](.github/badges/prometheus.svg)](https://prometheus.io/)
+[![Grafana: dashboards](.github/badges/grafana.svg)](https://grafana.com/oss/grafana/)
+[![Gatus: health checks](.github/badges/gatus.svg)](https://github.com/TwiN/gatus)\
+[![Intel: amd64](.github/badges/intel.svg)](#hardware)
+[![Raspberry Pi: arm64](.github/badges/raspberrypi.svg)](#hardware)
+[![Mac mini: M4](.github/badges/macmini.svg)](#hardware)
+[![D2: diagrams](.github/badges/d2.svg)](docs/diagrams.md)
+[![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
 
 Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync. It runs media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
 
@@ -234,6 +254,7 @@ The [operating reference](docs/README.md) explains component ownership, maintena
 ```bash
 make validate-all   # repository checks, also run by CI
 make diagrams       # re-render docs/diagrams/*.d2 (needs Docker)
+make badges         # re-render the tags in .github/badges/
 ```
 
 Validation also builds and tests the native Rust exposure CLI. Rustup selects the toolchain pinned in `apps/exposure-control/cli/rust-toolchain.toml` when Cargo runs from that directory.

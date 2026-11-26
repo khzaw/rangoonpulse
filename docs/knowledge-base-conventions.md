@@ -75,7 +75,15 @@ Use repository-relative paths, concrete Kubernetes object names, and executable 
 
 Do not add a tag from an external badge service. GitHub fetches external images through its image proxy; when the service answers slowly, the proxy returns an error and the README shows a broken image.
 
-A tag is a self-contained SVG file: shapes, text, and inline paths only, with no embedded image, font, or link to another file.
+A tag is a self-contained SVG file: shapes, text, and inline paths only, with no embedded image, font, or link to another file. `scripts/render_badges.py` holds the tag list and writes the files:
+
+```bash
+make badges
+```
+
+To add a tag, add a line to `TAGS` in the script, run `make badges`, and link the new file from the tag rows at the top of `README.md`. A tag names a part of the stack and its role here. Leave out version numbers and counts that change with routine updates. The script asks shields.io for each tag once and rewrites the logo to inline paths, so rendering needs network access and reading the README does not. It fails without writing anything when a logo name is unknown.
+
+Keep each README row under about 700 pixels, the sum of the `width` values of its files, so the row does not wrap on a desktop page.
 
 ## Skills
 
