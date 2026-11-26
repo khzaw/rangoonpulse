@@ -107,6 +107,7 @@ spec:
               DEFAULT_EXPIRY_HOURS: "1"
               RECONCILE_INTERVAL_SECONDS: "30"
               DEFAULT_AUTH_MODE: cloudflare-access
+              CF_ACCESS_TEAM_DOMAIN: lucky-art-ea09.cloudflareaccess.com
               SHARE_RATE_LIMIT_REQUESTS: "120"
               SHARE_RATE_LIMIT_WINDOW_SECONDS: "60"
               IMAGE_UPDATE_CACHE_TTL_HOURS: "168"
