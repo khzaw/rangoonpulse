@@ -42,6 +42,16 @@ test("defaults, overrides, snapshots and persisted state use one auth and expiry
   assert.equal(core.get("photos").expiresAt, null);
 });
 
+test("snapshots mark agent hosts and default everything else to shares", () => {
+  const { core } = fixture({
+    services: [{ id: "books", target: "http://books" },
+      { id: "budget", target: "http://budget", kind: "agent" },
+      { id: "odd", target: "http://odd", kind: "typo" }],
+  });
+  assert.deepEqual(core.list().map((service) => [service.id, service.kind]),
+    [["books", "share"], ["budget", "agent"], ["odd", "share"]]);
+});
+
 test("expiry denies immediately, reconciles once, and preserves unbounded shares", () => {
   const { core, advance, audit } = fixture();
   core.enable("books", { hours: 0.25 });

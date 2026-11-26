@@ -23,6 +23,7 @@
       const vpnSectionMetaEl = document.getElementById('vpnSectionMeta');
       const auditMetaEl = document.getElementById('auditMeta');
       const rowsEl = document.getElementById('rows');
+      const agentAccessEl = document.getElementById('agentAccess');
       const auditRowsEl = document.getElementById('auditRows');
       const updatesRowsEl = document.getElementById('updatesRows');
       const updatesSearchInputEl = document.getElementById('updatesSearchInput');
@@ -444,7 +445,7 @@
 
       function tickExpiryCountdowns() {
         let shouldRefresh = false;
-        rowsEl.querySelectorAll('.expiry[data-expires-at]').forEach((node) => {
+        document.querySelectorAll('#rows .expiry[data-expires-at], #agentAccess .expiry[data-expires-at]').forEach((node) => {
           const state = updateExpiryNode(node);
           if (node.dataset.enabled === '1' && state === 'expired') shouldRefresh = true;
         });
@@ -785,7 +786,7 @@
       function renderOverviewDigest(services, updateItems, helmUpdateItems) {
         if (!overviewDigestEl) return;
         const tuning = dashboardState.tuning || null;
-        const activeServices = services.filter((svc) => svc.enabled);
+        const activeServices = services.filter((svc) => svc.enabled && !isAgent(svc));
         const images = updateItems.filter((item) => item && item.status === 'update');
         const charts = helmUpdateItems.filter((item) => item && item.status === 'update');
         const pending = images.map((item) => ({
@@ -913,7 +914,7 @@
         const travel = dashboardState.travel || null;
         const tuning = dashboardState.tuning || null;
         const vpn = dashboardState.vpn || null;
-        const activeExposures = services.filter((svc) => svc.enabled).length;
+        const activeExposures = services.filter((svc) => svc.enabled && !isAgent(svc)).length;
         const updateItems = updates && Array.isArray(updates.items) ? updates.items : [];
         const helmUpdateItems = helmUpdates && Array.isArray(helmUpdates.items) ? helmUpdates.items : [];
         const updateCount = updateItems.concat(helmUpdateItems).filter((item) => item && item.status === 'update').length;
@@ -1306,7 +1307,7 @@
 
       function renderTravel(travel) {
         const travelData = travel || null;
-        const activeServices = (dashboardState.services || []).filter((svc) => svc.enabled);
+        const activeServices = (dashboardState.services || []).filter((svc) => svc.enabled && !isAgent(svc));
         if (!travelData) {
           travelSummaryEl.textContent = 'unavailable';
           travelSummaryEl.title = '';
@@ -1437,9 +1438,15 @@
         return (view !== 'active' || Boolean(service.enabled)) && text.includes(query.trim().toLowerCase());
       }
 
+      // Agent hosts are standing endpoints for machine clients, not temporary
+      // shares: they live in their own block and stay out of share counts.
+      function isAgent(service) {
+        return Boolean(service) && service.kind === 'agent';
+      }
+
       function filterShares() {
         let visible = 0;
-        const services = dashboardState.services || [];
+        const services = (dashboardState.services || []).filter((service) => !isAgent(service));
         rowsEl.querySelectorAll('[data-service-id]').forEach((row) => {
           const service = services.find((item) => item.id === row.dataset.serviceId);
           row.hidden = !service || !shareMatches(sharesSearch.value, shareView, service);
@@ -1455,8 +1462,163 @@
         button.onclick = () => { shareView = button.dataset.shareView; filterShares(); };
       });
 
-      function renderRows(services) {
+      const SHARE_HOURS = [0.25, 0.5, 1, 2, 6, 12, 24, null];
+      // The share being set up, kept across re-renders: { id, hours, authMode }.
+      let shareDraft = null;
+
+      function fmtShareHours(hours) {
+        if (hours === null) return 'never';
+        return hours < 1 ? Math.round(hours * 60) + 'm' : hours + 'h';
+      }
+
+      async function runShareMutation(btn, mutate, doneText) {
+        try {
+          mutationInFlight += 1;
+          setBtnLoading(btn, true);
+          await mutate();
+          setMsg(doneText);
+          await loadDashboard({ silent: true });
+        } catch (err) {
+          setMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          setBtnLoading(btn, false);
+        }
+      }
+
+      // One segmented choice; the shared glide thumb follows the pressed option.
+      function shareChoice(label, options, current, onPick) {
+        const field = document.createElement('div');
+        field.className = 'sheet-field';
+        const caption = document.createElement('span');
+        caption.className = 'eyebrow';
+        caption.textContent = label;
+        const group = document.createElement('div');
+        group.className = 'view-switch sheet-switch';
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-label', label);
+        const thumb = document.createElement('span');
+        thumb.className = 'glide-thumb';
+        thumb.setAttribute('aria-hidden', 'true');
+        group.appendChild(thumb);
+        options.forEach(([value, text]) => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.textContent = text;
+          option.setAttribute('aria-pressed', String(value === current));
+          option.onclick = () => {
+            group.querySelectorAll('button').forEach((item) => item.setAttribute('aria-pressed', String(item === option)));
+            onPick(value);
+          };
+          group.appendChild(option);
+        });
+        field.append(caption, group);
+        window.Fx.glide(group, thumb, '[aria-pressed="true"]', 'x');
+        return { field, group };
+      }
+
+      function closeShareSheet(options) {
+        const sheetRow = rowsEl.querySelector('.share-sheet-row:not(.is-closing)');
+        if (!sheetRow) return;
+        if (shareDraft && shareDraft.id === sheetRow.dataset.sheetFor) shareDraft = null;
+        const row = sheetRow.previousElementSibling;
+        const toggle = row && row.querySelector('.share-toggle');
+        if (row) row.classList.remove('is-configuring');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', 'false');
+          if (options && options.focus) toggle.focus({ preventScroll: true });
+        }
+        sheetRow.classList.add('is-closing');
+        sheetRow.querySelector('.share-sheet').classList.remove('is-open', 'is-settled');
+        // Reduced motion has no transition to wait for; the timer covers both.
+        setTimeout(() => sheetRow.remove(), 260);
+      }
+
+      // The sheet opens under its row, so the table's columns never move.
+      function openShareSheet(svc, row, toggle, options) {
+        const restoring = Boolean(options && options.restore);
+        if (!restoring) closeShareSheet();
+        if (!shareDraft || shareDraft.id !== svc.id) {
+          const defaultHours = Number(svc.defaultExpiryHours || 1);
+          shareDraft = {
+            id: svc.id,
+            hours: SHARE_HOURS.includes(defaultHours) ? defaultHours : 1,
+            authMode: svc.authMode === 'cloudflare-access' ? 'cloudflare-access' : 'none',
+          };
+        }
+        const draft = shareDraft;
+        row.classList.add('is-configuring');
+        toggle.setAttribute('aria-expanded', 'true');
+
+        const sheetRow = document.createElement('tr');
+        sheetRow.className = 'share-sheet-row';
+        sheetRow.dataset.sheetFor = svc.id;
+        const cell = document.createElement('td');
+        cell.colSpan = 6;
+        const sheet = document.createElement('div');
+        sheet.className = 'share-sheet';
+        sheet.id = toggle.getAttribute('aria-controls');
+        sheet.setAttribute('role', 'group');
+        sheet.setAttribute('aria-label', 'Share ' + (svc.name || svc.id));
+        const inner = document.createElement('div');
+        inner.className = 'share-sheet-inner';
+        const body = document.createElement('div');
+        body.className = 'share-sheet-body';
+
+        const expiry = shareChoice('Expires',
+          SHARE_HOURS.map((hours) => [hours, fmtShareHours(hours)]),
+          draft.hours, (hours) => { draft.hours = hours; });
+        const auth = shareChoice('Auth',
+          [['none', 'none'], ['cloudflare-access', 'cf-access']],
+          draft.authMode, (mode) => { draft.authMode = mode; });
+
+        const actions = document.createElement('div');
+        actions.className = 'sheet-actions';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'ghost';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => closeShareSheet({ focus: true });
+        const goBtn = document.createElement('button');
+        goBtn.type = 'button';
+        goBtn.className = 'danger';
+        goBtn.textContent = 'Go public';
+        goBtn.onclick = () => runShareMutation(goBtn, async () => {
+          await exposureClient.enable(svc.id, { hours: draft.hours, authMode: draft.authMode });
+          if (shareDraft === draft) shareDraft = null;
+        }, 'Enabled ' + svc.id);
+        actions.append(cancelBtn, goBtn);
+
+        body.append(expiry.field, auth.field, actions);
+        inner.appendChild(body);
+        sheet.appendChild(inner);
+        sheet.addEventListener('keydown', (event) => {
+          if (event.key !== 'Escape') return;
+          event.stopPropagation();
+          closeShareSheet({ focus: true });
+        });
+        cell.appendChild(sheet);
+        sheetRow.appendChild(cell);
+        // A restored sheet (after a refresh) appears already open, without motion.
+        if (restoring) sheet.classList.add('is-open', 'is-settled');
+        row.after(sheetRow);
+        if (restoring) return;
+        void sheet.offsetHeight;
+        sheet.classList.add('is-open');
+        expiry.group.querySelector('[aria-pressed="true"]').focus({ preventScroll: true });
+        // Once open, stop clipping so focus rings show; then keep it in view.
+        setTimeout(() => {
+          if (!sheetRow.isConnected || sheetRow.classList.contains('is-closing')) return;
+          sheet.classList.add('is-settled');
+          sheetRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 260);
+      }
+
+      function renderRows(allServices) {
+        const services = allServices.filter((svc) => !isAgent(svc));
+        renderAgents(allServices);
         rowsEl.innerHTML = '';
+        if (shareDraft && !services.some((svc) => svc.id === shareDraft.id && !svc.enabled)) shareDraft = null;
         if (!services.length) {
           const tr = document.createElement('tr');
           const td = document.createElement('td');
@@ -1514,99 +1676,35 @@
           expiryNode.textContent = expiry.text;
           expiryTd.appendChild(expiryNode);
 
-          tr.append(serviceTd, statusTd, authTd, urlTd, expiryTd);
-
           const controlsTd = document.createElement('td');
           const controls = document.createElement('div');
           controls.className = 'controls';
-
-          async function runMutation(btn, mutate, doneText) {
-            try {
-              mutationInFlight += 1;
-              setBtnLoading(btn, true);
-              await mutate();
-              setMsg(doneText);
-              await loadDashboard({ silent: true });
-            } catch (err) {
-              setMsg(err.message, true);
-            } finally {
-              mutationInFlight = Math.max(0, mutationInFlight - 1);
-            }
-          }
-
-          function renderIdleControls() {
-            controls.replaceChildren();
-            if (svc.enabled) {
-              const disableBtn = document.createElement('button');
-              disableBtn.textContent = 'Disable';
-              disableBtn.className = 'danger';
-              disableBtn.onclick = () => runMutation(disableBtn, () => exposureClient.disable(svc.id), 'Disabled ' + svc.id);
-              controls.appendChild(disableBtn);
-              return;
-            }
-            const shareBtn = document.createElement('button');
+          let shareBtn = null;
+          if (svc.enabled) {
+            const disableBtn = document.createElement('button');
+            disableBtn.textContent = 'Disable';
+            disableBtn.className = 'danger';
+            disableBtn.onclick = () => runShareMutation(disableBtn, () => exposureClient.disable(svc.id), 'Disabled ' + svc.id);
+            controls.appendChild(disableBtn);
+          } else {
+            shareBtn = document.createElement('button');
             shareBtn.textContent = 'Share';
-            shareBtn.onclick = () => renderShareControls();
+            shareBtn.className = 'share-toggle';
+            shareBtn.setAttribute('aria-expanded', 'false');
+            shareBtn.setAttribute('aria-controls', 'share-sheet-' + svc.id);
+            shareBtn.onclick = () => {
+              if (shareBtn.getAttribute('aria-expanded') === 'true') closeShareSheet();
+              else openShareSheet(svc, tr, shareBtn);
+            };
             controls.appendChild(shareBtn);
           }
-
-          function renderShareControls() {
-            controls.replaceChildren();
-            tr.classList.add('is-configuring');
-
-            const expirySelect = document.createElement('select');
-            expirySelect.className = 'control-select';
-            expirySelect.setAttribute('aria-label', 'Expiry for ' + svc.id);
-            [0.25, 0.5, 1, 2, 6, 12, 24].forEach((hours) => {
-              const opt = document.createElement('option');
-              opt.value = String(hours);
-              opt.textContent = hours < 1 ? Math.round(hours * 60) + 'm' : String(hours) + 'h';
-              if (hours === Number(svc.defaultExpiryHours || 1)) opt.selected = true;
-              expirySelect.appendChild(opt);
-            });
-            const untilDisabledOpt = document.createElement('option');
-            untilDisabledOpt.value = 'until-disabled';
-            untilDisabledOpt.textContent = 'No expiry';
-            expirySelect.appendChild(untilDisabledOpt);
-
-            const authSelect = document.createElement('select');
-            authSelect.className = 'control-select';
-            authSelect.setAttribute('aria-label', 'Auth mode for ' + svc.id);
-            ['none', 'cloudflare-access'].forEach((mode) => {
-              const opt = document.createElement('option');
-              opt.value = mode;
-              opt.textContent = mode === 'cloudflare-access' ? 'cf-access' : mode;
-              if (mode === (svc.authMode || 'none')) opt.selected = true;
-              authSelect.appendChild(opt);
-            });
-
-            const confirmBtn = document.createElement('button');
-            confirmBtn.textContent = 'Go public';
-            confirmBtn.className = 'danger';
-            confirmBtn.onclick = () => {
-              const hours = expirySelect.value === 'until-disabled' ? null : Number(expirySelect.value);
-              runMutation(confirmBtn, () => exposureClient.enable(svc.id, { hours, authMode: authSelect.value }), 'Enabled ' + svc.id);
-            };
-
-            const cancelBtn = document.createElement('button');
-            cancelBtn.textContent = 'Cancel';
-            cancelBtn.className = 'ghost';
-            cancelBtn.onclick = () => {
-              tr.classList.remove('is-configuring');
-              renderIdleControls();
-            };
-
-            controls.append(expirySelect, authSelect, confirmBtn, cancelBtn);
-            expirySelect.focus();
-          }
-
-          renderIdleControls();
           controlsTd.appendChild(controls);
-          tr.appendChild(controlsTd);
+          tr.append(serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd);
           [serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd].forEach((cell, index) => {
             cell.dataset.label = ['Service', 'Status', 'Auth', 'Public link', 'Expires', 'Actions'][index];
           });
           rowsEl.appendChild(tr);
+          if (shareBtn && shareDraft && shareDraft.id === svc.id) openShareSheet(svc, tr, shareBtn, { restore: true });
         });
         const emptyRow = document.createElement('tr');
         emptyRow.dataset.shareEmpty = '';
@@ -1614,6 +1712,92 @@
         rowsEl.appendChild(emptyRow);
         filterShares();
         tickExpiryCountdowns();
+      }
+
+      // Each agent host is one standing switch: on means reachable with its
+      // Cloudflare Access service token and no expiry; off cuts it.
+      function renderAgents(services) {
+        if (!agentAccessEl) return;
+        const agents = services.filter(isAgent);
+        agentAccessEl.hidden = agents.length === 0;
+        const ids = new Set(agents.map((agent) => agent.id));
+        agentAccessEl.querySelectorAll('[data-agent-id]').forEach((node) => {
+          if (!ids.has(node.dataset.agentId)) node.remove();
+        });
+        agents.forEach((agent) => {
+          let node = agentAccessEl.querySelector('[data-agent-id="' + agent.id + '"]');
+          if (!node) {
+            node = document.createElement('div');
+            node.className = 'route agent-route';
+            node.dataset.agentId = agent.id;
+            node.innerHTML =
+              '<div class="route-main">' +
+                '<div class="eyebrow">Agent access</div>' +
+                '<div class="route-state"><span class="lamp" data-agent-lamp></span><span data-agent-name></span></div>' +
+                '<div class="meta-line" data-agent-meta></div>' +
+              '</div>' +
+              '<div class="route-controls"><div class="vpn-toggle">' +
+                '<span class="vpn-toggle-label" data-agent-label="off">Off</span>' +
+                '<button class="toggle-switch" type="button" role="switch" aria-checked="false"><span class="toggle-knob" aria-hidden="true"></span></button>' +
+                '<span class="vpn-toggle-label" data-agent-label="on">On</span>' +
+              '</div></div>';
+            const toggle = node.querySelector('.toggle-switch');
+            toggle.onclick = () => setAgentAccess(agent.id, !toggle.classList.contains('on'));
+            node.querySelectorAll('[data-agent-label]').forEach((label) => {
+              label.onclick = () => {
+                const on = label.dataset.agentLabel === 'on';
+                if (on !== toggle.classList.contains('on')) setAgentAccess(agent.id, on);
+              };
+            });
+            agentAccessEl.appendChild(node);
+          }
+          const verified = agent.authMode === 'cloudflare-access';
+          node.querySelector('[data-agent-name]').textContent = agent.name || agent.id;
+          node.querySelector('[data-agent-lamp]').className = 'lamp ' + (!agent.enabled ? 'off' : verified ? 'status' : 'warning');
+          const meta = node.querySelector('[data-agent-meta]');
+          meta.innerHTML = '<span>' + escapeHtml(agent.publicHost || '') + '</span><span>' + (verified ? 'service token' : 'auth none') + '</span>';
+          if (agent.enabled) {
+            const expiry = fmtExpiry(agent.expiresAt, true);
+            const expiryNode = document.createElement('span');
+            expiryNode.className = 'expiry ' + expiry.state;
+            expiryNode.dataset.expiresAt = String(agent.expiresAt || '');
+            expiryNode.dataset.enabled = '1';
+            expiryNode.textContent = expiry.text;
+            meta.appendChild(expiryNode);
+          }
+          setAgentSwitch(node, agent.enabled);
+          node.querySelector('.toggle-switch').setAttribute('aria-label', 'Agent access for ' + (agent.name || agent.id));
+        });
+      }
+
+      function setAgentSwitch(node, on) {
+        const toggle = node.querySelector('.toggle-switch');
+        toggle.classList.toggle('on', on);
+        toggle.setAttribute('aria-checked', String(on));
+        node.querySelectorAll('[data-agent-label]').forEach((label) => label.classList.toggle('active', (label.dataset.agentLabel === 'on') === on));
+      }
+
+      async function setAgentAccess(id, on) {
+        const agent = (dashboardState.services || []).find((service) => service.id === id);
+        const node = agentAccessEl.querySelector('[data-agent-id="' + id + '"]');
+        if (!agent || !node || mutationInFlight > 0) return;
+        if (!confirm(on ? 'Open ' + agent.publicHost + ' to its service token?' : 'Cut agent access on ' + agent.publicHost + '?')) return;
+        const toggle = node.querySelector('.toggle-switch');
+        setAgentSwitch(node, on);
+        try {
+          mutationInFlight += 1;
+          setBtnLoading(toggle, true);
+          if (on) await exposureClient.enable(id, { hours: null, authMode: 'cloudflare-access' });
+          else await exposureClient.disable(id);
+          setMsg((on ? 'Opened ' : 'Closed ') + agent.publicHost);
+          await loadDashboard({ silent: true });
+        } catch (err) {
+          setAgentSwitch(node, agent.enabled);
+          setMsg(err.message, true);
+        } finally {
+          mutationInFlight = Math.max(0, mutationInFlight - 1);
+          setBtnLoading(toggle, false);
+        }
       }
 
       function renderAudit(entries) {
@@ -2712,7 +2896,7 @@
       };
 
       emergencyBtn.onclick = async () => {
-        if (!confirm('Disable ALL temporary exposures?')) return;
+        if (!confirm('Disable every share and agent access?')) return;
         try {
           mutationInFlight += 1;
           setBtnLoading(emergencyBtn, true);
@@ -2763,15 +2947,17 @@
       if (travelVpnBtn) travelVpnBtn.onclick = () => setTransmissionVpnMode('vpn');
 
       if (travelDisableSharesBtn) {
+        // Travel closes temporary shares only; agent access is not travel posture.
         travelDisableSharesBtn.onclick = async () => {
-          if (!confirm('Disable ALL temporary exposures?')) return;
+          if (!confirm('Disable all temporary shares?')) return;
           try {
             mutationInFlight += 1;
             setBtnLoading(travelDisableSharesBtn, true);
             setBtnLoading(emergencyBtn, true);
-            await exposureClient.disableAll();
-            setTravelMsg('All exposures disabled');
-            setMsg('All exposures disabled');
+            const open = (dashboardState.services || []).filter((svc) => svc.enabled && !isAgent(svc));
+            for (const svc of open) await exposureClient.disable(svc.id);
+            setTravelMsg('Shares disabled');
+            setMsg('Shares disabled');
             await loadDashboard({ silent: true });
           } catch (err) {
             setTravelMsg(err.message, true);
@@ -2887,6 +3073,22 @@
             commands.push({ group: 'Theme', label: mode[0].toUpperCase() + mode.slice(1), keywords: 'theme appearance', run: () => themeModeButtons.find((button) => button.dataset.themeMode === mode)?.click() });
           }
           for (const service of dashboardState.services || []) {
+            if (isAgent(service)) {
+              commands.push({
+                group: 'Shares',
+                label: service.name || service.id,
+                hint: 'agent ' + (service.enabled ? 'on' : 'off'),
+                keywords: [service.id, service.publicHost, 'agent token'].join(' '),
+                run: () => {
+                  setActivePage('exposure');
+                  const node = agentAccessEl.querySelector('[data-agent-id="' + service.id + '"]');
+                  if (!node) return;
+                  node.scrollIntoView({ block: 'center' });
+                  node.querySelector('.toggle-switch').focus({ preventScroll: true });
+                },
+              });
+              continue;
+            }
             commands.push({
               group: 'Shares',
               label: service.name || service.id,

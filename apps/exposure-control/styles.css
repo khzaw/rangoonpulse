@@ -456,8 +456,32 @@ th { position: sticky; top: 0; z-index: 2; padding-block: 10px; border-top: 0; b
 .expiry.urgent::before, .expiry.expired::before { content: ""; width: 6px; height: 6px; background: var(--yellow); }
 .expiry.expired::before { background: var(--red); }
 .controls { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.controls > * { animation: fade 180ms var(--ease-out); }
 .th-actions { width: 1%; }
+
+/* Share sheet: opens under its row, so no column ever changes width. */
+.share-toggle[aria-expanded="true"] { background: var(--bg-panel-strong); border-color: var(--border-strong); }
+.share-sheet-row > td { padding: 0; border-top: 0; }
+#rows tr[hidden] + .share-sheet-row { display: none; }
+.share-sheet { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 240ms var(--ease-out); }
+.share-sheet.is-open { grid-template-rows: 1fr; }
+.is-closing .share-sheet { transition-duration: 180ms; }
+.share-sheet-inner { min-height: 0; overflow: hidden; }
+.share-sheet.is-settled .share-sheet-inner { overflow: visible; }
+.share-sheet-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 28px;
+  padding: 4px 0 20px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 240ms var(--ease-out);
+}
+.share-sheet.is-open .share-sheet-body { opacity: 1; transform: none; transition-delay: 40ms; }
+.is-closing .share-sheet-body { transition-delay: 0ms; transition-duration: 120ms; }
+.sheet-field { display: grid; gap: 8px; }
+.sheet-switch > button { min-width: 38px; padding: 0 10px; font: 11.5px var(--font-mono); }
+.sheet-actions { display: flex; gap: 6px; margin-left: auto; }
 .disclosure { border-top: 1px solid var(--border); }
 .disclosure + .disclosure { margin-top: calc(var(--gap) * -1); }
 .disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; cursor: pointer; font-size: 13px; font-weight: 500; list-style: none; }
@@ -476,6 +500,11 @@ th { position: sticky; top: 0; z-index: 2; padding-block: 10px; border-top: 0; b
 .route-main { display: grid; gap: 6px; min-width: 0; }
 .route-state { font: 400 22px/1.1 var(--font-mono); letter-spacing: -.04em; }
 .route-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+.agent-route .route-state { display: flex; align-items: center; gap: 12px; }
+.lamp.off { background: transparent; box-shadow: inset 0 0 0 1px var(--text-3); }
+.agent-route .meta-line .expiry { font: inherit; }
+.agent-route .toggle-switch.on { border-color: color-mix(in srgb, var(--green) 55%, transparent); background: color-mix(in srgb, var(--green) 14%, transparent); }
+.agent-route .toggle-switch.on .toggle-knob { background: var(--green); }
 
 /* --------------------------------------------------------------- updates */
 
@@ -1098,6 +1127,13 @@ svg.matrix { display: block; width: auto; fill: currentColor; stroke: none; shap
   #rows td:nth-child(4), #rows td:last-child, .updates-service-cell, .updates-table .updates-version-cell, .update-row > .updates-context-cell { grid-column: 1 / -1; }
   #rows .controls { flex-wrap: wrap; justify-content: flex-start; }
   #rows td[colspan], .updates-scroll td[colspan] { display: block; padding: 24px 0; }
+  #rows .share-sheet-row { display: block; }
+  #rows .share-sheet-row > td[colspan] { padding: 0; }
+  .share-sheet-body { gap: 16px; padding-top: 0; }
+  .sheet-field { width: 100%; }
+  .sheet-switch { width: 100%; }
+  .sheet-switch > button { flex: 1; min-width: 0; padding: 0; }
+  .sheet-actions { width: 100%; justify-content: flex-end; }
   .updates-scroll tbody > tr:not(.update-row) { display: block; }
   .updates-context-cell .truncate-text { white-space: normal; }
   .version-tag { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }

@@ -78,6 +78,7 @@
     "name": "Actual Budget",
     "target": "http://actualbudget.default.svc.cluster.local:5006",
     "description": "Actual Budget for Cloudflare Access service-token clients",
+    "kind": "agent",
     "publicHostOverride": "actual-agent.${BASE_DOMAIN}",
     "authMode": "cloudflare-access",
     "accessAud": "30080de062feea385e770dae3b2bf724abd1c549e523496a2871fd72217c4782"

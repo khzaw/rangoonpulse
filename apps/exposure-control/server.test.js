@@ -245,7 +245,7 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
   const servicesPath = path.join(directory, "services.json");
   fs.writeFileSync(servicesPath, JSON.stringify([
     { id: "books", name: "Books", target: `http://127.0.0.1:${upstreamPort}`, accessAud: "books-aud" },
-    { id: "photos", name: "Photos", target: `http://127.0.0.1:${upstreamPort}`, publicHostOverride: "photos.example.test" },
+    { id: "photos", name: "Photos", target: `http://127.0.0.1:${upstreamPort}`, publicHostOverride: "photos.example.test", kind: "agent" },
   ]));
   let port;
   async function start() {
@@ -274,6 +274,7 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
     return response.json();
   } });
   let child = await start();
+  assert.deepEqual((await gui.list()).services.map((service) => service.kind), ["share", "agent"]);
   assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test")).status, 403);
   assert.equal((await exposureRequest(port, "/api/services", "GET", undefined, "other.example.test")).status, 403);
   const enabled = await cli("enable", "books", "--for", "15m", "--auth", "none");

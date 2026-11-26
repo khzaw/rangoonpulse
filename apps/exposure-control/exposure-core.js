@@ -39,6 +39,7 @@ function createExposureCore({
       id: service.id,
       name: service.name,
       description: service.description || "",
+      kind: service.kind === "agent" ? "agent" : "share",
       target: service.target,
       publicHost: host,
       publicUrl: "https://" + host,

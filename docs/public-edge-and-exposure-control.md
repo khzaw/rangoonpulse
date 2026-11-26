@@ -47,7 +47,7 @@ Current mismatch: `jackett`, `subarr`, `iris`, and `athena` are catalog entries 
 
 Private-only services have no catalog entry, Tunnel route, or DNS alias because they have no external sharing need: Audiobookshelf, Flux UI, Gatus, Immich, Radarr, Shelfmark, Sonarr, Speedtest, and Tracerr. Add share wiring for them only when public access is explicitly requested.
 
-`actual` uses the dedicated `actual-agent.khzaw.dev` host for API clients that hold a Cloudflare Access service token. See [service-token hosts](./share-host-authentication.md#service-token-hosts).
+`actual` uses the dedicated `actual-agent.khzaw.dev` host for API clients that hold a Cloudflare Access service token. Its catalog entry sets `"kind": "agent"`, which marks a standing machine endpoint rather than a temporary share: the cockpit shows it under Agent access instead of the share table, and share counts and travel posture leave it out. Entries without `kind` are shares; any other value fails startup. See [service-token hosts](./share-host-authentication.md#service-token-hosts).
 
 ## Runtime State
 
@@ -83,7 +83,7 @@ Overview leads with a count of states that need a look (nodes, travel, Transmiss
 
 The command palette (`Cmd/Ctrl+K` or `/`) reaches every page, each share row, theme modes, and the same actions as the page buttons. It adds no capability: destructive actions keep their confirmation, and anything without one on the page has none in the palette.
 
-Updates separates image and chart inventories into keyboard-accessible tabs. Shares lists public services first and supports text search and a Public filter without replacing in-progress share forms. Disable all lives on Shares and Travel. Job schedules and history, overview freshness, and tuning schedule evidence are expandable. Jobs, deployments, and secret inventories load on demand, including when selected during initial loading.
+Updates separates image and chart inventories into keyboard-accessible tabs. Shares lists public services first and supports text search and a Public filter without replacing in-progress share forms. Share opens a sheet under its row with expiry and auth choices, so the table's columns never move; one sheet is open at a time, Escape closes it, and its choices survive a refresh. Agent access sits below the table as one switch per agent host: on enables it with `cloudflare-access` and no expiry, off disables it. Disable all on Shares closes every share and agent host; the Travel button closes temporary shares only. Job schedules and history, overview freshness, and tuning schedule evidence are expandable. Jobs, deployments, and secret inventories load on demand, including when selected during initial loading.
 
 Boxes are reserved for the dashboard pages: the Overview hero and the Pulse reading strip. Every other page is open type on hairlines, with a stronger rule opening a group and a faint one dividing its rows; do not add framed cards or corner ornaments to them.
 

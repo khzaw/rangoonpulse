@@ -3,7 +3,7 @@ title: Share-Host Authentication
 summary: Cloudflare Access trust boundary, token verification, service-token hosts, and external configuration requirements for public share hosts.
 status: active
 owner: homelab
-last_reviewed: 2026-11-26
+last_reviewed: 2026-11-27
 ---
 
 # Share-Host Authentication
@@ -33,11 +33,11 @@ Canonical overrides such as `actual-agent.khzaw.dev`, `iris.khzaw.dev`, or `athe
 
 `actual-agent.khzaw.dev` exposes Actual Budget to API clients outside the tailnet. Its Access application must have a single Service Auth policy for that client's service token. The client sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` on every request; Cloudflare rejects requests without them before the Tunnel. Actual's server password still applies, and Actual has no read-only scope.
 
-Keep each service token on a dedicated host and application. Adding a service token to a shared `share-*` application would admit it to every enabled share. Exposure-control still owns enablement, so enable the share with `cloudflare-access` mode, usually `--until-disabled`, and disable it to cut access without touching Cloudflare.
+Keep each service token on a dedicated host and application. Adding a service token to a shared `share-*` application would admit it to every enabled share. Mark the catalog entry `"kind": "agent"` so the cockpit shows it under Agent access rather than among temporary shares. Exposure-control still owns enablement: the Agent access switch, or the CLI with `cloudflare-access` mode and usually `--until-disabled`, opens the host, and disabling it cuts access without touching Cloudflare.
 
 ## Repository Touch Points
 
-- service auth mode and optional `accessAud`: `apps/exposure-control/services.json` and runtime state
+- service auth mode, optional `accessAud`, and agent `kind`: `apps/exposure-control/services.json` and runtime state
 - team domain: `CF_ACCESS_TEAM_DOMAIN` in `apps/exposure-control/helmrelease.yaml`
 - Tunnel host route: `infrastructure/public-edge/helmrelease.yaml`
 - DNS alias: `infrastructure/public-edge/share-hosts-cname.yaml`

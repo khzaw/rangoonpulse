@@ -492,6 +492,10 @@ function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+// A share is a temporary public link for people; an agent host is a standing
+// endpoint for a machine client and is left out of temporary-share posture.
+const SERVICE_KINDS = new Set(["share", "agent"]);
+
 function loadServices() {
   const raw = fs.readFileSync(SERVICES_FILE, "utf8");
   const parsed = JSON.parse(raw);
@@ -507,6 +511,9 @@ function loadServices() {
     }
     if (svc.accessAud !== undefined && (typeof svc.accessAud !== "string" || !svc.accessAud.trim())) {
       throw new Error("accessAud for service " + svc.id + " must be a non-empty string");
+    }
+    if (svc.kind !== undefined && !SERVICE_KINDS.has(svc.kind)) {
+      throw new Error("invalid kind for service " + svc.id + ": " + svc.kind);
     }
   }
   return parsed.map((svc) => ({
@@ -4085,7 +4092,7 @@ async function buildTravelSnapshot() {
     };
   });
   const activeShares = snapshotServices()
-    .filter((item) => item.enabled)
+    .filter((item) => item.enabled && item.kind !== "agent")
     .map((item) => ({
       id: item.id,
       name: item.name,
