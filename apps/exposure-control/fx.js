@@ -263,18 +263,82 @@
 
   /* -------------------------------------------------------------- toasts */
 
+  // Toasts form one deck at the top centre: the newest in front, two older
+  // ones peeking below it. Hovering or focusing the deck fans it out and
+  // pauses every timer.
+  const TOAST_ICONS = {
+    done: '<path d="m6.5 12.5 3.5 3.5 7.5-8"/>',
+    danger: '<path d="m8 8 8 8M16 8l-8 8"/>',
+    warning: '<path d="M12 6.5v7M12 17v.5"/>',
+    info: '<circle cx="12" cy="12" r="7"/><path d="M12 8.5V12l2.5 1.5"/>',
+    busy: '<path d="M12 5a7 7 0 1 1-7 7"/>',
+  };
+  const TOAST_LIFETIME = { done: 3600, info: 5200, warning: 7000, danger: 9000, busy: 90000 };
   const toasts = new Map();
+  let deckExpanded = false;
+
   function toastHost() {
     let host = window.document.getElementById('toasts');
     if (!host) {
-      host = window.document.createElement('div');
+      host = window.document.createElement('section');
       host.id = 'toasts';
       host.className = 'toasts';
-      host.setAttribute('role', 'status');
+      host.setAttribute('aria-label', 'Notifications');
       host.setAttribute('aria-live', 'polite');
+      const expand = (on) => {
+        if (deckExpanded === on) return;
+        deckExpanded = on;
+        host.classList.toggle('is-expanded', on);
+        for (const entry of toasts.values()) (on ? pauseToast : startToast)(entry);
+        layoutToasts();
+      };
+      host.addEventListener('pointerenter', () => expand(true));
+      host.addEventListener('pointerleave', () => expand(false));
+      host.addEventListener('focusin', () => expand(true));
+      host.addEventListener('focusout', (event) => { if (!host.contains(event.relatedTarget)) expand(false); });
       window.document.body.appendChild(host);
     }
     return host;
+  }
+
+  function startToast(entry) {
+    window.clearTimeout(entry.timer);
+    if (deckExpanded) return;
+    entry.startedAt = Date.now();
+    entry.timer = window.setTimeout(() => dismiss(entry.scope), entry.remaining);
+  }
+
+  function pauseToast(entry) {
+    window.clearTimeout(entry.timer);
+    if (entry.startedAt) entry.remaining = Math.max(1200, entry.remaining - (Date.now() - entry.startedAt));
+    entry.startedAt = 0;
+  }
+
+  // Collapsed, each older card keeps its bottom edge 8px under the one in
+  // front of it; expanded, the cards stack in full with a 8px gap.
+  function layoutToasts() {
+    const host = window.document.getElementById('toasts');
+    if (!host) return;
+    const deck = [...toasts.values()].sort((a, b) => b.order - a.order);
+    const heights = deck.map((entry) => entry.node.offsetHeight);
+    const frontHeight = heights[0] || 0;
+    let offset = 0;
+    deck.forEach((entry, index) => {
+      const style = entry.node.style;
+      entry.node.classList.toggle('is-front', index === 0);
+      entry.node.style.zIndex = String(deck.length - index);
+      if (deckExpanded) {
+        style.setProperty('--y', offset + 'px');
+        style.setProperty('--s', '1');
+        style.setProperty('--o', '1');
+      } else {
+        style.setProperty('--y', (frontHeight - heights[index] + index * 8) + 'px');
+        style.setProperty('--s', String(1 - Math.min(index, 3) * 0.05));
+        style.setProperty('--o', index < 3 ? '1' : '0');
+      }
+      offset += heights[index] + 8;
+    });
+    host.style.height = (deckExpanded ? Math.max(0, offset - 8) : frontHeight + Math.min(deck.length - 1, 2) * 8) + 'px';
   }
 
   function dismiss(scope) {
@@ -283,34 +347,85 @@
     toasts.delete(scope);
     window.clearTimeout(entry.timer);
     entry.node.classList.add('is-leaving');
-    window.setTimeout(() => entry.node.remove(), 200);
+    window.setTimeout(() => entry.node.remove(), 220);
+    if (!toasts.size) {
+      deckExpanded = false;
+      window.document.getElementById('toasts')?.classList.remove('is-expanded');
+    }
+    layoutToasts();
   }
 
-  // One toast per scope: "Saving…" becomes "Saved." in place instead of stacking.
+  function replay(node, className) {
+    node.classList.remove(className);
+    void node.offsetWidth;
+    node.classList.add(className);
+    window.setTimeout(() => node.classList.remove(className), 400);
+  }
+
+  // One toast per scope, updated in place: "Opening…" becomes "Public" on the
+  // same card, and the icon morphs instead of a second card stacking up.
+  // Options: tone (done|busy|danger|warning|info), detail, action {label, run}.
   function toast(scope, text, options = {}) {
     if (!window) return;
     if (!text) { dismiss(scope); return; }
     const busy = options.busy ?? /(…|\.\.\.)$/.test(text);
+    const tone = options.tone || (options.error ? 'danger' : busy ? 'busy' : 'done');
+    const detail = options.detail ? String(options.detail) : '';
     let entry = toasts.get(scope);
     if (!entry) {
       // Several areas failing for one reason should read as one message.
-      for (const other of toasts.values()) if (other.text === text) return;
-      const node = window.document.createElement('button');
-      node.type = 'button';
-      node.className = 'toast';
-      node.innerHTML = '<span class="toast-mark" aria-hidden="true"></span><span class="toast-text"></span>';
-      node.addEventListener('click', () => dismiss(scope));
+      for (const other of toasts.values()) if (other.text === text && other.detail === detail) return;
+      const node = window.document.createElement('div');
+      node.className = 'toast is-entering';
+      node.innerHTML =
+        '<button type="button" class="toast-main">' +
+          '<span class="toast-icon" aria-hidden="true"><svg viewBox="0 0 24 24"></svg></span>' +
+          '<span class="toast-copy"><span class="toast-title"></span><span class="toast-detail"></span></span>' +
+        '</button>';
+      node.querySelector('.toast-main').addEventListener('click', () => dismiss(scope));
       toastHost().appendChild(node);
-      entry = { node };
+      entry = { scope, node, order: 0, tone: '' };
       toasts.set(scope, entry);
     }
-    window.clearTimeout(entry.timer);
+    const { node } = entry;
+    const changed = entry.text !== text || entry.detail !== detail;
+    entry.order = ++toast.order;
     entry.text = text;
-    entry.node.querySelector('.toast-text').textContent = text;
-    entry.node.dataset.tone = options.error ? 'danger' : busy ? 'busy' : 'done';
-    entry.node.setAttribute('aria-label', text + ' — dismiss');
-    entry.timer = window.setTimeout(() => dismiss(scope), options.error ? 9000 : busy ? 90000 : 3200);
+    entry.detail = detail;
+    node.querySelector('.toast-title').textContent = text;
+    const detailNode = node.querySelector('.toast-detail');
+    detailNode.textContent = detail;
+    detailNode.hidden = !detail;
+    node.querySelector('.toast-main').setAttribute('aria-label', text + (detail ? ', ' + detail : '') + ' — dismiss');
+    if (entry.tone !== tone) {
+      node.querySelector('.toast-icon svg').innerHTML = TOAST_ICONS[tone] || TOAST_ICONS.done;
+      if (entry.tone) replay(node.querySelector('.toast-icon'), 'is-morphing');
+      entry.tone = tone;
+    }
+    node.dataset.tone = tone;
+    if (changed && !node.classList.contains('is-entering')) replay(node.querySelector('.toast-copy'), 'is-updating');
+
+    node.querySelector('.toast-action')?.remove();
+    if (options.action && options.action.label && typeof options.action.run === 'function') {
+      const action = window.document.createElement('button');
+      action.type = 'button';
+      action.className = 'toast-action';
+      action.textContent = options.action.label;
+      action.addEventListener('click', () => options.action.run());
+      node.appendChild(action);
+    }
+
+    entry.remaining = options.duration || TOAST_LIFETIME[tone] + (options.action ? 2400 : 0);
+    startToast(entry);
+    layoutToasts();
+    if (node.classList.contains('is-entering')) {
+      // Enter from above the deck, then settle into place.
+      void node.offsetWidth;
+      node.classList.remove('is-entering');
+    }
   }
+  toast.order = 0;
+
 
   /* ------------------------------------------------------------- palette */
 

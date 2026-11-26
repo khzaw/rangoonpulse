@@ -444,16 +444,23 @@
       }
 
       function tickExpiryCountdowns() {
-        let shouldRefresh = false;
+        const expired = new Set();
         document.querySelectorAll('#rows .expiry[data-expires-at], #agentAccess .expiry[data-expires-at]').forEach((node) => {
           const state = updateExpiryNode(node);
-          if (node.dataset.enabled === '1' && state === 'expired') shouldRefresh = true;
+          const owner = node.closest('[data-service-id], [data-agent-id]');
+          if (node.dataset.enabled === '1' && state === 'expired' && owner) expired.add(owner.dataset.serviceId || owner.dataset.agentId);
         });
-        if (shouldRefresh && mutationInFlight === 0 && !pendingExpiryRefresh) {
+        if (expired.size && mutationInFlight === 0 && !pendingExpiryRefresh) {
           pendingExpiryRefresh = true;
           setTimeout(async () => {
             try {
               await refreshServicesOnly();
+              const closed = (dashboardState.services || []).filter((svc) => expired.has(svc.id) && !svc.enabled);
+              if (closed.length === 1) {
+                window.Fx.toast('shares', (closed[0].name || closed[0].id) + ' expired', { tone: 'info', detail: closed[0].publicHost + ' is private' });
+              } else if (closed.length) {
+                window.Fx.toast('shares', closed.length + ' shares expired', { tone: 'info', detail: namesOf(closed) });
+              }
             } finally {
               pendingExpiryRefresh = false;
             }
@@ -1471,19 +1478,83 @@
         return hours < 1 ? Math.round(hours * 60) + 'm' : hours + 'h';
       }
 
-      async function runShareMutation(btn, mutate, doneText) {
+      // Every exposure action reports through one toast: busy while the
+      // request runs, then the outcome at the moment the page shows it.
+      const MIN_BUSY_MS = 450;
+
+      function shareTerms(service) {
+        const expiry = service.expiresAt ? fmtExpiry(service.expiresAt, true).text : 'no expiry';
+        return expiry + ' · ' + (service.authMode === 'cloudflare-access' ? 'cf-access' : 'auth none');
+      }
+
+      function namesOf(services) {
+        const names = services.map((service) => service.name || service.id);
+        return names.length > 3 ? names.slice(0, 2).join(', ') + ' and ' + (names.length - 2) + ' more' : names.join(', ');
+      }
+
+      // Snapshots returned by the API update the page at once; the rest of
+      // the dashboard refreshes in the background.
+      function applyServiceSnapshots(result) {
+        const snapshots = (result && (result.services || (result.service ? [result.service] : []))) || [];
+        const byId = new Map(snapshots.filter((service) => service && service.id).map((service) => [service.id, service]));
+        if (!byId.size) return;
+        dashboardState.services = (dashboardState.services || []).map((service) => byId.get(service.id) || service);
+        renderRows(dashboardState.services);
+        renderOverview();
+      }
+
+      async function runExposure(task) {
+        const { btn, busy, request, done, fail } = task;
+        const started = Date.now();
+        window.Fx.toast('shares', busy.text, { tone: 'busy', detail: busy.detail });
         try {
           mutationInFlight += 1;
-          setBtnLoading(btn, true);
-          await mutate();
-          setMsg(doneText);
-          await loadDashboard({ silent: true });
+          if (btn) setBtnLoading(btn, true);
+          const result = await request();
+          await new Promise((resolve) => setTimeout(resolve, Math.max(0, MIN_BUSY_MS - (Date.now() - started))));
+          applyServiceSnapshots(result);
+          const outcome = done(result || {});
+          window.Fx.toast('shares', outcome.text, { tone: outcome.tone || 'done', detail: outcome.detail, action: outcome.action });
+          void loadDashboard({ silent: true });
+          return result || {};
         } catch (err) {
-          setMsg(err.message, true);
+          window.Fx.toast('shares', fail, {
+            tone: 'danger',
+            detail: err.message,
+            action: { label: 'Retry', run: () => runExposure({ ...task, btn: null }) },
+          });
+          return null;
         } finally {
           mutationInFlight = Math.max(0, mutationInFlight - 1);
-          setBtnLoading(btn, false);
+          if (btn) setBtnLoading(btn, false);
         }
+      }
+
+      async function copyShareLink(service) {
+        try {
+          await navigator.clipboard.writeText(service.publicUrl);
+          window.Fx.toast('shares', 'Link copied', { detail: service.publicUrl });
+        } catch {
+          window.Fx.toast('shares', 'Clipboard blocked', { tone: 'danger', detail: service.publicUrl });
+        }
+      }
+
+      function shareOpened(label, service) {
+        return { text: label + ' is public', detail: shareTerms(service), action: { label: 'Copy link', run: () => copyShareLink(service) } };
+      }
+
+      // Undo reopens with the same auth and whatever time was left, rounded
+      // up to the API's 15-minute steps.
+      function reopenShare(previous) {
+        const label = previous.name || previous.id;
+        const left = previous.expiresAt ? (Date.parse(previous.expiresAt) - Date.now()) / 3600000 : null;
+        const hours = left === null ? null : Math.min(24, Math.max(0.25, Math.ceil(left * 4) / 4));
+        return runExposure({
+          busy: { text: 'Reopening ' + label + '…', detail: previous.publicHost },
+          request: () => exposureClient.enable(previous.id, { hours, authMode: previous.authMode === 'cloudflare-access' ? 'cloudflare-access' : 'none' }),
+          done: ({ service }) => shareOpened(label, service || previous),
+          fail: 'Couldn\'t reopen ' + label,
+        });
       }
 
       // One segmented choice; the shared glide thumb follows the pressed option.
@@ -1583,10 +1654,17 @@
         goBtn.type = 'button';
         goBtn.className = 'danger';
         goBtn.textContent = 'Go public';
-        goBtn.onclick = () => runShareMutation(goBtn, async () => {
-          await exposureClient.enable(svc.id, { hours: draft.hours, authMode: draft.authMode });
-          if (shareDraft === draft) shareDraft = null;
-        }, 'Enabled ' + svc.id);
+        const label = svc.name || svc.id;
+        goBtn.onclick = () => runExposure({
+          btn: goBtn,
+          busy: { text: 'Opening ' + label + '…', detail: svc.publicHost },
+          request: () => exposureClient.enable(svc.id, { hours: draft.hours, authMode: draft.authMode }),
+          done: ({ service }) => {
+            if (shareDraft === draft) shareDraft = null;
+            return shareOpened(label, service || svc);
+          },
+          fail: 'Couldn\'t open ' + label,
+        });
         actions.append(cancelBtn, goBtn);
 
         body.append(expiry.field, auth.field, actions);
@@ -1684,7 +1762,13 @@
             const disableBtn = document.createElement('button');
             disableBtn.textContent = 'Disable';
             disableBtn.className = 'danger';
-            disableBtn.onclick = () => runShareMutation(disableBtn, () => exposureClient.disable(svc.id), 'Disabled ' + svc.id);
+            disableBtn.onclick = () => runExposure({
+              btn: disableBtn,
+              busy: { text: 'Closing ' + (svc.name || svc.id) + '…', detail: svc.publicHost },
+              request: () => exposureClient.disable(svc.id),
+              done: () => ({ text: (svc.name || svc.id) + ' is private', detail: svc.publicHost, action: { label: 'Undo', run: () => reopenShare(svc) } }),
+              fail: 'Couldn\'t close ' + (svc.name || svc.id),
+            });
             controls.appendChild(disableBtn);
           } else {
             shareBtn = document.createElement('button');
@@ -1784,20 +1868,14 @@
         if (!confirm(on ? 'Open ' + agent.publicHost + ' to its service token?' : 'Cut agent access on ' + agent.publicHost + '?')) return;
         const toggle = node.querySelector('.toggle-switch');
         setAgentSwitch(node, on);
-        try {
-          mutationInFlight += 1;
-          setBtnLoading(toggle, true);
-          if (on) await exposureClient.enable(id, { hours: null, authMode: 'cloudflare-access' });
-          else await exposureClient.disable(id);
-          setMsg((on ? 'Opened ' : 'Closed ') + agent.publicHost);
-          await loadDashboard({ silent: true });
-        } catch (err) {
-          setAgentSwitch(node, agent.enabled);
-          setMsg(err.message, true);
-        } finally {
-          mutationInFlight = Math.max(0, mutationInFlight - 1);
-          setBtnLoading(toggle, false);
-        }
+        const result = await runExposure({
+          btn: toggle,
+          busy: { text: (on ? 'Opening' : 'Closing') + ' agent access…', detail: agent.publicHost },
+          request: () => on ? exposureClient.enable(id, { hours: null, authMode: 'cloudflare-access' }) : exposureClient.disable(id),
+          done: () => ({ text: 'Agent access ' + (on ? 'on' : 'off'), detail: (agent.name || agent.id) + ' · ' + agent.publicHost }),
+          fail: 'Couldn\'t change agent access',
+        });
+        if (!result) setAgentSwitch(node, agent.enabled);
       }
 
       function renderAudit(entries) {
@@ -2897,18 +2975,14 @@
 
       emergencyBtn.onclick = async () => {
         if (!confirm('Disable every share and agent access?')) return;
-        try {
-          mutationInFlight += 1;
-          setBtnLoading(emergencyBtn, true);
-          await exposureClient.disableAll();
-          setMsg('All exposures disabled');
-          await loadDashboard({ silent: true });
-        } catch (err) {
-          setMsg(err.message, true);
-        } finally {
-          mutationInFlight = Math.max(0, mutationInFlight - 1);
-          setBtnLoading(emergencyBtn, false);
-        }
+        const open = (dashboardState.services || []).filter((svc) => svc.enabled);
+        await runExposure({
+          btn: emergencyBtn,
+          busy: { text: 'Closing everything…', detail: open.length ? namesOf(open) : '' },
+          request: () => exposureClient.disableAll(),
+          done: () => ({ text: 'Everything is private', detail: open.length ? namesOf(open) + ' closed' : 'nothing was public' }),
+          fail: 'Couldn\'t close everything',
+        });
       };
 
       async function setTransmissionVpnMode(mode) {
@@ -2950,22 +3024,16 @@
         // Travel closes temporary shares only; agent access is not travel posture.
         travelDisableSharesBtn.onclick = async () => {
           if (!confirm('Disable all temporary shares?')) return;
-          try {
-            mutationInFlight += 1;
-            setBtnLoading(travelDisableSharesBtn, true);
-            setBtnLoading(emergencyBtn, true);
-            const open = (dashboardState.services || []).filter((svc) => svc.enabled && !isAgent(svc));
-            for (const svc of open) await exposureClient.disable(svc.id);
-            setTravelMsg('Shares disabled');
-            setMsg('Shares disabled');
-            await loadDashboard({ silent: true });
-          } catch (err) {
-            setTravelMsg(err.message, true);
-          } finally {
-            mutationInFlight = Math.max(0, mutationInFlight - 1);
-            setBtnLoading(travelDisableSharesBtn, false);
-            setBtnLoading(emergencyBtn, false);
-          }
+          const services = dashboardState.services || [];
+          const open = services.filter((svc) => svc.enabled && !isAgent(svc));
+          const agentOn = services.some((svc) => svc.enabled && isAgent(svc));
+          await runExposure({
+            btn: travelDisableSharesBtn,
+            busy: { text: 'Closing ' + open.length + (open.length === 1 ? ' share…' : ' shares…'), detail: namesOf(open) },
+            request: async () => ({ services: (await Promise.all(open.map((svc) => exposureClient.disable(svc.id)))).map((reply) => reply && reply.service) }),
+            done: () => ({ text: 'Shares closed', detail: namesOf(open) + (agentOn ? ' · agent access kept' : '') }),
+            fail: 'Couldn\'t close shares',
+          });
         };
       }
 

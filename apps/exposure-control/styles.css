@@ -371,7 +371,7 @@ a.tile:hover .tile-arrow, a.link:hover svg { transform: translate(2px, -2px); co
 }
 
 /* State is a lamp beside the label; values stay ink. */
-.lamp, :where(.tile[data-tone]:not([data-tone="neutral"])) .tile-label::before, .chip[data-tone]::before, .pill::before, .toast-mark {
+.lamp, :where(.tile[data-tone]:not([data-tone="neutral"])) .tile-label::before, .chip[data-tone]::before, .pill::before {
   content: "";
   flex: none;
   width: 6px;
@@ -968,28 +968,68 @@ svg.matrix { display: block; width: auto; fill: currentColor; stroke: none; shap
 
 /* ---------------------------------------------------------------- toasts */
 
-.toasts { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; }
+/* One deck at the top centre. Cards sit absolutely; fx.js sets each card's
+   --y, --s and --o for the collapsed or fanned-out layout. */
+.toasts {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 60;
+  width: min(380px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  transition: height 360ms var(--ease-out);
+}
 .toast {
-  pointer-events: auto;
-  justify-content: flex-start;
-  max-width: min(440px, calc(100vw - 32px));
-  min-height: 38px;
-  padding: 8px 14px 8px 12px;
-  border-color: var(--border-strong);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
   background: var(--bg-panel-strong);
-  box-shadow: 0 12px 32px var(--shadow);
+  box-shadow: 0 14px 36px var(--shadow);
+  transform-origin: 50% 100%;
+  transform: translateY(var(--y, 0px)) scale(var(--s, 1));
+  opacity: var(--o, 1);
+  transition: transform 380ms var(--ease-out), opacity 220ms ease;
+}
+.toast.is-entering { opacity: 0; transform: translateY(calc(-100% - 16px)); }
+.toast.is-leaving { opacity: 0; transform: translateY(calc(var(--y, 0px) - 10px)) scale(calc(var(--s, 1) * .96)); pointer-events: none; transition-duration: 200ms; }
+.toast > * { transition: opacity 160ms ease; }
+.toasts:not(.is-expanded) .toast:not(.is-front) > * { opacity: 0; }
+.toast-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 0 4px 0 0;
+  border: 0;
+  background: transparent;
   font-weight: 400;
   text-align: left;
   white-space: normal;
-  animation: toastIn 220ms var(--ease-out);
-  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
 }
-.toast:hover { background: var(--bg-hover); }
-.toast.is-leaving { opacity: 0; transform: translateY(6px) scale(.98); }
-.toast[data-tone="done"] .toast-mark { background: var(--green); }
-.toast[data-tone="danger"] .toast-mark { background: var(--red); }
-.toast[data-tone="busy"] .toast-mark { background: var(--text-1); animation: blink .8s steps(2, end) infinite; }
-@keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+.toast-main:hover { background: transparent; }
+.toast-main:active { transform: none; }
+.toast-icon { flex: none; display: grid; place-items: center; width: 32px; height: 32px; background: var(--bg-hover); color: var(--text-1); transition: background 220ms ease, color 220ms ease; }
+.toast-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; }
+.toast[data-tone="done"] .toast-icon { background: var(--green); color: var(--bg-base); }
+.toast[data-tone="danger"] .toast-icon { background: var(--red); color: var(--bg-base); }
+.toast[data-tone="warning"] .toast-icon { background: var(--yellow); color: var(--bg-base); }
+.toast[data-tone="busy"] .toast-icon svg { animation: spin .8s linear infinite; }
+.toast-icon.is-morphing { animation: iconMorph 300ms var(--ease-out); }
+.toast-copy { display: grid; gap: 1px; min-width: 0; }
+.toast-copy.is-updating { animation: copyIn 240ms var(--ease-out); }
+.toast-title { color: var(--text-1); font-size: 13px; font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+.toast-detail { color: var(--text-3); font: 11px/1.5 var(--font-mono); overflow-wrap: anywhere; }
+.toast-action { flex: none; min-height: 30px; padding: 0 12px; border-color: transparent; background: var(--bg-hover); font-size: 12px; }
+.toast-action:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+@keyframes iconMorph { from { transform: scale(.7); filter: blur(1.5px); } }
+@keyframes copyIn { from { opacity: .35; transform: translateY(3px); } }
 
 /* --------------------------------------------------------------- palette */
 
@@ -1085,8 +1125,6 @@ svg.matrix { display: block; width: auto; fill: currentColor; stroke: none; shap
   .tank-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .placement-detail { min-height: 72px; }
   .job-config-grid, .secret-key-row { grid-template-columns: minmax(0, 1fr); }
-  .toasts { right: 12px; left: 12px; bottom: 12px; align-items: stretch; }
-  .toast { max-width: none; }
   .deploy-list { grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; }
   .deploy-row { row-gap: 8px; }
   .deploy-row > * { grid-column: 1 / -1; }
