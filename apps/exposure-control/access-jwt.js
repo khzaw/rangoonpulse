@@ -35,9 +35,21 @@ function parseJsonSegment(segment, label) {
   throw new AccessTokenError("malformed token " + label);
 }
 
+// Node's connection errors can carry an empty message (AggregateError from
+// address fallback), so fall back to codes for logs and 503 reasons.
+function describeError(error) {
+  if (!error) return "unknown error";
+  const inner = Array.isArray(error.errors)
+    ? [...new Set(error.errors.map((item) => item?.code || item?.message).filter(Boolean))].join(",")
+    : "";
+  return error.message || error.code || inner || error.name || String(error);
+}
+
 function createAccessVerifier({
   teamDomain, fetchJson, now = Date.now,
-  clockSkewSeconds = 60, refreshCooldownMs = 30_000, maxKeyAgeMs = 60 * 60 * 1000,
+  clockSkewSeconds = 60, refreshCooldownMs = 30_000, failureBackoffMs = 2_000,
+  maxKeyAgeMs = 60 * 60 * 1000, fetchAttempts = 3, retryDelayMs = 300,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }) {
   const issuer = normalizeTeamDomain(teamDomain);
   if (!issuer) throw new Error("Cloudflare Access team domain is required");
@@ -46,6 +58,7 @@ function createAccessVerifier({
   let fetchedAt = 0;
   let attemptedAt = 0;
   let inflight = null;
+  let lastFailure = null;
 
   function importKeys(body) {
     const next = new Map();
@@ -60,14 +73,31 @@ function createAccessVerifier({
     return next;
   }
 
+  async function fetchKeys() {
+    let lastError = null;
+    for (let attempt = 1; attempt <= fetchAttempts; attempt += 1) {
+      try {
+        return importKeys(await fetchJson(certsUrl));
+      } catch (error) {
+        lastError = error;
+        if (attempt < fetchAttempts) await sleep(retryDelayMs * attempt);
+      }
+    }
+    throw lastError;
+  }
+
   function refresh() {
     if (!inflight) {
       attemptedAt = now();
-      inflight = Promise.resolve()
-        .then(() => fetchJson(certsUrl))
-        .then((body) => {
-          keys = importKeys(body);
+      inflight = fetchKeys()
+        .then((next) => {
+          keys = next;
           fetchedAt = now();
+          lastFailure = null;
+        })
+        .catch((error) => {
+          lastFailure = error;
+          throw error;
         })
         .finally(() => {
           inflight = null;
@@ -78,18 +108,17 @@ function createAccessVerifier({
 
   async function keyFor(kid) {
     const needsRefresh = !keys.size || !keys.has(kid) || now() - fetchedAt > maxKeyAgeMs;
-    // Refreshes run at most once per cooldown so forged key ids or an
-    // unreachable certs endpoint cannot turn every request into a fetch.
-    let failure = null;
-    if (needsRefresh && (inflight || now() - attemptedAt >= refreshCooldownMs)) {
+    // Refreshes are rate limited so forged key ids or an unreachable certs
+    // endpoint cannot turn every request into a fetch. Without any keys the
+    // wait is short: every request fails until a fetch succeeds.
+    const wait = keys.size ? refreshCooldownMs : failureBackoffMs;
+    if (needsRefresh && (inflight || now() - attemptedAt >= wait)) {
       try {
         await refresh();
-      } catch (error) {
-        failure = error;
-      }
+      } catch {}
     }
     if (!keys.size) {
-      const reason = failure ? ": " + failure.message : "";
+      const reason = lastFailure ? ": " + describeError(lastFailure) : "";
       throw new AccessTokenError("cloudflare access keys unavailable" + reason, 503);
     }
     const key = keys.get(kid);
@@ -126,7 +155,18 @@ function createAccessVerifier({
     return claims;
   }
 
-  return { issuer, certsUrl, verify };
+  // Loads keys ahead of the first request; failures are left for the
+  // request path to retry.
+  async function warm() {
+    try {
+      await refresh();
+      return null;
+    } catch (error) {
+      return describeError(error);
+    }
+  }
+
+  return { issuer, certsUrl, verify, warm };
 }
 
-module.exports = { createAccessVerifier, normalizeTeamDomain, AccessTokenError };
+module.exports = { createAccessVerifier, normalizeTeamDomain, describeError, AccessTokenError };

@@ -9,7 +9,7 @@ const zlib = require("node:zlib");
 const { URL } = require("node:url");
 const { parseDependencyDashboard } = require("./renovate-dashboard");
 const { createExposureCore, ExposureError, normalizeAuthMode } = require("./exposure-core.js");
-const { createAccessVerifier, AccessTokenError } = require("./access-jwt.js");
+const { createAccessVerifier, describeError, AccessTokenError } = require("./access-jwt.js");
 
 const CONFIGURED_BASE_DOMAIN = String(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "",
@@ -4025,7 +4025,7 @@ async function checkAccessToken(svc, token) {
     return null;
   } catch (error) {
     const status = error instanceof AccessTokenError ? error.status : 503;
-    console.warn("cloudflare access token rejected for " + svc.id + ": " + error.message);
+    console.warn("cloudflare access token rejected for " + svc.id + ": " + describeError(error));
     return status === 503
       ? { status, message: "cloudflare access verification unavailable" }
       : { status: 403, message: "cloudflare access token rejected" };
@@ -5141,4 +5141,12 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(accessVerifier
     ? "cloudflare access tokens verified against " + accessVerifier.certsUrl
     : "CF_ACCESS_TEAM_DOMAIN unset: cloudflare-access shares reject all requests");
+  if (accessVerifier) {
+    const warmKeys = async () => {
+      const failure = await accessVerifier.warm();
+      if (failure) console.warn("cloudflare access key refresh failed: " + failure);
+    };
+    warmKeys();
+    setInterval(warmKeys, 30 * 60 * 1000).unref();
+  }
 });

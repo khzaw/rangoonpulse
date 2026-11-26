@@ -23,7 +23,7 @@ For a `cloudflare-access` share, exposure-control requires the `Cf-Access-Jwt-As
 - `exp` and `nbf`, with 60 seconds of clock skew
 - audience, when the catalog entry sets `accessAud` to the Access application's AUD tag
 
-`CF_ACCESS_TEAM_DOMAIN` in `apps/exposure-control/helmrelease.yaml` sets the team domain, such as `<team>.cloudflareaccess.com`. While it is unset, every `cloudflare-access` share returns `403`. Keys are cached for an hour, an unknown key ID triggers at most one refetch per 30 seconds, and an unreachable certs endpoint with no cached keys returns `503`. Rejections are logged with their reason and counted in `exposure_control_share_denied_auth_total`.
+`CF_ACCESS_TEAM_DOMAIN` in `apps/exposure-control/helmrelease.yaml` sets the team domain, such as `<team>.cloudflareaccess.com`. While it is unset, every `cloudflare-access` share returns `403`. Keys load at startup and refresh every 30 minutes, and each fetch makes three attempts. An unknown key ID triggers at most one refetch per 30 seconds. With no cached keys, requests return `503 cloudflare access verification unavailable` and a new fetch runs at most every 2 seconds. Rejections are logged with their reason, using the error code when Node gives no message, and counted in `exposure_control_share_denied_auth_total`.
 
 The header's presence proves nothing: a request on a hostname that no Access application covers can carry any value. Signature and issuer checks reject forged values. Set `accessAud` on any host that must accept only its own application's tokens; without it, a token from any application in the team is accepted.
 

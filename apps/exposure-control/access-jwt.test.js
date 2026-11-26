@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { test } = require("node:test");
-const { createAccessVerifier, normalizeTeamDomain, AccessTokenError } = require("./access-jwt.js");
+const { createAccessVerifier, normalizeTeamDomain, describeError, AccessTokenError } = require("./access-jwt.js");
 
 const TEAM = "https://team.cloudflareaccess.com";
 const NOW = Date.parse("2026-11-26T00:00:00Z");
@@ -26,18 +26,24 @@ function claims(overrides = {}) {
   return { aud: ["agent-aud"], iss: TEAM, iat: seconds - 10, nbf: seconds - 10, exp: seconds + 600, type: "app", ...overrides };
 }
 
-function verifier({ keys = [primary], clock = { now: NOW }, fail = false } = {}) {
+function verifier({ keys = [primary], clock = { now: NOW }, fail = false, failures = 0 } = {}) {
   const calls = [];
+  const state = { fail, failures };
   const instance = createAccessVerifier({
     teamDomain: "team.cloudflareaccess.com",
     now: () => clock.now,
+    sleep: async () => {},
     fetchJson: async (url) => {
       calls.push(url);
-      if (fail) throw new Error("offline");
+      if (state.fail) throw new Error("offline");
+      if (state.failures > 0) {
+        state.failures -= 1;
+        throw Object.assign(new AggregateError([{ code: "ETIMEDOUT" }, { code: "ENETUNREACH" }], ""), { code: undefined });
+      }
       return { keys: keys.map((key) => key.jwk), public_cert: { kid: "ignored", cert: "-----BEGIN CERTIFICATE-----" } };
     },
   });
-  return { instance, calls, clock };
+  return { instance, calls, clock, state };
 }
 
 async function rejects(promise, status, pattern) {
@@ -114,11 +120,38 @@ test("rotated keys published since the last fetch verify after the cooldown", as
   assert.equal(calls.length, 2);
 });
 
-test("unreachable certs fail closed with 503 and do not refetch on every request", async () => {
-  const { instance, calls } = verifier({ fail: true });
-  await rejects(instance.verify(sign(claims())), 503, /unavailable: offline/);
-  await rejects(instance.verify(sign(claims())), 503, /unavailable$/);
+test("unreachable certs fail closed with 503 and retry after a short backoff", async () => {
+  const { instance, calls, clock, state } = verifier({ fail: true });
+  await rejects(instance.verify(sign(claims())), 503, /unavailable: offline$/);
+  assert.equal(calls.length, 3, "one refresh makes three attempts");
+  await rejects(instance.verify(sign(claims())), 503, /unavailable: offline$/);
+  assert.equal(calls.length, 3, "requests inside the backoff do not refetch");
+  state.fail = false;
+  clock.now += 2_001;
+  assert.ok(await instance.verify(sign(claims())));
+  assert.equal(calls.length, 4);
+});
+
+test("a transient fetch failure is retried within the same request", async () => {
+  const { instance, calls } = verifier({ failures: 1 });
+  assert.ok(await instance.verify(sign(claims())));
+  assert.equal(calls.length, 2);
+});
+
+test("connection errors without a message are described by their codes", async () => {
+  assert.equal(describeError(new AggregateError([{ code: "ETIMEDOUT" }, { code: "ETIMEDOUT" }, { code: "ENETUNREACH" }], "")), "ETIMEDOUT,ENETUNREACH");
+  assert.equal(describeError(Object.assign(new Error(""), { code: "ECONNRESET" })), "ECONNRESET");
+  const { instance } = verifier({ failures: 3 });
+  await rejects(instance.verify(sign(claims())), 503, /unavailable: ETIMEDOUT,ENETUNREACH$/);
+});
+
+test("warming loads keys before the first request and reports failures", async () => {
+  const { instance, calls } = verifier();
+  assert.equal(await instance.warm(), null);
+  assert.ok(await instance.verify(sign(claims())));
   assert.equal(calls.length, 1);
+  const failing = verifier({ fail: true });
+  assert.equal(await failing.instance.warm(), "offline");
 });
 
 test("cached keys keep verifying when a scheduled refresh fails", async () => {
@@ -126,7 +159,7 @@ test("cached keys keep verifying when a scheduled refresh fails", async () => {
   const clock = { now: NOW };
   let calls = 0;
   const instance = createAccessVerifier({
-    teamDomain: TEAM, now: () => clock.now,
+    teamDomain: TEAM, now: () => clock.now, sleep: async () => {},
     fetchJson: async () => {
       calls += 1;
       if (state.fail) throw new Error("offline");
@@ -137,12 +170,12 @@ test("cached keys keep verifying when a scheduled refresh fails", async () => {
   state.fail = true;
   clock.now += 2 * 60 * 60 * 1000;
   assert.ok(await instance.verify(sign(claims({ exp: Math.floor(clock.now / 1000) + 600 }))));
-  assert.equal(calls, 2);
+  assert.equal(calls, 4, "initial fetch plus three failed refresh attempts");
 });
 
 test("a certs response without usable RSA keys is treated as unavailable", async () => {
   const instance = createAccessVerifier({
-    teamDomain: TEAM, now: () => NOW,
+    teamDomain: TEAM, now: () => NOW, sleep: async () => {},
     fetchJson: async () => ({ keys: [{ kty: "EC", kid: "ec" }, { kty: "RSA", kid: "bad", n: "x", e: "AQAB", use: "enc" }] }),
   });
   await rejects(instance.verify(sign(claims())), 503, /no usable RSA signing keys/);
