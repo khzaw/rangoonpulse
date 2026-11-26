@@ -80,7 +80,7 @@ share hostname
   -> Cloudflare edge and Access when configured
   -> Cloudflare Tunnel
   -> exposure-control
-  -> allow/expiry/rate-limit checks
+  -> allow/expiry/rate-limit/Access-token checks
   -> selected in-cluster Service
 ```
 

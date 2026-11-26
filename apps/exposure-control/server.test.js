@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
 const os = require("node:os");
@@ -222,11 +223,28 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
   });
   servers.push(upstream);
   const upstreamPort = await listen(upstream);
+  const signing = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const certs = http.createServer((req, res) => {
+    if (req.url !== "/cdn-cgi/access/certs") {
+      res.statusCode = 404;
+      return res.end();
+    }
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ keys: [{ ...signing.publicKey.export({ format: "jwk" }), kid: "test", alg: "RS256" }] }));
+  });
+  servers.push(certs);
+  const teamDomain = `http://127.0.0.1:${await listen(certs)}`;
+  const accessToken = (aud) => {
+    const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+    const body = encode({ alg: "RS256", kid: "test" }) + "." +
+      encode({ iss: teamDomain, aud: [aud], exp: Math.floor(Date.now() / 1000) + 600 });
+    return body + "." + crypto.sign("RSA-SHA256", Buffer.from(body), signing.privateKey).toString("base64url");
+  };
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "exposure-cli-integration-"));
   temporaryDirectories.push(directory);
   const servicesPath = path.join(directory, "services.json");
   fs.writeFileSync(servicesPath, JSON.stringify([
-    { id: "books", name: "Books", target: `http://127.0.0.1:${upstreamPort}` },
+    { id: "books", name: "Books", target: `http://127.0.0.1:${upstreamPort}`, accessAud: "books-aud" },
     { id: "photos", name: "Photos", target: `http://127.0.0.1:${upstreamPort}`, publicHostOverride: "photos.example.test" },
   ]));
   let port;
@@ -236,7 +254,7 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
       SERVICES_FILE: servicesPath, TRAVEL_CONFIG_FILE: TRAVEL_CONFIG_PATH,
       PUBLIC_DOMAIN: "example.test", SHARE_HOST_PREFIX: "share-",
       CONTROL_PANEL_HOST: "controlpanel.example.test", DEFAULT_AUTH_MODE: "cloudflare-access",
-      DEFAULT_EXPIRY_HOURS: "1", KUBERNETES_SERVICE_HOST: "",
+      DEFAULT_EXPIRY_HOURS: "1", KUBERNETES_SERVICE_HOST: "", CF_ACCESS_TEAM_DOMAIN: teamDomain,
     }, stdio: ["ignore", "pipe", "pipe"] });
     children.push(child);
     port = await waitForStartup(child);
@@ -271,8 +289,13 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
   await cli("enable", "books", "--until-disabled", "--auth", "cloudflare-access");
   assert.equal((await cli("show", "books")).service.authMode, "cloudflare-access");
   assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test")).status, 403);
-  assert.equal((await exposureRequest(port, "/", "GET", undefined, "share-books.example.test",
-    { "cf-access-jwt-assertion": "test-assertion" })).status, 200);
+  const withToken = (token) => exposureRequest(port, "/", "GET", undefined, "share-books.example.test",
+    { "cf-access-jwt-assertion": token });
+  const forged = await withToken("test-assertion");
+  assert.equal(forged.status, 403);
+  assert.equal(forged.text, "cloudflare access token rejected");
+  assert.equal((await withToken(accessToken("other-app"))).status, 403);
+  assert.equal((await withToken(accessToken("books-aud"))).status, 200);
   await cli("enable", "photos", "--until-disabled", "--auth", "none");
   assert.equal((await exposureRequest(port, "/", "GET", undefined, "photos.example.test")).status, 200);
   const beforeRestart = await gui.list();

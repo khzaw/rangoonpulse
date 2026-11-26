@@ -9,6 +9,7 @@ resources:
 configMapGenerator:
   - name: exposure-control-app-files
     files:
+      - access-jwt.js
       - activity-feed.js
       - app.js
       - exposure-core.js

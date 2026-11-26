@@ -9,6 +9,7 @@ const zlib = require("node:zlib");
 const { URL } = require("node:url");
 const { parseDependencyDashboard } = require("./renovate-dashboard");
 const { createExposureCore, ExposureError, normalizeAuthMode } = require("./exposure-core.js");
+const { createAccessVerifier, AccessTokenError } = require("./access-jwt.js");
 
 const CONFIGURED_BASE_DOMAIN = String(
   process.env.PUBLIC_DOMAIN || process.env.BASE_DOMAIN || process.env.base_domain || "",
@@ -55,6 +56,8 @@ const RECONCILE_INTERVAL_SECONDS = Number(
 );
 const DEFAULT_AUTH_MODE =
   normalizeAuthMode(process.env.DEFAULT_AUTH_MODE) || "cloudflare-access";
+// Without a team domain, cloudflare-access shares reject every request.
+const CF_ACCESS_TEAM_DOMAIN = String(process.env.CF_ACCESS_TEAM_DOMAIN || "").trim();
 const SHARE_RATE_LIMIT_REQUESTS = clampInt(
   process.env.SHARE_RATE_LIMIT_REQUESTS,
   120,
@@ -497,6 +500,9 @@ function loadServices() {
       throw new Error(
         "invalid authMode for service " + svc.id + ": " + svc.authMode,
       );
+    }
+    if (svc.accessAud !== undefined && (typeof svc.accessAud !== "string" || !svc.accessAud.trim())) {
+      throw new Error("accessAud for service " + svc.id + " must be a non-empty string");
     }
   }
   return parsed.map((svc) => ({
@@ -3996,6 +4002,35 @@ async function setTransmissionVpnMode(mode) {
 
 const services = loadServices();
 const travelConfig = loadTravelConfig();
+const accessVerifier = CF_ACCESS_TEAM_DOMAIN
+  ? createAccessVerifier({
+    teamDomain: CF_ACCESS_TEAM_DOMAIN,
+    fetchJson: async (url) => {
+      const response = await requestUrl(url, {
+        headers: { accept: "application/json" }, timeoutMs: 5000, totalTimeoutMs: 8000,
+        maxBodyBytes: 256 * 1024,
+      });
+      if (response.statusCode !== 200) throw new Error("certs endpoint returned " + response.statusCode);
+      return JSON.parse(response.body);
+    },
+  })
+  : null;
+
+async function checkAccessToken(svc, token) {
+  if (!accessVerifier) {
+    return { status: 403, message: "cloudflare access verification is not configured" };
+  }
+  try {
+    await accessVerifier.verify(token, { audience: svc.accessAud });
+    return null;
+  } catch (error) {
+    const status = error instanceof AccessTokenError ? error.status : 503;
+    console.warn("cloudflare access token rejected for " + svc.id + ": " + error.message);
+    return status === 503
+      ? { status, message: "cloudflare access verification unavailable" }
+      : { status: 403, message: "cloudflare access token rejected" };
+  }
+}
 const serviceById = new Map(services.map((svc) => [svc.id, svc]));
 const serviceByHost = new Map(
   services.map((svc) => [servicePublicHost(svc), svc]),
@@ -4246,7 +4281,7 @@ function renderMetrics() {
     "# HELP exposure_control_share_denied_disabled_total Number of share requests denied because exposure was disabled.",
     "# TYPE exposure_control_share_denied_disabled_total counter",
     "exposure_control_share_denied_disabled_total " + metrics.shareDeniedDisabledTotal,
-    "# HELP exposure_control_share_denied_auth_total Number of share requests denied due to missing Cloudflare Access token.",
+    "# HELP exposure_control_share_denied_auth_total Number of share requests denied due to a missing or unverified Cloudflare Access token.",
     "# TYPE exposure_control_share_denied_auth_total counter",
     "exposure_control_share_denied_auth_total " + metrics.shareDeniedAuthTotal,
     "# HELP exposure_control_share_denied_rate_limited_total Number of share requests denied by rate limit.",
@@ -5056,6 +5091,11 @@ const server = http.createServer(async (req, res) => {
           metrics.shareDeniedAuthTotal += 1;
           return sendText(res, 403, "cloudflare access token required");
         }
+        const denied = await checkAccessToken(svc, String(cfJwt));
+        if (denied) {
+          metrics.shareDeniedAuthTotal += 1;
+          return sendText(res, denied.status, denied.message);
+        }
       }
       metrics.shareAllowedTotal += 1;
       return proxyRequest(req, res, svc.target);
@@ -5098,4 +5138,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("exposure-control backend listening on :" + server.address().port);
+  console.log(accessVerifier
+    ? "cloudflare access tokens verified against " + accessVerifier.certsUrl
+    : "CF_ACCESS_TEAM_DOMAIN unset: cloudflare-access shares reject all requests");
 });

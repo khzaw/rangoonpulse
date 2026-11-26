@@ -3,7 +3,7 @@ title: Public Edge and Exposure Control
 summary: Current permanent-public and temporary-share routing, ownership, state, and emergency controls.
 status: active
 owner: homelab
-last_reviewed: 2026-11-20
+last_reviewed: 2026-11-26
 ---
 
 # Public Edge and Exposure Control
@@ -45,11 +45,13 @@ A service is fully share-wired only when all three current inventories agree:
 
 Current mismatch: `jackett`, `subarr`, `iris`, and `athena` are catalog entries without complete static public-edge route and DNS wiring.
 
+`actual` uses the dedicated `actual-agent.khzaw.dev` host for API clients that hold a Cloudflare Access service token. See [service-token hosts](./share-host-authentication.md#service-token-hosts).
+
 ## Runtime State
 
 Exposure-control stores enabled state and audit data on its PVC. Shares support bounded expiry and an explicit until-disabled mode. The normal quick preset defaults to one hour.
 
-Authentication mode is per service/share. The backend fallback is Cloudflare Access, while the operator UI may present `none` as the selectable default. The backend currently checks for the Cloudflare Access assertion header; cryptographic JWT verification is not implemented.
+Authentication mode is per service/share. The backend fallback is Cloudflare Access, while the operator UI may present `none` as the selectable default. In `cloudflare-access` mode the backend verifies the Access token's signature, issuer, expiry, and optional per-service audience against `CF_ACCESS_TEAM_DOMAIN`; while that is unset, those shares reject every request. The [share-host authentication contract](./share-host-authentication.md) owns the details.
 
 State lives at `/data/state.json`; the append-only audit stream is `/data/audit.json`. `GET /api/audit` returns the latest 100 entries newest first. Recognized share hosts proxy target application paths including `/api/*`, preserving request bodies and `Content-Length`. Exposure-control's own APIs are restricted to the control-panel host.
 
@@ -94,7 +96,7 @@ Assets use content hashes, immutable caching, ETags, and brotli/gzip compression
 ## Security Boundary
 
 - The Tunnel is outbound-only from the cluster.
-- Protected share hosts must reach exposure-control through Cloudflare Access; direct origin reachability would bypass the header trust boundary.
+- Protected share hosts need a Cloudflare Access application in front; exposure-control rejects requests whose Access token it cannot verify.
 - Private canonical hostnames remain separate from public share hostnames unless a service has an explicit `publicHostOverride`.
 - Rate limits, expiry, and enable state are enforced by exposure-control, not cloudflared.
 
@@ -110,7 +112,7 @@ Update the catalog, Tunnel route, and DNS alias together. Then validate JSON/YAM
 
 - disabled host returns `403`
 - enabled host reaches the intended service
-- Access-protected mode rejects a request without the assertion header
+- Access-protected mode rejects a request without the assertion header and one with a forged value
 - expiry returns the host to disabled state
 
 ## Verification

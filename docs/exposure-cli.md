@@ -3,7 +3,7 @@ title: Exposure CLI
 summary: Usage guide for the native Rust CLI, including kubectl access, share commands, defaults, JSON output, and troubleshooting.
 status: active
 owner: homelab
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-26
 ---
 
 # Exposure CLI
@@ -148,7 +148,7 @@ exposure enable immich --for 2h --auth cloudflare-access
 | Mode | Exposure-control behavior |
 | --- | --- |
 | `none` | Does not require a Cloudflare Access assertion header; this is the CLI default |
-| `cloudflare-access` | Requires the Access assertion header on requests to the enabled share |
+| `cloudflare-access` | Requires an Access token that exposure-control verifies against the configured team keys |
 
 Authentication and duration are independent: `--auth cloudflare-access` alone still enables an indefinite share. Application logins and externally configured Cloudflare policies continue to apply in either mode. The CLI does not create or modify Access applications or policies. See the [share-host authentication contract](./share-host-authentication.md) for the trust boundary and external setup.
 

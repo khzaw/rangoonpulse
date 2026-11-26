@@ -129,6 +129,14 @@
     "description": "Immich"
   },
   {
+    "id": "actual",
+    "name": "Actual Budget",
+    "target": "http://actualbudget.default.svc.cluster.local:5006",
+    "description": "Actual Budget for Cloudflare Access service-token clients",
+    "publicHostOverride": "actual-agent.${BASE_DOMAIN}",
+    "authMode": "cloudflare-access"
+  },
+  {
     "id": "iris",
     "name": "Iris OpenClaw UI",
     "target": "http://10.0.0.66:18789",
