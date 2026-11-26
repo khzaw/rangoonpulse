@@ -2,11 +2,7 @@
 
 # rangoonpulse
 
-### My homelab, defined in Git
-
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-e6e6e6?style=flat-square&logo=kubernetes&logoColor=white&labelColor=101010)](https://kubernetes.io/) [![Talos](https://img.shields.io/badge/Talos-e6e6e6?style=flat-square&logo=talos&logoColor=white&labelColor=101010)](https://www.talos.dev/) [![Flux](https://img.shields.io/badge/Flux-GitOps-e6e6e6?style=flat-square&logo=flux&logoColor=white&labelColor=101010)](https://fluxcd.io/) [![Renovate](https://img.shields.io/badge/Renovate-updates-e6e6e6?style=flat-square&logo=renovate&logoColor=white&labelColor=101010)](https://docs.renovatebot.com/) [![SOPS](https://img.shields.io/badge/SOPS-age-e6e6e6?style=flat-square&labelColor=101010)](https://github.com/getsops/sops)
-
-[![CI](https://img.shields.io/github/actions/workflow/status/khzaw/rangoonpulse/ci.yaml?branch=master&style=flat-square&label=CI&labelColor=101010)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml) [![Last commit](https://img.shields.io/github/last-commit/khzaw/rangoonpulse?style=flat-square&labelColor=101010&color=e6e6e6)](https://github.com/khzaw/rangoonpulse/commits/master) [![Stars](https://img.shields.io/github/stars/khzaw/rangoonpulse?style=flat-square&labelColor=101010&color=e6e6e6)](https://github.com/khzaw/rangoonpulse/stargazers)
+[![Kubernetes](.github/badges/kubernetes.svg)](https://kubernetes.io/) [![Talos](.github/badges/talos.svg)](https://www.talos.dev/) [![Flux: GitOps](.github/badges/flux.svg)](https://fluxcd.io/) [![Renovate: updates](.github/badges/renovate.svg)](https://docs.renovatebot.com/) [![SOPS: age](.github/badges/sops.svg)](https://github.com/getsops/sops) [![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
 
 Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync. It runs media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
 

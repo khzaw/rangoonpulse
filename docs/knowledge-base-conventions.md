@@ -69,6 +69,14 @@ last_reviewed: YYYY-MM-DD
 
 Use repository-relative paths, concrete Kubernetes object names, and executable verification commands. Avoid duplicating version numbers or inventories already expressed in manifests unless the exact value is itself an operator constraint.
 
+## README Images
+
+`README.md` loads its images from this repository: tags from `.github/badges/`, screenshots from `.github/screenshots/`, and diagrams from `docs/diagrams/`. The CI status badge is the one exception, and GitHub serves it.
+
+Do not add a tag from an external badge service. GitHub fetches external images through its image proxy; when the service answers slowly, the proxy returns an error and the README shows a broken image.
+
+A tag is a self-contained SVG file: shapes, text, and inline paths only, with no embedded image, font, or link to another file.
+
 ## Skills
 
 Every project-local `SKILL.md` must:
