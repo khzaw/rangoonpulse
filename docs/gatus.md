@@ -3,7 +3,7 @@ title: Gatus Service Monitoring
 summary: Git-managed availability checks, 60s-tier Prometheus alerts, shared PostgreSQL history, private access, and operator integrations.
 status: active
 owner: homelab
-last_reviewed: 2026-11-23
+last_reviewed: 2026-11-27
 ---
 
 # Gatus Service Monitoring
@@ -192,10 +192,9 @@ latest result per endpoint; it does not label a newly started check healthy
 before it has produced a result. Prometheus scrapes `/metrics` through
 `monitoring/ServiceMonitor/gatus` for availability, duration, and result history.
 
-The Control Panel discovers Gatus in Updates and Tuning. Exposure Control uses
-the `gatus` catalog ID and `share-gatus.khzaw.dev` route. That share starts
-disabled; its DNS alias and Tunnel route do not make the canonical hostname
-public. Share enable/expiry/authentication remains owned by Exposure Control.
+The Control Panel discovers Gatus in Updates and Tuning. Gatus is private-only
+and has no temporary share; see the
+[private-only list](./public-edge-and-exposure-control.md#temporary-shares).
 
 `default/gatus-secret` is SOPS-managed under `infrastructure/secrets/default/`:
 

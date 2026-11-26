@@ -100,8 +100,6 @@ spec:
                 service: http://ericaknight.default.svc.cluster.local:8080
               - hostname: www.${ERICAKNIGHT_DOMAIN}
                 service: http://ericaknight.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}speedtest.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}chartsdb.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}bento.${BASE_DOMAIN}
@@ -110,33 +108,17 @@ spec:
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}miniflux.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}shelfmark.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}jellyfin.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}seerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}audiobookshelf.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}gatus.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}fluxui.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}itvp.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}sonarr.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}radarr.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}tracerr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}kroki.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}tunarr.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: ${SHARE_HOST_PREFIX}vaultwarden.${BASE_DOMAIN}
-                service: http://exposure-control.default.svc.cluster.local:8080
-              - hostname: ${SHARE_HOST_PREFIX}immich.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080
               - hostname: actual-agent.${BASE_DOMAIN}
                 service: http://exposure-control.default.svc.cluster.local:8080

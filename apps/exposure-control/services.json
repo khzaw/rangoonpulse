@@ -1,11 +1,5 @@
 [
   {
-    "id": "speedtest",
-    "name": "Speedtest",
-    "target": "http://speedtest.default.svc.cluster.local:80",
-    "description": "LibreSpeed UI"
-  },
-  {
     "id": "chartsdb",
     "name": "ChartDB",
     "target": "http://chartsdb.default.svc.cluster.local:80",
@@ -32,12 +26,6 @@
     "authMode": "cloudflare-access"
   },
   {
-    "id": "shelfmark",
-    "name": "Shelfmark",
-    "target": "http://shelfmark.default.svc.cluster.local:8084",
-    "description": "Book and audiobook downloader"
-  },
-  {
     "id": "jellyfin",
     "name": "Jellyfin",
     "target": "http://jellyfin.default.svc.cluster.local:8096",
@@ -50,41 +38,10 @@
     "description": "Seerr"
   },
   {
-    "id": "audiobookshelf",
-    "name": "Audiobookshelf",
-    "target": "http://audiobookshelf.default.svc.cluster.local:80",
-    "description": "Audiobookshelf"
-  },
-  {
-    "id": "gatus",
-    "name": "Gatus",
-    "target": "http://gatus.default.svc.cluster.local:8080",
-    "description": "Service health and uptime history"
-  },
-  {
-    "id": "fluxui",
-    "name": "Flux UI",
-    "target": "http://flux-operator.flux-system.svc.cluster.local:9080",
-    "description": "Flux Operator web UI",
-    "authMode": "cloudflare-access"
-  },
-  {
     "id": "itvp",
     "name": "Interview Prep",
     "target": "http://interview-prep.default.svc.cluster.local:3000",
     "description": "Coding and system-design practice journal"
-  },
-  {
-    "id": "sonarr",
-    "name": "Sonarr",
-    "target": "http://sonarr.default.svc.cluster.local:8989",
-    "description": "Sonarr"
-  },
-  {
-    "id": "radarr",
-    "name": "Radarr",
-    "target": "http://radarr.default.svc.cluster.local:7878",
-    "description": "Radarr"
   },
   {
     "id": "jackett",
@@ -97,12 +54,6 @@
     "name": "Subarr",
     "target": "http://subarr.default.svc.cluster.local:9922",
     "description": "Subtitle management"
-  },
-  {
-    "id": "tracerr",
-    "name": "Tracerr",
-    "target": "http://tracerr.default.svc.cluster.local:3000",
-    "description": "Tracerr"
   },
   {
     "id": "kroki",
@@ -121,12 +72,6 @@
     "name": "Vaultwarden",
     "target": "http://vaultwarden.default.svc.cluster.local:80",
     "description": "Vaultwarden"
-  },
-  {
-    "id": "immich",
-    "name": "Immich",
-    "target": "http://immich-server.default.svc.cluster.local:2283",
-    "description": "Immich"
   },
   {
     "id": "actual",

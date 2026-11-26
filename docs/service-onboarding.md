@@ -3,7 +3,7 @@ title: Service Onboarding
 summary: Required GitOps, dashboard, Control Panel, tuning, secrets, and live verification surfaces for every new application.
 status: active
 owner: homelab
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-27
 ---
 
 # Service Onboarding
@@ -107,7 +107,7 @@ disabled. A public Access challenge can verify the outer boundary; verify the di
 the exposure backend as well when authentication prevents observing it directly. Do not enable public access
 solely to complete a private deployment check.
 
-A no-share exception must be explicit and recorded in the focused app guide with its reason and scope. Private
+A no-share exception must be explicit and recorded in the private-only list in the [exposure-control guide](./public-edge-and-exposure-control.md#temporary-shares). Private
 canonical access by itself is not a no-share exception: a disabled share route is part of ordinary onboarding.
 
 ## Resource tuning and HPA ownership

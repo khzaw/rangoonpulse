@@ -3,7 +3,7 @@ title: Networking and Access Topology
 summary: Current private ingress, public Tunnel, temporary-share, DNS, and dedicated-edge paths.
 status: active
 owner: homelab
-last_reviewed: 2026-11-23
+last_reviewed: 2026-11-27
 ---
 
 # Networking and Access Topology
@@ -91,6 +91,8 @@ A working share requires agreement between the exposure-control catalog, Tunnel 
 - Private app hostnames use explicit ExternalDNS annotations and normally resolve to the shared ingress VIP.
 - Permanent-public and share hosts use proxied `ExternalName` Services under `infrastructure/public-edge/`.
 - ExternalDNS intentionally ignores Ingress rule and TLS host fields. DNS ownership must be explicit.
+- ExternalDNS updates or deletes only records with its ownership TXT (`a-<host>` or `cname-<host>`, owner `default`). It leaves a record without one in place, including after its source is removed. It still honors a legacy bare-`<host>` ownership TXT but never deletes it, so remove those once the prefixed record exists. Zone apexes cannot carry an ownership TXT and need manual cleanup.
+- The Cloudflare plan caps each zone at 200 records, and each managed host uses two. When a host is retired, confirm that its record and ownership TXT are gone.
 - ExternalDNS currently reads the repository's `external-dns.alpha.kubernetes.io/` annotations through an explicit compatibility flag. Remove that flag only in the same atomic change that migrates every annotation.
 
 LAN clients use the two AdGuard VIPs. Cluster and node DNS intentionally use public upstream resolution rather than depending on the LAN filtering path.

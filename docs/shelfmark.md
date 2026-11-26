@@ -3,7 +3,7 @@ title: Shelfmark
 summary: Current Shelfmark storage mappings, shared-library write boundary, exposure, and tuning ownership.
 status: active
 owner: homelab
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-27
 ---
 
 # Shelfmark
@@ -15,7 +15,7 @@ last_reviewed: 2026-10-25
 - health: `/api/health`
 - placement: primary node
 - rollout: `Recreate`
-- temporary share: fully wired as `share-shelfmark.khzaw.dev`
+- temporary share: none; private-only (see [exposure-control](./public-edge-and-exposure-control.md#temporary-shares))
 
 Image and resource values are authoritative in the HelmRelease and Resource Advisor policy rather than this doc.
 

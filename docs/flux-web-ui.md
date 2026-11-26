@@ -3,7 +3,7 @@ title: Flux Operator Web UI
 summary: Current private and temporary-share access, source ownership, controller-manifest caveat, and verification.
 status: active
 owner: homelab
-last_reviewed: 2026-11-16
+last_reviewed: 2026-11-27
 ---
 
 # Flux Operator Web UI
@@ -21,7 +21,7 @@ Chart versions are authoritative in the HelmRelease.
 
 ## Access
 
-The canonical hostname uses the private ingress path and is intended for LAN or Tailscale clients. `share-fluxui.khzaw.dev` is fully wired through exposure-control and public-edge for temporary access with Cloudflare Access mode.
+The canonical hostname uses the private ingress path and is intended for LAN or Tailscale clients. It has no temporary share; see the [private-only list](./public-edge-and-exposure-control.md#temporary-shares).
 
 ## Flux Controller Manifest
 

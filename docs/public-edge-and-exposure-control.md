@@ -3,7 +3,7 @@ title: Public Edge and Exposure Control
 summary: Current permanent-public and temporary-share routing, ownership, state, and emergency controls.
 status: active
 owner: homelab
-last_reviewed: 2026-11-26
+last_reviewed: 2026-11-27
 ---
 
 # Public Edge and Exposure Control
@@ -44,6 +44,8 @@ A service is fully share-wired only when all three current inventories agree:
 3. `infrastructure/public-edge/share-hosts-cname.yaml`
 
 Current mismatch: `jackett`, `subarr`, `iris`, and `athena` are catalog entries without complete static public-edge route and DNS wiring.
+
+Private-only services have no catalog entry, Tunnel route, or DNS alias because they have no external sharing need: Audiobookshelf, Flux UI, Gatus, Immich, Radarr, Shelfmark, Sonarr, Speedtest, and Tracerr. Add share wiring for them only when public access is explicitly requested.
 
 `actual` uses the dedicated `actual-agent.khzaw.dev` host for API clients that hold a Cloudflare Access service token. See [service-token hosts](./share-host-authentication.md#service-token-hosts).
 

@@ -87,19 +87,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-speedtest-cname
-  namespace: public-edge
-  annotations:
-    # Create DNS alias to Cloudflare Tunnel edge endpoint.
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}speedtest.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
   name: share-chartsdb-cname
   namespace: public-edge
   annotations:
@@ -148,18 +135,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-shelfmark-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}shelfmark.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
   name: share-jellyfin-cname
   namespace: public-edge
   annotations:
@@ -184,82 +159,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: share-audiobookshelf-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}audiobookshelf.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-gatus-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}gatus.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-fluxui-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}fluxui.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
   name: share-itvp-cname
   namespace: public-edge
   annotations:
     external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}itvp.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-sonarr-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}sonarr.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-radarr-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}radarr.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-tracerr-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}tracerr.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName
@@ -296,18 +199,6 @@ metadata:
   namespace: public-edge
   annotations:
     external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}vaultwarden.${BASE_DOMAIN}
-    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-spec:
-  type: ExternalName
-  externalName: a0a36100-5576-4d6c-b8c8-6c1441b03774.cfargotunnel.com
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: share-immich-cname
-  namespace: public-edge
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: ${SHARE_HOST_PREFIX}immich.${BASE_DOMAIN}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
 spec:
   type: ExternalName

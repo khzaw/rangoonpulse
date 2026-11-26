@@ -1,9 +1,9 @@
 ---
 title: Tracerr
-summary: Current Tracerr deployment, Tracearr upstream naming, shared database, Redis, secrets, and exposure surfaces.
+summary: Current Tracerr deployment, Tracearr upstream naming, shared database, Redis, and secrets.
 status: active
 owner: homelab
-last_reviewed: 2026-11-22
+last_reviewed: 2026-11-27
 ---
 
 # Tracerr
@@ -19,7 +19,7 @@ Repository objects, directory names, Flux wiring, and hostname use `tracerr`. Th
 - database: shared `media-postgres`; TimescaleDB extension updates follow [Media PostgreSQL](./media-postgres.md#extension-updates)
 - Redis: persistent sidecar in the Tracerr release
 - hostname: `tracerr.khzaw.dev`
-- temporary share: fully wired through exposure-control and public-edge
+- temporary share: none; private-only (see [exposure-control](./public-edge-and-exposure-control.md#temporary-shares))
 
 Mutable image versions belong in the HelmRelease, not this doc.
 
@@ -31,7 +31,7 @@ The database secret must stay consistent with the `tracearr` role/database initi
 
 ## Integration
 
-Tracerr is registered with Flux, Dynacat, exposure-control/public-edge, and Resource Advisor. Check each current source before changing service identity or ports.
+Tracerr is registered with Flux, Dynacat, and Resource Advisor. Check each current source before changing service identity or ports.
 
 ## Verification
 
