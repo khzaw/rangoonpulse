@@ -146,6 +146,63 @@ test('share search combines literal case-insensitive text and active filtering w
   assert.equal(context.shareMatches('.*', 'all', services[0]), false);
 });
 
+test('share rows keep their configured order when shares are enabled or disabled', () => {
+  function domNode(tag) {
+    const classes = new Set();
+    return {
+      tag,
+      children: [],
+      dataset: {},
+      attributes: {},
+      classList: {
+        add(name) { classes.add(name); },
+        remove(name) { classes.delete(name); },
+        contains(name) { return classes.has(name); },
+      },
+      append(...nodes) { this.children.push(...nodes); },
+      appendChild(node) { this.children.push(node); return node; },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      getAttribute(name) { return this.attributes[name]; },
+    };
+  }
+  const rowsEl = {
+    children: [],
+    set innerHTML(_value) { this.children = []; },
+    appendChild(node) { this.children.push(node); return node; },
+  };
+  const context = vm.createContext({
+    rowsEl,
+    shareDraft: null,
+    isAgent: (service) => Boolean(service) && service.kind === 'agent',
+    renderAgents() {},
+    filterShares() {},
+    tickExpiryCountdowns() {},
+    fmtExpiry: () => ({ text: '—', state: 'none' }),
+    exposureClient: {},
+    runExposure() {},
+    closeShareSheet() {},
+    openShareSheet() {},
+    document: {
+      createElement: domNode,
+      getElementById: () => ({ textContent: '' }),
+    },
+  });
+  vm.runInContext(between('      function renderRows(', '      // Each agent host is one standing switch:'), context);
+  const serviceOrder = () => rowsEl.children.map((row) => row.dataset.serviceId).filter(Boolean);
+  const catalog = [
+    { id: 'bento', name: 'BentoPDF', publicHost: 'share-bento.example.test', enabled: false },
+    { id: 'jellyfin', name: 'Jellyfin', publicHost: 'share-jellyfin.example.test', enabled: false },
+    { id: 'vaultwarden', name: 'Vaultwarden', publicHost: 'share-vaultwarden.example.test', enabled: false },
+    { id: 'actual', name: 'Actual Budget', kind: 'agent', enabled: true },
+  ];
+  context.renderRows(catalog);
+  assert.deepEqual(serviceOrder(), ['bento', 'jellyfin', 'vaultwarden']);
+  context.renderRows(catalog.map((svc) => (svc.id === 'vaultwarden' ? { ...svc, enabled: true } : svc)));
+  assert.deepEqual(serviceOrder(), ['bento', 'jellyfin', 'vaultwarden']);
+  context.renderRows(catalog.map((svc) => (svc.id === 'jellyfin' ? { ...svc, enabled: true } : svc)));
+  assert.deepEqual(serviceOrder(), ['bento', 'jellyfin', 'vaultwarden']);
+});
+
 for (const [page, field, loader] of [['jobs', 'jobs', 'loadJobs'], ['deploy', 'siteDeployments', 'loadSiteDeployments'], ['secrets', 'secrets', 'loadSecrets']]) {
   test('opening ' + page + ' during initial loading completes its lazy request', async () => {
     let resolveServices;

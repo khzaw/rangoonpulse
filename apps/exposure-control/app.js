@@ -1708,8 +1708,8 @@
           rowsEl.appendChild(tr);
           return;
         }
-        // Public shares lead; the rest keep their configured order.
-        services.slice().sort((a, b) => Number(Boolean(b.enabled)) - Number(Boolean(a.enabled))).forEach((svc) => {
+        // Keep the configured order so rows stay put when toggled.
+        services.forEach((svc) => {
           const tr = document.createElement('tr');
           tr.dataset.serviceId = svc.id;
           if (svc.enabled) tr.classList.add('is-enabled');
