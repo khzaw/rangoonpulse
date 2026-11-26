@@ -71,19 +71,25 @@ Use repository-relative paths, concrete Kubernetes object names, and executable 
 
 ## README Images
 
-`README.md` loads its images from this repository: tags from `.github/badges/`, screenshots from `.github/screenshots/`, and diagrams from `docs/diagrams/`. The CI status badge is the one exception, and GitHub serves it.
+`README.md` loads its images from this repository: stack tags from `.github/badges/`, screenshots from `.github/screenshots/`, and diagrams from `docs/diagrams/`. The CI status badge is the one exception, and GitHub serves it.
 
 Do not add a tag from an external badge service. GitHub fetches external images through its image proxy; when the service answers slowly, the proxy returns an error and the README shows a broken image.
 
-A tag is a self-contained SVG file: shapes, text, and inline paths only, with no embedded image, font, or link to another file. `scripts/render_badges.py` holds the tag list and writes the files:
+A stack tag is a small copy of a service-map card: logo and name on the card colour. It is a self-contained SVG file with no embedded image, font, or link to another file. `scripts/render_badges.py` holds the tag list and writes the files:
 
 ```bash
 make badges
 ```
 
-To add a tag, add a line to `TAGS` in the script, run `make badges`, and link the new file from the tag rows at the top of `README.md`. A tag names a part of the stack and its role here. Leave out version numbers and counts that change with routine updates. The script asks shields.io for each tag once and rewrites the logo to inline paths, so rendering needs network access and reading the README does not. It fails without writing anything when a logo name is unknown.
+To add a tag:
 
-Keep each README row under about 700 pixels, the sum of the `width` values of its files, so the row does not wrap on a desktop page.
+1. Add a line to `TAGS` in the script: file name, name, and logo URL. Use the logo the service map uses for the same part, from the same pinned icon commit. See [diagrams](./diagrams.md) for the icon sources.
+2. Run `make badges`. It needs network access and writes nothing when a logo fails its checks.
+3. Add the tag to its layer row in the stack table at the top of `README.md`.
+
+The stack table lists the platform by layer, then a few of the main apps. Keep it to the Kubernetes and homelab stack: no hardware, version numbers, or counts. Keep a row's tags under about 600 pixels, the sum of the `width` values of its files, so the table fits a desktop page without wrapping.
+
+The icon commits are pinned in two places: the `vars` block of each diagram source and the top of the script. Bump them together.
 
 ## Skills
 

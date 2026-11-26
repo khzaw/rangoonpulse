@@ -2,29 +2,74 @@
 
 # rangoonpulse
 
-[![Talos: Linux](.github/badges/talos.svg)](https://www.talos.dev/)
-[![Kubernetes: 2 nodes](.github/badges/kubernetes.svg)](https://kubernetes.io/)
-[![Flux: GitOps](.github/badges/flux.svg)](https://fluxcd.io/)
-[![Helm: charts](.github/badges/helm.svg)](https://helm.sh/)
-[![Renovate: updates](.github/badges/renovate.svg)](https://docs.renovatebot.com/)
-[![SOPS: age](.github/badges/sops.svg)](https://github.com/getsops/sops)\
-[![NGINX: ingress](.github/badges/nginx.svg)](https://kubernetes.github.io/ingress-nginx/)
-[![Let's Encrypt: TLS](.github/badges/letsencrypt.svg)](https://letsencrypt.org/)
-[![Cloudflare: Tunnel](.github/badges/cloudflare.svg)](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-[![Tailscale: remote access](.github/badges/tailscale.svg)](https://tailscale.com/)
-[![AdGuard Home: DNS](.github/badges/adguard.svg)](https://github.com/AdguardTeam/AdGuardHome)\
-[![TrueNAS: NFS](.github/badges/truenas.svg)](https://www.truenas.com/)
-[![PostgreSQL: databases](.github/badges/postgresql.svg)](https://www.postgresql.org/)
-[![Prometheus: metrics](.github/badges/prometheus.svg)](https://prometheus.io/)
-[![Grafana: dashboards](.github/badges/grafana.svg)](https://grafana.com/oss/grafana/)
-[![Gatus: health checks](.github/badges/gatus.svg)](https://github.com/TwiN/gatus)\
-[![Intel: amd64](.github/badges/intel.svg)](#hardware)
-[![Raspberry Pi: arm64](.github/badges/raspberrypi.svg)](#hardware)
-[![Mac mini: M4](.github/badges/macmini.svg)](#hardware)
-[![D2: diagrams](.github/badges/d2.svg)](docs/diagrams.md)
 [![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
 
 Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync. It runs media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
+
+<table>
+  <tr>
+    <th align="left">Cluster</th>
+    <td align="left">
+      <a href="https://www.talos.dev/"><img src=".github/badges/talos.svg" alt="Talos" height="28"></a>
+      <a href="https://kubernetes.io/"><img src=".github/badges/kubernetes.svg" alt="Kubernetes" height="28"></a>
+      <a href="docs/canal.md"><img src=".github/badges/canal.svg" alt="Canal" height="28"></a>
+      <a href="https://coredns.io/"><img src=".github/badges/coredns.svg" alt="CoreDNS" height="28"></a>
+    </td>
+  </tr>
+  <tr>
+    <th align="left">GitOps</th>
+    <td align="left">
+      <a href="https://fluxcd.io/"><img src=".github/badges/flux.svg" alt="Flux" height="28"></a>
+      <a href="https://helm.sh/"><img src=".github/badges/helm.svg" alt="Helm" height="28"></a>
+      <a href="https://docs.renovatebot.com/"><img src=".github/badges/renovate.svg" alt="Renovate" height="28"></a>
+      <a href="https://github.com/getsops/sops"><img src=".github/badges/sops.svg" alt="SOPS" height="28"></a>
+      <a href="#cicd-workflows"><img src=".github/badges/github-actions.svg" alt="GitHub Actions" height="28"></a>
+    </td>
+  </tr>
+  <tr>
+    <th align="left">Ingress and TLS</th>
+    <td align="left">
+      <a href="https://kubernetes.github.io/ingress-nginx/"><img src=".github/badges/ingress-nginx.svg" alt="ingress-nginx" height="28"></a>
+      <a href="https://cert-manager.io/"><img src=".github/badges/cert-manager.svg" alt="cert-manager" height="28"></a>
+      <a href="https://letsencrypt.org/"><img src=".github/badges/letsencrypt.svg" alt="Let's Encrypt" height="28"></a>
+    </td>
+  </tr>
+  <tr>
+    <th align="left">Edge and DNS</th>
+    <td align="left">
+      <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/"><img src=".github/badges/cloudflare.svg" alt="Cloudflare Tunnel" height="28"></a>
+      <a href="https://tailscale.com/"><img src=".github/badges/tailscale.svg" alt="Tailscale" height="28"></a>
+      <a href="https://github.com/AdguardTeam/AdGuardHome"><img src=".github/badges/adguard.svg" alt="AdGuard Home" height="28"></a>
+    </td>
+  </tr>
+  <tr>
+    <th align="left">Storage</th>
+    <td align="left">
+      <a href="https://www.truenas.com/"><img src=".github/badges/truenas.svg" alt="TrueNAS" height="28"></a>
+      <a href="https://www.postgresql.org/"><img src=".github/badges/postgresql.svg" alt="PostgreSQL" height="28"></a>
+    </td>
+  </tr>
+  <tr>
+    <th align="left">Observability</th>
+    <td align="left">
+      <a href="https://prometheus.io/"><img src=".github/badges/prometheus.svg" alt="Prometheus" height="28"></a>
+      <a href="https://prometheus.io/docs/alerting/latest/alertmanager/"><img src=".github/badges/alertmanager.svg" alt="Alertmanager" height="28"></a>
+      <a href="https://grafana.com/oss/grafana/"><img src=".github/badges/grafana.svg" alt="Grafana" height="28"></a>
+      <a href="https://github.com/TwiN/gatus"><img src=".github/badges/gatus.svg" alt="Gatus" height="28"></a>
+    </td>
+  </tr>
+  <tr>
+    <th align="left">Apps</th>
+    <td align="left">
+      <a href="https://jellyfin.org/"><img src=".github/badges/jellyfin.svg" alt="Jellyfin" height="28"></a>
+      <a href="https://immich.app/"><img src=".github/badges/immich.svg" alt="Immich" height="28"></a>
+      <a href="https://sonarr.tv/"><img src=".github/badges/sonarr.svg" alt="Sonarr" height="28"></a>
+      <a href="https://radarr.video/"><img src=".github/badges/radarr.svg" alt="Radarr" height="28"></a>
+      <a href="https://github.com/dani-garcia/vaultwarden"><img src=".github/badges/vaultwarden.svg" alt="Vaultwarden" height="28"></a>
+      <a href="https://miniflux.app/"><img src=".github/badges/miniflux.svg" alt="Miniflux" height="28"></a>
+    </td>
+  </tr>
+</table>
 
 [![Service map: every workload group in the cluster, with the private, public, and temporary-share paths into it](docs/diagrams/service-map.png)](docs/diagrams/service-map.png?raw=1)
 
