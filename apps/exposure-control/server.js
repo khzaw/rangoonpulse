@@ -4986,6 +4986,10 @@ const CONTROL_PANEL_ASSETS = new Map([
     filePath: path.join(APP_DIR, "update-policy.js"),
     contentType: "application/javascript; charset=utf-8",
   }],
+  ["/assets/updates-view.js", {
+    filePath: path.join(APP_DIR, "updates-view.js"),
+    contentType: "application/javascript; charset=utf-8",
+  }],
   ["/assets/pulse.js", {
     filePath: path.join(APP_DIR, "pulse.js"),
     contentType: "application/javascript; charset=utf-8",

@@ -77,8 +77,8 @@ curl -fsS --max-time 180 'https://controlpanel.khzaw.dev/api/helm-updates?refres
 
 Check `checkedAt`, `source`, `stale`, and row details: refresh errors can return an older cached snapshot.
 Then open [Control Panel Updates](https://controlpanel.khzaw.dev/#updates) and verify both rows and their
-maintenance status. `Unknown` requires investigation or a documented concrete upstream limitation; it does not
-mean the update path was verified. A workload without a HelmRelease may mark the chart row inapplicable, while
+maintenance status. A row under Could not check (API status `unknown`) requires investigation or a documented
+concrete upstream limitation; it does not mean the update path was verified. A workload without a HelmRelease may mark the chart row inapplicable, while
 still completing its image maintenance path.
 
 ## Private access and disabled share setup

@@ -242,67 +242,23 @@
         <div class="page-head">
           <div>
             <h1 class="page-title">Updates</h1>
-            <div id="renovateMeta" class="page-meta">loading…</div>
+            <div id="renovateStrip" class="upd-renovate" aria-live="polite"></div>
           </div>
           <div class="page-actions">
-            <div id="renovateLinks" class="link-row"></div>
+            <button id="updatesRefreshBtn" type="button" title="Check registries and chart repositories now">Check</button>
             <button id="renovateRunBtn" class="primary" type="button">Run Renovate</button>
           </div>
         </div>
-        <div class="tabs" role="tablist" aria-label="Update type">
-          <span class="glide-thumb" aria-hidden="true"></span>
-          <button id="imagesTab" type="button" role="tab" aria-selected="true" aria-controls="imagesPanel" data-update-tab="images">Images <span id="imagesTabCount" class="tab-count"></span></button>
-          <button id="chartsTab" type="button" role="tab" aria-selected="false" aria-controls="chartsPanel" tabindex="-1" data-update-tab="charts">Charts <span id="chartsTabCount" class="tab-count"></span></button>
+        <div id="updatesFigures" class="upd-figures"></div>
+        <div class="toolbar upd-toolbar">
+          <label class="search-shell" for="updatesSearchInput">
+            <span class="sr-only">Search updates</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
+            <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="Search" />
+          </label>
+          <div class="view-switch" role="group" aria-label="Kind"><span class="glide-thumb" aria-hidden="true"></span><button type="button" data-updates-kind="all" aria-pressed="true">All</button><button type="button" data-updates-kind="image" aria-pressed="false">Images<span id="updatesImageCount"></span></button><button type="button" data-updates-kind="chart" aria-pressed="false">Charts<span id="updatesChartCount"></span></button></div>
+          <div id="updatesMeta" class="page-meta toolbar-end"></div>
         </div>
-        <div id="imagesPanel" role="tabpanel" aria-labelledby="imagesTab">
-          <div class="toolbar">
-            <label class="search-shell" for="updatesSearchInput">
-              <span class="sr-only">Search images</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
-              <input id="updatesSearchInput" type="search" autocomplete="off" placeholder="Search" />
-            </label>
-            <label class="check-chip">
-              <input id="updatesOnlyAvailable" type="checkbox" />
-              <span>Pending only</span>
-            </label>
-            <div id="updatesMeta" class="page-meta toolbar-end"></div>
-            <button id="updatesRefreshBtn" type="button">Check</button>
-          </div>
-          <div class="table-shell updates-scroll">
-            <table class="updates-table" role="table" aria-label="Container image updates">
-              <thead>
-                <tr>
-                  <th>Service</th>
-                  <th>Version</th>
-                  <th>State</th>
-                  <th>Image</th>
-                  <th><span class="sr-only">Action</span></th>
-                </tr>
-              </thead>
-              <tbody id="updatesRows"></tbody>
-            </table>
-          </div>
-        </div>
-        <div id="chartsPanel" role="tabpanel" aria-labelledby="chartsTab" hidden>
-          <div class="toolbar">
-            <div id="helmUpdatesMeta" class="page-meta toolbar-end"></div>
-            <button id="helmUpdatesRefreshBtn" type="button">Check</button>
-          </div>
-          <div class="table-shell updates-scroll">
-            <table class="helm-updates-table" role="table" aria-label="Helm chart updates">
-              <thead>
-                <tr>
-                  <th>Release</th>
-                  <th>Current</th>
-                  <th>Latest</th>
-                  <th>State</th>
-                  <th>Chart</th>
-                  <th><span class="sr-only">Action</span></th>
-                </tr>
-              </thead>
-              <tbody id="helmUpdatesRows"></tbody>
-            </table>
-          </div>
-        </div>
+        <div id="updatesBody" class="upd-body"></div>
       </section>
 
       <section id="travel" class="section" data-page-section hidden>
@@ -446,6 +402,7 @@
     </main>
     <script src="/assets/thinking-orb.js" defer></script>
     <script src="/assets/update-policy.js" defer></script>
+    <script src="/assets/updates-view.js" defer></script>
     <script src="/assets/pulse.js" defer></script>
     <script src="/assets/tuning.js" defer></script>
     <script src="/assets/fx.js" defer></script>

@@ -94,26 +94,6 @@ test('telemetry pages load on entry and not again while they stay on screen', ()
   assert.deepEqual(loads, ['activity', 'pulse', 'activity']);
 });
 
-test('tab keyboard navigation wraps, supports Home/End and leaves one tab in the tab order', () => {
-  const panels = { imagesPanel: element(), chartsPanel: element() };
-  const tabs = ['images', 'charts'].map((id) => element(id, { 'aria-controls': id + 'Panel' }));
-  const context = vm.createContext({ document: { querySelectorAll: () => tabs, getElementById: (id) => panels[id] } });
-  vm.runInContext(between('      const updateTabs =', '      let mutationInFlight ='), context);
-  const key = (tab, key) => tab.onkeydown({ key, preventDefault() {} });
-  key(tabs[0], 'ArrowLeft');
-  assert.equal(panels.imagesPanel.hidden, true);
-  assert.equal(panels.chartsPanel.hidden, false);
-  assert.equal(tabs[1].tabIndex, 0);
-  assert.equal(tabs[0].tabIndex, -1);
-  assert.equal(tabs[1].focused, true);
-  key(tabs[1], 'ArrowRight');
-  assert.equal(tabs[0].getAttribute('aria-selected'), 'true');
-  key(tabs[0], 'End');
-  assert.equal(tabs[1].getAttribute('aria-selected'), 'true');
-  key(tabs[1], 'Home');
-  assert.equal(tabs[0].getAttribute('aria-selected'), 'true');
-});
-
 test('share search combines literal case-insensitive text and active filtering without replacing forms', () => {
   const services = [
     { id: 'reader', name: 'Book library', publicHost: 'share-reader.example.test', enabled: true },

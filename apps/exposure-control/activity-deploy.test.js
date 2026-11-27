@@ -95,7 +95,7 @@ function harness(fetch) {
   vm.createContext(context);
   vm.runInContext([
     functionsBetween('      function describeRequestActivity(', '      function withUnitSpace('),
-    functionsBetween('      function escapeHtml(', '      function normalizeMatchToken('),
+    functionsBetween('      function escapeHtml(', '      function setBtnLoading('),
     functionsBetween('      function conditionLabel(', '      async function saveJobConfig('),
   ].join('\n'), context);
   return { context, clock, cards: () => cards };

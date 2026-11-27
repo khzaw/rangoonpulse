@@ -25,11 +25,11 @@
       const rowsEl = document.getElementById('rows');
       const agentAccessEl = document.getElementById('agentAccess');
       const auditRowsEl = document.getElementById('auditRows');
-      const updatesRowsEl = document.getElementById('updatesRows');
+      const updatesBodyEl = document.getElementById('updatesBody');
+      const updatesFiguresEl = document.getElementById('updatesFigures');
       const updatesSearchInputEl = document.getElementById('updatesSearchInput');
-      const updatesOnlyAvailableEl = document.getElementById('updatesOnlyAvailable');
-      const renovateMetaEl = document.getElementById('renovateMeta');
-      const renovateLinksEl = document.getElementById('renovateLinks');
+      const updatesKindButtons = Array.from(document.querySelectorAll('[data-updates-kind]'));
+      const renovateStripEl = document.getElementById('renovateStrip');
       const vpnMetaEl = document.getElementById('vpnMeta');
       const transmissionPanelEl = document.getElementById('transmissionPanel');
       const auditPanelEl = document.getElementById('auditPanel');
@@ -48,9 +48,6 @@
       const travelExposureLink = document.getElementById('travelExposureLink');
       const renovateRunBtn = document.getElementById('renovateRunBtn');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
-      const helmUpdatesRowsEl = document.getElementById('helmUpdatesRows');
-      const helmUpdatesMetaEl = document.getElementById('helmUpdatesMeta');
-      const helmUpdatesRefreshBtn = document.getElementById('helmUpdatesRefreshBtn');
       const secretsSummaryEl = document.getElementById('secretsSummary');
       const secretsSearchInputEl = document.getElementById('secretsSearchInput');
       const secretsNamespaceFilterEl = document.getElementById('secretsNamespaceFilter');
@@ -137,30 +134,6 @@
         setActivePage('overview', { focus: true });
       };
 
-      const updateTabs = Array.from(document.querySelectorAll('[data-update-tab]'));
-      function selectUpdateTab(tab) {
-        updateTabs.forEach((button) => {
-          const selected = button === tab;
-          button.setAttribute('aria-selected', String(selected));
-          button.tabIndex = selected ? 0 : -1;
-          document.getElementById(button.getAttribute('aria-controls')).hidden = !selected;
-        });
-      }
-      updateTabs.forEach((tab, index) => {
-        tab.onclick = () => selectUpdateTab(tab);
-        tab.onkeydown = (event) => {
-          let next;
-          if (event.key === 'ArrowRight') next = (index + 1) % updateTabs.length;
-          if (event.key === 'ArrowLeft') next = (index + updateTabs.length - 1) % updateTabs.length;
-          if (event.key === 'Home') next = 0;
-          if (event.key === 'End') next = updateTabs.length - 1;
-          if (next === undefined) return;
-          event.preventDefault();
-          selectUpdateTab(updateTabs[next]);
-          updateTabs[next].focus();
-        };
-      });
-
       let mutationInFlight = 0;
       let pendingExpiryRefresh = false;
       let transmissionVpnState = null;
@@ -173,8 +146,8 @@
         paused: true,
         'aria-label': 'Control panel activity',
       });
-      let updatesFilterQuery = '';
-      let updatesOnlyAvailable = false;
+      // Filter and disclosure state outlive a repaint of the Updates page.
+      const updatesUi = { query: '', kind: 'all', open: { unchecked: false, current: false }, painted: {} };
       let dashboardState = {
         services: [],
         audit: [],
@@ -182,6 +155,7 @@
         renovate: null,
         updates: null,
         helmUpdates: null,
+        activity: null,
         travel: null,
         dns: null,
         tuning: null,
@@ -325,7 +299,7 @@
         const previousPage = activePage;
         activePage = nextPage;
         if (nextPage === 'pulse' && previousPage !== 'pulse') loadPulse({ silent: true });
-        if (nextPage === 'activity' && previousPage !== 'activity') loadActivity();
+        if ((nextPage === 'activity' || nextPage === 'updates') && previousPage !== nextPage) loadActivity();
         pageSections.forEach((section) => {
           section.hidden = section.id !== nextPage;
           section.classList.toggle('page-active', section.id === nextPage);
@@ -553,99 +527,6 @@
         return escapeHtml(value).replace(/\n/g, '&#10;');
       }
 
-      function normalizeMatchToken(value) {
-        return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-      }
-
-      function normalizeRepoName(value) {
-        return String(value || '').replace(/\.git$/i, '').trim();
-      }
-
-      function prMatchScore(pr, item, mode) {
-        const haystack = normalizeMatchToken(String(pr && pr.title || '') + ' ' + String(pr && pr.headRefName || ''));
-        if (!haystack) return 0;
-
-        const candidates = mode === 'image'
-          ? [item && item.imageRepo, item && item.name, item && item.id]
-          : [item && item.chart, item && item.name, item && item.id];
-
-        let best = 0;
-        candidates.forEach((candidate) => {
-          const normalized = normalizeMatchToken(candidate);
-          if (!normalized || normalized.length < 4) return;
-          if (haystack.includes(normalized)) best = Math.max(best, normalized.length);
-        });
-        return best;
-      }
-
-      function findMatchingRenovatePr(item, mode) {
-        const prs = dashboardState.renovate && Array.isArray(dashboardState.renovate.openPrs)
-          ? dashboardState.renovate.openPrs
-          : [];
-        let best = null;
-        let bestScore = 0;
-        prs.forEach((pr) => {
-          const score = prMatchScore(pr, item, mode);
-          if (score > bestScore) {
-            best = pr;
-            bestScore = score;
-          }
-        });
-        return bestScore > 0 ? best : null;
-      }
-
-      function updateItemSearchText(item) {
-        return [
-          item && item.name,
-          item && item.id,
-          item && item.namespace,
-          item && item.imageRepo,
-          item && item.image,
-          item && item.currentVersion,
-          item && item.latestVersion,
-          item && item.statusText,
-          item && item.detail,
-          item && item.pod,
-        ].filter(Boolean).join(' ').toLowerCase();
-      }
-
-      function filteredUpdateItems(items) {
-        const query = String(updatesSearchInputEl ? updatesSearchInputEl.value : updatesFilterQuery).trim().toLowerCase();
-        const onlyAvailable = updatesOnlyAvailableEl ? updatesOnlyAvailableEl.checked : updatesOnlyAvailable;
-        return items.filter((item) => {
-          if (!item) return false;
-          if (onlyAvailable && item.status !== 'update') return false;
-          if (query && !updateItemSearchText(item).includes(query)) return false;
-          return true;
-        });
-      }
-
-      function versionTagHtml(value, className) {
-        const text = value || '—';
-        return '<span class="version-tag ' + className + '" title="' + attrText(text) + '" data-version-tooltip="' + attrText(text) + '">' + escapeHtml(text) + '</span>';
-      }
-
-      function versionDiffHtml(currentVersion, latestVersion, status) {
-        const current = currentVersion || '—';
-        const latest = latestVersion || '—';
-        const hasUpdate = status === 'update' && current !== latest;
-        const tooltip = hasUpdate ? current + ' → ' + latest : (latest !== '—' ? latest : current);
-        if (!hasUpdate) {
-          return (
-            '<div class="updates-version-diff is-current" title="' + attrText(tooltip) + '" data-version-tooltip="' + attrText(tooltip) + '">' +
-              versionTagHtml(latest !== '—' ? latest : current, 'version-single') +
-            '</div>'
-          );
-        }
-        return (
-          '<div class="updates-version-diff is-update" title="' + attrText(tooltip) + '" data-version-tooltip="' + attrText(tooltip) + '">' +
-            versionTagHtml(current, 'version-current') +
-            '<span class="version-arrow">→</span>' +
-            versionTagHtml(latest, 'version-latest') +
-          '</div>'
-        );
-      }
-
       function setBtnLoading(btn, on) {
         if (!btn) return;
         btn.disabled = Boolean(on);
@@ -672,36 +553,8 @@
       function renderRenovateStatus(payload) {
         const renovate = payload || null;
         dashboardState.renovate = renovate;
-        renovateLinksEl.innerHTML = '';
-
-        if (!renovate || !renovate.configured) {
-          renovateMetaEl.textContent = renovate && renovate.error ? 'Renovate unavailable' : 'Renovate not configured';
-          renovateRunBtn.disabled = true;
-          return;
-        }
-
-        const activeRun = renovate.activeRun || null;
-        const lastRun = activeRun || renovate.lastRun || null;
-        const meta = [lastRun ? (lastRun.status === 'completed' ? (lastRun.conclusion || 'completed') : lastRun.status) : 'idle'];
-        if (lastRun && lastRun.updatedAt) meta.push(fmtAgo(lastRun.updatedAt));
-        meta.push(String(renovate.openPrCount || 0) + ' open');
-        renovateMetaEl.textContent = 'Renovate ' + meta.join(' · ');
-        renovateMetaEl.title = lastRun && lastRun.updatedAt ? fmtDateTime(lastRun.updatedAt) : '';
-        renovateRunBtn.disabled = Boolean(activeRun);
-
-        const links = [];
-        if (renovate.dashboardIssueUrl) {
-          links.push('<a href="' + escapeHtml(renovate.dashboardIssueUrl) + '" target="_blank" rel="noreferrer">Dashboard</a>');
-        }
-        if (lastRun && lastRun.url) {
-          links.push('<a href="' + escapeHtml(lastRun.url) + '" target="_blank" rel="noreferrer">Run</a>');
-        }
-        if (renovate.repository) {
-          links.push('<a href="https://github.com/' + escapeHtml(normalizeRepoName(renovate.repository)) + '/pulls?q=is%3Apr+is%3Aopen+label%3Arenovate" target="_blank" rel="noreferrer">PRs</a>');
-        }
-        renovateLinksEl.innerHTML = links.join('');
-        if (dashboardState.updates) renderUpdates(dashboardState.updates);
-        if (dashboardState.helmUpdates) renderHelmUpdates(dashboardState.helmUpdates);
+        renovateRunBtn.disabled = !renovate || !renovate.configured || Boolean(renovate.activeRun);
+        renderUpdatesPage();
       }
 
       async function loadRenovateStatus(options) {
@@ -732,14 +585,6 @@
           renovateRunBtn.classList.remove('is-loading');
           renovateRunBtn.disabled = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
         }
-      }
-
-      async function runRenovateScan(label) {
-        const targetLabel = String(label || '').trim();
-        if (targetLabel) {
-          setRenovateMsg('Starting Renovate for ' + targetLabel + '…');
-        }
-        await runRenovate();
       }
 
       // One stat tile. State shows as a lamp beside the label; the figure stays
@@ -798,12 +643,12 @@
         const charts = helmUpdateItems.filter((item) => item && item.status === 'update');
         const pending = images.map((item) => ({
           name: item.name || item.id || 'service',
-          detail: (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
+          detail: window.UpdatesView ? window.UpdatesView.changeLabel(item) : (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
         })).concat(charts.map((item) => ({
           name: item.name || item.release || item.id || 'release',
           detail: 'chart ' + (item.currentVersion || '?') + ' → ' + (item.latestVersion || '?'),
         })));
-        const reportsAvailable = Boolean(dashboardState.updates && dashboardState.helmUpdates);
+        const reportsAvailable = Boolean(dashboardState.updates && dashboardState.helmUpdates && !dashboardState.updates.error && !dashboardState.helmUpdates.error);
         const preview = tuning && tuning.applyPreflight && Date.parse(tuning.applyPreflight.builtAt) > 0 ? tuning.applyPreflight : null;
         const proposals = preview && Array.isArray(preview.selected) ? preview.selected : [];
         const audit = (dashboardState.audit || []).slice(0, 4);
@@ -1024,7 +869,7 @@
                 '<td><span class="pill" data-tone="' + jobTone(run.status) + '">' + escapeHtml(run.status || 'unknown') + '</span></td>' +
                 '<td>' + fmtDateTime(run.startedAt) + '</td>' +
                 '<td>' + (run.durationSeconds == null ? '—' : String(run.durationSeconds) + 's') + '</td>' +
-                '<td class="updates-action-cell"><button class="updates-action-btn" type="button" data-job-log="' + id + '" data-job-run="' + escapeHtml(run.name || '') + '">Logs</button></td>' +
+                '<td class="job-log-cell"><button class="job-log-btn" type="button" data-job-log="' + id + '" data-job-run="' + escapeHtml(run.name || '') + '">Logs</button></td>' +
               '</tr>'
             ).join('')
             : '<tr><td colspan="5" class="empty-state">No runs.</td></tr>';
@@ -1907,166 +1752,90 @@
         }).join('');
       }
 
-      function updateTone(status) {
-        if (status === 'update') return 'warning';
-        if (status === 'current') return 'ok';
-        if (status === 'not-installed') return 'danger';
-        return 'neutral';
+      // Each region repaints only when its markup changes, so a quiet refresh
+      // leaves focus and an open disclosure alone.
+      function paintUpdates(element, key, markup) {
+        if (!element || updatesUi.painted[key] === markup) return;
+        updatesUi.painted[key] = markup;
+        element.innerHTML = markup;
       }
 
-      function renderUpdates(payload) {
-        const items = payload && Array.isArray(payload.items) ? payload.items : [];
-        document.getElementById('imagesTabCount').textContent = items.filter((item) => item.status === 'update').length || '';
-        const visibleItems = filteredUpdateItems(items);
-        const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
-        const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
-        const policy = window.UpdatePolicy;
-        updatesRowsEl.innerHTML = '';
-        if (!items.length) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="5" class="empty-state">No images.</td>';
-          updatesRowsEl.appendChild(tr);
-        } else if (!visibleItems.length) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="5" class="empty-state">No match.</td>';
-          updatesRowsEl.appendChild(tr);
-        } else {
-          visibleItems.forEach((item) => {
-            const tr = document.createElement('tr');
-            tr.className = 'update-row';
-            tr.setAttribute('role', 'row');
-            const imageLabel = item.imageRepo || item.image || '—';
-            const imageDetail = [item.detail, item.pod ? 'pod/' + item.pod : ''].filter(Boolean).join(' · ');
-            const visibleDetail = !['update', 'current'].includes(item.status) ? item.detail || '' : '';
-            const imageTitle = [imageLabel, imageDetail].filter(Boolean).join('\n');
-            const workflow = policy.classifyImageUpdate(item, dashboardState.renovate, payload && payload.checkedAt);
-            const statusLabel = item.status === 'update' ? workflow.label : String(item.statusText || 'unknown').toLowerCase();
-            let actionHtml = '<span class="updates-action-note">—</span>';
-            if (workflow.url) {
-              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(workflow.url) + '" target="_blank" rel="noreferrer" aria-label="' + attrText(workflow.label) + '">Open</a>';
-            } else if (item.status === 'update') {
-              if (!renovateConfigured) {
-                actionHtml = '<span class="updates-action-note">Renovate off</span>';
-              } else if (renovateActiveRun && workflow.canRun) {
-                actionHtml = '<span class="updates-action-note">Scan running</span>';
-              } else if (workflow.canRun) {
-                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="image" data-item-label="' + escapeHtml(item.name || item.id || 'service') + '">Scan</button>';
-              } else {
-                actionHtml = '<span class="updates-action-note" title="' + attrText(workflow.detail) + '">' + escapeHtml(workflow.label) + '</span>';
-              }
-            }
-            tr.innerHTML =
-              '<td class="updates-service-cell" data-label="Service" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
-              '<td class="updates-version-cell" data-label="Version" role="cell">' + versionDiffHtml(item.currentVersion, item.latestVersion, item.status) + '</td>' +
-              '<td class="updates-status-cell" data-label="State" role="cell"><span class="pill" data-tone="' + updateTone(item.status) + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
-              '<td class="updates-context-cell" data-label="Image" role="cell" title="' + attrText(imageTitle) + '"><div class="updates-version truncate-text" title="' + attrText(imageLabel) + '">' + escapeHtml(imageLabel) + '</div><div class="updates-sub truncate-text" title="' + attrText(imageDetail) + '">' + escapeHtml(visibleDetail) + '</div></td>' +
-              '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
-            updatesRowsEl.appendChild(tr);
-          });
-        }
-        const nextCheckAt = payload && payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : 'unknown';
-        const source = payload && payload.source ? payload.source : 'unknown';
-        const staleText = payload && payload.stale ? ' · stale' : '';
-        const refreshingText = payload && payload.refreshInProgress ? ' · refreshing' : '';
-        const filterText = items.length && visibleItems.length !== items.length ? visibleItems.length + ' / ' + items.length + ' · ' : '';
-        updatesMetaEl.textContent = filterText + (payload && payload.checkedAt ? 'checked ' + fmtAgo(payload.checkedAt) : 'not checked') + staleText + refreshingText;
-        updatesMetaEl.title = (payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) + ' · ' : '') + 'next ' + nextCheckAt + ' · ' + source;
+      // The older of the two reports sets the visible age; both sit in the tooltip.
+      function updatesFreshness() {
+        const reports = [['images', dashboardState.updates], ['charts', dashboardState.helmUpdates]].filter(([, payload]) => payload && payload.checkedAt);
+        if (!reports.length) return { text: '', title: '' };
+        const oldest = reports.map(([, payload]) => payload.checkedAt).sort()[0];
+        const busy = reports.some(([, payload]) => payload.refreshInProgress);
+        const title = reports.map(([label, payload]) => label + ' ' + fmtDateTime(payload.checkedAt) +
+          (payload.stale ? ' (stale)' : '') + ' · next ' + (payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : '?')).join('\n');
+        return { text: (busy ? 'checking · ' : '') + 'checked ' + fmtAgo(oldest), title };
       }
+
+      function renderUpdatesPage() {
+        const V = window.UpdatesView;
+        if (!V || !updatesBodyEl) return;
+        const now = Date.now();
+        const renovate = dashboardState.renovate;
+        const model = V.buildModel({
+          images: dashboardState.updates,
+          charts: dashboardState.helmUpdates,
+          renovate,
+          activity: dashboardState.activity,
+          kind: updatesUi.kind,
+          query: updatesUi.query,
+          now,
+        });
+        const c = model.counts;
+        paintUpdates(renovateStripEl, 'renovate', V.renovateMarkup(renovate, now));
+        paintUpdates(updatesFiguresEl, 'figures', V.figuresMarkup(model));
+        paintUpdates(updatesBodyEl, 'body', V.bodyMarkup(model, { now, open: updatesUi.open }));
+
+        document.getElementById('updatesImageCount').textContent = c.images ? String(c.images) : '';
+        document.getElementById('updatesChartCount').textContent = c.charts ? String(c.charts) : '';
+        const freshness = updatesFreshness();
+        updatesMetaEl.textContent = freshness.text;
+        updatesMetaEl.title = freshness.title;
+      }
+
+      // Kept as the entry points the rest of the panel calls.
+      function renderUpdates() { renderUpdatesPage(); }
+      function renderHelmUpdates() { renderUpdatesPage(); }
 
       async function loadUpdates(options) {
         const force = Boolean(options && options.force);
-        if (force) {
-          setBtnLoading(updatesRefreshBtn, true);
-          setUpdatesMsg('Checking registries…');
-        }
         try {
-          const path = force ? '/api/image-updates?force=1' : '/api/image-updates';
-          const payload = await request(path, 'GET');
+          const payload = await request(force ? '/api/image-updates?force=1' : '/api/image-updates', 'GET');
           dashboardState.updates = payload;
-          renderUpdates(payload);
+          renderUpdatesPage();
           renderOverview();
-          setUpdatesMsg(payload.stale ? 'Cached; refreshing in background.' : force ? 'Images checked.' : '');
+          if (payload.stale) setUpdatesMsg('Images cached; refreshing.');
+          else if (force) setUpdatesMsg('Images checked.');
         } catch (err) {
           setUpdatesMsg(err.message, true);
-        } finally {
-          if (force) setBtnLoading(updatesRefreshBtn, false);
         }
-      }
-
-      function renderHelmUpdates(payload) {
-        const items = payload && Array.isArray(payload.items) ? payload.items : [];
-        document.getElementById('chartsTabCount').textContent = items.filter((item) => item.status === 'update').length || '';
-        const renovateConfigured = Boolean(dashboardState.renovate && dashboardState.renovate.configured);
-        const renovateActiveRun = Boolean(dashboardState.renovate && dashboardState.renovate.activeRun);
-        helmUpdatesRowsEl.innerHTML = '';
-        if (!items.length) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="6" class="empty-state">No charts.</td>';
-          helmUpdatesRowsEl.appendChild(tr);
-        } else {
-          const policy = window.UpdatePolicy;
-          items.forEach((item) => {
-            const tr = document.createElement('tr');
-            tr.className = 'update-row';
-            tr.setAttribute('role', 'row');
-            const workflow = policy && typeof policy.classifyHelmUpdate === 'function'
-              ? policy.classifyHelmUpdate(item, dashboardState.renovate, payload && payload.checkedAt)
-              : (() => {
-                  const matchingPr = findMatchingRenovatePr(item, 'helm');
-                  return matchingPr
-                    ? { kind: 'open-pr', label: 'PR #' + String(matchingPr.number || ''), detail: String(matchingPr.title || ''), url: String(matchingPr.url || ''), canRun: false }
-                    : { kind: item.status === 'update' ? 'ready' : 'current', label: String(item.statusText || 'unknown').toLowerCase(), detail: item.detail || '', canRun: item.status === 'update' };
-                })();
-            const statusLabel = item.status === 'update' ? workflow.label : String(item.statusText || 'unknown').toLowerCase();
-            let actionHtml = '<span class="updates-action-note">—</span>';
-            if (workflow.url) {
-              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(workflow.url) + '" target="_blank" rel="noreferrer">' + escapeHtml(workflow.label) + '</a>';
-            } else if (item.status === 'update') {
-              if (!renovateConfigured) {
-                actionHtml = '<span class="updates-action-note">Renovate off</span>';
-              } else if (renovateActiveRun && workflow.canRun) {
-                actionHtml = '<span class="updates-action-note">Scan running</span>';
-              } else if (workflow.canRun) {
-                actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="helm" data-item-label="' + escapeHtml(item.name || item.id || 'chart') + '">Scan</button>';
-              } else {
-                actionHtml = '<span class="updates-action-note" title="' + attrText(workflow.detail) + '">' + escapeHtml(workflow.label) + '</span>';
-              }
-            }
-            tr.innerHTML =
-              '<td class="updates-service-cell" data-label="Release" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
-              '<td class="updates-version updates-cell-center helm-current-cell" data-label="Current" role="cell">' + escapeHtml(item.currentVersion || '—') + '</td>' +
-              '<td class="updates-version updates-cell-center helm-latest-cell" data-label="Latest" role="cell">' + escapeHtml(item.latestVersion || '—') + '</td>' +
-              '<td class="updates-status-cell" data-label="State" role="cell"><span class="pill" data-tone="' + updateTone(item.status) + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
-              '<td class="updates-context-cell" data-label="Chart" role="cell"><div class="updates-version">' + escapeHtml(item.chart || '—') + '</div><div class="updates-sub">' + escapeHtml((item.repo || '—') + (item.detail ? ' · ' + item.detail : '')) + '</div></td>' +
-              '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
-            helmUpdatesRowsEl.appendChild(tr);
-          });
-        }
-        const nextCheckAt = payload && payload.nextCheckAt ? fmtDateTime(payload.nextCheckAt) : 'unknown';
-        const source = payload && payload.source ? payload.source : 'unknown';
-        const staleText = payload && payload.stale ? ' · stale' : '';
-        const refreshingText = payload && payload.refreshInProgress ? ' · refreshing' : '';
-        helmUpdatesMetaEl.textContent = (payload && payload.checkedAt ? 'checked ' + fmtAgo(payload.checkedAt) : 'not checked') + staleText + refreshingText;
-        helmUpdatesMetaEl.title = (payload && payload.checkedAt ? fmtDateTime(payload.checkedAt) + ' · ' : '') + 'next ' + nextCheckAt + ' · ' + source;
       }
 
       async function loadHelmUpdates(options) {
         const force = Boolean(options && options.force);
-        if (force) {
-          setBtnLoading(helmUpdatesRefreshBtn, true);
-          setHelmUpdatesMsg('Checking chart repos…');
-        }
         try {
-          const path = force ? '/api/helm-updates?force=1' : '/api/helm-updates';
-          const payload = await request(path, 'GET');
+          const payload = await request(force ? '/api/helm-updates?force=1' : '/api/helm-updates', 'GET');
           dashboardState.helmUpdates = payload;
-          renderHelmUpdates(payload);
+          renderUpdatesPage();
           renderOverview();
-          setHelmUpdatesMsg(payload.stale ? 'Cached; refreshing in background.' : force ? 'Charts checked.' : '');
+          if (payload.stale) setHelmUpdatesMsg('Charts cached; refreshing.');
+          else if (force) setHelmUpdatesMsg('Charts checked.');
         } catch (err) {
           setHelmUpdatesMsg(err.message, true);
+        }
+      }
+
+      async function checkRegistries() {
+        setBtnLoading(updatesRefreshBtn, true);
+        setUpdatesMsg('Checking…');
+        try {
+          await Promise.all([loadUpdates({ force: true }), loadHelmUpdates({ force: true }), loadRenovateStatus({ force: true })]);
         } finally {
-          if (force) setBtnLoading(helmUpdatesRefreshBtn, false);
+          setBtnLoading(updatesRefreshBtn, false);
         }
       }
 
@@ -2667,7 +2436,9 @@
           try {
             feedState.payload = await request(force ? '/api/activity?force=1' : '/api/activity', 'GET');
             feedState.loadedAt = Date.now();
+            dashboardState.activity = feedState.payload;
             renderActivity();
+            renderUpdatesPage();
           } catch (err) {
             feedStatusEl.dataset.state = 'degraded';
             feedStatusEl.textContent = 'unavailable';
@@ -2700,15 +2471,13 @@
         // Telemetry has its own loading state; a slow metrics query must not
         // delay rendering the operator controls returned by the other APIs.
         if (activePage === 'pulse') void loadPulse();
-        if (activePage === 'activity') void loadActivity();
+        if (activePage === 'activity' || activePage === 'updates') void loadActivity();
         const silent = Boolean(options && options.silent);
         if (!silent) {
           setLoadState('…');
           setBtnLoading(refreshAllBtn, true);
           rowsEl.innerHTML = skeletonTableRows(6, 4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
-          updatesRowsEl.innerHTML = skeletonTableRows(5, 4);
-          helmUpdatesRowsEl.innerHTML = skeletonTableRows(6, 4);
         }
 
         try {
@@ -2759,8 +2528,8 @@
             renderUpdates(dashboardState.updates);
             if (!silent) setUpdatesMsg('');
           } else {
-            dashboardState.updates = null;
-            renderUpdates({ items: [] });
+            dashboardState.updates = { items: [], error: updatesData.reason.message };
+            renderUpdates();
             setUpdatesMsg(updatesData.reason.message, true);
           }
           if (helmUpdatesData.status === 'fulfilled') {
@@ -2768,8 +2537,8 @@
             renderHelmUpdates(dashboardState.helmUpdates);
             if (!silent) setHelmUpdatesMsg('');
           } else {
-            dashboardState.helmUpdates = null;
-            renderHelmUpdates({ items: [] });
+            dashboardState.helmUpdates = { items: [], error: helmUpdatesData.reason.message };
+            renderHelmUpdates();
             setHelmUpdatesMsg(helmUpdatesData.reason.message, true);
           }
           if (renovateData.status === 'fulfilled') {
@@ -2848,16 +2617,18 @@
       refreshAllBtn.onclick = () => { loadDashboard(); loadVitals(true); };
       const exposureRefreshBtn = document.getElementById('exposureRefreshBtn');
       if (exposureRefreshBtn) exposureRefreshBtn.onclick = () => loadDashboard();
-      updatesRefreshBtn.onclick = () => loadUpdates({ force: true });
+      updatesRefreshBtn.onclick = () => checkRegistries();
       updatesSearchInputEl.addEventListener('input', () => {
-        updatesFilterQuery = updatesSearchInputEl.value || '';
-        renderUpdates(dashboardState.updates || { items: [] });
+        updatesUi.query = updatesSearchInputEl.value || '';
+        renderUpdatesPage();
       });
-      updatesOnlyAvailableEl.addEventListener('change', () => {
-        updatesOnlyAvailable = updatesOnlyAvailableEl.checked;
-        renderUpdates(dashboardState.updates || { items: [] });
+      updatesKindButtons.forEach((button) => {
+        button.onclick = () => {
+          updatesUi.kind = button.dataset.updatesKind || 'all';
+          updatesKindButtons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+          renderUpdatesPage();
+        };
       });
-      helmUpdatesRefreshBtn.onclick = () => loadHelmUpdates({ force: true });
       renovateRunBtn.onclick = () => runRenovate();
       jobsRefreshBtn.onclick = () => loadJobs({ force: true });
       feedRefreshBtn.onclick = () => loadActivity({ force: true });
@@ -2942,25 +2713,22 @@
           window.setTimeout(finishRemoval, 220);
         }
       });
-      updatesRowsEl.onclick = async (event) => {
-        const button = event.target.closest('[data-renovate-scan]');
-        if (!button) return;
-        button.disabled = true;
-        try {
-          await runRenovateScan(button.dataset.itemLabel || 'service update');
-        } finally {
-          button.disabled = false;
-        }
-      };
-      helmUpdatesRowsEl.onclick = async (event) => {
-        const button = event.target.closest('[data-renovate-scan]');
-        if (!button) return;
-        button.disabled = true;
-        try {
-          await runRenovateScan(button.dataset.itemLabel || 'chart update');
-        } finally {
-          button.disabled = false;
-        }
+      // A disclosure remembers being open across repaints; toggle does not
+      // bubble, so it is caught on the way down.
+      updatesBodyEl.addEventListener('toggle', (event) => {
+        const key = event.target && event.target.dataset ? event.target.dataset.updatesDisclosure : '';
+        if (key) updatesUi.open[key] = event.target.open;
+      }, true);
+      // Each figure jumps to the list it counts, opening it when folded.
+      updatesFiguresEl.onclick = (event) => {
+        const tile = event.target.closest('[data-updates-jump]');
+        if (!tile) return;
+        const target = document.getElementById(tile.dataset.updatesJump);
+        if (!target) return;
+        const folded = target.closest('details');
+        if (folded && !folded.open) folded.open = true;
+        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        target.focus({ preventScroll: true });
       };
       siteDeployListEl.onclick = async (event) => {
         const runButton = event.target.closest('[data-site-deploy-run]');
@@ -3081,6 +2849,8 @@
         if (activePage === 'pulse') loadPulse({ silent: true });
         if (activePage === 'overview') loadVitals();
         if (activePage === 'activity') loadActivity();
+        // Renovate runs and Flux rollouts move on their own; keep the page honest.
+        if (activePage === 'updates') { loadActivity(); loadRenovateStatus(); renderUpdatesPage(); }
       }
       setInterval(refreshVisibleTelemetry, 60000);
       document.documentElement.classList.toggle('is-backgrounded', document.hidden);
@@ -3138,8 +2908,7 @@
           commands.push({ group: 'Run', label: 'Refresh', hint: 'all data', run: () => refreshAllBtn.click() });
           if (!renovateRunBtn.disabled) commands.push({ group: 'Run', label: 'Run Renovate', run: () => runRenovate() });
           commands.push(
-            { group: 'Run', label: 'Check images', hint: 'registries', run: () => loadUpdates({ force: true }) },
-            { group: 'Run', label: 'Check charts', hint: 'helm repos', run: () => loadHelmUpdates({ force: true }) },
+            { group: 'Run', label: 'Check for updates', hint: 'registries + charts', run: () => { setActivePage('updates'); checkRegistries(); } },
             { group: 'Run', label: 'Deploy all sites', hint: 'flux reconcile', run: () => { setActivePage('deploy'); runAllSiteDeployments(siteDeployAllBtn); } },
           );
           if (transmissionVpnState) {

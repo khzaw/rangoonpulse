@@ -21,6 +21,16 @@ The `flux` manager tracks both Helm charts and inline `HelmRelease` values; `hel
 
 Do not infer Renovate failure from the control panel update count. The control panel compares live workload images with registry tags; Renovate compares Git declarations under manager, versioning, ignore, and PR-limit policy.
 
+### Control Panel Updates
+
+[Control Panel Updates](https://controlpanel.khzaw.dev/#updates) merges the image report, the chart report, Renovate status, and the Activity feed. [`update-policy.js`](../apps/exposure-control/update-policy.js) classifies each available update and [`updates-view.js`](../apps/exposure-control/updates-view.js) places it in one lane:
+
+- **Needs action**: Renovate has no PR for it (run Renovate) or a Renovate PR is open (review and merge).
+- **In flight**: queued behind the PR limit, already pinned in Git but not yet rolled out by Flux, or covered by a Renovate run in progress.
+- **Held back**: shipped by a parent chart or operator, or kept on its line by Renovate policy.
+
+A floating tag whose digest moved (`latest`, `pg16`) shows as a new build, not as a version change. Recently landed lists Renovate and Flux image-automation commits from the Activity window with their applied or pending rollout state. Could not check lists rows whose registry or chart lookup failed; they carry no update verdict.
+
 ## Versioning Constraints
 
 - `kube-prometheus-stack` follows normal Renovate chart updates. Before a monitoring upgrade, verify the operator and config-reloader image indexes support both `linux/amd64` and `linux/arm64`, review chart/CRD changes, check the new chart's rules and dashboards against the metric filters in `docs/prometheus-storage.md`, and verify the generated Prometheus and Alertmanager workloads as well as Helm readiness. Preserve placement and resource reservations unless separately validated.

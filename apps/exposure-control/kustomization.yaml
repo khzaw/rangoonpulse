@@ -25,6 +25,7 @@ configMapGenerator:
       - server.js
       - thinking-orb.js
       - update-policy.js
+      - updates-view.js
       - secret-commit-job.sh
       - services.json
       - styles.css
