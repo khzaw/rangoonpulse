@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
 
-Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync. It runs media, photos, books, personal apps, and the tools that keep them running. Most services stay on LAN and Tailscale; public sites and temporary shares have their own Cloudflare Tunnel routes.
+This repository defines a homelab Kubernetes cluster. Two nodes run Talos Linux, TrueNAS holds the storage, and Flux applies each commit on `master` to the cluster. The cluster runs media, photo, and book services, personal apps, and the monitoring and automation for all of them. Most services are reachable only over the LAN and Tailscale. Public sites and temporary shares use Cloudflare Tunnel.
 
 <table>
   <tr>
@@ -71,9 +71,9 @@ Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync
   </tr>
 </table>
 
-[![Service map: every workload group in the cluster, with the private, public, and temporary-share paths into it](docs/diagrams/service-map.png)](docs/diagrams/service-map.png?raw=1)
+[![Service map of every workload group in the cluster, with the private, public, and temporary-share paths into it](docs/diagrams/service-map.png)](docs/diagrams/service-map.png?raw=1)
 
-**Click to open the full-size image.** What runs here and how traffic reaches it. White lines are the private path, amber is public through Cloudflare Tunnel, green is a temporary share. Rendered by `make diagrams` from [this D2 file](docs/diagrams/service-map.d2). [How to read it](docs/diagrams.md).
+The service map shows each group of workloads and how traffic reaches it. White lines are the private path, amber lines are the permanent public path through Cloudflare Tunnel, and green lines are temporary shares. Click the image to open it at full size. `make diagrams` renders it from [its D2 source](docs/diagrams/service-map.d2), and [the diagram guide](docs/diagrams.md) explains how to read it.
 
 [How it works](#how-it-works) · [Architecture](#architecture) · [Hardware](#hardware) · [Services](#services) · [Workflows](#cicd-workflows) · [Screenshots](#screenshots) · [Docs](docs/README.md)
 
@@ -83,60 +83,47 @@ Two Talos Kubernetes nodes, TrueNAS storage, and Flux keeping everything in sync
 
 ## How it works
 
-Talos runs the two nodes. Everything after that comes through Git.
+Talos Linux runs both nodes and is managed outside Flux. Everything above the operating system comes from this repository.
 
 ```text
 push to master
    ├─ CI validates manifests, docs, and diagrams, then checks CPU headroom for changed workloads
    └─ Flux reconciles flux/ onto the cluster
-         ├─ SOPS and age decrypt secrets in the cluster, so none are committed in plaintext
+         ├─ Flux decrypts SOPS secrets with age, so Git holds no plaintext secrets
          ├─ ingress-nginx, cert-manager, and ExternalDNS publish private hosts with TLS and DNS
-         └─ Cloudflare Tunnel publishes the public sites, and exposure-control gates temporary shares
+         └─ Cloudflare Tunnel publishes the public sites, and exposure-control enforces access and expiry on temporary shares
 ```
 
-Each service is one directory under `apps/` and one Flux Kustomization under `flux/kustomizations/`. A new workload is a new directory and a new entry in [the reconciliation tree](flux/kustomization.yaml).
+Each app has one directory under `apps/` and one Flux Kustomization under `flux/kustomizations/`. To add a workload, add both and list the Kustomization in [the reconciliation tree](flux/kustomization.yaml).
 
-[![GitOps loop: commits reach the cluster through Flux, while Renovate, image automation, Resource Advisor, and the Control Panel write back to Git](docs/diagrams/gitops-loop.png)](docs/diagrams/gitops-loop.png?raw=1)
+[![GitOps loop showing commits reaching the cluster through Flux, and Renovate, image automation, Resource Advisor, and the Control Panel writing back to Git](docs/diagrams/gitops-loop.png)](docs/diagrams/gitops-loop.png?raw=1)
 
-People are not the only writers. Four automations change the cluster by changing Git:
+Four automations also write to Git:
 
-- **Renovate** opens chart, image, and GitHub Actions update PRs every six hours.
-- **Flux image automation** commits new tags for the self-built images.
-- **[Resource Advisor](docs/resource-advisor.md)** reads retained Prometheus metrics and opens budgeted resource-tuning PRs. CI renders the affected workloads and checks CPU capacity, including room for rollouts and scheduled jobs.
-- **The Control Panel** commits SOPS-encrypted secret edits.
+- Renovate opens pull requests for chart, image, and GitHub Actions updates every six hours.
+- Flux image automation commits new tags for the self-built images.
+- [Resource Advisor](docs/resource-advisor.md) reads retained Prometheus metrics and opens pull requests that resize workloads within a shared growth budget. CI renders each affected workload and checks that the nodes have enough CPU for it, with room left for rollouts and scheduled jobs.
+- The Control Panel commits secret edits encrypted with SOPS. It is also the private web UI for temporary shares, telemetry, a timeline of Git changes reaching the cluster, deployments, scheduled jobs, and resource tuning.
 
-Flux owns permanent desired state; the Control Panel owns temporary share and routing state. The two AdGuard instances have independent storage and rollout boundaries, so DNS updates proceed one instance at a time.
+Flux owns the permanent desired state. The Control Panel owns temporary share and routing state.
 
----
-
-## Highlights
-
-| Feature | How it works here |
-|---|---|
-| **GitOps first** | Flux reconciles Kustomizations and HelmReleases from this repository. |
-| **Private by default** | LAN and Tailscale clients share an ingress VIP; public access is explicitly wired through Cloudflare Tunnel. |
-| **Two architectures** | An AMD64 primary node handles the heavier workloads; an ARM64 Raspberry Pi runs utility services. |
-| **Storage by workload** | TrueNAS provides shared files and media; node-local storage handles latency-sensitive databases and caches. |
-| **Resource tuning** | Resource Advisor uses Prometheus data to propose budgeted resource changes through pull requests. |
-| **Control Panel** | A private interface for temporary shares, telemetry, a Git-to-cluster activity timeline, deployments, scheduled jobs, secrets, and resource tuning. |
-| **Encrypted secrets** | SOPS + age protects Git-managed secrets; Flux decrypts them in the cluster. |
-| **Diagrams as code** | The diagrams on this page are [D2 sources](docs/diagrams/) rendered by a pinned toolchain. CI fails when a source changes without a render. |
+The two AdGuard instances run on separate nodes, with separate storage and separate Flux Kustomizations. A DNS change rolls out to one instance at a time.
 
 ---
 
 ## Architecture
 
-Private ingress, permanent public sites, and temporary shares follow three distinct paths:
+Traffic reaches a service by one of three paths:
 
 | Path | Route | Carries |
 |---|---|---|
-| **Private** | LAN or Tailscale client → MetalLB ingress VIP → ingress-nginx → Service | Every app's canonical host |
-| **Public** | Cloudflare edge → Cloudflare Tunnel → Service | The self-built public sites |
-| **Temporary share** | Cloudflare edge → Cloudflare Tunnel → exposure-control → Service | Selected apps, while a share is enabled |
+| Private | LAN or Tailscale client → MetalLB ingress VIP → ingress-nginx → Service | Every app's canonical host |
+| Public | Cloudflare edge → Cloudflare Tunnel → Service | The self-built public sites |
+| Temporary share | Cloudflare edge → Cloudflare Tunnel → exposure-control → Service | Selected apps, while a share is enabled |
 
-Public routes normally bypass MetalLB and ingress-nginx. Canonical app hosts stay private unless explicitly published; temporary shares have separate hostnames and expiry controls. See [networking](docs/networking.md) for routing details.
+Public routes do not pass through MetalLB or ingress-nginx. An app's canonical host stays private unless a Cloudflare Tunnel route publishes it. A temporary share uses a separate hostname and can expire on a timer. [Networking](docs/networking.md) has the routing details.
 
-Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate public upstreams so they do not depend on the LAN filtering path.
+Two AdGuard Home instances serve DNS for the LAN. Cluster and node DNS queries go to public resolvers, so they do not depend on AdGuard.
 
 ### Hardware
 
@@ -147,71 +134,71 @@ Dual AdGuard Home instances serve LAN DNS. Cluster and node DNS use separate pub
 | TrueNAS | Shared storage over NFS | | HDD pool for media · NVMe pool for downloads |
 | Mac mini | Native services and independent monitoring, outside the cluster | `arm64` | Apple M4 · 24 GB RAM |
 
-Both cluster nodes run [Talos Linux](https://www.talos.dev/). Shared configuration lives in [cluster settings](flux/cluster-settings.yaml); the [architecture guide](docs/architecture.md) explains how the components fit together.
+Shared non-secret settings are in [cluster settings](flux/cluster-settings.yaml). The [architecture guide](docs/architecture.md) names the source of truth for each kind of configuration.
 
 ### Storage
 
 | Storage class | Purpose |
 |---|---|
-| `truenas-nfs` | Default relocatable storage for ordinary persistent data, books, and audiobooks |
+| `truenas-nfs` | Default class for app data, books, and audiobooks, not tied to a node |
 | `truenas-hdd-media` | Large shared media datasets |
 | `truenas-nvme-downloads` | Shared download workload data |
-| `local-path` | Latency-sensitive databases, SQLite, Prometheus/Grafana state, and caches |
+| `local-path` | Latency-sensitive databases, SQLite, Prometheus and Grafana state, and caches |
 
-[democratic-csi](https://github.com/democratic-csi/democratic-csi) provisions the TrueNAS classes. `local-path` is node-affined: moving a workload requires moving its data, not just changing its node selector. See [data protection](docs/data-protection.md) for backup coverage and recovery gaps.
+[democratic-csi](https://github.com/democratic-csi/democratic-csi) provisions the TrueNAS classes. A `local-path` volume is stored on one node. Moving its workload to another node means moving the data as well as changing the node selector. [Data protection](docs/data-protection.md) lists what is backed up and where recovery has gaps.
 
 ---
 
 ## Services
 
-The services below are declared in [the Flux reconciliation tree](flux/kustomization.yaml). Individual manifests contain their deployment settings and version pins.
+Every service below is declared in [the Flux reconciliation tree](flux/kustomization.yaml). Its manifests hold the deployment settings and version pins.
 
 ### Platform and operations
 
 | Area | Components |
 |---|---|
-| **Cluster** | [Talos Linux](https://www.talos.dev/), [Canal](docs/canal.md) CNI, CoreDNS |
-| **Delivery** | [Flux CD](https://fluxcd.io/), [Helm](https://helm.sh/), [Flux Operator](https://github.com/controlplaneio-fluxcd/flux-operator) UI, image automation, [Renovate](https://docs.renovatebot.com/), [Reloader](https://github.com/stakater/Reloader) |
-| **Networking** | [ingress-nginx](https://kubernetes.github.io/ingress-nginx/), [MetalLB](https://metallb.io/), [cert-manager](https://cert-manager.io/), [ExternalDNS](https://github.com/kubernetes-sigs/external-dns), [Tailscale Operator](https://tailscale.com/kb/1236/kubernetes-operator), subnet/exit Connector and independent DNS backup Connector |
-| **DNS and public edge** | Dual [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome), [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), [exposure-control](docs/public-edge-and-exposure-control.md) |
-| **Observability** | [Prometheus](https://prometheus.io/), Alertmanager, [Grafana](https://grafana.com/oss/grafana/), node exporter, [Metrics Server](https://github.com/kubernetes-sigs/metrics-server), [Gatus](docs/gatus.md) |
-| **Operations** | [Resource Advisor](docs/resource-advisor.md), Control Panel, host telemetry, power estimates, and independent cluster health checks |
-| **Secrets** | [SOPS](https://github.com/getsops/sops) with [age](https://github.com/FiloSottile/age), decrypted by Flux |
-| **Storage** | [TrueNAS](https://www.truenas.com/), [democratic-csi](https://github.com/democratic-csi/democratic-csi), [local-path provisioner](https://github.com/rancher/local-path-provisioner) |
+| Cluster | [Talos Linux](https://www.talos.dev/), [Canal](docs/canal.md) CNI, CoreDNS |
+| Delivery | [Flux CD](https://fluxcd.io/), [Helm](https://helm.sh/), [Flux Operator](https://github.com/controlplaneio-fluxcd/flux-operator) UI, image automation, [Renovate](https://docs.renovatebot.com/), [Reloader](https://github.com/stakater/Reloader) |
+| Networking | [ingress-nginx](https://kubernetes.github.io/ingress-nginx/), [MetalLB](https://metallb.io/), [cert-manager](https://cert-manager.io/), [ExternalDNS](https://github.com/kubernetes-sigs/external-dns), [Tailscale Operator](https://tailscale.com/kb/1236/kubernetes-operator), a subnet and exit node Connector, and a separate DNS backup Connector |
+| DNS and public edge | Two [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) instances, [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), [exposure-control](docs/public-edge-and-exposure-control.md) |
+| Observability | [Prometheus](https://prometheus.io/), Alertmanager, [Grafana](https://grafana.com/oss/grafana/), node exporter, [Metrics Server](https://github.com/kubernetes-sigs/metrics-server), [Gatus](docs/gatus.md) |
+| Operations | [Resource Advisor](docs/resource-advisor.md), Control Panel, host telemetry, power estimates, and cluster health checks that run outside the cluster |
+| Secrets | [SOPS](https://github.com/getsops/sops) with [age](https://github.com/FiloSottile/age), decrypted by Flux |
+| Storage | [TrueNAS](https://www.truenas.com/), [democratic-csi](https://github.com/democratic-csi/democratic-csi), [local-path provisioner](https://github.com/rancher/local-path-provisioner) |
 
 ### Media and library
 
 | Service | Purpose |
 |---|---|
-| **Jellyfin** | Media streaming with Intel iGPU access |
-| **Immich** | Photo and video library |
-| **Seerr** | Media requests |
-| **Audiobookshelf** | Audiobooks and podcasts |
-| **Shelfmark** | Book and audiobook downloads |
-| **BookOrbit** | E-book library and web reader |
-| **[RomM](docs/romm.md)** | ROM library, metadata, and browser emulation |
+| Jellyfin | Media streaming with Intel iGPU transcoding |
+| Immich | Photo and video library |
+| Seerr | Media requests |
+| Audiobookshelf | Audiobooks and podcasts |
+| Shelfmark | Book and audiobook downloads |
+| BookOrbit | E-book library and web reader |
+| [RomM](docs/romm.md) | ROM library, metadata, and browser emulation |
 
 ### Automation and TV
 
 | Area | Services |
 |---|---|
-| **Library management** | Sonarr, Radarr, Profilarr |
-| **Indexers and discovery** | Prowlarr, Jackett, autobrr, Flaresolverr |
-| **Downloads** | Transmission, SABnzbd |
-| **Subtitles** | Bazarr, Subarr |
-| **Playback analytics** | Tracerr / Tracearr |
-| **TV and devices** | Nodecast TV, Tunarr, iSponsorBlockTV |
+| Library management | Sonarr, Radarr, Profilarr |
+| Indexers and discovery | Prowlarr, Jackett, autobrr, Flaresolverr |
+| Downloads | Transmission, SABnzbd |
+| Subtitles | Bazarr, Subarr |
+| Playback analytics | Tracerr / Tracearr |
+| TV and devices | Nodecast TV, Tunarr, iSponsorBlockTV |
 
 ### Personal apps and tools
 
 | Area | Services |
 |---|---|
-| **Finance** | Actual Budget, Retirement |
-| **Study and notes** | Interview Prep, Obsidian LiveSync, Anki sync |
-| **RSS** | [Miniflux](docs/miniflux.md) |
-| **Personal tools** | 75 Soft, Reactive Resume, Vaultwarden, ChartDB, BentoPDF |
-| **Dashboards and utilities** | Dynacat, [Docs site](docs/docs-site.md), Speedtest Tracker, Kroki, Flux UI |
-| **Self-built public sites** | [Blog](https://blog.khzaw.dev), [MMCal](https://mmcal.khzaw.dev), [Rangoon Mapper](https://rangoonmapper.khzaw.dev), [Erica Knight](https://ericaknight.me) |
+| Finance | Actual Budget, Retirement |
+| Study and notes | Interview Prep, Obsidian LiveSync, Anki sync |
+| RSS | [Miniflux](docs/miniflux.md) |
+| Personal tools | 75 Soft, Reactive Resume, Vaultwarden, ChartDB, BentoPDF |
+| Dashboards and utilities | Dynacat, [Docs site](docs/docs-site.md), Speedtest Tracker, Kroki, Flux UI |
+| Self-built public sites | [Blog](https://blog.khzaw.dev), [MMCal](https://mmcal.khzaw.dev), [Rangoon Mapper](https://rangoonmapper.khzaw.dev), [Erica Knight](https://ericaknight.me) |
 
 ---
 
@@ -219,19 +206,19 @@ The services below are declared in [the Flux reconciliation tree](flux/kustomiza
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| [**CI**](.github/workflows/ci.yaml) | Push to `master`, pull request, manual | Runs `make validate-all`, the PromQL alert tests, and the power ledger SQL test, then checks CPU headroom for changed workloads |
-| [**Renovate**](.github/workflows/renovate.yaml) | Every six hours, manual | Opens chart, image, and GitHub Actions update PRs |
-| [**Exposure CLI image**](.github/workflows/exposure-cli.yaml) | Push to `master` and pull request that touch the CLI, manual | Tests and builds the native exposure CLI for `amd64` and `arm64`; pushes to `master` publish the multi-architecture image to GHCR |
-| [**Docs site image**](.github/workflows/docs-site.yaml) | Push to `master` and pull request that touch `docs/` or `docs-site/`, manual | Syncs `docs/`, builds and link-checks the Starlight portal, and pushes the multi-architecture image to GHCR on `master` |
-| [**Power tariff update**](.github/workflows/power-tariff.yaml) | Daily, manual | Fetches the official electricity tariff and opens a PR when the power-cost rules change |
+| [CI](.github/workflows/ci.yaml) | Push to `master`, pull request, manual | Runs `make validate-all`, the PromQL alert tests, and the power ledger SQL test, then checks CPU headroom for changed workloads |
+| [Renovate](.github/workflows/renovate.yaml) | Every six hours, manual | Opens pull requests for chart, image, and GitHub Actions updates |
+| [Exposure CLI image](.github/workflows/exposure-cli.yaml) | Push to `master` or pull request that touches the CLI, manual | Tests and builds the native exposure CLI for `amd64` and `arm64`. Pushes to `master` publish the multi-architecture image to GHCR |
+| [Docs site image](.github/workflows/docs-site.yaml) | Push to `master` or pull request that touches `docs/` or `docs-site/`, manual | Syncs `docs/`, builds and link-checks the Starlight portal, and pushes the multi-architecture image to GHCR on `master` |
+| [Power tariff update](.github/workflows/power-tariff.yaml) | Daily, manual | Fetches the official electricity tariff and opens a pull request when the power-cost rules change |
 
-Flux image automation and Resource Advisor run inside the cluster, not in GitHub Actions. See [dependency updates](docs/dependency-updates-renovate-and-flux-image-automation.md) for which automation owns which version field.
+Flux image automation and Resource Advisor run inside the cluster, not in GitHub Actions. [Dependency updates](docs/dependency-updates-renovate-and-flux-image-automation.md) lists which automation owns each version field.
 
 ---
 
 ## Screenshots
 
-Illustrative UI captures. Metrics, versions, and library contents vary over time; the service inventory above describes the repository's desired state.
+These screenshots are examples from one point in time, so their metrics, versions, and library contents go out of date. The service tables above list what the repository deploys now.
 
 ### Dynacat dashboard
 
@@ -288,23 +275,23 @@ Illustrative UI captures. Metrics, versions, and library contents vary over time
 └── AGENTS.md                     Agent session entrypoint
 ```
 
-Talos node lifecycle is managed separately from Flux. Generated machine configuration and local operator files are excluded from Git.
+Talos node configuration and upgrades happen outside Flux. Generated machine configuration and local operator files stay out of Git.
 
 ---
 
 ## Working with this repository
 
-This repository configures a specific homelab. Its DNS, node identities, and storage settings need adapting for another environment.
+This repository configures one specific homelab. To use it elsewhere, change its DNS names, node identities, and storage settings.
 
-The [operating reference](docs/README.md) explains component ownership, maintenance, and recovery. [AGENTS.md](AGENTS.md) is the entry point for coding agents.
+The [operating reference](docs/README.md) covers component ownership, maintenance, and recovery. [AGENTS.md](AGENTS.md) is the entry point for coding agents.
 
 ```bash
 make validate-all   # repository checks, also run by CI
 make diagrams       # re-render docs/diagrams/*.d2 (needs Docker)
-make badges         # re-render the tags in .github/badges/
+make badges         # re-render the badges in .github/badges/
 ```
 
-Validation also builds and tests the native Rust exposure CLI. Rustup selects the toolchain pinned in `apps/exposure-control/cli/rust-toolchain.toml` when Cargo runs from that directory.
+CI fails if a diagram source changes without a new render. Validation also builds and tests the native Rust exposure CLI. Rustup picks the toolchain pinned in `apps/exposure-control/cli/rust-toolchain.toml` when Cargo runs from that directory.
 
 ---
 
