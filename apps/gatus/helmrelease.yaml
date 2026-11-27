@@ -218,6 +218,8 @@ spec:
               buttons:
                 - name: Dashboard
                   link: https://rangoonpulse.${BASE_DOMAIN}
+                - name: Docs
+                  link: https://rangoonpulse.${BASE_DOMAIN}/docs/
                 - name: Control Panel
                   link: https://controlpanel.${BASE_DOMAIN}
                 - name: Grafana
@@ -653,6 +655,14 @@ spec:
               - name: Dynacat
                 group: Operations
                 url: https://rangoonpulse.${BASE_DOMAIN}/api/healthz
+                interval: 2m
+                client:
+                  timeout: 10s
+                conditions:
+                  - '[STATUS] == 200'
+              - name: Docs
+                group: Operations
+                url: https://rangoonpulse.${BASE_DOMAIN}/docs/
                 interval: 2m
                 client:
                   timeout: 10s

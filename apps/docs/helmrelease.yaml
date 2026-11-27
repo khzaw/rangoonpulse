@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: docs
+  namespace: default
+spec:
+  interval: 24h
+  chart:
+    spec:
+      chart: app-template
+      version: "5.3.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+  install: { remediation: { retries: 3 } }
+  upgrade: { remediation: { retries: 3 } }
+  values:
+    defaultPodOptionsStrategy: merge
+    defaultPodOptions:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: ${UTILITY_NODE_NAME}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+    controllers:
+      main:
+        replicas: 1
+        strategy: RollingUpdate
+        rollingUpdate:
+          maxSurge: 1
+          maxUnavailable: 0
+        containers:
+          main:
+            image:
+              repository: ghcr.io/khzaw/rangoonpulse-docs
+              tag: 1795760114-8ce7ed46486490bfc70da61662aaecb5a982b390 # {"$imagepolicy": "flux-system:docs:tag"}
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: 8080
+                  periodSeconds: 30
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /healthz
+                    port: 8080
+                  periodSeconds: 10
+            resources:
+              requests:
+                cpu: "25m"
+                memory: "64Mi"
+              limits:
+                cpu: "100m"
+                memory: "128Mi"
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - ALL
+              readOnlyRootFilesystem: true
+    service:
+      main:
+        controller: main
+        type: ClusterIP
+        ports:
+          http:
+            port: 8080
+    ingress:
+      main:
+        enabled: true
+        className: nginx
+        # Dynacat owns DNS (ExternalDNS) and TLS (dynacat-tls) for rangoonpulse.${BASE_DOMAIN}.
+        annotations:
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        hosts:
+          - host: rangoonpulse.${BASE_DOMAIN}
+            paths:
+              - path: /docs
+                pathType: Prefix
+                service:
+                  identifier: main
+                  port: http
+        tls:
+          - secretName: dynacat-tls
+            hosts:
+              - rangoonpulse.${BASE_DOMAIN}
+    persistence:
+      tmp:
+        enabled: true
+        type: emptyDir
+        sizeLimit: 64Mi
+        globalMounts:
+          - path: /tmp
+      nginx-cache:
+        enabled: true
+        type: emptyDir
+        sizeLimit: 64Mi
+        globalMounts:
+          - path: /var/cache/nginx

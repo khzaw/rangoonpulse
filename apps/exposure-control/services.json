@@ -74,6 +74,12 @@
     "description": "Vaultwarden"
   },
   {
+    "id": "docs",
+    "name": "Rangoonpulse Docs",
+    "target": "http://docs.default.svc.cluster.local:8080",
+    "description": "Homelab documentation site"
+  },
+  {
     "id": "actual",
     "name": "Actual Budget",
     "target": "http://actualbudget.default.svc.cluster.local:5006",

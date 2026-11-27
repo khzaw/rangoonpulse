@@ -91,6 +91,7 @@
       ],
       "matchPackageNames": [
         "ghcr.io/khzaw/interview-prep",
+        "ghcr.io/khzaw/rangoonpulse-docs",
         "ghcr.io/khzaw/retirement"
       ],
       "enabled": false

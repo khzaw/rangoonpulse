@@ -1,5 +1,5 @@
 .PHONY: help status flux-status hr-status events nodes pods
-.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-retirement deploy-rangoon-mapper deploy-static-sites
+.PHONY: reconcile reconcile-all deploy-blog deploy-mmcal deploy-ericaknight deploy-itvp deploy-retirement deploy-rangoon-mapper deploy-docs deploy-static-sites
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell check-rust build-exposure-cli test-python
@@ -108,6 +108,14 @@ deploy-rangoon-mapper: ## Force deploy latest Rangoon Mapper image now
 	flux reconcile source git flux-system -n flux-system
 	flux reconcile kustomization rangoon-mapper -n flux-system --with-source
 
+deploy-docs: ## Force deploy latest docs site image now
+	flux reconcile image repository docs -n flux-system
+	@sleep 2
+	flux reconcile image policy docs -n flux-system
+	flux reconcile image update docs -n flux-system
+	flux reconcile source git flux-system -n flux-system
+	flux reconcile kustomization docs -n flux-system --with-source
+
 deploy-static-sites: ## Force deploy all static-site images now
 	$(MAKE) deploy-blog
 	$(MAKE) deploy-mmcal
@@ -115,6 +123,7 @@ deploy-static-sites: ## Force deploy all static-site images now
 	$(MAKE) deploy-itvp
 	$(MAKE) deploy-retirement
 	$(MAKE) deploy-rangoon-mapper
+	$(MAKE) deploy-docs
 
 # --- Logs ---
 

@@ -8,6 +8,7 @@ All repository documentation is public. These guides retain technical context ne
 
 - [`architecture.md`](./architecture.md): source-of-truth map and cross-cutting touch points
 - [`knowledge-base-conventions.md`](./knowledge-base-conventions.md): current-only documentation policy and checks
+- [`docs-site.md`](./docs-site.md): Starlight documentation portal built from `docs/` and served at `rangoonpulse.khzaw.dev/docs/`
 - [`diagrams.md`](./diagrams.md): D2 diagram sources, pinned render pipeline, freshness check, and layout rules
 - [`shared-cluster-settings.md`](./shared-cluster-settings.md): Flux substitutions and shared constants
 - [`dependency-updates-renovate-and-flux-image-automation.md`](./dependency-updates-renovate-and-flux-image-automation.md): Renovate and image-promotion ownership

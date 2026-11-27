@@ -51,8 +51,9 @@ Current independently owned flows:
 - Interview Prep
 - Retirement
 - Rangoon Mapper
+- Docs
 
-Each app has its own ImageRepository, ImagePolicy, and ImageUpdateAutomation writer. Interview Prep currently scans and writes every three hours; the other five use six hours.
+Each app has its own ImageRepository, ImagePolicy, and ImageUpdateAutomation writer. Docs scans and writes every hour, Interview Prep currently scans and writes every three hours, and the other five use six hours.
 
 There is no shared `image-update-automation.yaml`. Inspect the per-app objects.
 

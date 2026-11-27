@@ -41,7 +41,7 @@ make deploy-blog
 
 The same action is available from `controlpanel.khzaw.dev/#deploy`.
 
-Other self-built image-automated targets are MMCal, Erica Knight, Interview Prep, Retirement, and Rangoon Mapper. Their exact intervals and public/private paths are authoritative in `infrastructure/image-automation/` and each app manifest.
+Other self-built image-automated targets are MMCal, Erica Knight, Interview Prep, Retirement, Rangoon Mapper, and [Docs](./docs-site.md). Their exact intervals and public/private paths are authoritative in `infrastructure/image-automation/` and each app manifest.
 
 ## Rollback
 

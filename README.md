@@ -210,7 +210,7 @@ The services below are declared in [the Flux reconciliation tree](flux/kustomiza
 | **Study and notes** | Interview Prep, Obsidian LiveSync, Anki sync |
 | **RSS** | [Miniflux](docs/miniflux.md) |
 | **Personal tools** | 75 Soft, Reactive Resume, Vaultwarden, ChartDB, BentoPDF |
-| **Dashboards and utilities** | Dynacat, Speedtest Tracker, Kroki, Flux UI |
+| **Dashboards and utilities** | Dynacat, [Docs site](docs/docs-site.md), Speedtest Tracker, Kroki, Flux UI |
 | **Self-built public sites** | [Blog](https://blog.khzaw.dev), [MMCal](https://mmcal.khzaw.dev), [Rangoon Mapper](https://rangoonmapper.khzaw.dev), [Erica Knight](https://ericaknight.me) |
 
 ---
@@ -222,6 +222,7 @@ The services below are declared in [the Flux reconciliation tree](flux/kustomiza
 | [**CI**](.github/workflows/ci.yaml) | Push to `master`, pull request, manual | Runs `make validate-all`, the PromQL alert tests, and the power ledger SQL test, then checks CPU headroom for changed workloads |
 | [**Renovate**](.github/workflows/renovate.yaml) | Every six hours, manual | Opens chart, image, and GitHub Actions update PRs |
 | [**Exposure CLI image**](.github/workflows/exposure-cli.yaml) | Push to `master` and pull request that touch the CLI, manual | Tests and builds the native exposure CLI for `amd64` and `arm64`; pushes to `master` publish the multi-architecture image to GHCR |
+| [**Docs site image**](.github/workflows/docs-site.yaml) | Push to `master` and pull request that touch `docs/` or `docs-site/`, manual | Syncs `docs/`, builds and link-checks the Starlight portal, and pushes the multi-architecture image to GHCR on `master` |
 | [**Power tariff update**](.github/workflows/power-tariff.yaml) | Daily, manual | Fetches the official electricity tariff and opens a PR when the power-cost rules change |
 
 Flux image automation and Resource Advisor run inside the cluster, not in GitHub Actions. See [dependency updates](docs/dependency-updates-renovate-and-flux-image-automation.md) for which automation owns which version field.
@@ -280,6 +281,7 @@ Illustrative UI captures. Metrics, versions, and library contents vary over time
 │   └── kustomizations/           Component reconciliation boundaries
 ├── docs/                         Current operating guidance
 │   └── diagrams/                 D2 diagram sources and their rendered images
+├── docs-site/                    Starlight static docs portal built from docs/
 ├── .agents/skills/               Repository procedures and safety gates
 ├── scripts/                      Validation and operator tooling
 ├── native/                       Native host integrations

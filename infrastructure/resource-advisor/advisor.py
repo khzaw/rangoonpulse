@@ -25,6 +25,7 @@ APP_TEMPLATE_RELEASE_FILE_MAP = {
     "bentopdf": "apps/bentopdf/helmrelease.yaml",
     "shelfmark": "apps/shelfmark/helmrelease.yaml",
     "chartsdb": "apps/chartsdb/helmrelease.yaml",
+    "docs": "apps/docs/helmrelease.yaml",
     "exposure-control": "apps/exposure-control/helmrelease.yaml",
     "flaresolverr": "apps/flaresolverr/helmrelease.yaml",
     "dynacat": "apps/dynacat/helmrelease.yaml",

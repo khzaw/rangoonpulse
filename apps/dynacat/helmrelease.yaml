@@ -334,6 +334,9 @@ spec:
                                 icon: di:sabnzbd
                           - title: Ops
                             links:
+                              - title: Docs
+                                url: https://rangoonpulse.${BASE_DOMAIN}/docs/
+                                icon: mdi:book-open-variant
                               - title: Grafana
                                 url: https://grafana.${BASE_DOMAIN}
                                 icon: di:grafana
@@ -752,6 +755,10 @@ spec:
                             url: https://rangoonpulse.${BASE_DOMAIN}
                             check-url: http://dynacat.default.svc.cluster.local:8080/api/healthz
                             icon: mdi:cat
+                          - title: Docs
+                            url: https://rangoonpulse.${BASE_DOMAIN}/docs/
+                            check-url: http://docs.default.svc.cluster.local:8080/healthz
+                            icon: mdi:book-open-variant
                           - title: Iris Gateway
                             url: https://iris.${BASE_DOMAIN}
                             check-url: http://${IRIS_MAC_MINI_IP}:18789/healthz

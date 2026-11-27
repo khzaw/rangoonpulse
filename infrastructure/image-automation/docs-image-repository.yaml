@@ -1,0 +1,9 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: docs
+  namespace: flux-system
+spec:
+  image: ghcr.io/khzaw/rangoonpulse-docs
+  interval: 1h

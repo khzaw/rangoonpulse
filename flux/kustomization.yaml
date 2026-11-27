@@ -82,6 +82,7 @@ resources:
   - ./kustomizations/adguard-primary.yaml
   - ./kustomizations/adguard-secondary.yaml
   - ./kustomizations/dynacat.yaml
+  - ./kustomizations/docs.yaml
   - ./kustomizations/tracerr.yaml
   - ./kustomizations/lan-access.yaml
   - ./kustomizations/iris-edge.yaml

@@ -1,0 +1,25 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: docs
+  namespace: flux-system
+spec:
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: master
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: "image-automation(docs): update {{range .Changed.Changes}}{{print .OldValue}} -> {{print .NewValue}} {{end}}"
+    push:
+      branch: master
+  update:
+    path: ./apps/docs
+    strategy: Setters

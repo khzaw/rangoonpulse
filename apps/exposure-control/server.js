@@ -389,6 +389,20 @@ const SITE_DEPLOYMENTS = [
     namespace: "default",
     imageRepo: "ghcr.io/khzaw/retirement",
   },
+  {
+    id: "docs",
+    title: "Docs",
+    description: "Starlight documentation site promoted from the latest ghcr.io/khzaw/rangoonpulse-docs image tag.",
+    url: "https://rangoonpulse." + PUBLIC_DOMAIN + "/docs/",
+    imageRepository: "docs",
+    imagePolicy: "docs",
+    imageUpdateAutomation: "docs",
+    gitRepository: "flux-system",
+    kustomization: "docs",
+    helmRelease: "docs",
+    namespace: "default",
+    imageRepo: "ghcr.io/khzaw/rangoonpulse-docs",
+  },
 ];
 const SITE_DEPLOYMENT_BY_ID = new Map();
 for (const deployment of SITE_DEPLOYMENTS) {

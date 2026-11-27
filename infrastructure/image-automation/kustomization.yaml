@@ -14,9 +14,12 @@ resources:
   - interview-prep-image-policy.yaml
   - retirement-image-repository.yaml
   - retirement-image-policy.yaml
+  - docs-image-repository.yaml
+  - docs-image-policy.yaml
   - blog-image-update-automation.yaml
   - mmcal-image-update-automation.yaml
   - rangoon-mapper-image-update-automation.yaml
   - ericaknight-image-update-automation.yaml
   - interview-prep-image-update-automation.yaml
   - retirement-image-update-automation.yaml
+  - docs-image-update-automation.yaml
