@@ -1,5 +1,5 @@
 # Service map: who talks to whom across the homelab.
-# White edges are the private path, amber the permanent public path, green temporary shares.
+# Black edges are the private path, amber the permanent public path, green temporary shares.
 # Grey solid edges carry data; dashed edges are control: GitOps, certificates, metrics, alerts.
 # Everything inside the dashed frame runs in the cluster and is reconciled by Flux.
 # Edges stay between groups: an edge into a grid cell drops ELK layering and flattens the sheet.
@@ -10,44 +10,44 @@ vars: {
   di: https://raw.githubusercontent.com/homarr-labs/dashboard-icons/23fc02e7710a66e0c774989f6e78372e9b6c2e15/svg
   sh: https://raw.githubusercontent.com/selfhst/icons/df07d93a4b9e1c3930007971a1dfa6203ea02aea/svg
   ify: https://api.iconify.design/tabler
-  ink: color=%23b0b0b0&height=64
-  private: "#eeeeee"
-  public: "#f0b35c"
-  share: "#3ecf8e"
+  ink: color=%23555555&height=64
+  private: "#1a1a1a"
+  public: "#d97706"
+  share: "#16a34a"
 }
 
-style.fill: "#000000"
+style.fill: "#ffffff"
 
 classes: {
   card: {
     label.near: bottom-center
     width: 140
     height: 142
-    style: {fill: "#101010"; stroke: "#2c2c2c"; font-color: "#f1f1f1"; border-radius: 0; font-size: 14}
+    style: {fill: "#f7f7f7"; stroke: "#d9d9d9"; font-color: "#111111"; border-radius: 0; font-size: 14}
   }
   group: {
-    style: {fill: "#000000"; stroke: "#2c2c2c"; font-color: "#909090"; border-radius: 0; font-size: 15; font: mono}
+    style: {fill: "#ffffff"; stroke: "#d9d9d9"; font-color: "#6b6b6b"; border-radius: 0; font-size: 15; font: mono}
   }
   key: {
     shape: text
-    style: {font-color: "#909090"; font-size: 17; font: mono}
+    style: {font-color: "#6b6b6b"; font-size: 17; font: mono}
   }
   frame: {
-    style: {fill: "#000000"; stroke: "#484848"; stroke-dash: 2; font-color: "#b0b0b0"; border-radius: 0; font-size: 17; font: mono}
+    style: {fill: "#ffffff"; stroke: "#a6a6a6"; stroke-dash: 2; font-color: "#4d4d4d"; border-radius: 0; font-size: 17; font: mono}
   }
 }
 
-(** -> **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 13; font: mono; italic: false}
-(** <- **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 13; font: mono; italic: false}
-(** <-> **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 13; font: mono; italic: false}
+(** -> **)[*].style: {stroke: "#9a9a9a"; font-color: "#4d4d4d"; font-size: 13; font: mono; italic: false}
+(** <- **)[*].style: {stroke: "#9a9a9a"; font-color: "#4d4d4d"; font-size: 13; font: mono; italic: false}
+(** <-> **)[*].style: {stroke: "#9a9a9a"; font-color: "#4d4d4d"; font-size: 13; font: mono; italic: false}
 
 internet: Internet {class: card; icon: ${ify}/world.svg?${ink}}
 cloudflare: "Cloudflare\nedge, DNS, Access" {class: card; icon: ${di}/cloudflare.svg}
 remote: Remote devices {class: card; icon: ${ify}/device-mobile.svg?${ink}}
-tailnet: "Tailscale\ntailnet, ACLs" {class: card; icon: ${di}/tailscale-light.svg}
+tailnet: "Tailscale\ntailnet, ACLs" {class: card; icon: ${di}/tailscale.svg}
 lan: LAN devices {class: card; icon: ${ify}/devices.svg?${ink}}
-github: "GitHub\nrepo, CI, Renovate" {class: card; icon: ${di}/github-light.svg}
-ghcr: "GHCR\nself-built images" {class: card; icon: ${di}/github-light.svg}
+github: "GitHub\nrepo, CI, Renovate" {class: card; icon: ${di}/github.svg}
+ghcr: "GHCR\nself-built images" {class: card; icon: ${di}/github.svg}
 letsencrypt: Let's Encrypt {class: card; icon: ${di}/lets-encrypt.svg}
 vpn: "WireGuard VPN\noptional route" {class: card; icon: ${di}/wireguard.svg}
 
@@ -66,7 +66,7 @@ hw: HARDWARE {
   primary: "Primary node\nTalos, amd64" {class: card; icon: ${di}/talos.svg}
   pi: "Raspberry Pi\nTalos, arm64" {class: card; icon: ${di}/raspberry-pi.svg}
   nas: "TrueNAS\nHDD and NVMe pools" {class: card; icon: ${di}/truenas-scale.svg}
-  mini: "Mac mini\nOpenClaw, Hermes" {class: card; icon: ${di}/apple-light.svg}
+  mini: "Mac mini\nOpenClaw, Hermes" {class: card; icon: ${di}/apple.svg}
 }
 
 cluster: KUBERNETES ON TALOS LINUX {
@@ -78,7 +78,7 @@ cluster: KUBERNETES ON TALOS LINUX {
     grid-columns: 3
     grid-gap: 12
     flux: Flux CD {class: card; icon: ${di}/flux-cd.svg}
-    fluxop: "Flux Operator\nweb UI" {class: card; icon: ${di}/flux-operator-light.svg}
+    fluxop: "Flux Operator\nweb UI" {class: card; icon: ${di}/flux-operator.svg}
     imageauto: "Image automation\nself-built images" {class: card; icon: ${di}/flux-cd.svg}
     advisor: "Resource Advisor\ntuning PRs" {class: card; icon: ${ify}/adjustments-horizontal.svg?${ink}}
     reloader: Reloader {class: card; icon: ${di}/reloader.svg}
@@ -98,9 +98,9 @@ cluster: KUBERNETES ON TALOS LINUX {
     adguard2: "AdGuard Home\nsecondary" {class: card; icon: ${di}/adguard-home.svg}
     coredns: "CoreDNS\ncluster DNS" {class: card; icon: ${di}/coredns.svg}
     canal: "Canal\nCNI" {class: card; icon: ${sh}/calico.svg}
-    tsop: "Tailscale Operator\nAPI proxy" {class: card; icon: ${di}/tailscale-light.svg}
-    tsconn: "Connector\nsubnet router, exit" {class: card; icon: ${di}/tailscale-light.svg}
-    tsdns: "Connector\nDNS backup" {class: card; icon: ${di}/tailscale-light.svg}
+    tsop: "Tailscale Operator\nAPI proxy" {class: card; icon: ${di}/tailscale.svg}
+    tsconn: "Connector\nsubnet router, exit" {class: card; icon: ${di}/tailscale.svg}
+    tsdns: "Connector\nDNS backup" {class: card; icon: ${di}/tailscale.svg}
     langw: "LAN proxies\nNAS, router, Mac mini" {class: card; icon: ${ify}/router.svg?${ink}}
   }
 
@@ -151,7 +151,7 @@ cluster: KUBERNETES ON TALOS LINUX {
     subarr: Subarr {class: card; icon: ${sh}/subarr.svg}
     profilarr: Profilarr {class: card; icon: ${di}/profilarr.svg}
     prowlarr: Prowlarr {class: card; icon: ${di}/prowlarr.svg}
-    jackett: Jackett {class: card; icon: ${di}/jackett-light.svg}
+    jackett: Jackett {class: card; icon: ${di}/jackett.svg}
     autobrr: autobrr {class: card; icon: ${di}/autobrr.svg}
     flaresolverr: FlareSolverr {class: card; icon: ${di}/flaresolverr.svg}
     transmission: "Transmission\n+ Gluetun" {class: card; icon: ${di}/transmission.svg}
@@ -170,9 +170,9 @@ cluster: KUBERNETES ON TALOS LINUX {
     soft: 75 Soft {class: card; icon: ${ify}/checklist.svg?${ink}}
     livesync: "Obsidian\nLiveSync" {class: card; icon: ${di}/obsidian.svg}
     anki: Anki sync {class: card; icon: ${sh}/anki.svg}
-    miniflux: Miniflux {class: card; icon: ${di}/miniflux-light.svg}
-    resume: Reactive Resume {class: card; icon: ${di}/reactive-resume-light.svg}
-    vaultwarden: Vaultwarden {class: card; icon: ${di}/vaultwarden-light.svg}
+    miniflux: Miniflux {class: card; icon: ${di}/miniflux.svg}
+    resume: Reactive Resume {class: card; icon: ${di}/reactive-resume.svg}
+    vaultwarden: Vaultwarden {class: card; icon: ${di}/vaultwarden.svg}
     chartdb: ChartDB {class: card; icon: ${ify}/schema.svg?${ink}}
     bentopdf: BentoPDF {class: card; icon: ${di}/bentopdf.svg}
     kroki: Kroki {class: card; icon: ${ify}/chart-dots-3.svg?${ink}}
@@ -218,7 +218,7 @@ legend: "" {
   near: bottom-center
   grid-rows: 1
   grid-gap: 36
-  style: {fill: "#000000"; stroke: "#000000"}
+  style: {fill: "#ffffff"; stroke: "#ffffff"}
   private: "━━ private: LAN, Tailscale" {class: key; style.font-color: ${private}}
   public: "━━ public: Cloudflare Tunnel" {class: key; style.font-color: ${public}}
   share: "━━ temporary shares" {class: key; style.font-color: ${share}}

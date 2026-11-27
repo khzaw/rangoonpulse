@@ -1,5 +1,3 @@
-<div align="center">
-
 # rangoonpulse
 
 [![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
@@ -75,11 +73,9 @@ Flux applies each commit on `master` to the cluster. Prometheus and Grafana coll
 
 [![Service map of every workload group in the cluster, with the private, public, and temporary-share paths into it](docs/diagrams/service-map.png)](docs/diagrams/service-map.png?raw=1)
 
-The service map shows each group of workloads and how traffic reaches it. White lines are the private path, amber lines are the permanent public path through Cloudflare Tunnel, and green lines are temporary shares. Click the image to open it at full size. `make diagrams` renders it from [its D2 source](docs/diagrams/service-map.d2), and [the diagram guide](docs/diagrams.md) explains how to read it.
+The service map shows each group of workloads and how traffic reaches it. Black lines are the private path, amber lines are the permanent public path through Cloudflare Tunnel, and green lines are temporary shares. Click the image to open it at full size. `make diagrams` renders it from [its D2 source](docs/diagrams/service-map.d2), and [the diagram guide](docs/diagrams.md) explains how to read it.
 
 [How it works](#how-it-works) · [Architecture](#architecture) · [Hardware](#hardware) · [Services](#services) · [Workflows](#cicd-workflows) · [Screenshots](#screenshots) · [Docs](docs/README.md)
-
-</div>
 
 ---
 

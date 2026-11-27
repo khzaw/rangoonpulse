@@ -3,7 +3,7 @@ title: Diagrams
 summary: D2 sources, the pinned render pipeline, and the rules for reading and changing the README diagrams.
 status: active
 owner: homelab
-last_reviewed: 2026-11-26
+last_reviewed: 2026-11-27
 ---
 
 # Diagrams
@@ -19,7 +19,7 @@ The README diagrams are code. Each one is a [D2](https://d2lang.com/) text file 
 
 | Mark | Meaning |
 | --- | --- |
-| White line | Private path: LAN or Tailscale client to the ingress VIP |
+| Black line | Private path: LAN or Tailscale client to the ingress VIP |
 | Amber line | Permanent public path through Cloudflare Tunnel |
 | Green line | Temporary share through exposure-control |
 | Grey solid line | Data: SQL, volumes, requests between apps |
@@ -71,7 +71,7 @@ Layout rules:
 - Give line styles for all three forms: `(** -> **)`, `(** <- **)`, and `(** <-> **)`. A line without a rule gets the D2 default colour.
 - Set a path colour on the line itself with `style.stroke`. A class on a line loses to the global line style.
 - Declaration order influences left-to-right order within a layer. Reordering groups can move the whole sheet.
-- Keep the palette from the Control Panel: black canvas, `#101010` cards, sharp corners, and green, amber, and red only as path or status colours.
+- Keep the light palette: white canvas, `#f7f7f7` cards, sharp corners, and green, amber, and red only as path or status colours.
 
 ## Icons
 
@@ -80,7 +80,7 @@ Each card names an icon URL:
 - [dashboard-icons](https://github.com/homarr-labs/dashboard-icons) and [selfh.st icons](https://github.com/selfhst/icons) for product logos, pinned to a commit in the `vars` block of each source
 - [Iconify](https://iconify.design/) Tabler icons for self-built apps and generic parts, with the colour set in the URL because D2 cannot recolour an icon
 
-Prefer the `-light` variant of a monochrome logo so it reads on the dark card. Iconify is an unpinned API and can answer HTTP 429 for some minutes. The render then stops and leaves the committed PNG and `SHA256SUMS` as they were. Run it again later.
+Use the standard variant of a monochrome logo, not `-light`, so it reads on the light card. Iconify is an unpinned API and can answer HTTP 429 for some minutes. The render then stops and leaves the committed PNG and `SHA256SUMS` as they were. Run it again later.
 
 ## Toolchain Pins
 

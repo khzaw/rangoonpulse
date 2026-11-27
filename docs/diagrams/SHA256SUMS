@@ -1,3 +1,3 @@
-9cea0ba36c4d856413c08202abd3779db72f6df76c1fc04f145f337488e81535  docs/diagrams/gitops-loop.d2
-45c701a897e9e9fc867583b1d080a37dcb2fce5031bd61bc1b8a0c4bea7ee29f  docs/diagrams/service-map.d2
+1be4f9fd567afda75b74ff5cde9f5c50b846f55c3ff057e0689a38efb82ec4f0  docs/diagrams/gitops-loop.d2
+7b3c263b8674a16f0212f2bfaeeb920c33c28d77466669c06bd4a71dec8ae41a  docs/diagrams/service-map.d2
 1a07edc248d728de638e780a79662e0f6d1577de48bd5150aa841a4352f87d61  scripts/render-diagrams.sh

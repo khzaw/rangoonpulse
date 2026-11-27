@@ -6,37 +6,37 @@ direction: right
 vars: {
   di: https://raw.githubusercontent.com/homarr-labs/dashboard-icons/23fc02e7710a66e0c774989f6e78372e9b6c2e15/svg
   ify: https://api.iconify.design/tabler
-  ink: color=%23b0b0b0&height=64
-  forward: "#eeeeee"
-  writeback: "#f0b35c"
+  ink: color=%23555555&height=64
+  forward: "#1a1a1a"
+  writeback: "#d97706"
 }
 
-style.fill: "#000000"
+style.fill: "#ffffff"
 
 classes: {
   card: {
     label.near: bottom-center
     width: 176
     height: 150
-    style: {fill: "#101010"; stroke: "#2c2c2c"; font-color: "#f1f1f1"; border-radius: 0; font-size: 16}
+    style: {fill: "#f7f7f7"; stroke: "#d9d9d9"; font-color: "#111111"; border-radius: 0; font-size: 16}
   }
   frame: {
-    style: {fill: "#000000"; stroke: "#484848"; stroke-dash: 2; font-color: "#b0b0b0"; border-radius: 0; font-size: 17; font: mono}
+    style: {fill: "#ffffff"; stroke: "#a6a6a6"; stroke-dash: 2; font-color: "#4d4d4d"; border-radius: 0; font-size: 17; font: mono}
   }
   key: {
     shape: text
-    style: {font-color: "#909090"; font-size: 17; font: mono}
+    style: {font-color: "#6b6b6b"; font-size: 17; font: mono}
   }
 }
 
-(** -> **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 15; font: mono; italic: false}
-(** <- **)[*].style: {stroke: "#6e6e6e"; font-color: "#b0b0b0"; font-size: 15; font: mono; italic: false}
+(** -> **)[*].style: {stroke: "#9a9a9a"; font-color: "#4d4d4d"; font-size: 15; font: mono; italic: false}
+(** <- **)[*].style: {stroke: "#9a9a9a"; font-color: "#4d4d4d"; font-size: 15; font: mono; italic: false}
 
 people: "Operators and agents" {class: card; icon: ${ify}/terminal-2.svg?${ink}}
 renovate: "Renovate\ncharts and images" {class: card; icon: ${di}/renovate.svg}
-repo: "rangoonpulse\nmaster" {class: card; icon: ${di}/github-light.svg}
+repo: "rangoonpulse\nmaster" {class: card; icon: ${di}/github.svg}
 ci: "CI\nchecks, CPU headroom" {class: card; icon: ${ify}/circle-check.svg?${ink}}
-ghcr: "GHCR\nself-built images" {class: card; icon: ${di}/github-light.svg}
+ghcr: "GHCR\nself-built images" {class: card; icon: ${di}/github.svg}
 
 cluster: KUBERNETES ON TALOS LINUX {
   class: frame
@@ -52,7 +52,7 @@ legend: "" {
   near: bottom-center
   grid-rows: 1
   grid-gap: 36
-  style: {fill: "#000000"; stroke: "#000000"}
+  style: {fill: "#ffffff"; stroke: "#ffffff"}
   forward: "━━ desired state" {class: key; style.font-color: ${forward}}
   writeback: "╍╍ writes back to Git" {class: key; style.font-color: ${writeback}}
   data: "━━ data" {class: key}
