@@ -1,4 +1,4 @@
-FROM node:26-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:26-alpine AS builder
 
 WORKDIR /src/docs-site
 COPY docs-site/package.json docs-site/package-lock.json ./
