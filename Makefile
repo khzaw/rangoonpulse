@@ -3,7 +3,7 @@
 .PHONY: image-repos image-policies image-updates
 .PHONY: talos-dashboard logs
 .PHONY: validate check-capacity check-git-capacity validate-kustomize validate-all check-docs check-node check-shell check-rust build-exposure-cli test-python
-.PHONY: diagrams check-diagrams badges
+.PHONY: diagrams check-diagrams badges docs-dev docs-build
 
 # Use this cluster's credentials when available; preserve explicit overrides and
 # kubectl's normal fallback on machines without the ignored local kubeconfig.
@@ -161,6 +161,12 @@ check-diagrams: ## Fail when a diagram source changed without a render
 
 badges: ## Render the README tags in .github/badges (needs network access)
 	python3 scripts/render_badges.py
+
+docs-dev: ## Run the Starlight docs site locally with live sync from docs/
+	cd docs-site && npm run dev
+
+docs-build: ## Sync docs/ and build the static Starlight docs site
+	cd docs-site && npm run build
 
 build-exposure-cli: ## Build the native exposure CLI used by integration tests
 	cd apps/exposure-control/cli && cargo build --locked

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" fill="#0a0a0a"/>
+  <rect x="1" y="1" width="30" height="30" fill="none" stroke="#303030" stroke-width="1"/>
+  <text x="16" y="21" text-anchor="middle" fill="#f1f1f1" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="600" letter-spacing="-0.5">rp</text>
+</svg>

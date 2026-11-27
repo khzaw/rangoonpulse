@@ -1,0 +1,9 @@
+*
+!docs/
+!docs-site/
+docs-site/node_modules
+docs-site/dist
+docs-site/.astro
+docs-site/src/content/docs
+docs-site/src/generated
+docs-site/public

@@ -1,0 +1,19 @@
+{
+  "name": "rangoonpulse-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-docs.mjs",
+    "dev": "node scripts/sync-docs.mjs && (node scripts/sync-docs.mjs --watch & astro dev --host 0.0.0.0)",
+    "build": "node scripts/sync-docs.mjs && astro build",
+    "preview": "astro preview --host 0.0.0.0",
+    "test": "node --test scripts/sync-docs.test.mjs"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.43.2",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "astro": "7.4.13",
+    "starlight-links-validator": "0.27.1"
+  }
+}

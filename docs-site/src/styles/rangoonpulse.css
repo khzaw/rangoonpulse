@@ -1,0 +1,230 @@
+/* rangoonpulse docs: ink on paper. Pure light/dark canvases, sharp corners,
+   hairline dividers, and monospace metadata aligned with Dynacat & Control Panel. */
+
+:root {
+  --sl-font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-font-mono: "Berkeley Mono", "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --sl-color-white: #f1f1f1;
+  --sl-color-gray-1: #e5e5e5;
+  --sl-color-gray-2: #b0b0b0;
+  --sl-color-gray-3: #8c8c8c;
+  --sl-color-gray-4: #484848;
+  --sl-color-gray-5: #252525;
+  --sl-color-gray-6: #101010;
+  --sl-color-black: #000000;
+
+  --sl-color-accent-low: #0e241b;
+  --sl-color-accent: #3ecf8e;
+  --sl-color-accent-high: #9ef0c8;
+
+  --sl-color-bg: #000000;
+  --sl-color-bg-nav: #000000;
+  --sl-color-bg-sidebar: #000000;
+  --sl-color-bg-inline-code: #141414;
+  --sl-color-hairline: #252525;
+  --sl-color-hairline-light: #1e1e1e;
+  --sl-color-hairline-shade: #0a0a0a;
+
+  --sl-nav-height: 3.5rem;
+  --sl-sidebar-width: 18.5rem;
+  --sl-content-width: 52rem;
+  --sl-text-body: 0.96875rem;
+  --sl-line-height: 1.68;
+}
+
+:root[data-theme="light"] {
+  --sl-color-white: #141414;
+  --sl-color-gray-1: #262626;
+  --sl-color-gray-2: #595959;
+  --sl-color-gray-3: #737373;
+  --sl-color-gray-4: #b8b8b8;
+  --sl-color-gray-5: #dddddd;
+  --sl-color-gray-6: #f2f2f2;
+  --sl-color-gray-7: #f8f8f8;
+  --sl-color-black: #ffffff;
+
+  --sl-color-accent-low: #e6f6ee;
+  --sl-color-accent: #138a5a;
+  --sl-color-accent-high: #0c5c3b;
+
+  --sl-color-bg: #ffffff;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #ffffff;
+  --sl-color-bg-inline-code: #f0f0f0;
+  --sl-color-hairline: #dddddd;
+  --sl-color-hairline-light: #e8e8e8;
+  --sl-color-hairline-shade: #f5f5f5;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--sl-color-white);
+  color: var(--sl-color-black);
+}
+
+/* Sharp corners throughout to match Control Panel and D2 diagrams. */
+.sl-markdown-content pre,
+.sl-markdown-content code,
+.sl-markdown-content img,
+.sl-markdown-content blockquote,
+.starlight-aside,
+.pagination-links a,
+.sidebar-content a,
+site-search button[data-open-modal],
+site-search dialog,
+starlight-toc a,
+.sl-badge {
+  border-radius: 0 !important;
+}
+
+/* Brand mark in top bar. */
+.rp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--sl-color-white);
+  font-family: var(--sl-font-mono);
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.rp-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid var(--sl-color-gray-4);
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.rp-brand-name {
+  font-weight: 500;
+}
+
+.rp-brand-sep {
+  color: var(--sl-color-gray-4);
+}
+
+.rp-brand-sub {
+  color: var(--sl-color-gray-3);
+}
+
+/* Compact cluster navigation links in top bar. */
+.rp-header-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-right: 0.45rem;
+  padding-right: 0.9rem;
+  border-right: 1px solid var(--sl-color-hairline);
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+}
+
+.rp-header-links a {
+  color: var(--sl-color-gray-2);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 120ms ease;
+}
+
+.rp-header-links a:hover {
+  color: var(--sl-color-white);
+}
+
+@media (max-width: 64rem) {
+  .rp-header-links {
+    display: none;
+  }
+}
+
+/* Sidebar typography & clean active indicator. */
+.sidebar-content .top-level > li > details > summary .large,
+.sidebar-content .top-level > li > .group-label .large {
+  font-family: var(--sl-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+
+.sidebar-content a {
+  font-size: 0.84375rem;
+  border-left: 2px solid transparent;
+  padding-inline-start: 0.6rem;
+}
+
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+  border-left-color: var(--sl-color-accent);
+  font-weight: 500;
+}
+
+/* Content headings, tables, inline code, and diagrams. */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4 {
+  letter-spacing: -0.015em;
+}
+
+.sl-markdown-content h2 {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--sl-color-hairline-light);
+}
+
+.sl-markdown-content code:not(pre code) {
+  border: 1px solid var(--sl-color-hairline);
+  padding: 0.1rem 0.32rem;
+  font-size: 0.84em;
+}
+
+.sl-markdown-content table {
+  display: table;
+  width: 100%;
+  font-size: 0.88rem;
+  border-collapse: collapse;
+}
+
+.sl-markdown-content th {
+  font-family: var(--sl-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-2);
+  border-bottom: 1px solid var(--sl-color-gray-4);
+}
+
+.sl-markdown-content td {
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+.sl-markdown-content img {
+  border: 1px solid var(--sl-color-hairline);
+}
+
+/* Search button hairline styling. */
+site-search button[data-open-modal] {
+  border: 1px solid var(--sl-color-hairline);
+  background: var(--sl-color-gray-6);
+  font-family: var(--sl-font-mono);
+  font-size: 0.78rem;
+}
+
+site-search button[data-open-modal]:hover {
+  border-color: var(--sl-color-gray-4);
+}
