@@ -1424,11 +1424,10 @@ spec:
         enabled: true
         data:
           user.css: |
-            /* Prefer a locally installed Berkeley Mono (not bundled); the variable
-               family carries normal-width faces when only condensed statics exist.
-               Falls back to Dynacat's bundled JetBrains Mono. */
+            /* Prefer a locally installed Berkeley Mono (not bundled); fall back to
+               Dynacat's bundled JetBrains Mono. */
             body {
-              font-family: "Berkeley Mono Variable", "Berkeley Mono", "JetBrains Mono", monospace;
+              font-family: "Berkeley Mono", "JetBrains Mono", monospace;
             }
 
     persistence:
