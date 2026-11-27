@@ -1,5 +1,3 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
----
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -15,8 +13,8 @@ spec:
         kind: HelmRepository
         name: bjw-s-charts
         namespace: flux-system
-  install: { remediation: { retries: 3 } }
-  upgrade: { remediation: { retries: 3 } }
+  install: {remediation: {retries: 3}}
+  upgrade: {remediation: {retries: 3}}
   values:
     defaultPodOptionsStrategy: merge
     defaultPodOptions:
@@ -41,7 +39,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/rangoonpulse-docs
-              tag: 1795760114-8ce7ed46486490bfc70da61662aaecb5a982b390 # {"$imagepolicy": "flux-system:docs:tag"}
+              tag: 1795760766-dc61b9d9c348c57c26a8893a388171cad673f2aa # {"$imagepolicy": "flux-system:docs:tag"}
             probes:
               liveness:
                 enabled: true
