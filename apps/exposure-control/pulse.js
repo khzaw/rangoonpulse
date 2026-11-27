@@ -114,15 +114,15 @@
   function monthlyLedger(snapshot, now = Date.now()) {
     const rows = (Array.isArray(snapshot?.months) ? snapshot.months : []).filter((row) =>
       /^\d{4}-(0[1-9]|1[0-2])$/.test(row?.month) && numeric(row.costSgd) && row.costSgd >= 0);
-    if (snapshot?.state === 'unavailable') return '<div class="monthly-ledger"><h3>monthly totals</h3><p class="pulse-empty">Monthly history unavailable.</p></div>';
-    if (!rows.length) return '<div class="monthly-ledger"><h3>monthly totals</h3><p class="pulse-empty">Awaiting the first collection.</p></div>';
+    if (snapshot?.state === 'unavailable') return '<div class="monthly-ledger"><h3>Monthly totals</h3><p class="pulse-empty">Monthly history unavailable.</p></div>';
+    if (!rows.length) return '<div class="monthly-ledger"><h3>Monthly totals</h3><p class="pulse-empty">Awaiting the first collection.</p></div>';
     const shown = rows.slice(-24);
     const max = Math.max(...shown.map((row) => row.costSgd), 0.0001);
     const collected = Math.max(...shown.map((row) => Date.parse(row.collectedUntil)).filter(Number.isFinite));
     const overdue = !Number.isFinite(collected) || now - collected > 8 * 86400000;
     const through = Number.isFinite(collected) ? new Date(collected).toLocaleString('en-GB', { timeZone: 'Asia/Singapore', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : 'unknown';
     const money = (value) => 'S$\u00a0' + number(value, value > 0 && value < 0.01 ? 4 : 2);
-    return '<div class="monthly-ledger' + (overdue ? ' is-overdue' : '') + '"><div class="monthly-heading"><h3>monthly totals</h3><span>' + (overdue ? 'Collection overdue · ' : 'Collected through ') + esc(through) + ' SGT</span></div>' +
+    return '<div class="monthly-ledger' + (overdue ? ' is-overdue' : '') + '"><div class="monthly-heading"><h3>Monthly totals</h3><span>' + (overdue ? 'Collection overdue · ' : 'Collected through ') + esc(through) + ' SGT</span></div>' +
       '<div class="monthly-scroll"><ol class="monthly-bars" aria-label="Recorded monthly homelab electricity costs in Singapore dollars">' + shown.map((row) => {
         const status = (row.final ? 'Final' : 'In progress') + (row.partial ? ' · partial coverage' : '');
         const coverage = numeric(row.coveragePercent) ? number(row.coveragePercent, 2) + '% coverage' : 'Coverage unavailable';

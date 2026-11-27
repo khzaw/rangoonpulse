@@ -2462,7 +2462,7 @@
           '<div class="power-ticker"><div class="ticker-stats">' + stats.map(([value, label]) => '<div class="ticker-stat"><div class="ticker-value">' + value + '</div><div class="ticker-label">' + label + '</div></div>').join('') + '</div>' +
           '<div class="ticker-wave" tabindex="0" role="group" aria-label="Estimated homelab power, seven days. Arrow keys read values.">' + P.sparkline(P.values(series), { fill: true, pattern: true, ticks, width, height: 84, label: 'Estimated homelab power over seven days' }) + '</div>' +
           '<div class="ticker-days">' + ticks.filter((tick) => tick.x > .015 && tick.x < .985).map((tick) => '<span style="left:' + tick.x * 100 + '%">' + escapeHtml(tick.label) + '</span>').join('') + '</div>' +
-          '<div class="ticker-note"><span>Estimated · Kubernetes nodes + Iris + nas</span>' + (power.kwh24h === null ? '<span>awaiting history</span>' : '') + '</div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
+          '<div class="ticker-note"><span>Estimated · Kubernetes nodes + Iris + TrueNAS</span>' + (power.kwh24h === null ? '<span>awaiting history</span>' : '') + '</div></div>' + P.monthlyLedger(dashboardState.monthlyPower);
       }
 
       const expandedStorageGroups = new Set();
@@ -2544,14 +2544,14 @@
         const chartHeight = stacked ? 300 : Math.max(260, Math.min(420, width * .36));
         const namespaceCount = new Set(placementPods.map((pod) => pod.namespace)).size;
         el.innerHTML = pulseSectionHeader('Placement', placementPods.length ? placementPods.length + ' pods · ' + namespaceCount + ' namespaces' : 'unavailable') +
-          '<div class="placement-legend"><span>area = memory request</span><span class="placement-density">usage ' + [1, 2, 3, 4, 5].map((step) => '<i class="density-step density-' + step + '"></i>').join('') + '</span></div>' +
+          '<div class="placement-legend"><span>Area = memory request</span><span class="placement-density">Usage ' + [1, 2, 3, 4, 5].map((step) => '<i class="density-step density-' + step + '"></i>').join('') + '</span></div>' +
           '<div class="placement-nodes" style="grid-template-columns:' + (stacked ? '1fr' : nodes.map(([, pods]) => weight(pods) + 'fr').join(' ')) + '">' + nodes.map(([name, pods]) => {
             const nodeWidth = stacked ? width : (width - 24 * (nodes.length - 1)) * weight(pods) / total;
             const collapsed = new Set([...collapsedNamespaces].filter((key) => key.startsWith(name + '|')).map((key) => key.slice(name.length + 1)));
             const requested = pods.reduce((sum, pod) => sum + (pod.request || 0), 0);
             return '<section class="placement-node" data-placement-node="' + escapeHtml(name) + '"><div class="placement-node-heading"><h3>' + escapeHtml(name) + '</h3><span>' + pods.length + ' pods · ' + P.fmt.bytes(requested) + '</span></div>' + P.placementSvg(pods, nodeWidth, chartHeight, { collapsed, flashing }) + '</section>';
           }).join('') + '</div>' + (placementPods.length ? '' : '<p class="pulse-empty">No pod data.</p>') +
-          '<div id="placementDetail" class="placement-detail" role="status">Hover a pod · click a namespace to fold</div><div class="placement-note"><span>square restarts · red over request · checkered not running</span></div>';
+          '<div id="placementDetail" class="placement-detail" role="status">Hover a pod · click a namespace to fold</div><div class="placement-note"><span>Square: restarts · Red: over request · Checkered: not running</span></div>';
         if (focused) {
           const target = [...el.querySelectorAll('[data-pod-key], [data-namespace]')].find((element) => focused.pod ? element.dataset.podKey === focused.pod : element.dataset.namespace === focused.namespace && element.closest('[data-placement-node]')?.dataset.placementNode === focused.node);
           target?.focus({ preventScroll: true });
@@ -2566,7 +2566,9 @@
         const pod = placementPods.find((item) => item.key === cell.dataset.podKey);
         if (!pod) return;
         const P = window.Pulse;
-        document.getElementById('placementDetail').textContent = pod.namespace + '/' + pod.name + ' · req ' + P.fmt.bytes(pod.request) + ' · use ' + P.fmt.bytes(pod.usage) + ' · ' + P.fmt.pct(pod.ratio) + ' of request · ' + P.number(pod.restarts, 0) + ' restarts · ' + pod.phase;
+        const detail = document.getElementById('placementDetail');
+        detail.classList.add('is-active');
+        detail.textContent = pod.namespace + '/' + pod.name + ' · req ' + P.fmt.bytes(pod.request) + ' · use ' + P.fmt.bytes(pod.usage) + ' · ' + P.fmt.pct(pod.ratio) + ' of request · ' + P.number(pod.restarts, 0) + ' restarts · ' + pod.phase;
       }
       const placementMapEl = document.getElementById('placementMap');
       placementMapEl.addEventListener('pointerover', showPlacementDetail);
