@@ -680,25 +680,34 @@
             '<div class="column-sub">' + sub + '</div>' + body + '</section>';
         }
 
-        overviewDigestEl.innerHTML =
-          column('Updates', '#updates',
-            reportsAvailable ? String(pending.length) : (pending.length ? pending.length + '+' : '—'),
-            reportsAvailable ? images.length + (images.length === 1 ? ' image' : ' images') + ' · ' + charts.length + (charts.length === 1 ? ' chart' : ' charts') : 'report incomplete',
-            list(pending.slice(0, 7), '')) +
-          column('Public access', '#exposure', String(activeServices.length), activeServices.length ? 'public now' : 'all private',
-            list(activeServices.map((svc) => ({
+        // Zero kinds drop out of the breakdown: "4 images", not "4 images · 0 charts".
+        const updateParts = [[images.length, 'image'], [charts.length, 'chart']]
+          .filter(([count]) => count)
+          .map(([count, noun]) => count + ' ' + noun + (count === 1 ? '' : 's'));
+        const recent = audit.map((entry) => ({
+          name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
+          detail: fmtAgo(entry.ts),
+          title: fmtDateTime(entry.ts),
+        }));
+        // Rows start on the same line in every column; history only needs a
+        // label when live shares are listed above it.
+        const accessBody = activeServices.length
+          ? list(activeServices.map((svc) => ({
               name: svc.publicHost || svc.name || svc.id,
               href: svc.publicUrl,
               detail: (svc.authMode === 'cloudflare-access' ? 'cf-access' : (svc.authMode || 'none')) + ' · ' + fmtExpiry(svc.expiresAt, svc.enabled).text,
-            })), '') +
-            (audit.length ? '<div class="eyebrow column-kicker">Recent</div>' + list(audit.map((entry) => ({
-              name: (entry.action || '') + (entry.serviceId ? ' ' + entry.serviceId : ''),
-              detail: fmtAgo(entry.ts),
-              title: fmtDateTime(entry.ts),
-            })), '') : '')) +
+            })), '') + (recent.length ? '<div class="eyebrow column-kicker">Recent</div>' + list(recent, '') : '')
+          : list(recent, '');
+
+        overviewDigestEl.innerHTML =
+          column('Updates', '#updates',
+            reportsAvailable ? String(pending.length) : (pending.length ? pending.length + '+' : '—'),
+            !reportsAvailable ? 'partial' : updateParts.length ? updateParts.join(' · ') : 'up to date',
+            list(pending.slice(0, 7), '')) +
+          column('Public access', '#exposure', String(activeServices.length), activeServices.length ? 'live' : 'all private', accessBody) +
           column('Tuning', '#tuning',
             preview ? String(Number(preview.selectedCount ?? proposals.length)) : '—',
-            !preview ? 'preview unavailable' : preview.hardFitOk === false ? 'node fit blocked' : 'proposed changes',
+            !preview ? 'no preview' : preview.hardFitOk === false ? 'fit blocked' : 'proposed',
             list(proposals.slice(0, 7).map((row) => {
               const current = (row.current && row.current.requests) || {};
               const next = (row.recommended && row.recommended.requests) || {};
@@ -813,7 +822,7 @@
         document.getElementById('overviewHeadline').textContent = attention ? attention + ' to check' : 'All clear';
 
         const meta = [];
-        if (tuning && tuning.fetch) meta.push('<span>advisor ' + fmtAgo(tuning.fetch.lastRunAt) + ' · ' + escapeHtml(tuning.fetch.mode || 'n/a') + '</span>');
+        if (tuning && tuning.fetch) meta.push('<span>advisor ' + fmtAgo(tuning.fetch.lastRunAt) + '</span>');
         if (updates && updates.checkedAt) meta.push('<span>images ' + fmtAgo(updates.checkedAt) + '</span>');
         if (helmUpdates && helmUpdates.checkedAt) meta.push('<span>charts ' + fmtAgo(helmUpdates.checkedAt) + '</span>');
         if (travel && travel.checkedAt) meta.push('<span>travel ' + fmtAgo(travel.checkedAt) + '</span>');
