@@ -108,3 +108,21 @@ test('boxes stay on the dashboard pages', () => {
   }
   assert.doesNotMatch(read('styles.css'), /\.panel\b/);
 });
+
+test('no class or id looks like a social or ad widget to content blockers', () => {
+  // Content blockers hide generic social and promo hooks on every site:
+  // `.share-list` and `.share-toggle` once emptied the Public access list and
+  // hid its Share buttons. Name hooks after what they do, never "share".
+  const bait = /share|social|sponsor|advert|promo|banner|newsletter|subscribe|cookie|consent|popup/i;
+  const tokens = new Set();
+  for (const match of read('styles.css').matchAll(/[.#]([A-Za-z_][\w-]*)/g)) tokens.add(match[1]);
+  for (const match of read('index.html').matchAll(/\b(?:class|id)="([^"]*)"/g)) match[1].split(/\s+/).forEach((token) => tokens.add(token));
+  for (const file of ['app.js', 'fx.js', 'feed.js', 'pulse.js', 'tuning.js', 'updates-view.js']) {
+    const source = read(file);
+    for (const match of source.matchAll(/\b(?:class|className)\s*=\s*\\?["']([^"'\\]*)/g)) match[1].split(/\s+/).forEach((token) => tokens.add(token));
+    for (const match of source.matchAll(/classList\.(?:add|remove|toggle|contains)\(\s*'([^']+)'/g)) tokens.add(match[1]);
+    for (const match of source.matchAll(/getElementById\('([^']+)'\)/g)) tokens.add(match[1]);
+  }
+  assert.ok(tokens.has('access-list') && tokens.has('access-toggle'), 'the Public access hooks were not found');
+  assert.deepEqual([...tokens].filter((token) => bait.test(token)), []);
+});

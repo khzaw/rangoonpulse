@@ -170,12 +170,12 @@
           </div>
         </div>
         <div class="toolbar">
-          <label class="search-shell"><span class="sr-only">Search services</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input id="sharesSearch" type="search" placeholder="Search" autocomplete="off" /></label>
+          <label class="search-shell"><span class="sr-only">Search services</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input id="accessSearch" type="search" placeholder="Search" autocomplete="off" /></label>
           <div class="view-switch" role="group" aria-label="Filter services"><span class="glide-thumb" aria-hidden="true"></span><button type="button" data-share-view="all" aria-pressed="true">All</button><button type="button" data-share-view="active" aria-pressed="false">Public</button></div>
-          <span id="sharesCount" class="page-meta toolbar-end" role="status"></span>
+          <span id="accessCount" class="page-meta toolbar-end" role="status"></span>
         </div>
-        <div class="share-columns" aria-hidden="true"><span>Service</span><span>State</span><span>Access</span><span>Expires</span><span></span></div>
-        <ul id="rows" class="share-list" aria-label="Services"></ul>
+        <div class="access-columns" aria-hidden="true"><span>Service</span><span>State</span><span>Access</span><span>Expires</span><span></span></div>
+        <ul id="rows" class="access-list" aria-label="Services"></ul>
         <div id="agentAccess" class="agent-access" hidden></div>
         <div id="transmissionPanel" class="route">
           <div class="route-main">
@@ -268,14 +268,14 @@
           </div>
           <div class="travel-action-group">
             <a id="travelExposureLink" class="link" href="#exposure">Public access<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-            <button id="travelDisableSharesBtn" class="danger" type="button">Disable all</button>
+            <button id="travelDisablePublicBtn" class="danger" type="button">Disable all</button>
           </div>
         </div>
         <div class="block-head"><h2 class="block-title">Access</h2><div id="travelNotesMeta" class="page-meta"></div></div>
         <div class="columns columns-2">
           <article class="column">
             <div class="eyebrow">Public shares</div>
-            <div id="travelShares" class="travel-shares"></div>
+            <div id="travelPublic" class="travel-public"></div>
           </article>
           <article class="column">
             <div class="eyebrow">Notes</div>

@@ -7,7 +7,7 @@
       const travelBundlesMetaEl = document.getElementById('travelBundlesMeta');
       const travelBundlesEl = document.getElementById('travelBundles');
       const travelNotesMetaEl = document.getElementById('travelNotesMeta');
-      const travelSharesEl = document.getElementById('travelShares');
+      const travelSharesEl = document.getElementById('travelPublic');
       const travelNotesEl = document.getElementById('travelNotes');
       const tuningView = window.Tuning.createView(document.getElementById('tuning'));
       const exposureClient = window.ExposureClient.createExposureClient({ request });
@@ -44,7 +44,7 @@
       const vpnToggleLabels = Array.from(document.querySelectorAll('[data-vpn-label]'));
       const travelDirectBtn = document.getElementById('travelDirectBtn');
       const travelVpnBtn = document.getElementById('travelVpnBtn');
-      const travelDisableSharesBtn = document.getElementById('travelDisableSharesBtn');
+      const travelDisableSharesBtn = document.getElementById('travelDisablePublicBtn');
       const travelExposureLink = document.getElementById('travelExposureLink');
       const renovateRunBtn = document.getElementById('renovateRunBtn');
       const updatesRefreshBtn = document.getElementById('updatesRefreshBtn');
@@ -74,7 +74,7 @@
       const navigation = document.getElementById('navigation');
       const navMenuBtn = document.getElementById('navMenuBtn');
       const mobileNavigation = window.matchMedia('(max-width: 980px)');
-      const sharesSearch = document.getElementById('sharesSearch');
+      const sharesSearch = document.getElementById('accessSearch');
       const shareViewButtons = Array.from(document.querySelectorAll('[data-share-view]'));
       let shareView = 'all';
 
@@ -419,7 +419,7 @@
 
       function tickExpiryCountdowns() {
         const expired = new Set();
-        document.querySelectorAll('#rows .share-meter:not([hidden])').forEach(updateShareMeter);
+        document.querySelectorAll('#rows .access-meter:not([hidden])').forEach(updateShareMeter);
         document.querySelectorAll('#rows .expiry[data-expires-at], #agentAccess .expiry[data-expires-at]').forEach((node) => {
           const state = updateExpiryNode(node);
           const owner = node.closest('[data-service-id], [data-agent-id]');
@@ -541,7 +541,7 @@
       function skeletonShareRows(count) {
         let html = '';
         for (let i = 0; i < count; i++) {
-          html += '<li class="share is-skeleton" aria-hidden="true"><div class="share-line"><div class="share-id">' +
+          html += '<li class="access-row is-skeleton" aria-hidden="true"><div class="access-line"><div class="access-id">' +
             skeletonLine('38%') + skeletonLine('52%', '10px') + '</div></div></li>';
         }
         return html;
@@ -1316,7 +1316,7 @@
         });
         const empty = rowsEl.querySelector('[data-share-empty]');
         if (empty) empty.hidden = visible > 0;
-        document.getElementById('sharesCount').textContent = visible + ' / ' + services.length;
+        document.getElementById('accessCount').textContent = visible + ' / ' + services.length;
         shareViewButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.shareView === shareView)));
       }
       sharesSearch.addEventListener('input', filterShares);
@@ -1495,7 +1495,7 @@
       // One segmented choice; the shared glide thumb follows the pressed option.
       function segmented(label, options, current, onPick, key) {
         const group = document.createElement('div');
-        group.className = 'view-switch share-switch';
+        group.className = 'view-switch access-switch';
         group.setAttribute('role', 'group');
         group.setAttribute('aria-label', label);
         const thumb = document.createElement('span');
@@ -1521,12 +1521,12 @@
 
       function panelField(label, ...content) {
         const field = document.createElement('div');
-        field.className = 'share-field';
+        field.className = 'access-field';
         const caption = document.createElement('span');
         caption.className = 'eyebrow';
         caption.textContent = label;
         const value = document.createElement('div');
-        value.className = 'share-field-value';
+        value.className = 'access-field-value';
         value.append(...content);
         field.append(caption, value);
         return field;
@@ -1544,7 +1544,7 @@
 
       function panelActions(...buttons) {
         const actions = document.createElement('div');
-        actions.className = 'share-panel-actions';
+        actions.className = 'access-panel-actions';
         actions.append(...buttons);
         return actions;
       }
@@ -1563,8 +1563,8 @@
         const draft = shareDraft;
         const label = svc.name || svc.id;
         const body = document.createElement('div');
-        body.className = 'share-panel-body';
-        const go = panelButton('', 'primary share-go', (button) => runExposure({
+        body.className = 'access-panel-body';
+        const go = panelButton('', 'primary access-go', (button) => runExposure({
           btn: button,
           busy: { text: 'Opening ' + label + '…', detail: svc.publicHost },
           request: () => exposureClient.enable(svc.id, { hours: draft.hours, authMode: draft.authMode }),
@@ -1594,10 +1594,10 @@
       function manageBody(svc) {
         const id = svc.id;
         const body = document.createElement('div');
-        body.className = 'share-panel-body';
+        body.className = 'access-panel-body';
 
         const link = document.createElement('a');
-        link.className = 'share-url';
+        link.className = 'access-url';
         link.href = String(svc.publicUrl || '#');
         link.target = '_blank';
         link.rel = 'noreferrer';
@@ -1607,7 +1607,7 @@
 
         const timed = Boolean(svc.expiresAt);
         const now = document.createElement('span');
-        now.className = 'share-until';
+        now.className = 'access-until';
         if (timed) {
           const expiry = fmtExpiry(svc.expiresAt, true);
           now.innerHTML = '<span class="expiry ' + expiry.state + '" data-expires-at="' + escapeHtml(svc.expiresAt) + '" data-enabled="1">' +
@@ -1634,7 +1634,7 @@
         const timeValue = [now, chips];
         if (!timed) {
           const caption = document.createElement('span');
-          caption.className = 'share-caption';
+          caption.className = 'access-caption';
           caption.textContent = 'expire in';
           timeValue.splice(1, 0, caption);
         }
@@ -1655,7 +1655,7 @@
       }
 
       function sharePanelOf(row) {
-        return Array.from(row.children).find((node) => node.classList.contains('share-panel') && !node.classList.contains('is-closing')) || null;
+        return Array.from(row.children).find((node) => node.classList.contains('access-panel') && !node.classList.contains('is-closing')) || null;
       }
 
       // Repaints an open panel for the share's current state. When a share
@@ -1700,7 +1700,7 @@
         const row = shareRow(id);
         if (!row) return;
         row.classList.remove('is-open');
-        const toggle = row.querySelector('.share-toggle');
+        const toggle = row.querySelector('.access-toggle');
         if (toggle) {
           toggle.setAttribute('aria-expanded', 'false');
           if (options && options.focus) toggle.focus({ preventScroll: true });
@@ -1721,13 +1721,13 @@
         if (openShareId) closeSharePanel();
         openShareId = id;
         row.classList.add('is-open');
-        const toggle = row.querySelector('.share-toggle');
+        const toggle = row.querySelector('.access-toggle');
         if (toggle) toggle.setAttribute('aria-expanded', 'true');
         const panel = document.createElement('div');
-        panel.className = 'share-panel';
-        panel.id = 'share-panel-' + id;
+        panel.className = 'access-panel';
+        panel.id = 'access-panel-' + id;
         panel.setAttribute('role', 'region');
-        panel.innerHTML = '<div class="share-panel-inner"></div>';
+        panel.innerHTML = '<div class="access-panel-inner"></div>';
         panel.addEventListener('keydown', (event) => {
           if (event.key !== 'Escape') return;
           event.stopPropagation();
@@ -1765,17 +1765,17 @@
 
       function buildShareRow(svc) {
         const row = document.createElement('li');
-        row.className = 'share';
+        row.className = 'access-row';
         row.dataset.serviceId = svc.id;
         row.innerHTML =
-          '<div class="share-line">' +
-            '<div class="share-id"><span class="share-name"></span><span class="share-host"></span></div>' +
-            '<div class="share-facts">' +
-              '<span class="share-state"><span class="lamp off"></span><span data-share-state></span></span>' +
-              '<span class="share-access"></span>' +
-              '<span class="share-time"><span class="expiry" data-enabled="1"></span><span class="share-meter" aria-hidden="true"><i></i></span></span>' +
+          '<div class="access-line">' +
+            '<div class="access-id"><span class="access-name"></span><span class="access-host"></span></div>' +
+            '<div class="access-facts">' +
+              '<span class="access-state"><span class="lamp off"></span><span data-share-state></span></span>' +
+              '<span class="access-who"></span>' +
+              '<span class="access-time"><span class="expiry" data-enabled="1"></span><span class="access-meter" aria-hidden="true"><i></i></span></span>' +
             '</div>' +
-            '<div class="share-actions"></div>' +
+            '<div class="access-actions"></div>' +
           '</div>';
         // The whole line opens the panel; links and buttons keep their own job.
         row.firstElementChild.addEventListener('click', (event) => {
@@ -1789,11 +1789,11 @@
       function paintShareActions(row, svc) {
         const id = svc.id;
         const label = svc.name || svc.id;
-        const actions = row.querySelector('.share-actions');
-        const toggle = panelButton(svc.enabled ? 'Edit' : 'Share', 'share-toggle', () => toggleSharePanel(id));
+        const actions = row.querySelector('.access-actions');
+        const toggle = panelButton(svc.enabled ? 'Edit' : 'Share', 'access-toggle', () => toggleSharePanel(id));
         toggle.setAttribute('aria-label', (svc.enabled ? 'Edit ' : 'Share ') + label);
         toggle.setAttribute('aria-expanded', String(openShareId === id));
-        toggle.setAttribute('aria-controls', 'share-panel-' + id);
+        toggle.setAttribute('aria-controls', 'access-panel-' + id);
         const buttons = [toggle];
         if (svc.enabled) {
           const stop = panelButton('Stop', 'danger', (button) => stopShare(id, button));
@@ -1816,19 +1816,19 @@
         row.dataset.state = state;
         row.dataset.expiresAt = svc.expiresAt || '';
         row.classList.toggle('is-live', live);
-        row.querySelector('.share-name').textContent = svc.name || svc.id;
-        const host = row.querySelector('.share-host');
+        row.querySelector('.access-name').textContent = svc.name || svc.id;
+        const host = row.querySelector('.access-host');
         if (live) {
           host.innerHTML = '<a href="' + escapeHtml(svc.publicUrl || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(svc.publicHost || '') + '</a>';
         } else {
           host.textContent = svc.publicHost || '';
         }
-        row.querySelector('.share-state .lamp').className = 'lamp ' + (live ? 'status' : 'off');
+        row.querySelector('.access-state .lamp').className = 'lamp ' + (live ? 'status' : 'off');
         row.querySelector('[data-share-state]').textContent = state;
-        row.querySelector('.share-access').textContent = live ? accessLabel(svc.authMode) : '';
-        const time = row.querySelector('.share-time');
+        row.querySelector('.access-who').textContent = live ? accessLabel(svc.authMode) : '';
+        const time = row.querySelector('.access-time');
         const expiryNode = time.querySelector('.expiry');
-        const meter = time.querySelector('.share-meter');
+        const meter = time.querySelector('.access-meter');
         // Hidden by visibility, not [hidden]: the cell keeps its grid column.
         time.classList.toggle('is-idle', !live);
         expiryNode.dataset.expiresAt = live ? String(svc.expiresAt || '') : '';
@@ -1844,7 +1844,7 @@
           void time.offsetWidth;
           time.classList.add('is-bumped');
         }
-        if (flipped || !row.querySelector('.share-actions').childElementCount) paintShareActions(row, svc);
+        if (flipped || !row.querySelector('.access-actions').childElementCount) paintShareActions(row, svc);
         if (openShareId === svc.id) renderSharePanel(row, svc, { morph: flipped });
       }
 
@@ -1861,10 +1861,10 @@
         });
         if (!services.length) {
           const empty = document.createElement('li');
-          empty.className = 'share-empty';
+          empty.className = 'access-empty';
           empty.textContent = 'No services.';
           rowsEl.appendChild(empty);
-          document.getElementById('sharesCount').textContent = '0 / 0';
+          document.getElementById('accessCount').textContent = '0 / 0';
           return;
         }
         // Keep the configured order so rows stay put when toggled.
@@ -1874,7 +1874,7 @@
           if (rowsEl.children[index] !== row) rowsEl.insertBefore(row, rowsEl.children[index] || null);
         });
         const empty = document.createElement('li');
-        empty.className = 'share-empty';
+        empty.className = 'access-empty';
         empty.dataset.shareEmpty = '';
         empty.textContent = 'No match.';
         rowsEl.appendChild(empty);
