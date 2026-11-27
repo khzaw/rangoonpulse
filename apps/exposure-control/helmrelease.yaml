@@ -117,7 +117,7 @@ spec:
               SHARE_RATE_LIMIT_WINDOW_SECONDS: "60"
               IMAGE_UPDATE_CACHE_TTL_HOURS: "168"
               IMAGE_UPDATE_HTTP_TIMEOUT_MS: "6000"
-              IMAGE_UPDATE_EXCLUDED_WORKLOADS: blog,mmcal,rangoon-mapper
+              IMAGE_UPDATE_EXCLUDED_WORKLOADS: blog,mmcal,rangoon-mapper,ericaknight,interview-prep,retirement
               HELM_UPDATE_CACHE_TTL_HOURS: "168"
               HELM_UPDATE_HTTP_TIMEOUT_MS: "8000"
               TRAVEL_CACHE_TTL_SECONDS: "30"

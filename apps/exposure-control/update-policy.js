@@ -100,6 +100,52 @@
     return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime > rightTime;
   }
 
+  const CHART_MANAGED_IMAGE_REPOS = new Set([
+    "grafana/grafana",
+    "kiwigrid/k8s-sidecar",
+    "kube-state-metrics/kube-state-metrics",
+    "prometheus-operator/prometheus-operator",
+    "prometheus/alertmanager",
+    "prometheus/blackbox-exporter",
+    "prometheus/node-exporter",
+    "prometheus/prometheus",
+    "tailscale/k8s-operator",
+    "tailscale/tailscale",
+    "valkey/valkey",
+  ]);
+
+  function helmFullCandidates(item) {
+    return [item && item.chart, item && item.name, item && item.id]
+      .map(canonicalPackage)
+      .filter(Boolean);
+  }
+
+  function matchHelmScore(value, item) {
+    const haystack = normalizedToken(value);
+    if (!haystack) return 0;
+    let best = 0;
+    for (const candidate of helmFullCandidates(item)) {
+      const token = normalizedToken(candidate);
+      if (token.length < 4) continue;
+      if (haystack === token) best = Math.max(best, 10000 + token.length);
+      else if (haystack.includes(token)) best = Math.max(best, token.length);
+    }
+    return best;
+  }
+
+  function bestMatchingHelmEntry(entries, item, valueForEntry) {
+    let best = null;
+    let bestScore = 0;
+    for (const entry of entries) {
+      const score = matchHelmScore(valueForEntry(entry), item);
+      if (score > bestScore) {
+        best = entry;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
   function classifyImageUpdate(item, renovate, imageCheckedAt) {
     if (!item || item.status !== "update") {
       return { kind: "current", label: "current", detail: "No newer image detected.", canRun: false };
@@ -120,10 +166,7 @@
     }
 
     const imageRepo = canonicalPackage(item.imageRepo || item.image);
-    if (
-      imageRepo === "prometheus-operator/prometheus-operator" ||
-      imageRepo === "tailscale/tailscale"
-    ) {
+    if (CHART_MANAGED_IMAGE_REPOS.has(imageRepo)) {
       return {
         kind: "chart-managed",
         label: "chart managed",
@@ -186,8 +229,100 @@
     };
   }
 
+  function classifyHelmUpdate(item, renovate, helmCheckedAt) {
+    if (!item || item.status !== "update") {
+      return { kind: "current", label: "current", detail: "No newer chart detected.", canRun: false };
+    }
+
+    if (
+      item.specVersion &&
+      !sameVersion(item.currentVersion, item.specVersion) &&
+      sameVersion(item.latestVersion, item.specVersion)
+    ) {
+      return {
+        kind: "git-ahead",
+        label: "Git at " + item.specVersion,
+        detail: "The HelmRelease spec is already at this version; Flux has not finished rolling it out yet.",
+        canRun: false,
+      };
+    }
+
+    const dependencies = Array.isArray(renovate && renovate.detectedDependencies)
+      ? renovate.detectedDependencies
+      : [];
+    const dependency = bestMatchingHelmEntry(dependencies, item, (entry) => entry && entry.name);
+    if (
+      dependency &&
+      !sameVersion(item.currentVersion, dependency.currentValue) &&
+      sameVersion(item.latestVersion, dependency.currentValue)
+    ) {
+      return {
+        kind: "git-ahead",
+        label: "Git at " + dependency.currentValue,
+        detail: "Renovate already sees this chart version in Git; the live release is behind.",
+        canRun: false,
+      };
+    }
+
+    const openPrs = Array.isArray(renovate && renovate.openPrs) ? renovate.openPrs : [];
+    const openPr = bestMatchingHelmEntry(
+      openPrs,
+      item,
+      (pr) => String((pr && pr.title) || "") + " " + String((pr && pr.headRefName) || ""),
+    );
+    if (openPr) {
+      return {
+        kind: "open-pr",
+        label: "PR #" + String(openPr.number || ""),
+        detail: String(openPr.title || "Renovate PR is open."),
+        url: String(openPr.url || ""),
+        canRun: false,
+      };
+    }
+
+    const rateLimited = Array.isArray(renovate && renovate.rateLimitedUpdates)
+      ? renovate.rateLimitedUpdates
+      : [];
+    const queued = bestMatchingHelmEntry(
+      rateLimited,
+      item,
+      (update) => String((update && update.title) || "") + " " + String((update && update.branchName) || ""),
+    );
+    if (queued) {
+      return {
+        kind: "queued",
+        label: "queued",
+        detail: String(queued.title || "Renovate detected this chart update but the PR limit deferred it."),
+        canRun: false,
+      };
+    }
+
+    const lastRunAt = renovate && renovate.lastRun && renovate.lastRun.updatedAt;
+    const dependencyAlreadyReportedLatest = Boolean(
+      dependency &&
+      Array.isArray(dependency.updates) &&
+      dependency.updates.some((version) => sameVersion(version, item.latestVersion)),
+    );
+    if (happenedAfter(helmCheckedAt, lastRunAt) && !dependencyAlreadyReportedLatest) {
+      return {
+        kind: "new-since-run",
+        label: "new since run",
+        detail: "The chart report found this after Renovate last completed.",
+        canRun: true,
+      };
+    }
+
+    return {
+      kind: "ready",
+      label: "ready to scan",
+      detail: "No open or queued Renovate update matched this chart.",
+      canRun: true,
+    };
+  }
+
   return {
     canonicalPackage,
+    classifyHelmUpdate,
     classifyImageUpdate,
     findDetectedDependency,
     findOpenPr,

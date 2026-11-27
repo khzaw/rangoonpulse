@@ -3,21 +3,21 @@ title: Dependency Updates
 summary: Current Renovate, Flux image automation, ownership boundaries, cadence, and verification.
 status: active
 owner: homelab
-last_reviewed: 2026-11-13
+last_reviewed: 2026-11-27
 ---
 
 # Dependency Updates
 
 ## Renovate
 
-- configuration: `renovate.json`
+- configuration: `renovate.json` (discovered automatically by the workflow without passing a duplicate global `configurationFile`)
 - workflow: `.github/workflows/renovate.yaml`
 - execution: GitHub Actions every six hours
 - PR concurrency and hourly creation limits: seven
 
 Renovate owns normal chart, image, GitHub Actions, and other declared dependency updates except where package/path rules delegate ownership or intentionally pin a dependency.
 
-The two AdGuard releases use file-specific branches because they are separate rollout units. Self-built image tags are excluded or package-disabled where Flux image automation owns promotion.
+The `flux` manager tracks both Helm charts and inline `HelmRelease` values; `helm-values` is scoped to standalone `*values.yaml` files (such as `apps/actualbudget/values.yaml`) so `HelmRelease` files are not scanned twice. The two AdGuard releases use file-specific branches matching `flux` and `helm-values` because they are separate rollout units. Self-built image tags are excluded (`ignorePaths` for static-site directories, or disabled by `packageRules` where the manifest also has Renovate-managed charts or sidecars such as `interview-prep` and `retirement`) where Flux image automation owns promotion.
 
 Do not infer Renovate failure from the control panel update count. The control panel compares live workload images with registry tags; Renovate compares Git declarations under manager, versioning, ignore, and PR-limit policy.
 
@@ -26,6 +26,7 @@ Do not infer Renovate failure from the control panel update count. The control p
 - `kube-prometheus-stack` follows normal Renovate chart updates. Before a monitoring upgrade, verify the operator and config-reloader image indexes support both `linux/amd64` and `linux/arm64`, review chart/CRD changes, check the new chart's rules and dashboards against the metric filters in `docs/prometheus-storage.md`, and verify the generated Prometheus and Alertmanager workloads as well as Helm readiness. Preserve placement and resource reservations unless separately validated.
 - LinuxServer build suffixes must remain orderable. Jellyfin accepts stable two- or three-component app versions, numeric Ubuntu base versions, and LinuxServer rebuild numbers; base transitions are reviewable updates rather than compatibility locks.
 - Jackett tracks `linuxserver/docker-jackett` packaging releases through an inline custom-manager hint, converting their tags to the image's three-component app version. Packaging releases follow the multiarch image push; upstream `Jackett/Jackett` releases can precede publication and must not drive deployments. Its Docker datasource is disabled because the registry's large history makes lookup incomplete.
+- Tunarr tracks stable three-component numeric tags (`^\d+\.\d+\.\d+$`) via regex versioning so Renovate handles the `1.x` to CalVer (`2026.x.x`) transition without matching architecture or development tags.
 - Keep the intentionally pinned Flaresolverr image exception and the separate AdGuard rollout branches. Check `renovate.json` and inline hints before changing a tag representation or release source.
 
 ## Flux Image Automation

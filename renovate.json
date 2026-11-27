@@ -4,7 +4,9 @@
     "config:recommended"
   ],
   "timezone": "Asia/Singapore",
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "labels": [
     "dependencies",
     "renovate"
@@ -36,7 +38,7 @@
   },
   "helm-values": {
     "managerFilePatterns": [
-      "/(^|/)(apps|core|infrastructure)/.+(helmrelease|values)\\.ya?ml$/"
+      "/(^|/)(apps|core|infrastructure)/.+values\\.ya?ml$/"
     ]
   },
   "kubernetes": {
@@ -88,6 +90,7 @@
         "docker"
       ],
       "matchPackageNames": [
+        "ghcr.io/khzaw/interview-prep",
         "ghcr.io/khzaw/retirement"
       ],
       "enabled": false
@@ -152,8 +155,19 @@
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-r(?<build>\\d+)-ls(?<revision>\\d+)$"
     },
     {
+      "description": "Track Tunarr stable numeric releases across the 1.x to CalVer transition without matching arch or dev tags.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/chrisbenincasa/tunarr"
+      ],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    },
+    {
       "description": "Keep AdGuard primary image updates in their own branch and PR.",
       "matchManagers": [
+        "flux",
         "helm-values"
       ],
       "matchDatasources": [
@@ -171,6 +185,7 @@
     {
       "description": "Keep AdGuard secondary image updates in their own branch and PR.",
       "matchManagers": [
+        "flux",
         "helm-values"
       ],
       "matchDatasources": [

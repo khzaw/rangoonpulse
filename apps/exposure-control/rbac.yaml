@@ -47,6 +47,9 @@ metadata:
   name: exposure-control-pods-reader
 rules:
   - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list"]
   - apiGroups: [""]

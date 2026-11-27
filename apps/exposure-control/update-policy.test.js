@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
 
-const { classifyImageUpdate } = require("./update-policy");
+const { classifyHelmUpdate, classifyImageUpdate } = require("./update-policy");
 
 const lastRun = { updatedAt: "2026-08-01T00:00:00.000Z" };
 
@@ -130,6 +130,9 @@ test("classifies operator-generated images as chart managed", () => {
   for (const imageRepo of [
     "quay.io/prometheus-operator/prometheus-operator",
     "docker.io/tailscale/tailscale",
+    "docker.io/valkey/valkey",
+    "quay.io/prometheus/prometheus",
+    "docker.io/grafana/grafana",
   ]) {
     const result = classifyImageUpdate(
       {
@@ -156,6 +159,50 @@ test("classifies operator-generated images as chart managed", () => {
     assert.equal(result.label, "chart managed");
     assert.equal(result.canRun, false);
   }
+});
+
+test("classifies Helm chart updates across git-ahead, open PR, and queued Renovate states", () => {
+  const gitAhead = classifyHelmUpdate(
+    {
+      name: "kube-prometheus-stack",
+      chart: "kube-prometheus-stack",
+      currentVersion: "93.10.1",
+      specVersion: "93.11.1",
+      latestVersion: "93.11.1",
+      status: "update",
+    },
+    { lastRun, openPrs: [], rateLimitedUpdates: [], detectedDependencies: [] },
+    "2026-08-01T01:00:00.000Z",
+  );
+  assert.equal(gitAhead.kind, "git-ahead");
+  assert.equal(gitAhead.label, "Git at 93.11.1");
+  assert.equal(gitAhead.canRun, false);
+
+  const queued = classifyHelmUpdate(
+    {
+      name: "flux-operator",
+      chart: "flux-operator",
+      currentVersion: "0.63.1",
+      specVersion: "0.63.1",
+      latestVersion: "0.64.0",
+      status: "update",
+    },
+    {
+      lastRun,
+      openPrs: [],
+      rateLimitedUpdates: [
+        {
+          branchName: "renovate/flux-operator-0.x",
+          title: "Update flux-operator Docker tag to v0.64.0",
+        },
+      ],
+      detectedDependencies: [],
+    },
+    "2026-08-01T01:00:00.000Z",
+  );
+  assert.equal(queued.kind, "queued");
+  assert.equal(queued.label, "queued");
+  assert.equal(queued.canRun, false);
 });
 
 test("classifies an update discovered after Renovate ran even when the dependency was already known", () => {

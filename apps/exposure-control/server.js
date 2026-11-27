@@ -859,7 +859,7 @@ function parseComparableTag(tag) {
   if (!parts || parts.length === 0) return null;
 
   const { tokens, hasVariableNumber } = parts.reduce(
-    (acc, part) => {
+    (acc, part, index) => {
       if (/^\d+$/.test(part)) {
         const variable = !acc.sawString || MOVING_TAG_FAMILY_TOKENS.has(acc.previousString);
         return {
@@ -869,9 +869,11 @@ function parseComparableTag(tag) {
         };
       }
       const lower = part.toLowerCase();
+      const leadingVersionPrefix =
+        index === 0 && lower === "v" && /^\d+$/.test(parts[1] || "");
       return {
-        sawString: true,
-        previousString: lower,
+        sawString: leadingVersionPrefix ? acc.sawString : true,
+        previousString: leadingVersionPrefix ? acc.previousString : lower,
         hasVariableNumber: acc.hasVariableNumber,
         tokens: [...acc.tokens, { type: "str", value: lower, raw: part, variable: false }],
       };
@@ -2438,23 +2440,44 @@ async function getResourceAdvisorArtifact(pathname, acceptHeader) {
 
 async function registryRequest(urlString, repository, tokenState, options) {
   const opts = options || {};
+  let currentUrl = urlString;
+  let redirects = 0;
   while (true) {
+    const currentOrigin = new URL(currentUrl).origin;
     const headers = {
       accept: "application/json",
       "user-agent": "exposure-control/1.0",
       ...(opts.headers || {}),
     };
-    if (tokenState && tokenState.token) {
+    if (
+      tokenState &&
+      tokenState.token &&
+      (!tokenState.origin || tokenState.origin === currentOrigin)
+    ) {
       headers.authorization = "Bearer " + tokenState.token;
     }
 
-    const res = await requestHttps(urlString, {
+    const res = await requestHttps(currentUrl, {
       ...opts,
       headers,
     });
 
+    if (
+      (res.statusCode === 301 ||
+        res.statusCode === 302 ||
+        res.statusCode === 303 ||
+        res.statusCode === 307 ||
+        res.statusCode === 308) &&
+      res.headers.location &&
+      redirects < 5
+    ) {
+      currentUrl = new URL(res.headers.location, currentUrl).toString();
+      redirects += 1;
+      continue;
+    }
+
     if (res.statusCode === 401) {
-      if (tokenState && tokenState.token) {
+      if (tokenState && tokenState.token && tokenState.origin === currentOrigin) {
         throw new Error("registry authentication failed");
       }
       const challenge = parseWwwAuthenticate(res.headers["www-authenticate"]);
@@ -2463,10 +2486,11 @@ async function registryRequest(urlString, repository, tokenState, options) {
         throw new Error("registry authentication state unavailable");
       }
       tokenState.token = token;
+      tokenState.origin = currentOrigin;
       continue;
     }
 
-    return res;
+    return { ...res, finalUrl: currentUrl };
   }
 }
 
@@ -2539,7 +2563,7 @@ async function listRegistryTags(imageRef) {
           tags.push(value);
         }
       }
-      pageUrl = nextLinkUrl(res.headers.link, pageUrl);
+      pageUrl = nextLinkUrl(res.headers.link, res.finalUrl || pageUrl);
     }
   }
 
@@ -3120,10 +3144,43 @@ function inferWorkloadId(pod) {
   return name.replace(/-[a-z0-9]{5}$/i, "");
 }
 
-function pickPrimaryContainer(pod) {
+function isLikelySidecarContainer(name) {
+  const lower = String(name || "").trim().toLowerCase();
+  if (!lower) return false;
+  return (
+    lower === "litestream" ||
+    lower === "config-reloader" ||
+    lower === "gluetun-webui" ||
+    lower === "info" ||
+    lower.endsWith("-sidecar") ||
+    lower.includes("-sc-")
+  );
+}
+
+function pickPrimaryContainer(pod, workloadId) {
   const containers = (pod && pod.spec && pod.spec.containers) || [];
   if (containers.length === 0) return null;
-  return containers[0];
+  if (containers.length === 1) return containers[0];
+
+  const exactPreferred = containers.find((container) => {
+    const name = String((container && container.name) || "").toLowerCase();
+    return name === "main" || name === "app";
+  });
+  if (exactPreferred) return exactPreferred;
+
+  const workload = String(workloadId || "").trim().toLowerCase();
+  if (workload) {
+    const byWorkload = containers.find((container) => {
+      const name = String((container && container.name) || "").toLowerCase();
+      return Boolean(name) && (name === workload || workload.endsWith("-" + name));
+    });
+    if (byWorkload) return byWorkload;
+  }
+
+  return (
+    containers.find((container) => !isLikelySidecarContainer(container && container.name)) ||
+    containers[0]
+  );
 }
 
 function findContainerStatus(pod, containerName) {
@@ -3241,7 +3298,7 @@ async function buildImageUpdateSnapshot() {
     const namespace = slash >= 0 ? key.slice(0, slash) : "default";
     const workloadId = slash >= 0 ? key.slice(slash + 1) : key;
     const podName = String((pod && pod.metadata && pod.metadata.name) || "");
-    const container = pickPrimaryContainer(pod);
+    const container = pickPrimaryContainer(pod, workloadId);
 
     const base = {
       id: workloadId,
@@ -3520,14 +3577,29 @@ async function fetchHelmRepoIndex(repoUrl) {
   const cacheKey = trimmed;
   if (helmRepoIndexCache.has(cacheKey)) return helmRepoIndexCache.get(cacheKey);
 
-  const indexUrl = trimmed + "/index.yaml";
+  let currentUrl = trimmed + "/index.yaml";
   try {
-    const res = await requestUrl(indexUrl, {
-      method: "GET",
-      headers: { accept: "application/x-yaml, text/yaml, text/plain" },
-      timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
-    });
-    if (res.statusCode !== 200) {
+    let res = null;
+    for (let redirects = 0; redirects < 5; redirects += 1) {
+      res = await requestUrl(currentUrl, {
+        method: "GET",
+        headers: { accept: "application/x-yaml, text/yaml, text/plain" },
+        timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
+      });
+      if (
+        (res.statusCode === 301 ||
+          res.statusCode === 302 ||
+          res.statusCode === 303 ||
+          res.statusCode === 307 ||
+          res.statusCode === 308) &&
+        res.headers.location
+      ) {
+        currentUrl = new URL(res.headers.location, currentUrl).toString();
+        continue;
+      }
+      break;
+    }
+    if (!res || res.statusCode !== 200) {
       helmRepoIndexCache.set(cacheKey, null);
       return null;
     }
@@ -3543,12 +3615,15 @@ async function fetchHelmRepoIndex(repoUrl) {
 function parseHelmRepoIndex(body) {
   const entries = {};
   const text = String(body || "");
-  const lines = text.split("\n");
+  const lines = text.split(/\r?\n/);
   let currentChart = null;
   let inEntries = false;
+  let chartIndent = null;
+  let propIndent = null;
 
   for (const line of lines) {
     const trimmed = line.trimEnd();
+    if (!trimmed || /^\s*#/.test(trimmed)) continue;
     if (/^entries:\s*$/.test(trimmed)) {
       inEntries = true;
       continue;
@@ -3556,14 +3631,38 @@ function parseHelmRepoIndex(body) {
     if (!inEntries) continue;
     if (/^\S/.test(trimmed)) break;
 
-    const chartMatch = trimmed.match(/^  ([a-zA-Z0-9._-]+):\s*$/);
-    if (chartMatch) {
-      currentChart = chartMatch[1];
-      entries[currentChart] = [];
+    const indentMatch = trimmed.match(/^(\s+)/);
+    const indent = indentMatch ? indentMatch[1].length : 0;
+
+    if (chartIndent === null || indent === chartIndent) {
+      const chartMatch = trimmed.match(/^\s+["']?([a-zA-Z0-9._-]+)["']?:\s*$/);
+      if (chartMatch) {
+        chartIndent = indent;
+        currentChart = chartMatch[1];
+        propIndent = null;
+        if (!entries[currentChart]) entries[currentChart] = [];
+        continue;
+      }
+    }
+
+    if (!currentChart) continue;
+
+    const itemMatch = trimmed.match(/^(\s+)-\s+(.*)$/);
+    if (
+      itemMatch &&
+      itemMatch[1].length >= chartIndent &&
+      (propIndent === null || itemMatch[1].length + 2 === propIndent)
+    ) {
+      propIndent = itemMatch[1].length + 2;
+      const inlineVersion = itemMatch[2].match(/^version:\s*["']?([^"'\s]+)["']?\s*$/);
+      if (inlineVersion) {
+        entries[currentChart].push(inlineVersion[1]);
+      }
       continue;
     }
-    if (currentChart) {
-      const versionMatch = line.match(/^    version:\s*"?([^"\s]+)"?\s*$/);
+
+    if (propIndent !== null && indent === propIndent) {
+      const versionMatch = trimmed.match(/^\s+version:\s*["']?([^"'\s]+)["']?\s*$/);
       if (versionMatch) {
         entries[currentChart].push(versionMatch[1]);
       }
@@ -3590,10 +3689,12 @@ function findLatestHelmVersion(chartName, repoIndex, currentVersion) {
       bestParsed = parsed;
     }
   }
+  if (!bestParsed) return null;
+  if (helmSemverCompare(bestParsed, current) < 0) return currentVersion;
   return best;
 }
 
-async function fetchOciChartTags(ociUrl, chartName) {
+async function fetchOciChartTags(ociUrl, chartName, currentVersion) {
   const trimmed = String(ociUrl || "").replace(/^oci:\/\//, "").replace(/\/+$/, "");
   if (!trimmed) return [];
   const registry = trimmed.split("/")[0];
@@ -3601,57 +3702,11 @@ async function fetchOciChartTags(ociUrl, chartName) {
   const fullRepo = repoPath ? repoPath + "/" + chartName : chartName;
 
   try {
-    const tokenUrl = "https://" + registry + "/v2/" + fullRepo + "/tags/list";
-    const res = await requestHttps(tokenUrl, {
-      method: "GET",
-      headers: { accept: "application/json" },
-      timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
+    return await listRegistryTags({
+      registry,
+      repository: fullRepo,
+      tag: String(currentVersion || "").trim(),
     });
-    if (res.statusCode === 200) {
-      const data = JSON.parse(res.body || "{}");
-      return Array.isArray(data.tags) ? data.tags : [];
-    }
-    if (res.statusCode === 401) {
-      const authHeader = String(res.headers["www-authenticate"] || "");
-      const realmMatch = authHeader.match(/realm="([^"]+)"/);
-      const serviceMatch = authHeader.match(/service="([^"]+)"/);
-      const scopeMatch = authHeader.match(/scope="([^"]+)"/);
-      if (realmMatch) {
-        let tokenReqUrl = realmMatch[1];
-        const params = [];
-        if (serviceMatch) params.push("service=" + encodeURIComponent(serviceMatch[1]));
-        if (scopeMatch) params.push("scope=" + encodeURIComponent(scopeMatch[1]));
-        else params.push("scope=" + encodeURIComponent("repository:" + fullRepo + ":pull"));
-        tokenReqUrl += "?" + params.join("&");
-        const tokenRes = await requestHttps(tokenReqUrl, {
-          method: "GET",
-          headers: { accept: "application/json" },
-          timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
-        });
-        if (tokenRes.statusCode === 200) {
-          const tokenData = JSON.parse(tokenRes.body || "{}");
-          const token = tokenData.token || tokenData.access_token || "";
-          if (token) {
-            const retryRes = await requestHttps(
-              "https://" + registry + "/v2/" + fullRepo + "/tags/list",
-              {
-                method: "GET",
-                headers: {
-                  accept: "application/json",
-                  authorization: "Bearer " + token,
-                },
-                timeoutMs: HELM_UPDATE_HTTP_TIMEOUT_MS,
-              },
-            );
-            if (retryRes.statusCode === 200) {
-              const retryData = JSON.parse(retryRes.body || "{}");
-              return Array.isArray(retryData.tags) ? retryData.tags : [];
-            }
-          }
-        }
-      }
-    }
-    return [];
   } catch {
     return [];
   }
@@ -3672,6 +3727,8 @@ function findLatestFromTags(tags, currentVersion) {
       bestParsed = parsed;
     }
   }
+  if (!bestParsed) return null;
+  if (helmSemverCompare(bestParsed, current) < 0) return currentVersion;
   return best;
 }
 
@@ -3681,7 +3738,7 @@ async function resolveHelmUpdateFields(task) {
   }
 
   if (task.isOci) {
-    const tags = await fetchOciChartTags(task.repoUrl, task.chartName);
+    const tags = await fetchOciChartTags(task.repoUrl, task.chartName, task.currentVersion);
     if (!tags.length) {
       return { status: "unknown", statusText: "Unknown", detail: "Could not fetch OCI tags for " + task.chartName + "." };
     }
@@ -4255,20 +4312,22 @@ function disableExpiredExposures() {
   }
 }
 
-setInterval(
-  disableExpiredExposures,
-  Math.max(RECONCILE_INTERVAL_SECONDS, 15) * 1000,
-);
-setInterval(
-  () => {
-    const now = Date.now();
-    const windowMs = SHARE_RATE_LIMIT_WINDOW_SECONDS * 1000;
-    for (const [key, entry] of rateLimits.entries()) {
-      if (now - entry.startMs > windowMs * 2) rateLimits.delete(key);
-    }
-  },
-  Math.max(SHARE_RATE_LIMIT_WINDOW_SECONDS, 15) * 1000,
-);
+function startBackgroundTimers() {
+  setInterval(
+    disableExpiredExposures,
+    Math.max(RECONCILE_INTERVAL_SECONDS, 15) * 1000,
+  ).unref();
+  setInterval(
+    () => {
+      const now = Date.now();
+      const windowMs = SHARE_RATE_LIMIT_WINDOW_SECONDS * 1000;
+      for (const [key, entry] of rateLimits.entries()) {
+        if (now - entry.startMs > windowMs * 2) rateLimits.delete(key);
+      }
+    },
+    Math.max(SHARE_RATE_LIMIT_WINDOW_SECONDS, 15) * 1000,
+  ).unref();
+}
 
 function activeExposureCount() {
   return exposureCore.activeCount();
@@ -5164,20 +5223,32 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log("exposure-control backend listening on :" + server.address().port);
-  console.log(accessVerifier
-    ? "cloudflare access tokens verified against " + accessVerifier.certsUrl
-    : "CF_ACCESS_TEAM_DOMAIN unset: cloudflare-access shares reject all requests");
-  if (accessVerifier) {
-    const warmKeys = async () => {
-      const failure = await accessVerifier.warm();
-      if (failure) console.warn("cloudflare access key refresh failed: " + failure);
-    };
-    warmKeys();
-    setInterval(warmKeys, 30 * 60 * 1000).unref();
-  }
-  console.log(dnsUsage.configured
-    ? "dns record usage read for zone " + DNS_USAGE_ZONE
-    : "CLOUDFLARE_DNS_READ_TOKEN unset: overview shows no DNS record usage");
-});
+if (require.main === module) {
+  startBackgroundTimers();
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log("exposure-control backend listening on :" + server.address().port);
+    console.log(accessVerifier
+      ? "cloudflare access tokens verified against " + accessVerifier.certsUrl
+      : "CF_ACCESS_TEAM_DOMAIN unset: cloudflare-access shares reject all requests");
+    if (accessVerifier) {
+      const warmKeys = async () => {
+        const failure = await accessVerifier.warm();
+        if (failure) console.warn("cloudflare access key refresh failed: " + failure);
+      };
+      warmKeys();
+      setInterval(warmKeys, 30 * 60 * 1000).unref();
+    }
+    console.log(dnsUsage.configured
+      ? "dns record usage read for zone " + DNS_USAGE_ZONE
+      : "CLOUDFLARE_DNS_READ_TOKEN unset: overview shows no DNS record usage");
+  });
+}
+
+module.exports = {
+  findLatestFromTags,
+  findLatestHelmVersion,
+  parseComparableTag,
+  parseHelmRepoIndex,
+  pickPrimaryContainer,
+  resolveLatestComparableTag,
+};

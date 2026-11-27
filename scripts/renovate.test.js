@@ -102,3 +102,32 @@ for (const release of [
     assert.equal(new RegExp(jackettManager.extractVersionTemplate).test(release), false);
   });
 }
+
+const tunarrRule = config.packageRules.find((entry) =>
+  entry.matchPackageNames?.includes("ghcr.io/chrisbenincasa/tunarr"),
+);
+const tunarrPattern = new RegExp(tunarrRule.versioning.replace(/^regex:/, ""));
+
+for (const [tag, expected] of [
+  ["1.3.15", { major: "1", minor: "3", patch: "15" }],
+  ["2026.11.3", { major: "2026", minor: "11", patch: "3" }],
+]) {
+  test(`Tunarr versioning tracks stable releases across 1.x to CalVer: ${tag}`, () => {
+    const match = tunarrPattern.exec(tag);
+    assert.ok(match);
+    assert.deepEqual({ ...match.groups }, expected);
+  });
+}
+
+for (const tag of [
+  "latest",
+  "edge",
+  "2026.11.3-arm64",
+  "2026.11.3-nvidia",
+  "1.4.0-dev.1",
+  "v2026.11.3",
+]) {
+  test(`Tunarr ignores arch and non-stable tags: ${tag}`, () => {
+    assert.equal(tunarrPattern.test(tag), false);
+  });
+}

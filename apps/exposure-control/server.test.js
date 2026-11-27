@@ -560,6 +560,128 @@ test("metrics reject excess series points and bound upstream parsing and the com
   assert.match(response.json().metrics.pod_mem_usage.detail, /separately/);
 });
 
+function loadServerHelpers() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "exposure-control-helpers-"));
+  temporaryDirectories.push(dir);
+  const previousEnv = {
+    APP_DIR: process.env.APP_DIR,
+    DATA_DIR: process.env.DATA_DIR,
+    SERVICES_FILE: process.env.SERVICES_FILE,
+    TRAVEL_CONFIG_FILE: process.env.TRAVEL_CONFIG_FILE,
+  };
+  process.env.APP_DIR = __dirname;
+  process.env.DATA_DIR = dir;
+  process.env.SERVICES_FILE = path.join(__dirname, "services.json");
+  process.env.TRAVEL_CONFIG_FILE = TRAVEL_CONFIG_PATH;
+  try {
+    return require("./server.js");
+  } finally {
+    for (const [key, value] of Object.entries(previousEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+test("comparable tag tracking preserves leading v version numbers across distroless and ls suffixes", () => {
+  const { parseComparableTag, resolveLatestComparableTag } = loadServerHelpers();
+  assert.ok(parseComparableTag("v1.13.1-distroless"));
+  assert.equal(parseComparableTag("pg16"), null);
+
+  assert.deepEqual(
+    resolveLatestComparableTag("v1.13.1-distroless", [
+      "v1.12.1-distroless",
+      "v1.13.1-distroless",
+      "v1.14.0-distroless",
+      "v1.15.0-rc.1-distroless",
+      "v1.15.0-busybox",
+    ]),
+    { latestTag: "v1.14.0-distroless", updateAvailable: true },
+  );
+
+  assert.deepEqual(
+    resolveLatestComparableTag("v1.6.2-ls374", [
+      "v1.6.2-ls374",
+      "v1.6.3-ls375",
+      "v1.7.0-ls1",
+    ]),
+    { latestTag: "v1.7.0-ls1", updateAvailable: true },
+  );
+});
+
+test("primary container selection skips alphabetical sidecars in multi-container pods", () => {
+  const { pickPrimaryContainer } = loadServerHelpers();
+  assert.equal(
+    pickPrimaryContainer(
+      { spec: { containers: [{ name: "gluetun-webui" }, { name: "main" }] } },
+      "transmission",
+    ).name,
+    "main",
+  );
+  assert.equal(
+    pickPrimaryContainer(
+      {
+        spec: {
+          containers: [
+            { name: "grafana-sc-dashboard" },
+            { name: "grafana-sc-datasources" },
+            { name: "grafana" },
+          ],
+        },
+      },
+      "kube-prometheus-stack-grafana",
+    ).name,
+    "grafana",
+  );
+  assert.equal(
+    pickPrimaryContainer(
+      { spec: { containers: [{ name: "litestream" }, { name: "main" }] } },
+      "seventyfivesoft",
+    ).name,
+    "main",
+  );
+});
+
+test("Helm repo index parsing handles 2-space and 4-space indentation without capturing dependency versions", () => {
+  const { findLatestHelmVersion, parseHelmRepoIndex } = loadServerHelpers();
+  const index = parseHelmRepoIndex([
+    "apiVersion: v2",
+    "entries:",
+    "    tailscale-operator:",
+    "        - apiVersion: v2",
+    "          name: tailscale-operator",
+    "          version: 1.104.7",
+    "        - apiVersion: v2",
+    "          name: tailscale-operator",
+    "          version: 1.104.4",
+  ].join("\n"));
+  assert.deepEqual(index["tailscale-operator"], ["1.104.7", "1.104.4"]);
+  assert.equal(findLatestHelmVersion("tailscale-operator", index, "1.104.4"), "1.104.7");
+
+  const twoSpace = parseHelmRepoIndex([
+    "apiVersion: v1",
+    "entries:",
+    "  app-template:",
+    "  - apiVersion: v2",
+    "    dependencies:",
+    "    - name: common",
+    "      version: 9.9.9",
+    "    version: 5.3.0",
+  ].join("\n"));
+  assert.deepEqual(twoSpace["app-template"], ["5.3.0"]);
+  assert.equal(findLatestHelmVersion("app-template", twoSpace, "5.3.0"), "5.3.0");
+});
+
+test("Helm tag and index version resolvers never report a downgrade when listings are truncated", () => {
+  const { findLatestFromTags, findLatestHelmVersion } = loadServerHelpers();
+  assert.equal(findLatestFromTags(["0.50.0", "0.51.0", "0.52.0"], "0.63.1"), "0.63.1");
+  assert.equal(findLatestFromTags(["0.63.1", "0.64.0"], "0.63.1"), "0.64.0");
+  assert.equal(
+    findLatestHelmVersion("demo", { demo: ["1.0.0", "1.1.0"] }, "1.2.0"),
+    "1.2.0",
+  );
+});
+
 test("metrics impose a total timeout even while an upstream trickles bytes", async () => {
   const panel = await startMetricsPanel((url, res) => {
     res.writeHead(200);

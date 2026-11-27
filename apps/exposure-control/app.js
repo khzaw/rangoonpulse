@@ -2004,28 +2004,39 @@
           tr.innerHTML = '<td colspan="6" class="empty-state">No charts.</td>';
           helmUpdatesRowsEl.appendChild(tr);
         } else {
+          const policy = window.UpdatePolicy;
           items.forEach((item) => {
             const tr = document.createElement('tr');
             tr.className = 'update-row';
             tr.setAttribute('role', 'row');
-            const matchingPr = findMatchingRenovatePr(item, 'helm');
+            const workflow = policy && typeof policy.classifyHelmUpdate === 'function'
+              ? policy.classifyHelmUpdate(item, dashboardState.renovate, payload && payload.checkedAt)
+              : (() => {
+                  const matchingPr = findMatchingRenovatePr(item, 'helm');
+                  return matchingPr
+                    ? { kind: 'open-pr', label: 'PR #' + String(matchingPr.number || ''), detail: String(matchingPr.title || ''), url: String(matchingPr.url || ''), canRun: false }
+                    : { kind: item.status === 'update' ? 'ready' : 'current', label: String(item.statusText || 'unknown').toLowerCase(), detail: item.detail || '', canRun: item.status === 'update' };
+                })();
+            const statusLabel = item.status === 'update' ? workflow.label : String(item.statusText || 'unknown').toLowerCase();
             let actionHtml = '<span class="updates-action-note">—</span>';
-            if (matchingPr) {
-              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(matchingPr.url) + '" target="_blank" rel="noreferrer">PR #' + escapeHtml(matchingPr.number) + '</a>';
+            if (workflow.url) {
+              actionHtml = '<a class="updates-action-link" href="' + escapeHtml(workflow.url) + '" target="_blank" rel="noreferrer">' + escapeHtml(workflow.label) + '</a>';
             } else if (item.status === 'update') {
               if (!renovateConfigured) {
                 actionHtml = '<span class="updates-action-note">Renovate off</span>';
-              } else if (renovateActiveRun) {
+              } else if (renovateActiveRun && workflow.canRun) {
                 actionHtml = '<span class="updates-action-note">Scan running</span>';
-              } else {
+              } else if (workflow.canRun) {
                 actionHtml = '<button class="updates-action-btn" type="button" data-renovate-scan="helm" data-item-label="' + escapeHtml(item.name || item.id || 'chart') + '">Scan</button>';
+              } else {
+                actionHtml = '<span class="updates-action-note" title="' + attrText(workflow.detail) + '">' + escapeHtml(workflow.label) + '</span>';
               }
             }
             tr.innerHTML =
               '<td class="updates-service-cell" data-label="Release" role="cell"><div class="svc-name">' + escapeHtml(item.name || item.id || '') + '</div><div class="svc-id">' + escapeHtml(item.namespace || '') + '</div></td>' +
               '<td class="updates-version updates-cell-center helm-current-cell" data-label="Current" role="cell">' + escapeHtml(item.currentVersion || '—') + '</td>' +
               '<td class="updates-version updates-cell-center helm-latest-cell" data-label="Latest" role="cell">' + escapeHtml(item.latestVersion || '—') + '</td>' +
-              '<td class="updates-status-cell" data-label="State" role="cell"><span class="pill" data-tone="' + updateTone(item.status) + '">' + escapeHtml(String(item.statusText || 'unknown').toLowerCase()) + '</span></td>' +
+              '<td class="updates-status-cell" data-label="State" role="cell"><span class="pill" data-tone="' + updateTone(item.status) + '" title="' + attrText(workflow.detail) + '">' + escapeHtml(statusLabel) + '</span></td>' +
               '<td class="updates-context-cell" data-label="Chart" role="cell"><div class="updates-version">' + escapeHtml(item.chart || '—') + '</div><div class="updates-sub">' + escapeHtml((item.repo || '—') + (item.detail ? ' · ' + item.detail : '')) + '</div></td>' +
               '<td class="updates-cell-center updates-action-cell" data-label="Action" role="cell">' + actionHtml + '</td>';
             helmUpdatesRowsEl.appendChild(tr);
