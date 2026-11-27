@@ -4,7 +4,9 @@
 
 [![CI](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/khzaw/rangoonpulse/actions/workflows/ci.yaml)
 
-This repository defines a homelab Kubernetes cluster. Two nodes run Talos Linux, TrueNAS holds the storage, and Flux applies each commit on `master` to the cluster. The cluster runs media, photo, and book services, personal apps, and the monitoring and automation for all of them. Most services are reachable only over the LAN and Tailscale. Public sites and temporary shares use Cloudflare Tunnel.
+This is where the code for my homelab Kubernetes cluster lives. At the moment the cluster consists of two nodes running Talos Linux and a NAS running TrueNAS for storage. There is also a Mac mini that hosts a Hermes agent and an OpenClaw agent.
+
+Flux applies each commit on `master` to the cluster. Prometheus and Grafana collect and chart metrics, Alertmanager sends alerts, and Gatus checks that services respond. Renovate and Resource Advisor open pull requests for version bumps and resource changes, and Flux image automation commits new image tags. The cluster runs media, photo, and book services and personal apps. Most services are reachable only over the LAN and Tailscale. Public sites and temporary shares use Cloudflare Tunnel.
 
 <table>
   <tr>
