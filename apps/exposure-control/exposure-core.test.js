@@ -113,3 +113,49 @@ test("disable all counts desired shares and preserves per-share auth", () => {
   assert.deepEqual(audit.at(-1), { action: "emergency-disable-all", disabled: 2 });
   assert.equal(core.disableAll().disabled, 0);
 });
+
+test("updates extend, reset, or re-auth a live share and keep its opening time", () => {
+  const { core, audit, advance } = fixture();
+  const opened = core.enable("books", { hours: 1, authMode: "none" });
+  assert.equal(opened.openedAt, "2026-11-02T00:00:00.000Z");
+  advance(40 * 60 * 1000);
+  const extended = core.update("books", { extendHours: 1 });
+  assert.equal(extended.expiresAt, "2026-11-02T02:00:00.000Z");
+  assert.equal(extended.authMode, "none");
+  assert.equal(extended.openedAt, "2026-11-02T00:00:00.000Z");
+  assert.equal(extended.updatedAt, "2026-11-02T00:40:00.000Z");
+  const reauthed = core.update("books", { authMode: "cloudflare-access" });
+  assert.equal(reauthed.expiresAt, "2026-11-02T02:00:00.000Z");
+  assert.equal(reauthed.authMode, "cloudflare-access");
+  assert.equal(core.update("books", { hours: null }).expiresAt, null);
+  assert.equal(core.update("books", { hours: 0.25 }).expiresAt, "2026-11-02T00:55:00.000Z");
+  assert.deepEqual(audit.slice(1), [
+    { action: "update", serviceId: "books", extendHours: 1, expiresAt: "2026-11-02T02:00:00.000Z" },
+    { action: "update", serviceId: "books", authMode: "cloudflare-access", expiresAt: "2026-11-02T02:00:00.000Z" },
+    { action: "update", serviceId: "books", expiryMode: "until-disabled", expiresAt: null },
+    { action: "update", serviceId: "books", hours: 0.25, expiresAt: "2026-11-02T00:55:00.000Z" },
+  ]);
+  advance(15 * 60 * 1000);
+  assert.equal(core.get("books").enabled, false);
+  assert.equal(core.get("books").openedAt, null);
+});
+
+test("updates never reopen a closed or expired share and reject unclear requests", () => {
+  const { core, audit, saved, advance } = fixture();
+  assert.throws(() => core.update("books", { extendHours: 1 }), { status: 409 });
+  core.enable("books", { hours: 0.25 });
+  core.enable("photos", { hours: null });
+  for (const options of [null, [], {}, { hours: 1, extendHours: 1 }, { extendHours: 0.1 }, { extendHours: 25 },
+    { extendHours: null }, { hours: 0 }, { authMode: "open" }]) {
+    assert.throws(() => core.update("books", options), { status: 400 });
+  }
+  assert.throws(() => core.update("photos", { extendHours: 1 }), { status: 409 });
+  assert.throws(() => core.update("missing", { extendHours: 1 }), { status: 404 });
+  advance(15 * 60 * 1000);
+  assert.throws(() => core.update("books", { extendHours: 1 }), { status: 409 });
+  assert.equal(core.get("books").enabled, false);
+  core.disable("photos");
+  assert.throws(() => core.update("photos", { hours: 1 }), { status: 409 });
+  assert.equal(audit.filter((entry) => entry.action === "update").length, 0);
+  assert.equal(saved.length, 3);
+});

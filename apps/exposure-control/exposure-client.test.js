@@ -12,11 +12,13 @@ test("the browser global and Node export use the same API contract", async () =>
     const client = createClient({ request: async (...args) => { calls.push(args); } });
     await client.list();
     await client.enable("books", { hours: null, authMode: "none" });
+    await client.update("books", { extendHours: 1 });
     await client.disable("books");
     await client.disableAll();
     await client.audit();
     assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
       ["/api/services", "GET"], ["/api/services/books/enable", "POST", { hours: null, authMode: "none" }],
+      ["/api/services/books/update", "POST", { extendHours: 1 }],
       ["/api/services/books/disable", "POST"], ["/api/admin/disable-all", "POST"], ["/api/audit", "GET"],
     ]);
     assert.throws(() => client.enable("../bad"), /invalid service id/);

@@ -424,6 +424,7 @@ const MANAGED_JOB_LOG_TAIL_LINES = clampInt(
 
 const metrics = {
   enableTotal: 0,
+  updateTotal: 0,
   disableTotal: 0,
   emergencyDisableTotal: 0,
   expiredDisableTotal: 0,
@@ -4380,6 +4381,9 @@ function renderMetrics() {
     "# HELP exposure_control_enable_total Number of manual enable operations.",
     "# TYPE exposure_control_enable_total counter",
     "exposure_control_enable_total " + metrics.enableTotal,
+    "# HELP exposure_control_update_total Number of edits to live shares.",
+    "# TYPE exposure_control_update_total counter",
+    "exposure_control_update_total " + metrics.updateTotal,
     "# HELP exposure_control_disable_total Number of manual disable operations.",
     "# TYPE exposure_control_disable_total counter",
     "exposure_control_disable_total " + metrics.disableTotal,
@@ -4580,6 +4584,19 @@ async function handleApi(req, res, parsedUrl) {
 
     const service = exposureCore.enable(id, body);
     metrics.enableTotal += 1;
+    return sendJson(res, 200, { service });
+  }
+
+  const updateMatch = pathname.match(/^\/api\/services\/([a-z0-9-]+)\/update$/);
+  if (req.method === "POST" && updateMatch) {
+    let body = {};
+    try {
+      body = await parseBody(req);
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+    const service = exposureCore.update(updateMatch[1], body);
+    metrics.updateTotal += 1;
     return sendJson(res, 200, { service });
   }
 

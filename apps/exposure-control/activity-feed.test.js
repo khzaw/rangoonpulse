@@ -291,6 +291,24 @@ test("the operator audit log reads as plain actions and ignores malformed entrie
   assert.deepEqual(result.events[4].tags, [["closed", "3"]]);
 });
 
+test("edits to a live share say what changed", () => {
+  const result = feed.buildFeed({
+    now: NOW,
+    audit: [
+      { action: "update", serviceId: "jellyfin", extendHours: 1, expiresAt: at(-90), ts: at(1) },
+      { action: "update", serviceId: "books", expiryMode: "until-disabled", expiresAt: null, ts: at(2) },
+      { action: "update", serviceId: "books", hours: 0.25, authMode: "cloudflare-access", expiresAt: at(-15), ts: at(3) },
+      { action: "update", serviceId: "seerr", authMode: "none", expiresAt: at(-30), ts: at(4) },
+    ],
+  });
+  assert.deepEqual(result.events.map((event) => [event.text, event.via, event.area, event.tone, event.tags]), [
+    ["Extended jellyfin", "shares", "jellyfin", "neutral", [["extend", "+1h"]]],
+    ["Changed expiry of books", "shares", "books", "warning", [["ttl", "none"]]],
+    ["Changed expiry of books", "shares", "books", "neutral", [["ttl", "0.25h"], ["auth", "cf-access"]]],
+    ["Changed auth on seerr", "shares", "seerr", "warning", [["auth", "none"]]],
+  ]);
+});
+
 test("a CronJob contributes its latest run plus retained failures and work in progress", () => {
   const job = { id: "report", title: "Resource advisor report", namespace: "monitoring", cronJob: "report", fluxKustomization: "resource-advisor" };
   const run = (name, minutesAgo, status, seconds, extra = {}) => ({

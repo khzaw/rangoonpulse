@@ -343,6 +343,17 @@ function auditEvents(entries, jobs) {
       const ttl = entry.expiryMode === "until-disabled" ? "none" : Number.isFinite(Number(entry.hours)) && entry.hours != null ? Number(entry.hours) + "h" : "";
       event.tags = (ttl ? [["ttl", ttl]] : []).concat([["auth", AUTH_LABEL[entry.authMode] || String(entry.authMode || "default")]]);
       if (entry.authMode === "none") event.tone = "warning";
+    } else if (action === "update") {
+      // An edit to a live share: more time, a new expiry, or a new auth mode.
+      const extended = entry.extendHours != null && Number.isFinite(Number(entry.extendHours));
+      const resets = entry.expiryMode === "until-disabled" || entry.hours != null;
+      event.via = "shares";
+      event.area = target;
+      event.text = (extended ? "Extended " : resets ? "Changed expiry of " : "Changed auth on ") + target;
+      if (extended) event.tags.push(["extend", "+" + Number(entry.extendHours) + "h"]);
+      if (resets) event.tags.push(["ttl", entry.expiryMode === "until-disabled" ? "none" : Number(entry.hours) + "h"]);
+      if (entry.authMode) event.tags.push(["auth", AUTH_LABEL[entry.authMode] || String(entry.authMode)]);
+      if (entry.authMode === "none" || entry.expiryMode === "until-disabled") event.tone = "warning";
     } else if (action === "disable") {
       event.via = "shares";
       event.text = "Unshared " + target;

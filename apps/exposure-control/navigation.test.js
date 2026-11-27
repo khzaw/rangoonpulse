@@ -34,7 +34,7 @@ function routing() {
     window: { location: { hash: '#overview' }, scrollTo() {} },
     history: { pushState(_a, _b, hash) { context.window.location.hash = hash; }, replaceState(_a, _b, hash) { context.window.location.hash = hash; } },
     pageSections: Object.values(nodes).filter((node) => pages.includes(node.id)),
-    pageLinks: pages.map((id) => { const link = element(id, { href: '#' + id }); link.dataset.pageTitle = id === 'exposure' ? 'Shares' : id; return link; }),
+    pageLinks: pages.map((id) => { const link = element(id, { href: '#' + id }); link.dataset.pageTitle = id === 'exposure' ? 'Public access' : id; return link; }),
     activePage: 'overview', hasLoadedDashboard: true, dashboardState: {},
     mobileNavigation: { matches: true }, navigation: { open: true, close() { this.open = false; } },
     transmissionPanelEl: element(), auditPanelEl: element(),
@@ -52,7 +52,7 @@ test('navigation shows one page, marks the current link, closes the mobile menu 
   context.setActivePage('exposure', { focus: true });
   assert.deepEqual(context.pageSections.filter((node) => !node.hidden).map((node) => node.id), ['exposure']);
   assert.deepEqual(context.pageLinks.filter((node) => node.getAttribute('aria-current') === 'page').map((node) => node.id), ['exposure']);
-  assert.equal(context.document.title, 'Shares · rangoonpulse');
+  assert.equal(context.document.title, 'Public access · rangoonpulse');
   assert.equal(context.window.location.hash, '#exposure');
   assert.equal(context.navigation.open, false);
   assert.equal(nodes.exposure.heading.focused, true);
@@ -126,42 +126,36 @@ test('share search combines literal case-insensitive text and active filtering w
   assert.equal(context.shareMatches('.*', 'all', services[0]), false);
 });
 
-test('share rows keep their configured order when shares are enabled or disabled', () => {
-  function domNode(tag) {
-    const classes = new Set();
-    return {
-      tag,
-      children: [],
-      dataset: {},
-      attributes: {},
-      classList: {
-        add(name) { classes.add(name); },
-        remove(name) { classes.delete(name); },
-        contains(name) { return classes.has(name); },
-      },
-      append(...nodes) { this.children.push(...nodes); },
-      appendChild(node) { this.children.push(node); return node; },
-      setAttribute(name, value) { this.attributes[name] = value; },
-      getAttribute(name) { return this.attributes[name]; },
-    };
-  }
+test('share rows keep their configured order and their nodes across refreshes', () => {
   const rowsEl = {
     children: [],
-    set innerHTML(_value) { this.children = []; },
-    appendChild(node) { this.children.push(node); return node; },
+    appendChild(node) { return this.insertBefore(node, null); },
+    insertBefore(node, reference) {
+      const at = this.children.indexOf(node);
+      if (at !== -1) this.children.splice(at, 1);
+      const index = reference ? this.children.indexOf(reference) : -1;
+      node.parent = this;
+      if (index === -1) this.children.push(node); else this.children.splice(index, 0, node);
+      return node;
+    },
   };
+  function domNode(tag) {
+    return {
+      tag, dataset: {}, textContent: '',
+      remove() { const list = this.parent.children; list.splice(list.indexOf(this), 1); },
+    };
+  }
+  const painted = [];
   const context = vm.createContext({
     rowsEl,
     shareDraft: null,
+    openShareId: null,
     isAgent: (service) => Boolean(service) && service.kind === 'agent',
     renderAgents() {},
     filterShares() {},
     tickExpiryCountdowns() {},
-    fmtExpiry: () => ({ text: '—', state: 'none' }),
-    exposureClient: {},
-    runExposure() {},
-    closeShareSheet() {},
-    openShareSheet() {},
+    buildShareRow: (svc) => { const row = domNode('li'); row.dataset.serviceId = svc.id; return row; },
+    paintShareRow: (row, svc) => painted.push([row, svc.enabled]),
     document: {
       createElement: domNode,
       getElementById: () => ({ textContent: '' }),
@@ -177,10 +171,16 @@ test('share rows keep their configured order when shares are enabled or disabled
   ];
   context.renderRows(catalog);
   assert.deepEqual(serviceOrder(), ['bento', 'jellyfin', 'vaultwarden']);
+  const firstRows = rowsEl.children.filter((row) => row.dataset.serviceId);
   context.renderRows(catalog.map((svc) => (svc.id === 'vaultwarden' ? { ...svc, enabled: true } : svc)));
   assert.deepEqual(serviceOrder(), ['bento', 'jellyfin', 'vaultwarden']);
   context.renderRows(catalog.map((svc) => (svc.id === 'jellyfin' ? { ...svc, enabled: true } : svc)));
   assert.deepEqual(serviceOrder(), ['bento', 'jellyfin', 'vaultwarden']);
+  assert.deepEqual(rowsEl.children.filter((row) => row.dataset.serviceId), firstRows, 'rows are repainted, not rebuilt');
+  assert.equal(rowsEl.children.filter((row) => 'shareEmpty' in row.dataset).length, 1);
+  context.renderRows(catalog.filter((svc) => svc.id !== 'bento').reverse());
+  assert.deepEqual(serviceOrder(), ['vaultwarden', 'jellyfin']);
+  assert.equal(rowsEl.children.at(-1).dataset.shareEmpty, '');
 });
 
 for (const [page, field, loader] of [['jobs', 'jobs', 'loadJobs'], ['deploy', 'siteDeployments', 'loadSiteDeployments'], ['secrets', 'secrets', 'loadSecrets']]) {

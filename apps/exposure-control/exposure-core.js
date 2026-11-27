@@ -25,6 +25,17 @@ function createExposureCore({
   const expired = (exposure) => Boolean(exposure?.enabled && exposure.expiresAt &&
     (!Number.isFinite(Date.parse(exposure.expiresAt)) || Date.parse(exposure.expiresAt) <= now()));
   const enabled = (exposure) => Boolean(exposure?.enabled && !expired(exposure));
+  const HOURS_RULE = "0.25 to 24 in 15-minute increments";
+  const validHours = (hours) => typeof hours === "number" && Number.isFinite(hours) &&
+    hours >= 0.25 && hours <= 24 && Number.isInteger(hours * 4);
+  const expiryFrom = (hours) => (hours === null ? null : new Date(now() + hours * 3600000).toISOString());
+  const expiryAudit = (hours) => (hours === null ? { expiryMode: "until-disabled" } : { hours });
+
+  function requireOptions(options, action) {
+    if (!options || typeof options !== "object" || Array.isArray(options)) {
+      throw new ExposureError(action + " options must be an object");
+    }
+  }
 
   function requireService(id) {
     const service = byId.get(id);
@@ -47,6 +58,8 @@ function createExposureCore({
       desiredEnabled: Boolean(exposure?.enabled),
       expiresAt: exposure?.expiresAt ?? null,
       updatedAt: exposure?.updatedAt ?? null,
+      // When the current public window began; edits to a live share keep it.
+      openedAt: enabled(exposure) ? (exposure.openedAt ?? exposure.updatedAt ?? null) : null,
       defaultExpiryHours,
       defaultAuthMode: serviceDefaultAuthMode(service),
       authMode: authModeFor(service, exposure),
@@ -73,23 +86,56 @@ function createExposureCore({
     activeCount: () => services.filter((service) => enabled(state.exposures[service.id])).length,
     enable(id, options = {}) {
       const service = requireService(id);
-      if (!options || typeof options !== "object" || Array.isArray(options)) {
-        throw new ExposureError("enable options must be an object");
-      }
+      requireOptions(options, "enable");
       const hours = options.hours === null ? null : (options.hours ?? defaultExpiryHours);
-      if (hours !== null && (typeof hours !== "number" || !Number.isFinite(hours) ||
-          hours < 0.25 || hours > 24 || !Number.isInteger(hours * 4))) {
-        throw new ExposureError("hours must be 0.25 to 24 in 15-minute increments, or null for until disabled");
+      if (hours !== null && !validHours(hours)) {
+        throw new ExposureError("hours must be " + HOURS_RULE + ", or null for until disabled");
       }
       const authMode = options.authMode === undefined
         ? serviceDefaultAuthMode(service) : normalizeAuthMode(options.authMode);
       if (!authMode) throw new ExposureError("authMode must be none or cloudflare-access");
+      const at = timestamp();
       commit({ ...state.exposures, [id]: {
-        enabled: true,
-        expiresAt: hours === null ? null : new Date(now() + hours * 3600000).toISOString(),
-        updatedAt: timestamp(), authMode,
-      } }, [{ action: "enable", serviceId: id, authMode,
-        ...(hours === null ? { expiryMode: "until-disabled" } : { hours }) }]);
+        enabled: true, expiresAt: expiryFrom(hours), updatedAt: at, openedAt: at, authMode,
+      } }, [{ action: "enable", serviceId: id, authMode, ...expiryAudit(hours) }]);
+      return snapshot(service);
+    },
+    // Changes a share that is public right now: a new expiry counted from now
+    // (hours), more time on the current expiry (extendHours), or its auth.
+    // A share that is off or already past its expiry is never reopened here.
+    update(id, options = {}) {
+      const service = requireService(id);
+      requireOptions(options, "update");
+      const current = state.exposures[id];
+      if (!enabled(current)) throw new ExposureError("share is not public: " + id, 409);
+      const setsExpiry = options.hours !== undefined;
+      const extending = options.extendHours !== undefined;
+      const setsAuth = options.authMode !== undefined;
+      if (setsExpiry && extending) throw new ExposureError("send hours or extendHours, not both");
+      if (!setsExpiry && !extending && !setsAuth) {
+        throw new ExposureError("nothing to update: send hours, extendHours, or authMode");
+      }
+      if (setsExpiry && options.hours !== null && !validHours(options.hours)) {
+        throw new ExposureError("hours must be " + HOURS_RULE + ", or null for until disabled");
+      }
+      if (extending && !validHours(options.extendHours)) {
+        throw new ExposureError("extendHours must be " + HOURS_RULE);
+      }
+      if (extending && !current.expiresAt) throw new ExposureError("share has no expiry to extend: " + id, 409);
+      const authMode = setsAuth ? normalizeAuthMode(options.authMode) : authModeFor(service, current);
+      if (!authMode) throw new ExposureError("authMode must be none or cloudflare-access");
+      const expiresAt = setsExpiry ? expiryFrom(options.hours)
+        : extending ? new Date(Date.parse(current.expiresAt) + options.extendHours * 3600000).toISOString()
+          : current.expiresAt ?? null;
+      const at = timestamp();
+      commit({ ...state.exposures, [id]: {
+        ...current, enabled: true, expiresAt, updatedAt: at,
+        openedAt: current.openedAt ?? current.updatedAt ?? at, authMode,
+      } }, [{ action: "update", serviceId: id,
+        ...(setsExpiry ? expiryAudit(options.hours) : {}),
+        ...(extending ? { extendHours: options.extendHours } : {}),
+        ...(setsAuth ? { authMode } : {}),
+        expiresAt }]);
       return snapshot(service);
     },
     disable(id) {

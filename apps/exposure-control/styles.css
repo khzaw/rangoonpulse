@@ -445,43 +445,78 @@ th, td { padding: 12px 20px 12px 0; text-align: left; vertical-align: middle; bo
 th:last-child, td:last-child { padding-right: 0; }
 th { position: sticky; top: 0; z-index: 2; padding-block: 10px; border-top: 0; background: var(--bg-base); box-shadow: inset 0 -1px 0 var(--border-strong); font-weight: 500; white-space: nowrap; }
 .svc-name { font-weight: 500; overflow-wrap: anywhere; }
-.svc-id, .audit-time, .audit-detail, .auth-mode { color: var(--text-3); font: 11px/1.6 var(--font-mono); }
-.shares-table { min-width: 720px; }
-#rows .svc-id { display: none; }
-.public-host { color: var(--text-3); font: 11.5px var(--font-mono); transition: color 150ms ease; }
-.is-enabled .public-host, .public-host:hover { color: var(--text-1); }
+.svc-id, .audit-time, .audit-detail { color: var(--text-3); font: 11px/1.6 var(--font-mono); }
 .expiry { display: inline-flex; align-items: center; gap: 7px; font: 11.5px var(--font-mono); color: var(--text-2); }
 .expiry.none { color: var(--text-dim); }
 .expiry.urgent, .expiry.expired { color: var(--text-1); }
 .expiry.urgent::before, .expiry.expired::before { content: ""; width: 6px; height: 6px; background: var(--yellow); }
 .expiry.expired::before { background: var(--red); }
-.controls { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.th-actions { width: 1%; }
 
-/* Share sheet: opens under its row, so no column ever changes width. */
-.share-toggle[aria-expanded="true"] { background: var(--bg-panel-strong); border-color: var(--border-strong); }
-.share-sheet-row > td { padding: 0; border-top: 0; }
-#rows tr[hidden] + .share-sheet-row { display: none; }
-.share-sheet { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 240ms var(--ease-out); }
-.share-sheet.is-open { grid-template-rows: 1fr; }
-.is-closing .share-sheet { transition-duration: 180ms; }
-.share-sheet-inner { min-height: 0; overflow: hidden; }
-.share-sheet.is-settled .share-sheet-inner { overflow: visible; }
-.share-sheet-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 14px 28px;
-  padding: 4px 0 20px;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity 160ms ease, transform 240ms var(--ease-out);
+/* Public access: one keyed row per service on shared columns. Rows sit 12px
+   wider than the page so their hover and open fill have room; text still
+   lines up with the toolbar. */
+.share-columns, .share-line { display: grid; grid-template-columns: minmax(0, 1fr) 96px 104px minmax(132px, .5fr) 128px; align-items: center; column-gap: 20px; }
+.share-columns { margin: 0 -12px; padding: 10px 12px; box-shadow: inset 0 -1px 0 var(--border-strong); }
+.share-columns > span { font: 500 10px/1.4 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.share-columns + .share-list { margin-top: calc(var(--gap) * -1); }
+.share-list { list-style: none; margin-inline: -12px; }
+.share { position: relative; border-top: 1px solid var(--table-divider); transition: background 150ms ease; }
+.share:first-child { border-top: 0; }
+.share::before { content: ""; position: absolute; inset: -1px auto 0 0; width: 2px; background: var(--text-1); transform: scaleY(0); transform-origin: top; transition: transform 240ms var(--ease-out); }
+.share.is-open { background: var(--soft-hover); }
+.share.is-open::before { transform: none; }
+.share-line { min-height: 58px; padding: 9px 12px; cursor: pointer; }
+.share.is-skeleton .share-line { cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .share:not(.is-skeleton):hover { background: var(--soft-hover); }
 }
-.share-sheet.is-open .share-sheet-body { opacity: 1; transform: none; transition-delay: 40ms; }
-.is-closing .share-sheet-body { transition-delay: 0ms; transition-duration: 120ms; }
-.sheet-field { display: grid; gap: 8px; }
-.sheet-switch > button { min-width: 38px; padding: 0 10px; font: 11.5px var(--font-mono); }
-.sheet-actions { display: flex; gap: 6px; margin-left: auto; }
+.share-facts { display: contents; }
+.share-id { display: grid; gap: 3px; min-width: 0; }
+.share-name { font-weight: 500; overflow-wrap: anywhere; }
+.share-host { overflow: hidden; color: var(--text-3); font: 11px/1.5 var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.share-host a { color: var(--text-2); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: color 150ms ease, text-decoration-color 150ms ease; }
+.share-host a:hover { color: var(--text-1); text-decoration-color: var(--border-strong); }
+.share-state { display: inline-flex; align-items: center; gap: 8px; color: var(--text-3); font: 11.5px var(--font-mono); }
+.share.is-live .share-state { color: var(--text-1); }
+.share-state .lamp { transition: background 150ms ease, box-shadow 150ms ease; }
+.share-access { color: var(--text-2); font: 11.5px var(--font-mono); }
+.share-time { display: grid; justify-items: start; gap: 6px; min-width: 0; }
+.share-time.is-idle { visibility: hidden; }
+.share-time.is-bumped .expiry { animation: timeBump 900ms var(--ease-out); }
+@keyframes timeBump { from { color: var(--green); } }
+/* Drains in real time; a lower fill is the share running out. */
+.share-meter { display: block; width: 100%; max-width: 112px; height: 2px; overflow: hidden; background: var(--meter-bg); }
+.share-meter i { display: block; height: 100%; background: var(--text-3); transform: scaleX(var(--left, 0)); transform-origin: left; transition: transform 1s linear, background 150ms ease; }
+.share-meter.is-low i { background: var(--yellow); }
+.share-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.share-actions > button { min-height: 30px; padding: 0 12px; font-size: 12px; }
+.share-toggle[aria-expanded="true"] { background: var(--bg-panel-strong); border-color: var(--border-strong); }
+.share-empty { padding: 28px; color: var(--text-3); font: 11.5px var(--font-mono); text-align: center; }
+
+/* The row's panel slides open beneath it, so no column changes width. */
+.share-panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 240ms var(--ease-out); }
+.share-panel.is-open { grid-template-rows: 1fr; }
+.share-panel.is-closing { transition-duration: 180ms; }
+.share-panel-inner { min-height: 0; overflow: hidden; }
+.share-panel.is-settled .share-panel-inner { overflow: visible; }
+.share-panel-body { display: grid; gap: 14px; padding: 6px 12px 18px; opacity: 0; transform: translateY(-6px); transition: opacity 160ms ease, transform 240ms var(--ease-out); }
+.share-panel.is-open .share-panel-body { opacity: 1; transform: none; transition-delay: 40ms; }
+.share-panel.is-closing .share-panel-body { transition-delay: 0ms; transition-duration: 120ms; }
+.share-panel .share-panel-body.is-entering { animation: panelSwap 240ms var(--ease-out) both; }
+@keyframes panelSwap { from { opacity: 0; transform: translateY(4px); } }
+.share-field { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; column-gap: 20px; }
+.share-field-value { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+.share-switch > button { min-width: 38px; padding: 0 10px; font: 11.5px var(--font-mono); }
+.share-url { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-1); font: 12px var(--font-mono); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 4px; overflow-wrap: anywhere; }
+.share-url svg { flex: none; width: 13px; height: 13px; transition: transform 200ms var(--ease-out); }
+.share-url:hover svg { transform: translate(2px, -2px); }
+.share-until { display: inline-flex; align-items: center; gap: 12px; color: var(--text-3); font: 11.5px var(--font-mono); }
+.share-caption { color: var(--text-3); font: 11.5px var(--font-mono); }
+.chip-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.time-chip { min-height: 30px; padding: 0 10px; font: 11.5px var(--font-mono); }
+.chip-divider { align-self: stretch; width: 1px; margin: 4px 4px; background: var(--border); }
+.share-panel-actions { display: flex; justify-content: flex-end; gap: 6px; padding-top: 2px; }
+.share-go { min-width: 150px; }
 .disclosure { border-top: 1px solid var(--border); }
 .disclosure + .disclosure { margin-top: calc(var(--gap) * -1); }
 .disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; cursor: pointer; font-size: 13px; font-weight: 500; list-style: none; }
@@ -1262,29 +1297,22 @@ svg.matrix { display: block; width: auto; fill: currentColor; stroke: none; shap
   .feed-area { margin-left: 0; }
   .feed-text { font-size: 15px; }
 
-  /* Tables become record lists; the header row stays for assistive tech. */
-  .shares-table { min-width: 0; }
-  .shares-table, .shares-table tbody { display: block; width: 100%; }
-  .shares-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  #rows [data-service-id] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 16px 0; border-top: 1px solid var(--table-divider); }
-  #rows [data-service-id]:first-child { border-top-color: var(--border-strong); }
-  #rows td { display: block; width: auto; max-width: none; min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
-  #rows td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--text-3); font: 500 9.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
-  #rows td:nth-child(1)::before, #rows td:nth-child(2)::before, #rows td:last-child::before { display: none; }
-  #rows td:nth-child(2) { text-align: right; }
-  #rows td:nth-child(3) { grid-area: 2 / 1; }
-  #rows td:nth-child(5) { grid-area: 2 / 2; }
-  #rows td:nth-child(4) { grid-row: 3; }
-  #rows td:nth-child(4), #rows td:last-child { grid-column: 1 / -1; }
-  #rows .controls { flex-wrap: wrap; justify-content: flex-start; }
-  #rows td[colspan] { display: block; padding: 24px 0; }
-  #rows .share-sheet-row { display: block; }
-  #rows .share-sheet-row > td[colspan] { padding: 0; }
-  .share-sheet-body { gap: 16px; padding-top: 0; }
-  .sheet-field { width: 100%; }
-  .sheet-switch { width: 100%; }
-  .sheet-switch > button { flex: 1; min-width: 0; padding: 0; }
-  .sheet-actions { width: 100%; justify-content: flex-end; }
+  /* Rows fold to two lines: name and actions, then state, access and time. */
+  .share-columns { display: none; }
+  .share-list { border-top: 1px solid var(--border-strong); }
+  .share-columns + .share-list { margin-top: 0; }
+  .share-line { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "id actions" "facts facts"; gap: 10px 12px; padding: 14px 12px; }
+  .share-id { grid-area: id; }
+  .share-actions { grid-area: actions; align-self: start; }
+  .share-facts { grid-area: facts; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+  .share-access:empty { display: none; }
+  .share-time.is-idle { display: none; }
+  .share-time { display: inline-flex; align-items: center; gap: 10px; }
+  .share-meter { width: 56px; }
+  .share-panel-body { gap: 16px; padding-top: 2px; }
+  .share-field { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  .share-switch { width: 100%; }
+  .share-switch > button { flex: 1; min-width: 0; padding: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

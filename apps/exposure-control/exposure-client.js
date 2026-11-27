@@ -11,6 +11,7 @@
     return {
       list: () => request("/api/services", "GET"),
       enable: (id, options = {}) => request(servicePath(id) + "/enable", "POST", options),
+      update: (id, options) => request(servicePath(id) + "/update", "POST", options),
       disable: (id) => request(servicePath(id) + "/disable", "POST"),
       disableAll: () => request("/api/admin/disable-all", "POST"),
       audit: () => request("/api/audit", "GET"),

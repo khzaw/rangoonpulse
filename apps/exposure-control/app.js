@@ -403,7 +403,7 @@
         if (mins < 60) return { text: mins + 'm left', state: mins <= 10 ? 'urgent' : 'active' };
         const hrs = Math.floor(mins / 60);
         const rm = mins % 60;
-        return { text: (rm ? hrs + 'h ' + rm + 'm' : hrs + 'h') + ' left', state: mins <= 120 ? 'urgent' : 'active' };
+        return { text: (rm ? hrs + 'h ' + rm + 'm' : hrs + 'h') + ' left', state: 'active' };
       }
 
       function updateExpiryNode(node) {
@@ -419,6 +419,7 @@
 
       function tickExpiryCountdowns() {
         const expired = new Set();
+        document.querySelectorAll('#rows .share-meter:not([hidden])').forEach(updateShareMeter);
         document.querySelectorAll('#rows .expiry[data-expires-at], #agentAccess .expiry[data-expires-at]').forEach((node) => {
           const state = updateExpiryNode(node);
           const owner = node.closest('[data-service-id], [data-agent-id]');
@@ -535,6 +536,15 @@
 
       function skeletonLine(width, height) {
         return '<span class="skeleton-line" style="width:' + (width || '80%') + ';height:' + (height || '13px') + '"></span>';
+      }
+
+      function skeletonShareRows(count) {
+        let html = '';
+        for (let i = 0; i < count; i++) {
+          html += '<li class="share is-skeleton" aria-hidden="true"><div class="share-line"><div class="share-id">' +
+            skeletonLine('38%') + skeletonLine('52%', '10px') + '</div></div></li>';
+        }
+        return html;
       }
 
       function skeletonTableRows(cols, count) {
@@ -675,7 +685,7 @@
             reportsAvailable ? String(pending.length) : (pending.length ? pending.length + '+' : '—'),
             reportsAvailable ? images.length + (images.length === 1 ? ' image' : ' images') + ' · ' + charts.length + (charts.length === 1 ? ' chart' : ' charts') : 'report incomplete',
             list(pending.slice(0, 7), '')) +
-          column('Shares', '#exposure', String(activeServices.length), activeServices.length ? 'public now' : 'all private',
+          column('Public access', '#exposure', String(activeServices.length), activeServices.length ? 'public now' : 'all private',
             list(activeServices.map((svc) => ({
               name: svc.publicHost || svc.name || svc.id,
               href: svc.publicUrl,
@@ -1198,7 +1208,7 @@
           fact('Private path', travelStateLabel(privateAccess.state), String(privateAccess.ready || 0) + ' ready · ' + String(privateAccess.degraded || 0) + ' degraded', travelTone(privateAccess.state)) +
           fact('Exit node', travelStateLabel(exitNode.state), connector.name || 'connector', travelTone(exitNode.state)) +
           fact('Transmission', transmission.desiredMode || 'unknown', 'running ' + (transmission.effectiveMode || 'unknown') + (transmission.placeholderConfig ? ' · placeholder config' : ''), transmission.rolloutPending || transmission.desiredMode === 'vpn' ? 'warning' : 'status') +
-          fact('Shares', String(activeShareCount), activeShareCount ? 'public now' : 'all private', activeShareCount > 0 ? 'warning' : 'status');
+          fact('Public access', String(activeShareCount), activeShareCount ? 'public now' : 'all private', activeShareCount > 0 ? 'warning' : 'status');
         travelOverviewMetaEl.innerHTML =
           '<span>checked ' + fmtAgo(travelData.checkedAt) + '</span>' +
           '<span>' + String((connector.advertisedRoutes || []).length) + ' routes</span>';
@@ -1315,12 +1325,40 @@
       });
 
       const SHARE_HOURS = [0.25, 0.5, 1, 2, 6, 12, 24, null];
+      // A live share gains time in these steps, or takes them as a fresh
+      // expiry when it has none.
+      const EXTEND_HOURS = [0.25, 1, 6, 24];
+      const ACCESS_CHOICES = [['none', 'Anyone with link'], ['cloudflare-access', 'Cloudflare login']];
       // The share being set up, kept across re-renders: { id, hours, authMode }.
       let shareDraft = null;
+      // The one row whose panel is open.
+      let openShareId = null;
 
       function fmtShareHours(hours) {
         if (hours === null) return 'never';
         return hours < 1 ? Math.round(hours * 60) + 'm' : hours + 'h';
+      }
+
+      function accessLabel(mode) {
+        return mode === 'cloudflare-access' ? 'cf login' : 'anyone';
+      }
+
+      const untilFormatter = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const untilDayFormatter = new Intl.DateTimeFormat('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+
+      function fmtUntil(value) {
+        const date = validDate(value);
+        if (!date) return '';
+        const today = date.toDateString() === new Date().toDateString();
+        return 'until ' + (today ? untilFormatter : untilDayFormatter).format(date);
+      }
+
+      function serviceById(id) {
+        return (dashboardState.services || []).find((service) => service.id === id) || null;
+      }
+
+      function shareRow(id) {
+        return Array.from(rowsEl.children).find((row) => row.dataset.serviceId === id) || null;
       }
 
       // Every exposure action reports through one toast: busy while the
@@ -1329,7 +1367,7 @@
 
       function shareTerms(service) {
         const expiry = service.expiresAt ? fmtExpiry(service.expiresAt, true).text : 'no expiry';
-        return expiry + ' · ' + (service.authMode === 'cloudflare-access' ? 'cf-access' : 'auth none');
+        return expiry + ' · ' + accessLabel(service.authMode);
       }
 
       function namesOf(services) {
@@ -1388,29 +1426,76 @@
         return { text: label + ' is public', detail: shareTerms(service), action: { label: 'Copy link', run: () => copyShareLink(service) } };
       }
 
-      // Undo reopens with the same auth and whatever time was left, rounded
-      // up to the API's 15-minute steps.
+      // Undo puts back whatever time was left, rounded up to the API's
+      // 15-minute steps; more than a day left cannot be expressed.
+      function remainingTerms(previous) {
+        if (!previous.expiresAt) return { hours: null };
+        const left = (Date.parse(previous.expiresAt) - Date.now()) / 3600000;
+        if (!(left > 0) || left > 24) return null;
+        return { hours: Math.min(24, Math.max(0.25, Math.ceil(left * 4) / 4)) };
+      }
+
       function reopenShare(previous) {
         const label = previous.name || previous.id;
-        const left = previous.expiresAt ? (Date.parse(previous.expiresAt) - Date.now()) / 3600000 : null;
-        const hours = left === null ? null : Math.min(24, Math.max(0.25, Math.ceil(left * 4) / 4));
+        const terms = remainingTerms(previous) || { hours: 24 };
         return runExposure({
           busy: { text: 'Reopening ' + label + '…', detail: previous.publicHost },
-          request: () => exposureClient.enable(previous.id, { hours, authMode: previous.authMode === 'cloudflare-access' ? 'cloudflare-access' : 'none' }),
+          request: () => exposureClient.enable(previous.id, { ...terms, authMode: previous.authMode === 'cloudflare-access' ? 'cloudflare-access' : 'none' }),
           done: ({ service }) => shareOpened(label, service || previous),
           fail: 'Couldn\'t reopen ' + label,
         });
       }
 
+      function stopShare(id, btn) {
+        const svc = serviceById(id);
+        if (!svc || mutationInFlight > 0) return null;
+        const label = svc.name || svc.id;
+        if (openShareId === id) closeSharePanel();
+        return runExposure({
+          btn,
+          busy: { text: 'Closing ' + label + '…', detail: svc.publicHost },
+          request: () => exposureClient.disable(id),
+          done: () => ({ text: label + ' is private', detail: svc.publicHost, action: { label: 'Undo', run: () => reopenShare(svc) } }),
+          fail: 'Couldn\'t close ' + label,
+        });
+      }
+
+      // Edits a live share in place: more time, a fresh expiry, or new access.
+      // The server refuses a share that has closed meanwhile.
+      async function editShare(id, change, btn) {
+        const svc = serviceById(id);
+        if (!svc || !svc.enabled || mutationInFlight > 0) return null;
+        const label = svc.name || svc.id;
+        const accessOnly = change.authMode !== undefined && change.hours === undefined && change.extendHours === undefined;
+        const busy = change.extendHours ? 'Extending ' + label + '…'
+          : accessOnly ? 'Changing access to ' + label + '…' : 'Changing expiry of ' + label + '…';
+        const result = await runExposure({
+          btn,
+          busy: { text: busy, detail: svc.publicHost },
+          request: () => exposureClient.update(id, change),
+          done: ({ service }) => {
+            const next = service || svc;
+            const text = change.extendHours ? label + ' extended'
+              : accessOnly ? (next.authMode === 'cloudflare-access' ? label + ' needs a login' : label + ' is open to anyone')
+                : next.expiresAt ? label + ' expiry changed' : label + ' has no expiry';
+            const undo = accessOnly ? { authMode: svc.authMode === 'cloudflare-access' ? 'cloudflare-access' : 'none' } : remainingTerms(svc);
+            return { text, detail: shareTerms(next), action: undo ? { label: 'Undo', run: () => editShare(id, undo) } : undefined };
+          },
+          fail: 'Couldn\'t change ' + label,
+        });
+        // A refused edit leaves the page on the last known state.
+        if (!result && openShareId === id) {
+          const row = shareRow(id);
+          const current = serviceById(id);
+          if (row && current) renderSharePanel(row, current);
+        }
+        return result;
+      }
+
       // One segmented choice; the shared glide thumb follows the pressed option.
-      function shareChoice(label, options, current, onPick) {
-        const field = document.createElement('div');
-        field.className = 'sheet-field';
-        const caption = document.createElement('span');
-        caption.className = 'eyebrow';
-        caption.textContent = label;
+      function segmented(label, options, current, onPick, key) {
         const group = document.createElement('div');
-        group.className = 'view-switch sheet-switch';
+        group.className = 'view-switch share-switch';
         group.setAttribute('role', 'group');
         group.setAttribute('aria-label', label);
         const thumb = document.createElement('span');
@@ -1421,39 +1506,52 @@
           const option = document.createElement('button');
           option.type = 'button';
           option.textContent = text;
+          option.dataset.focusKey = key + ':' + String(value);
           option.setAttribute('aria-pressed', String(value === current));
           option.onclick = () => {
+            if (option.getAttribute('aria-pressed') === 'true') return;
             group.querySelectorAll('button').forEach((item) => item.setAttribute('aria-pressed', String(item === option)));
             onPick(value);
           };
           group.appendChild(option);
         });
-        field.append(caption, group);
         window.Fx.glide(group, thumb, '[aria-pressed="true"]', 'x');
-        return { field, group };
+        return group;
       }
 
-      function closeShareSheet(options) {
-        const sheetRow = rowsEl.querySelector('.share-sheet-row:not(.is-closing)');
-        if (!sheetRow) return;
-        if (shareDraft && shareDraft.id === sheetRow.dataset.sheetFor) shareDraft = null;
-        const row = sheetRow.previousElementSibling;
-        const toggle = row && row.querySelector('.share-toggle');
-        if (row) row.classList.remove('is-configuring');
-        if (toggle) {
-          toggle.setAttribute('aria-expanded', 'false');
-          if (options && options.focus) toggle.focus({ preventScroll: true });
-        }
-        sheetRow.classList.add('is-closing');
-        sheetRow.querySelector('.share-sheet').classList.remove('is-open', 'is-settled');
-        // Reduced motion has no transition to wait for; the timer covers both.
-        setTimeout(() => sheetRow.remove(), 260);
+      function panelField(label, ...content) {
+        const field = document.createElement('div');
+        field.className = 'share-field';
+        const caption = document.createElement('span');
+        caption.className = 'eyebrow';
+        caption.textContent = label;
+        const value = document.createElement('div');
+        value.className = 'share-field-value';
+        value.append(...content);
+        field.append(caption, value);
+        return field;
       }
 
-      // The sheet opens under its row, so the table's columns never move.
-      function openShareSheet(svc, row, toggle, options) {
-        const restoring = Boolean(options && options.restore);
-        if (!restoring) closeShareSheet();
+      function panelButton(text, className, onClick, focusKey) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        if (className) button.className = className;
+        button.textContent = text;
+        if (focusKey) button.dataset.focusKey = focusKey;
+        button.onclick = () => onClick(button);
+        return button;
+      }
+
+      function panelActions(...buttons) {
+        const actions = document.createElement('div');
+        actions.className = 'share-panel-actions';
+        actions.append(...buttons);
+        return actions;
+      }
+
+      // A private service: pick how long and for whom, then one button that
+      // says exactly what it will do.
+      function composeBody(svc) {
         if (!shareDraft || shareDraft.id !== svc.id) {
           const defaultHours = Number(svc.defaultExpiryHours || 1);
           shareDraft = {
@@ -1463,45 +1561,11 @@
           };
         }
         const draft = shareDraft;
-        row.classList.add('is-configuring');
-        toggle.setAttribute('aria-expanded', 'true');
-
-        const sheetRow = document.createElement('tr');
-        sheetRow.className = 'share-sheet-row';
-        sheetRow.dataset.sheetFor = svc.id;
-        const cell = document.createElement('td');
-        cell.colSpan = 6;
-        const sheet = document.createElement('div');
-        sheet.className = 'share-sheet';
-        sheet.id = toggle.getAttribute('aria-controls');
-        sheet.setAttribute('role', 'group');
-        sheet.setAttribute('aria-label', 'Share ' + (svc.name || svc.id));
-        const inner = document.createElement('div');
-        inner.className = 'share-sheet-inner';
-        const body = document.createElement('div');
-        body.className = 'share-sheet-body';
-
-        const expiry = shareChoice('Expires',
-          SHARE_HOURS.map((hours) => [hours, fmtShareHours(hours)]),
-          draft.hours, (hours) => { draft.hours = hours; });
-        const auth = shareChoice('Auth',
-          [['none', 'none'], ['cloudflare-access', 'cf-access']],
-          draft.authMode, (mode) => { draft.authMode = mode; });
-
-        const actions = document.createElement('div');
-        actions.className = 'sheet-actions';
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'ghost';
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.onclick = () => closeShareSheet({ focus: true });
-        const goBtn = document.createElement('button');
-        goBtn.type = 'button';
-        goBtn.className = 'danger';
-        goBtn.textContent = 'Go public';
         const label = svc.name || svc.id;
-        goBtn.onclick = () => runExposure({
-          btn: goBtn,
+        const body = document.createElement('div');
+        body.className = 'share-panel-body';
+        const go = panelButton('', 'primary share-go', (button) => runExposure({
+          btn: button,
           busy: { text: 'Opening ' + label + '…', detail: svc.publicHost },
           request: () => exposureClient.enable(svc.id, { hours: draft.hours, authMode: draft.authMode }),
           done: ({ service }) => {
@@ -1509,136 +1573,311 @@
             return shareOpened(label, service || svc);
           },
           fail: 'Couldn\'t open ' + label,
-        });
-        actions.append(cancelBtn, goBtn);
+        }), 'go');
+        const name = () => { go.textContent = draft.hours === null ? 'Share until stopped' : 'Share for ' + fmtShareHours(draft.hours); };
+        name();
+        const expiry = segmented('Expires', SHARE_HOURS.map((hours) => [hours, fmtShareHours(hours)]), draft.hours, (hours) => {
+          draft.hours = hours;
+          name();
+        }, 'hours');
+        expiry.querySelector('[aria-pressed="true"]').dataset.autofocus = '';
+        const access = segmented('Access', ACCESS_CHOICES, draft.authMode, (mode) => { draft.authMode = mode; }, 'access');
+        body.append(
+          panelField('Expires', expiry),
+          panelField('Access', access),
+          panelActions(panelButton('Cancel', 'ghost', () => closeSharePanel({ focus: true })), go),
+        );
+        return body;
+      }
 
-        body.append(expiry.field, auth.field, actions);
-        inner.appendChild(body);
-        sheet.appendChild(inner);
-        sheet.addEventListener('keydown', (event) => {
+      // A live share: its link, more time, who can open it, and a way out.
+      function manageBody(svc) {
+        const id = svc.id;
+        const body = document.createElement('div');
+        body.className = 'share-panel-body';
+
+        const link = document.createElement('a');
+        link.className = 'share-url';
+        link.href = String(svc.publicUrl || '#');
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        link.innerHTML = escapeHtml(svc.publicHost || '') + '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg>';
+        const copy = panelButton('Copy link', '', () => copyShareLink(serviceById(id) || svc), 'copy');
+        copy.dataset.autofocus = '';
+
+        const timed = Boolean(svc.expiresAt);
+        const now = document.createElement('span');
+        now.className = 'share-until';
+        if (timed) {
+          const expiry = fmtExpiry(svc.expiresAt, true);
+          now.innerHTML = '<span class="expiry ' + expiry.state + '" data-expires-at="' + escapeHtml(svc.expiresAt) + '" data-enabled="1">' +
+            escapeHtml(expiry.text) + '</span><span>' + escapeHtml(fmtUntil(svc.expiresAt)) + '</span>';
+        } else {
+          now.textContent = 'no expiry';
+        }
+        const chips = document.createElement('div');
+        chips.className = 'chip-row';
+        chips.setAttribute('role', 'group');
+        chips.setAttribute('aria-label', timed ? 'Extend' : 'Expire in');
+        EXTEND_HOURS.forEach((hours) => {
+          const text = timed ? '+' + fmtShareHours(hours) : fmtShareHours(hours);
+          const chip = panelButton(text, 'time-chip', (button) => editShare(id, timed ? { extendHours: hours } : { hours }, button), 'time:' + hours);
+          chip.setAttribute('aria-label', (timed ? 'Extend by ' : 'Expire in ') + fmtShareHours(hours));
+          chips.appendChild(chip);
+        });
+        if (timed) {
+          const divider = document.createElement('span');
+          divider.className = 'chip-divider';
+          divider.setAttribute('aria-hidden', 'true');
+          chips.append(divider, panelButton('No expiry', 'time-chip', (button) => editShare(id, { hours: null }, button), 'time:never'));
+        }
+        const timeValue = [now, chips];
+        if (!timed) {
+          const caption = document.createElement('span');
+          caption.className = 'share-caption';
+          caption.textContent = 'expire in';
+          timeValue.splice(1, 0, caption);
+        }
+
+        const access = segmented('Access', ACCESS_CHOICES, svc.authMode === 'cloudflare-access' ? 'cloudflare-access' : 'none',
+          (mode) => editShare(id, { authMode: mode }), 'access');
+
+        body.append(
+          panelField('Link', link, copy),
+          panelField('Expires', ...timeValue),
+          panelField('Access', access),
+          panelActions(
+            panelButton('Done', 'ghost', () => closeSharePanel({ focus: true })),
+            panelButton('Stop sharing', 'danger', (button) => stopShare(id, button), 'stop'),
+          ),
+        );
+        return body;
+      }
+
+      function sharePanelOf(row) {
+        return Array.from(row.children).find((node) => node.classList.contains('share-panel') && !node.classList.contains('is-closing')) || null;
+      }
+
+      // Repaints an open panel for the share's current state. When a share
+      // goes public from its panel, the panel turns into its editor in place.
+      function renderSharePanel(row, svc, options) {
+        const panel = sharePanelOf(row);
+        if (!panel) return;
+        const inner = panel.firstElementChild;
+        const live = Boolean(svc.enabled);
+        panel.setAttribute('aria-label', (live ? 'Edit ' : 'Share ') + (svc.name || svc.id));
+        // A pressed button is disabled while its request runs, which drops
+        // focus to the page; the panel remembers it and puts it back.
+        const active = document.activeElement;
+        const lost = !active || active === document.body;
+        const focusKey = active && panel.contains(active) ? active.dataset.focusKey : lost ? panel.dataset.focusKey : null;
+        const morph = Boolean(options && options.morph) && panel.classList.contains('is-settled');
+        const from = morph ? inner.offsetHeight : 0;
+        const body = live ? manageBody(svc) : composeBody(svc);
+        inner.replaceChildren(body);
+        if (morph) {
+          body.classList.add('is-entering');
+          const to = inner.offsetHeight;
+          if (from && to && from !== to) {
+            inner.style.overflow = 'hidden';
+            inner.style.height = from + 'px';
+            void inner.offsetHeight;
+            inner.style.transition = 'height 240ms var(--ease-out)';
+            inner.style.height = to + 'px';
+            setTimeout(() => { inner.style.height = ''; inner.style.transition = ''; inner.style.overflow = ''; }, 260);
+          }
+        }
+        const target = (!morph && focusKey && body.querySelector('[data-focus-key="' + focusKey + '"]')) ||
+          (morph && (lost || panel.contains(active)) ? body.querySelector('[data-autofocus]') : null);
+        if (target) target.focus({ preventScroll: true });
+      }
+
+      function closeSharePanel(options) {
+        const id = openShareId;
+        openShareId = null;
+        if (!id) return;
+        if (shareDraft && shareDraft.id === id) shareDraft = null;
+        const row = shareRow(id);
+        if (!row) return;
+        row.classList.remove('is-open');
+        const toggle = row.querySelector('.share-toggle');
+        if (toggle) {
+          toggle.setAttribute('aria-expanded', 'false');
+          if (options && options.focus) toggle.focus({ preventScroll: true });
+        }
+        const panel = sharePanelOf(row);
+        if (!panel) return;
+        panel.classList.add('is-closing');
+        panel.classList.remove('is-open', 'is-settled');
+        // Reduced motion has no transition to wait for; the timer covers both.
+        setTimeout(() => panel.remove(), 260);
+      }
+
+      // The panel opens under its row, so no column ever changes width.
+      function openSharePanel(id) {
+        const svc = serviceById(id);
+        const row = shareRow(id);
+        if (!svc || !row) return;
+        if (openShareId) closeSharePanel();
+        openShareId = id;
+        row.classList.add('is-open');
+        const toggle = row.querySelector('.share-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        const panel = document.createElement('div');
+        panel.className = 'share-panel';
+        panel.id = 'share-panel-' + id;
+        panel.setAttribute('role', 'region');
+        panel.innerHTML = '<div class="share-panel-inner"></div>';
+        panel.addEventListener('keydown', (event) => {
           if (event.key !== 'Escape') return;
           event.stopPropagation();
-          closeShareSheet({ focus: true });
+          closeSharePanel({ focus: true });
         });
-        cell.appendChild(sheet);
-        sheetRow.appendChild(cell);
-        // A restored sheet (after a refresh) appears already open, without motion.
-        if (restoring) sheet.classList.add('is-open', 'is-settled');
-        row.after(sheetRow);
-        if (restoring) return;
-        void sheet.offsetHeight;
-        sheet.classList.add('is-open');
-        expiry.group.querySelector('[aria-pressed="true"]').focus({ preventScroll: true });
+        panel.addEventListener('focusin', (event) => {
+          panel.dataset.focusKey = event.target.dataset.focusKey || '';
+        });
+        row.appendChild(panel);
+        renderSharePanel(row, svc);
+        void panel.offsetHeight;
+        panel.classList.add('is-open');
+        const first = panel.querySelector('[data-autofocus]');
+        if (first) first.focus({ preventScroll: true });
         // Once open, stop clipping so focus rings show; then keep it in view.
         setTimeout(() => {
-          if (!sheetRow.isConnected || sheetRow.classList.contains('is-closing')) return;
-          sheet.classList.add('is-settled');
-          sheetRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          if (!panel.isConnected || panel.classList.contains('is-closing')) return;
+          panel.classList.add('is-settled');
+          panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }, 260);
+      }
+
+      function toggleSharePanel(id) {
+        if (openShareId === id) closeSharePanel({ focus: true });
+        else openSharePanel(id);
+      }
+
+      function updateShareMeter(meter) {
+        const end = Date.parse(meter.dataset.expiresAt);
+        const span = end - Date.parse(meter.dataset.openedAt);
+        const left = Number.isFinite(span) && span > 0 ? Math.min(1, Math.max(0, (end - Date.now()) / span)) : 0;
+        meter.style.setProperty('--left', left.toFixed(4));
+        meter.classList.toggle('is-low', left < 0.15);
+      }
+
+      function buildShareRow(svc) {
+        const row = document.createElement('li');
+        row.className = 'share';
+        row.dataset.serviceId = svc.id;
+        row.innerHTML =
+          '<div class="share-line">' +
+            '<div class="share-id"><span class="share-name"></span><span class="share-host"></span></div>' +
+            '<div class="share-facts">' +
+              '<span class="share-state"><span class="lamp off"></span><span data-share-state></span></span>' +
+              '<span class="share-access"></span>' +
+              '<span class="share-time"><span class="expiry" data-enabled="1"></span><span class="share-meter" aria-hidden="true"><i></i></span></span>' +
+            '</div>' +
+            '<div class="share-actions"></div>' +
+          '</div>';
+        // The whole line opens the panel; links and buttons keep their own job.
+        row.firstElementChild.addEventListener('click', (event) => {
+          if (event.target.closest('a, button')) return;
+          if (String(window.getSelection ? window.getSelection() : '')) return;
+          toggleSharePanel(row.dataset.serviceId);
+        });
+        return row;
+      }
+
+      function paintShareActions(row, svc) {
+        const id = svc.id;
+        const label = svc.name || svc.id;
+        const actions = row.querySelector('.share-actions');
+        const toggle = panelButton(svc.enabled ? 'Edit' : 'Share', 'share-toggle', () => toggleSharePanel(id));
+        toggle.setAttribute('aria-label', (svc.enabled ? 'Edit ' : 'Share ') + label);
+        toggle.setAttribute('aria-expanded', String(openShareId === id));
+        toggle.setAttribute('aria-controls', 'share-panel-' + id);
+        const buttons = [toggle];
+        if (svc.enabled) {
+          const stop = panelButton('Stop', 'danger', (button) => stopShare(id, button));
+          stop.setAttribute('aria-label', 'Stop sharing ' + label);
+          buttons.push(stop);
+        }
+        actions.replaceChildren(...buttons);
+      }
+
+      // Rows are keyed by service and repainted in place, so a refresh never
+      // collapses an open panel, steals focus, or replays motion.
+      function paintShareRow(row, svc) {
+        const live = Boolean(svc.enabled);
+        const key = [live, svc.name, svc.publicHost, svc.publicUrl, svc.authMode, svc.expiresAt, svc.openedAt].join('|');
+        if (row.dataset.key === key) return;
+        const state = live ? 'public' : 'private';
+        const flipped = row.dataset.state !== state;
+        const previousExpiry = row.dataset.state === 'public' ? row.dataset.expiresAt : '';
+        row.dataset.key = key;
+        row.dataset.state = state;
+        row.dataset.expiresAt = svc.expiresAt || '';
+        row.classList.toggle('is-live', live);
+        row.querySelector('.share-name').textContent = svc.name || svc.id;
+        const host = row.querySelector('.share-host');
+        if (live) {
+          host.innerHTML = '<a href="' + escapeHtml(svc.publicUrl || '#') + '" target="_blank" rel="noreferrer">' + escapeHtml(svc.publicHost || '') + '</a>';
+        } else {
+          host.textContent = svc.publicHost || '';
+        }
+        row.querySelector('.share-state .lamp').className = 'lamp ' + (live ? 'status' : 'off');
+        row.querySelector('[data-share-state]').textContent = state;
+        row.querySelector('.share-access').textContent = live ? accessLabel(svc.authMode) : '';
+        const time = row.querySelector('.share-time');
+        const expiryNode = time.querySelector('.expiry');
+        const meter = time.querySelector('.share-meter');
+        // Hidden by visibility, not [hidden]: the cell keeps its grid column.
+        time.classList.toggle('is-idle', !live);
+        expiryNode.dataset.expiresAt = live ? String(svc.expiresAt || '') : '';
+        expiryNode.dataset.enabled = live ? '1' : '0';
+        updateExpiryNode(expiryNode);
+        meter.hidden = !live || !svc.expiresAt;
+        meter.dataset.expiresAt = String(svc.expiresAt || '');
+        meter.dataset.openedAt = String(svc.openedAt || svc.updatedAt || '');
+        if (!meter.hidden) updateShareMeter(meter);
+        // More time on a live share flashes its countdown.
+        if (live && Date.parse(svc.expiresAt || '') > Date.parse(previousExpiry || '')) {
+          time.classList.remove('is-bumped');
+          void time.offsetWidth;
+          time.classList.add('is-bumped');
+        }
+        if (flipped || !row.querySelector('.share-actions').childElementCount) paintShareActions(row, svc);
+        if (openShareId === svc.id) renderSharePanel(row, svc, { morph: flipped });
       }
 
       function renderRows(allServices) {
         const services = allServices.filter((svc) => !isAgent(svc));
         renderAgents(allServices);
-        rowsEl.innerHTML = '';
         if (shareDraft && !services.some((svc) => svc.id === shareDraft.id && !svc.enabled)) shareDraft = null;
+        if (openShareId && !services.some((svc) => svc.id === openShareId)) openShareId = null;
+        const ids = new Set(services.map((svc) => svc.id));
+        const existing = new Map();
+        Array.from(rowsEl.children).forEach((node) => {
+          if (node.dataset.serviceId && ids.has(node.dataset.serviceId)) existing.set(node.dataset.serviceId, node);
+          else node.remove();
+        });
         if (!services.length) {
-          const tr = document.createElement('tr');
-          const td = document.createElement('td');
-          td.colSpan = 6;
-          td.className = 'empty-state';
-          td.textContent = 'No services.';
+          const empty = document.createElement('li');
+          empty.className = 'share-empty';
+          empty.textContent = 'No services.';
+          rowsEl.appendChild(empty);
           document.getElementById('sharesCount').textContent = '0 / 0';
-          tr.appendChild(td);
-          rowsEl.appendChild(tr);
           return;
         }
         // Keep the configured order so rows stay put when toggled.
-        services.forEach((svc) => {
-          const tr = document.createElement('tr');
-          tr.dataset.serviceId = svc.id;
-          if (svc.enabled) tr.classList.add('is-enabled');
-          const expiry = fmtExpiry(svc.expiresAt, svc.enabled);
-
-          const serviceTd = document.createElement('td');
-          const serviceName = document.createElement('div');
-          serviceName.className = 'svc-name';
-          serviceName.textContent = svc.name || 'unknown';
-          const serviceId = document.createElement('div');
-          serviceId.className = 'svc-id';
-          serviceId.textContent = svc.id || 'n/a';
-          serviceTd.append(serviceName, serviceId);
-
-          const statusTd = document.createElement('td');
-          const statusBadge = document.createElement('span');
-          statusBadge.className = 'pill';
-          statusBadge.dataset.tone = svc.enabled ? 'ok' : 'neutral';
-          statusBadge.textContent = svc.enabled ? 'Public' : 'Private';
-          statusTd.appendChild(statusBadge);
-
-          const authTd = document.createElement('td');
-          const authMode = document.createElement('span');
-          authMode.className = 'auth-mode';
-          authMode.textContent = svc.authMode === 'cloudflare-access' ? 'cf-access' : String(svc.authMode || 'none');
-          authTd.appendChild(authMode);
-
-          const urlTd = document.createElement('td');
-          const publicLink = document.createElement('a');
-          publicLink.className = 'public-host';
-          publicLink.href = String(svc.publicUrl || '#');
-          publicLink.target = '_blank';
-          publicLink.rel = 'noreferrer';
-          publicLink.textContent = String(svc.publicHost || '');
-          urlTd.appendChild(publicLink);
-
-          const expiryTd = document.createElement('td');
-          const expiryNode = document.createElement('span');
-          expiryNode.className = 'expiry ' + expiry.state;
-          expiryNode.dataset.expiresAt = String(svc.expiresAt || '');
-          expiryNode.dataset.enabled = svc.enabled ? '1' : '0';
-          expiryNode.textContent = expiry.text;
-          expiryTd.appendChild(expiryNode);
-
-          const controlsTd = document.createElement('td');
-          const controls = document.createElement('div');
-          controls.className = 'controls';
-          let shareBtn = null;
-          if (svc.enabled) {
-            const disableBtn = document.createElement('button');
-            disableBtn.textContent = 'Disable';
-            disableBtn.className = 'danger';
-            disableBtn.onclick = () => runExposure({
-              btn: disableBtn,
-              busy: { text: 'Closing ' + (svc.name || svc.id) + '…', detail: svc.publicHost },
-              request: () => exposureClient.disable(svc.id),
-              done: () => ({ text: (svc.name || svc.id) + ' is private', detail: svc.publicHost, action: { label: 'Undo', run: () => reopenShare(svc) } }),
-              fail: 'Couldn\'t close ' + (svc.name || svc.id),
-            });
-            controls.appendChild(disableBtn);
-          } else {
-            shareBtn = document.createElement('button');
-            shareBtn.textContent = 'Share';
-            shareBtn.className = 'share-toggle';
-            shareBtn.setAttribute('aria-expanded', 'false');
-            shareBtn.setAttribute('aria-controls', 'share-sheet-' + svc.id);
-            shareBtn.onclick = () => {
-              if (shareBtn.getAttribute('aria-expanded') === 'true') closeShareSheet();
-              else openShareSheet(svc, tr, shareBtn);
-            };
-            controls.appendChild(shareBtn);
-          }
-          controlsTd.appendChild(controls);
-          tr.append(serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd);
-          [serviceTd, statusTd, authTd, urlTd, expiryTd, controlsTd].forEach((cell, index) => {
-            cell.dataset.label = ['Service', 'Status', 'Auth', 'Public link', 'Expires', 'Actions'][index];
-          });
-          rowsEl.appendChild(tr);
-          if (shareBtn && shareDraft && shareDraft.id === svc.id) openShareSheet(svc, tr, shareBtn, { restore: true });
+        services.forEach((svc, index) => {
+          const row = existing.get(svc.id) || buildShareRow(svc);
+          paintShareRow(row, svc);
+          if (rowsEl.children[index] !== row) rowsEl.insertBefore(row, rowsEl.children[index] || null);
         });
-        const emptyRow = document.createElement('tr');
-        emptyRow.dataset.shareEmpty = '';
-        emptyRow.innerHTML = '<td colspan="6" class="empty-state">No match.</td>';
-        rowsEl.appendChild(emptyRow);
+        const empty = document.createElement('li');
+        empty.className = 'share-empty';
+        empty.dataset.shareEmpty = '';
+        empty.textContent = 'No match.';
+        rowsEl.appendChild(empty);
         filterShares();
         tickExpiryCountdowns();
       }
@@ -1731,6 +1970,7 @@
         auditRowsEl.innerHTML = entries.map((entry) => {
           const parts = [];
           if (entry.hours) parts.push(entry.hours + 'h');
+          if (entry.extendHours) parts.push('+' + entry.extendHours + 'h');
           if (entry.expiryMode === 'until-disabled') parts.push('no expiry');
           if (entry.authMode) parts.push(entry.authMode);
           if (entry.mode) parts.push('mode ' + entry.mode);
@@ -2476,7 +2716,7 @@
         if (!silent) {
           setLoadState('…');
           setBtnLoading(refreshAllBtn, true);
-          rowsEl.innerHTML = skeletonTableRows(6, 4);
+          if (!rowsEl.querySelector('[data-service-id]')) rowsEl.innerHTML = skeletonShareRows(4);
           auditRowsEl.innerHTML = skeletonTableRows(4, 3);
         }
 
@@ -2753,7 +2993,7 @@
       };
 
       emergencyBtn.onclick = async () => {
-        if (!confirm('Disable every share and agent access?')) return;
+        if (!confirm('Stop every share and agent access?')) return;
         const open = (dashboardState.services || []).filter((svc) => svc.enabled);
         await runExposure({
           btn: emergencyBtn,
@@ -2915,7 +3155,7 @@
             const next = transmissionVpnState.desiredMode === 'vpn' ? 'direct' : 'vpn';
             commands.push({ group: 'Run', label: 'Route Transmission ' + next, hint: 'asks first', run: () => setTransmissionVpnMode(next) });
           }
-          commands.push({ group: 'Run', label: 'Disable all shares', hint: 'asks first', danger: true, run: () => emergencyBtn.click() });
+          commands.push({ group: 'Run', label: 'Stop all public access', hint: 'asks first', danger: true, run: () => emergencyBtn.click() });
           commands.push({ group: 'View', label: 'Toggle sidebar', hint: '[', keywords: 'fold collapse navigation', run: toggleNavigation });
           for (const mode of ['system', 'light', 'dark']) {
             commands.push({ group: 'Theme', label: mode[0].toUpperCase() + mode.slice(1), keywords: 'theme appearance', run: () => themeModeButtons.find((button) => button.dataset.themeMode === mode)?.click() });
@@ -2923,7 +3163,7 @@
           for (const service of dashboardState.services || []) {
             if (isAgent(service)) {
               commands.push({
-                group: 'Shares',
+                group: 'Public access',
                 label: service.name || service.id,
                 hint: 'agent ' + (service.enabled ? 'on' : 'off'),
                 keywords: [service.id, service.publicHost, 'agent token'].join(' '),
@@ -2938,14 +3178,18 @@
               continue;
             }
             commands.push({
-              group: 'Shares',
+              group: 'Public access',
               label: service.name || service.id,
-              hint: service.enabled ? 'public' : 'private',
+              hint: service.enabled ? 'public · ' + fmtExpiry(service.expiresAt, true).text : 'private',
               keywords: [service.id, service.publicHost].join(' '),
               run: () => {
                 setActivePage('exposure');
-                sharesSearch.value = service.name || service.id;
+                sharesSearch.value = '';
+                shareView = 'all';
                 filterShares();
+                if (openShareId !== service.id) openSharePanel(service.id);
+                const row = shareRow(service.id);
+                if (row) row.scrollIntoView({ block: 'center' });
               },
             });
           }

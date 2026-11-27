@@ -62,7 +62,7 @@
             <a class="nav-pill" data-page-link data-page-title="Tuning" href="#tuning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h8m4 0h4M4 17h2m4 0h10"/><rect x="12" y="5" width="4" height="4"/><rect x="6" y="15" width="4" height="4"/></svg><span>Tuning</span></a>
           </div>
           <div class="nav-group"><div class="nav-group-label">Access</div>
-            <a class="nav-pill" data-page-link data-page-title="Shares" href="#exposure"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg><span>Shares</span><span class="nav-count" data-nav-count="exposure" hidden></span></a>
+            <a class="nav-pill" data-page-link data-page-title="Public access" href="#exposure"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg><span>Public access</span><span class="nav-count" data-nav-count="exposure" hidden></span></a>
             <a class="nav-pill" data-page-link data-page-title="Travel" href="#travel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z"/></svg><span>Travel</span></a>
             <a class="nav-pill" data-page-link data-page-title="Secrets" href="#secrets"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg><span>Secrets</span></a>
           </div>
@@ -162,33 +162,20 @@
 
       <section id="exposure" class="section" data-page-section hidden>
         <div class="page-head">
-          <h1 class="page-title">Shares</h1>
+          <h1 class="page-title">Public access</h1>
           <div class="page-actions">
             <div id="exposureMeta" class="page-meta"></div>
             <button id="exposureRefreshBtn" class="icon-btn" type="button" aria-label="Refresh" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"/></svg></button>
-            <button id="emergencyBtn" class="danger" type="button">Disable all</button>
+            <button id="emergencyBtn" class="danger" type="button">Stop all</button>
           </div>
         </div>
         <div class="toolbar">
           <label class="search-shell"><span class="sr-only">Search services</span><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><input id="sharesSearch" type="search" placeholder="Search" autocomplete="off" /></label>
-          <div class="view-switch" role="group" aria-label="Filter shares"><span class="glide-thumb" aria-hidden="true"></span><button type="button" data-share-view="all" aria-pressed="true">All</button><button type="button" data-share-view="active" aria-pressed="false">Public</button></div>
+          <div class="view-switch" role="group" aria-label="Filter services"><span class="glide-thumb" aria-hidden="true"></span><button type="button" data-share-view="all" aria-pressed="true">All</button><button type="button" data-share-view="active" aria-pressed="false">Public</button></div>
           <span id="sharesCount" class="page-meta toolbar-end" role="status"></span>
         </div>
-        <div class="table-shell">
-          <table class="shares-table" aria-label="Service shares">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>State</th>
-                <th>Auth</th>
-                <th>Link</th>
-                <th>Expires</th>
-                <th class="th-actions"><span class="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody id="rows"></tbody>
-          </table>
-        </div>
+        <div class="share-columns" aria-hidden="true"><span>Service</span><span>State</span><span>Access</span><span>Expires</span><span></span></div>
+        <ul id="rows" class="share-list" aria-label="Services"></ul>
         <div id="agentAccess" class="agent-access" hidden></div>
         <div id="transmissionPanel" class="route">
           <div class="route-main">
@@ -280,7 +267,7 @@
             </div>
           </div>
           <div class="travel-action-group">
-            <a id="travelExposureLink" class="link" href="#exposure">Shares<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a id="travelExposureLink" class="link" href="#exposure">Public access<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             <button id="travelDisableSharesBtn" class="danger" type="button">Disable all</button>
           </div>
         </div>

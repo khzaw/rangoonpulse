@@ -299,6 +299,15 @@ test("CLI and GUI share persisted state, expiry, auth enforcement and audit thro
   assert.equal((await withToken(accessToken("books-aud"))).status, 200);
   await cli("enable", "photos", "--until-disabled", "--auth", "none");
   assert.equal((await exposureRequest(port, "/", "GET", undefined, "photos.example.test")).status, 200);
+  assert.equal((await exposureRequest(port, "/api/services/photos/update", "POST", { extendHours: 1 })).status, 409);
+  const timed = (await gui.update("photos", { hours: 1 })).service;
+  assert.ok(Date.parse(timed.expiresAt) > Date.now());
+  const extended = (await gui.update("photos", { extendHours: 0.5, authMode: "cloudflare-access" })).service;
+  assert.equal(Date.parse(extended.expiresAt) - Date.parse(timed.expiresAt), 30 * 60 * 1000);
+  assert.equal(extended.openedAt, timed.openedAt);
+  assert.equal((await gui.update("photos", { authMode: "none" })).service.expiresAt, extended.expiresAt);
+  assert.equal((await gui.audit()).entries[0].action, "update");
+  assert.equal((await exposureRequest(port, "/api/services/chartsdb/update", "POST", { hours: 1 })).status, 404);
   const beforeRestart = await gui.list();
   await stop(child);
   child = await start();
