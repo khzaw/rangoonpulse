@@ -39,7 +39,7 @@ spec:
           main:
             image:
               repository: ghcr.io/khzaw/rangoonpulse-docs
-              tag: 1795766082-50a0deecf80ba9bc7c2358dfc034b369244cd198 # {"$imagepolicy": "flux-system:docs:tag"}
+              tag: 1795816630-9e344895f00ca474048475dc5c5f65d4737134ae # {"$imagepolicy": "flux-system:docs:tag"}
             probes:
               liveness:
                 enabled: true
