@@ -8,7 +8,7 @@ COPY docs /src/docs
 COPY docs-site /src/docs-site
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 COPY docs-site/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /src/docs-site/dist /usr/share/nginx/html/docs
