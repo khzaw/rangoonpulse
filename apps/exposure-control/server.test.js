@@ -682,6 +682,17 @@ test("Helm tag and index version resolvers never report a downgrade when listing
   );
 });
 
+test("digest matching accepts both multi-arch index digests and platform manifest digests", () => {
+  const { digestMatchesRemote } = loadServerHelpers();
+  const indexDigest = "sha256:" + "a".repeat(64);
+  const platformDigest = "sha256:" + "b".repeat(64);
+  const otherDigest = "sha256:" + "c".repeat(64);
+  const remote = { indexDigest, platformDigest, digest: indexDigest };
+  assert.equal(digestMatchesRemote(indexDigest, remote), true);
+  assert.equal(digestMatchesRemote(platformDigest, remote), true);
+  assert.equal(digestMatchesRemote(otherDigest, remote), false);
+});
+
 test("metrics impose a total timeout even while an upstream trickles bytes", async () => {
   const panel = await startMetricsPanel((url, res) => {
     res.writeHead(200);

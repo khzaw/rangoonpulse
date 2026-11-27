@@ -2631,16 +2631,33 @@ async function fetchRegistryManifestDigest(imageRef, tag, platform) {
   const headerDigest = extractImageDigest(
     res.headers["docker-content-digest"] || "",
   );
-  let value = headerDigest;
+  let platformDigest = "";
   const contentType = res.headers["content-type"];
   if (isManifestListContentType(contentType)) {
     const payload = JSON.parse(res.body || "{}");
     const selected = selectManifestForPlatform(payload.manifests, platform);
-    value = extractImageDigest(selected && selected.digest);
+    platformDigest = extractImageDigest(selected && selected.digest);
   }
+  const value = {
+    indexDigest: headerDigest,
+    platformDigest,
+    digest: headerDigest || platformDigest,
+  };
 
   registryManifestCache.set(cacheKey, { ts: now, value });
   return value;
+}
+
+function digestMatchesRemote(currentDigest, remoteManifest) {
+  const current = extractImageDigest(currentDigest);
+  if (!current || !remoteManifest) return false;
+  if (typeof remoteManifest === "string") {
+    return current === extractImageDigest(remoteManifest);
+  }
+  return Boolean(
+    (remoteManifest.indexDigest && current === remoteManifest.indexDigest) ||
+    (remoteManifest.platformDigest && current === remoteManifest.platformDigest),
+  );
 }
 
 function kubeApiAvailable() {
@@ -3497,7 +3514,8 @@ async function resolveImageUpdateFields(task) {
   const platform = task.podNodeName
     ? await getNodePlatform(task.podNodeName)
     : { os: "linux", architecture: "" };
-  const remoteDigest = await fetchRegistryManifestDigest(task.imageRef, task.imageRef.tag, platform);
+  const remoteManifest = await fetchRegistryManifestDigest(task.imageRef, task.imageRef.tag, platform);
+  const remoteDigest = remoteManifest && remoteManifest.digest;
   if (!remoteDigest) {
     return {
       status: "unknown",
@@ -3509,7 +3527,7 @@ async function resolveImageUpdateFields(task) {
     };
   }
 
-  const updateAvailable = remoteDigest !== task.currentDigest;
+  const updateAvailable = !digestMatchesRemote(task.currentDigest, remoteManifest);
   return {
     latestVersion: task.imageRef.tag,
     updateAvailable,
@@ -5245,6 +5263,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  digestMatchesRemote,
   findLatestFromTags,
   findLatestHelmVersion,
   parseComparableTag,
