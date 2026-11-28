@@ -67,6 +67,53 @@
     window.requestAnimationFrame(() => window.requestAnimationFrame(settle));
   }
 
+  /* --------------------------------------------------------- live ticks */
+
+  // Characters that differ, walked from the right so a carry ripples leftward
+  // the way an odometer turns over: 12:59:59 → 13:00:00 moves six glyphs in turn.
+  function tickPlan(previous, next) {
+    const before = Array.from(String(previous ?? ''));
+    const after = Array.from(String(next ?? ''));
+    const plan = [];
+    for (let index = after.length - 1; index >= 0; index -= 1) {
+      if (before[index] !== after[index]) plan.push({ index, char: after[index], order: plan.length });
+    }
+    return plan;
+  }
+
+  // One slot per character. A changed glyph lifts out while its successor
+  // rises in beneath it; `after` continues a cascade begun by another element.
+  // Returns how many glyphs moved so a neighbour can carry on from there.
+  function tick(element, text, { animate = true, after = 0, stagger = 55 } = {}) {
+    if (!element) return 0;
+    const next = String(text ?? '');
+    const slots = element.children;
+    const glyph = (char, state) => '<span class="tick-glyph' + (state ? ' ' + state : '') + '">' + escape(char) + '</span>';
+    if (slots.length !== Array.from(next).length) {
+      element.innerHTML = Array.from(next).map((char) => '<span class="tick-slot">' + glyph(char) + '</span>').join('');
+      return 0;
+    }
+    const shown = Array.from(slots, (slot) => slot.lastElementChild?.textContent || '').join('');
+    const plan = tickPlan(shown, next);
+    const motion = animate && !reducedMotion();
+    for (const step of plan) {
+      const slot = slots[step.index];
+      slot.querySelectorAll('.is-leaving').forEach((old) => old.remove());
+      const current = slot.lastElementChild;
+      if (!motion || !current) { slot.innerHTML = glyph(step.char); continue; }
+      const delay = (after + step.order) * stagger + 'ms';
+      current.className = 'tick-glyph is-leaving';
+      current.style.animationDelay = delay;
+      current.addEventListener('animationend', () => current.remove(), { once: true });
+      slot.insertAdjacentHTML('beforeend', glyph(step.char, 'is-entering'));
+      const entering = slot.lastElementChild;
+      entering.style.animationDelay = delay;
+      // A settled glyph drops its filled animation so nothing stays composited.
+      entering.addEventListener('animationend', () => { entering.className = 'tick-glyph'; entering.style.animationDelay = ''; }, { once: true });
+    }
+    return plan.length;
+  }
+
   /* -------------------------------------------------------- signal field */
 
   // One heartbeat over u in [0, 1): P wave, QRS spike, T wave.
@@ -569,5 +616,5 @@
     transition.finished.finally(() => document.documentElement.classList.remove('is-theming'));
   }
 
-  return { escape, score, rank, rollMarkup, roll, ecg, fieldLevel, field, spotlight, glide, toast, dismiss, palette, crosshair, reveal };
+  return { escape, score, rank, rollMarkup, roll, tickPlan, tick, ecg, fieldLevel, field, spotlight, glide, toast, dismiss, palette, crosshair, reveal };
 });

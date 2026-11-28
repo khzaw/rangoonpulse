@@ -38,6 +38,23 @@ test('digit roll renders one strip per digit, starts from the previous value and
   assert.doesNotMatch(Fx.rollMarkup('<b>'), /<b>/);
 });
 
+test('live ticks move only changed glyphs and carry from the right like an odometer', () => {
+  assert.deepEqual(Fx.tickPlan('17:26:04', '17:26:05'), [{ index: 7, char: '5', order: 0 }]);
+  assert.deepEqual(Fx.tickPlan('17:59:59', '18:00:00').map((step) => [step.index, step.char, step.order]), [
+    [7, '0', 0], [6, '0', 1], [4, '0', 2], [3, '0', 3], [1, '8', 4],
+  ]);
+  assert.deepEqual(Fx.tickPlan('09', '09'), []);
+  assert.equal(Fx.tick(null, '12'), 0);
+});
+
+test('the topbar clock ticks on whole seconds and catches up when the tab returns', () => {
+  const app = read('app.js');
+  assert.match(app, /second: '2-digit'/);
+  assert.match(app, /setTimeout\(\(\) => \{ tickClock\(true\); scheduleClock\(\); \}, 1000 - \(Date\.now\(\) % 1000\)/);
+  assert.match(app, /if \(document\.hidden\) return;\s+tickClock\(false\);/);
+  assert.doesNotMatch(app, /setInterval\(tickClock/);
+});
+
 test('the signal trace is brightest at the sweep head, fades behind it and flattens without a reading', () => {
   const base = { width: 800, step: 8, gap: 120, tail: 500, period: 340, amp: 80, mid: 140, sigma: 5, flat: true, head: 400 };
   const onLine = (x, extra = {}) => Fx.fieldLevel(x, base.mid, { ...base, ...extra });

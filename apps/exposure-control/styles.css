@@ -275,7 +275,19 @@ input[type="checkbox"]:checked { background: var(--text-1) ; border-color: var(-
 .top-actions { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .control-activity { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font: 10.5px var(--font-mono); white-space: nowrap; animation: fade 200ms var(--ease-out); }
 .control-activity-orb { width: 20px; height: 20px; flex: none; }
-.clock { color: var(--text-3); font: 11px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clock { display: inline-flex; align-items: baseline; gap: 6px; color: var(--text-3); font: 11px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.clock-face { position: relative; display: inline-flex; align-items: baseline; }
+.clock-hm { color: var(--text-2); }
+.clock-sweep { position: absolute; inset: auto 0 -4px; height: 1px; background: var(--text-3); opacity: .45; transform: scaleX(0); transform-origin: left; animation: sweep 60s linear infinite; pointer-events: none; }
+.is-backgrounded .clock-sweep { animation-play-state: paused; }
+@keyframes sweep { to { transform: scaleX(1); } }
+/* Live glyphs: each slot stacks the leaving and entering glyph in one cell, so nothing reflows. */
+.tick-slot { display: inline-grid; }
+.tick-glyph { grid-area: 1 / 1; }
+.tick-glyph.is-entering { animation: glyphIn 420ms var(--ease-out) both; }
+.tick-glyph.is-leaving { animation: glyphOut 320ms var(--ease-out) both; }
+@keyframes glyphIn { from { opacity: 0; transform: translateY(.65em); filter: blur(2px); } }
+@keyframes glyphOut { to { opacity: 0; transform: translateY(-.65em); filter: blur(2px); } }
 .palette-trigger { min-height: 30px; padding: 0 6px 0 10px; color: var(--text-3); font-weight: 400; font-size: 12px; }
 .palette-trigger svg { width: 13px; height: 13px; }
 .palette-trigger:hover { color: var(--text-1); }

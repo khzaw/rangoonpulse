@@ -3140,13 +3140,41 @@
       }
       new MutationObserver(rollFigures).observe(document.getElementById('mainContent'), { childList: true, subtree: true });
 
+      // The clock lands on each whole second. Seconds carry into minutes like an
+      // odometer, and the hairline sweeps the minute on the compositor.
       const clockEl = document.getElementById('clock');
-      const clockFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-      function tickClock() {
-        clockEl.textContent = clockFormat.format(new Date()) + ' SGT';
+      clockEl.innerHTML = '<span class="sr-only"></span><span class="clock-face" aria-hidden="true"><span class="clock-hm"></span><span class="clock-colon">:</span><span class="clock-s"></span><span class="clock-sweep"></span></span><span class="clock-zone" aria-hidden="true">SGT</span>';
+      const [clockLabel, clockFace] = clockEl.children;
+      const [clockHm, , clockS, clockSweep] = clockFace.children;
+      const clockFormat = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Singapore', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+      let clockTimer = 0;
+      function tickClock(animate) {
+        const now = new Date();
+        const part = Object.fromEntries(clockFormat.formatToParts(now).map((entry) => [entry.type, entry.value]));
+        const hm = part.hour + ':' + part.minute;
+        const moving = animate && !document.hidden && clockEl.getClientRects().length > 0;
+        const carried = fx.tick(clockS, part.second, { animate: moving });
+        fx.tick(clockHm, hm, { animate: moving, after: carried });
+        if (clockLabel.textContent !== hm + ' Singapore time') {
+          clockLabel.textContent = hm + ' Singapore time';
+          clockEl.dateTime = hm;
+        }
+        // Pin the sweep to the wall clock on load, on return and once a minute.
+        const sweep = (!moving || part.second === '00') && clockSweep.getAnimations?.()[0];
+        if (sweep) sweep.currentTime = Number(part.second) * 1000 + now.getMilliseconds();
       }
-      tickClock();
-      setInterval(tickClock, 15000);
+      function scheduleClock() {
+        clearTimeout(clockTimer);
+        clockTimer = setTimeout(() => { tickClock(true); scheduleClock(); }, 1000 - (Date.now() % 1000) + 8);
+      }
+      tickClock(false);
+      scheduleClock();
+      // Hidden tabs throttle timers; a returning tab snaps to the time without replaying motion.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        tickClock(false);
+        scheduleClock();
+      });
 
       // Everything reachable by pointer is reachable from the palette.
       const commandPalette = fx.palette({
