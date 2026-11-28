@@ -71,8 +71,10 @@ spec:
                     '  upstream_timeout: 3s' \
                     'querylog:' \
                     '  enabled: true' \
+                    '  interval: 7d' \
                     'statistics:' \
                     '  enabled: true' \
+                    '  interval: 30d' \
                     'filters: []' \
                     'whitelist_filters: []' \
                     'user_rules: []' \
@@ -92,6 +94,28 @@ spec:
                   sed -i -E 's/^  cache_optimistic:.*/  cache_optimistic: true/' "$CFG"
                   sed -i -E 's/^  upstream_timeout:.*/  upstream_timeout: 3s/' "$CFG"
                 fi
+
+                # Rotate query logs weekly while retaining monthly statistics.
+                TMP="$(mktemp "$DATA/conf/.retention.XXXXXX")"
+                trap 'rm -f "$TMP"' EXIT
+                awk '
+                  /^(querylog|statistics):/ {
+                    section = $1
+                    seen[section] = 1
+                    print section
+                    print "  interval: " (section == "querylog:" ? "7d" : "30d")
+                    next
+                  }
+                  /^[^[:space:]]/ { section = "" }
+                  section != "" && /^  interval:/ { next }
+                  { print }
+                  END {
+                    if (!seen["querylog:"]) { print "querylog:\n  interval: 7d" }
+                    if (!seen["statistics:"]) { print "statistics:\n  interval: 30d" }
+                  }
+                ' "$CFG" > "$TMP"
+                mv "$TMP" "$CFG"
+                trap - EXIT
 
                 # Keep primary Cloudflare upstreams on HTTPS and disable shared-client rate limiting.
                 # Preserve resolver variants, custom upstreams, and all other runtime settings.

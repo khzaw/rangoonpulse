@@ -3,7 +3,7 @@ title: AdGuard DNS Stack: Router Setup and Architecture
 summary: Current operating guidance for AdGuard DNS Stack: Router Setup and Architecture.
 status: active
 owner: homelab
-last_reviewed: 2026-11-18
+last_reviewed: 2026-11-28
 ---
 
 # AdGuard DNS Stack: Router Setup and Architecture
@@ -100,7 +100,7 @@ Expected GitOps state:
 AdGuard writes runtime config into `/adguard-data/conf/AdGuardHome.yaml` on the PVC. UI changes and setup wizard actions can
 drift away from intended GitOps behavior.
 
-Startup enforces DNS keys in
+Startup enforces runtime keys in
 `apps/adguard/primary/helmrelease.yaml` and `apps/adguard/secondary/helmrelease.yaml` before launching AdGuard:
 - `dns.fastest_timeout: 1s`
 - `dns.cache_size: 16777216`
@@ -111,6 +111,23 @@ Startup enforces DNS keys in
 - `dns.ratelimit: 0` (private DNS must handle shared-client bursts)
 - `http.address: 0.0.0.0:80`
 - `dhcp.enabled: false` (router remains DHCP authority)
+- `querylog.interval: 7d`
+- `statistics.interval: 30d`
+
+### Query logs and storage budget
+
+Both instances rotate query logs every seven days and retain statistics for
+30 days. Startup applies these intervals to existing PVC configuration as well
+as newly seeded state, preserving other query-log and statistics settings.
+
+AdGuard keeps the current and previous query-log files, so a seven-day rotation
+can retain nearly 14 days on disk. Shortening the interval takes effect through
+AdGuard's normal rotation; it does not clear query logs or statistics directly.
+
+Each local-path claim declares a 2 GiB storage budget. The storage dashboard
+compares directory usage against that request; local-path does not enforce it
+as a filesystem quota. Check the node's backing filesystem for actual free
+space before treating a high PVC percentage as an imminent disk-full condition.
 
 ### Upstream transport
 

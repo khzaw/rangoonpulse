@@ -20,6 +20,69 @@ def startup(instance):
 
 
 class AdGuardDNSTests(unittest.TestCase):
+    def normalize_retention(self, config: str, instance: str) -> str:
+        script = startup(instance)
+        subprocess.run(["sh", "-n"], input=script, text=True, check=True)
+        block = script.split("# Rotate query logs weekly", 1)[1]
+        block = block.split("\n", 1)[1].split("# Keep ", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            conf = Path(directory) / "conf"
+            conf.mkdir()
+            path = conf / "AdGuardHome.yaml"
+            path.write_text(config)
+            subprocess.run(
+                ["sh", "-eu", "-c", block],
+                env=dict(os.environ, DATA=directory, CFG=str(path)),
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(list(conf.iterdir()), [path], "Temporary config file leaked")
+            return path.read_text()
+
+    def test_retention_preserves_other_runtime_settings_and_is_idempotent(self):
+        config = """querylog:
+  interval: 30d
+  enabled: true
+  file_enabled: true
+  ignored:
+    - noisy.example
+  size_memory: 1000
+statistics:
+  interval: 30d
+  enabled: true
+  ignored: []
+dns:
+  upstream_dns:
+    - https://1.1.1.1/dns-query
+filters: []
+user_rules:
+  - '@@||example.com^'
+"""
+        expected = yaml.safe_load(config)
+        expected["querylog"]["interval"] = "7d"
+        for instance in ("primary", "secondary"):
+            with self.subTest(instance=instance):
+                result = self.normalize_retention(config, instance)
+                self.assertEqual(yaml.safe_load(result), expected)
+                self.assertEqual(self.normalize_retention(result, instance), result)
+
+    def test_retention_inserts_missing_intervals_and_sections(self):
+        for config in (
+            "dns:\n  port: 53\n",
+            "querylog:\n  enabled: false\nstatistics:\n  enabled: true\n",
+            "querylog: {}\nstatistics: {}\n",
+            "statistics:\n  interval: 7d\n",
+        ):
+            for instance in ("primary", "secondary"):
+                with self.subTest(config=config, instance=instance):
+                    expected = yaml.safe_load(config)
+                    expected.setdefault("querylog", {})["interval"] = "7d"
+                    expected.setdefault("statistics", {})["interval"] = "30d"
+                    result = self.normalize_retention(config, instance)
+                    self.assertEqual(yaml.safe_load(result), expected)
+                    self.assertEqual(self.normalize_retention(result, instance), result)
+
     def normalize(self, config, instance="primary"):
         script = startup(instance)
         subprocess.run(["sh", "-n"], input=script, text=True, check=True)
@@ -119,7 +182,10 @@ clients:
                 subprocess.run(["sh", "-eu", "-c", seed], env=dict(os.environ, CFG=str(path)), check=True)
                 upstreams = ["1.1.1.1", "1.0.0.1"]
                 upstreams = [f"https://{address}/dns-query" for address in upstreams]
-                dns = yaml.safe_load(path.read_text())["dns"]
+                seeded = yaml.safe_load(path.read_text())
+                self.assertEqual(seeded["querylog"]["interval"], "7d")
+                self.assertEqual(seeded["statistics"]["interval"], "30d")
+                dns = seeded["dns"]
                 self.assertEqual(dns["upstream_dns"], upstreams)
                 self.assertEqual(dns["ratelimit"], 0)
 
